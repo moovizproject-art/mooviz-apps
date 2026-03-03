@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "mooviz-app-9b766",
+    "dev": "mooviz-app-9b766",
+    "staging": "mooviz-app-9b766",
+    "production": "mooviz-prod"
+  }
+}
