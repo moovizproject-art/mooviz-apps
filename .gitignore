@@ -54,6 +54,7 @@ coverage/
 
 # Confidential docs
 initDocs/
+docs/
 
 # Secrets
 serviceAccountKey*.json
