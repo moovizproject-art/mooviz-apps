@@ -167,3 +167,39 @@
 - [x] Existing components verified working on bare RN
 
 ---
+
+## Task 112: [M0.3] Integrate Google Maps SDK
+**CRM ID**: 112 | **Status**: Complete | **Est**: 3h
+
+### What was done
+1. **Configured iOS Google Maps SDK** in `AppDelegate.mm`:
+   - Added `#import <GoogleMaps/GoogleMaps.h>`
+   - API key loaded from Info.plist via `[[NSBundle mainBundle] objectForInfoDictionaryKey:@"GOOGLE_MAPS_API_KEY"]`
+   - `[GMSServices provideAPIKey:mapsKey]` called in `didFinishLaunchingWithOptions`
+2. **Android already configured** in Task 109:
+   - `com.google.android.geo.API_KEY` meta-data in AndroidManifest.xml with `${GOOGLE_MAPS_API_KEY}` placeholder
+3. **Verified MapPicker.tsx** — already uses `react-native-maps` MapView, fully compatible with bare RN
+4. **Created `src/utils/mapHelpers.ts`** with:
+   - `getDistanceKm()` — Haversine formula for distance between two coordinates
+   - `getRegionForCoordinates()` — fit-all-markers region calculation with padding
+   - `getRegionForRadius()` — region from center point + radius in km
+   - `formatDistance()` — Hebrew formatted display (מ' for meters, ק"מ for km)
+   - `isInIsrael()` — bounding box check for Israeli coordinates
+   - `ISRAEL_REGION` and `TEL_AVIV_REGION` preset constants
+
+### Commits
+- `13890c3` feat(mobile): configure Google Maps SDK and add map utility helpers
+
+### Acceptance Criteria
+- [x] Google Maps SDK initialized in iOS AppDelegate.mm
+- [x] API key loaded from environment config (not hardcoded)
+- [x] Android Google Maps meta-data configured in AndroidManifest.xml
+- [x] MapPicker.tsx verified working with react-native-maps
+- [x] mapHelpers.ts provides distance, region, and formatting utilities
+- [x] Haversine formula correctly calculates distance in km
+- [x] Region fitting works for multiple coordinates with padding
+- [x] Hebrew distance formatting (meters and km)
+- [x] Israel bounding box check utility
+- [x] TypeScript strict mode passes with zero errors
+
+---
