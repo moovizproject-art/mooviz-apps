@@ -89,7 +89,44 @@
 - [x] TypeScript compiles with no migration-related errors
 
 ### Notes
-- 15 pre-existing TS errors in scaffold code (navigation typing, unused imports) — Task 110/111
 - Firebase Google Services config files still need to be downloaded before first native build
+
+---
+
+## Task 110: [M0.3] Set up navigation structure
+**CRM ID**: 110 | **Status**: Complete | **Est**: 3h
+
+### What was done
+1. **Fixed all TypeScript errors** — went from 21 errors to 0
+2. **Added proper navigation type system**:
+   - `NavigatorScreenParams` for nested navigators (AuthStack, SenderTabs, DriverTabs)
+   - `CompositeScreenProps` types exported for tab screens that navigate to root stack
+   - `SenderTabScreenProps<T>` and `DriverTabScreenProps<T>` composite types
+3. **Fixed screen prop types**:
+   - HomeScreen, MyDeliveriesScreen → `SenderTabScreenProps`
+   - FeedScreen, MyJobsScreen → `DriverTabScreenProps`
+   - ProfileScreen → no props needed (uses hooks directly)
+   - ChatScreen → `useRoute()` hook for flexible tab/stack usage
+   - OTPScreen → removed unused `navigation` destructure
+4. **Fixed deep linking config** in App.tsx:
+   - Nested auth screens under `AuthStack`
+   - Added route paths for ChatRoom, DeliveryDetail, Rating
+   - Added `LinkingOptions<RootStackParamList>` type annotation
+5. **Cleaned up unused imports** across 7 files
+6. **Fixed useFirestore** missing return value in non-realtime branch
+7. **Verified**: `tsc --noEmit` passes with zero errors
+
+### Commits
+- `eac66e8` fix(mobile): polish navigation types and fix all TypeScript errors
+
+### Acceptance Criteria
+- [x] React Navigation v6 works with bare RN 0.75
+- [x] All navigation param lists properly typed with NavigatorScreenParams
+- [x] Composite screen props exported for tab-to-stack navigation
+- [x] Deep linking config correctly nested under AuthStack
+- [x] All routes have deep link paths
+- [x] RTL animation (slide_from_left) on auth stack
+- [x] TypeScript strict mode passes with zero errors
+- [x] All screen components use correct prop types for their navigator context
 
 ---
