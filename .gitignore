@@ -52,6 +52,9 @@ build/
 # Test
 coverage/
 
+# Confidential docs
+initDocs/
+
 # Secrets
 serviceAccountKey*.json
 google-services.json
