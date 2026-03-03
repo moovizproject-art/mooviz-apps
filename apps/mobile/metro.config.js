@@ -1,11 +1,22 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
-
 /**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('metro-config').MetroConfig}
+ * Metro configuration — הגדרות Metro
+ * Configured for pnpm monorepo with workspace packages.
  */
-const config = {};
+const path = require('path');
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+const projectRoot = __dirname;
+const monorepoRoot = path.resolve(projectRoot, '../..');
+
+const config = {
+  watchFolders: [monorepoRoot],
+  resolver: {
+    nodeModulesPaths: [
+      path.resolve(projectRoot, 'node_modules'),
+      path.resolve(monorepoRoot, 'node_modules'),
+    ],
+    disableHierarchicalLookup: true,
+  },
+};
+
+module.exports = mergeConfig(getDefaultConfig(projectRoot), config);

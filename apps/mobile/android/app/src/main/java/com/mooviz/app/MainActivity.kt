@@ -1,4 +1,4 @@
-package com.moovizmobile
+package com.mooviz.app
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
