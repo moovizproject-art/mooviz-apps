@@ -1,8 +1,8 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "target": "ESNext",
+    "lib": ["ES2020"],
     "module": "commonjs",
     "moduleResolution": "node",
     "jsx": "react-native",
@@ -20,18 +20,22 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@mooviz/shared": ["../../packages/shared/src"],
-      "@mooviz/shared/*": ["../../packages/shared/src/*"]
+      "@mooviz/shared": ["../../shared/src"],
+      "@mooviz/shared/*": ["../../shared/src/*"]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "App.tsx"
+    "App.tsx",
+    "index.js"
   ],
   "exclude": [
     "node_modules",
     "babel.config.js",
-    "jest.config.js"
+    "jest.config.js",
+    "metro.config.js",
+    "ios",
+    "android"
   ]
 }
