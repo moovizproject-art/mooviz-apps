@@ -1,5 +1,12 @@
+/**
+ * useLocation — הוק מיקום GPS
+ * Provides GPS location with permissions handling.
+ * Uses react-native-geolocation-service for bare RN compatibility.
+ * מספק מיקום GPS עם ניהול הרשאות
+ */
 import { useState, useEffect, useCallback } from 'react';
-import * as Location from 'expo-location';
+import { Platform, PermissionsAndroid } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
 
 // ──────────────────────────────────────────────
 // Types
@@ -11,34 +18,51 @@ export interface GeoCoords {
   accuracy: number | null;
 }
 
+type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+
 interface UseLocationResult {
   location: GeoCoords | null;
   isLoading: boolean;
   error: string | null;
-  permissionStatus: Location.PermissionStatus | null;
+  permissionStatus: PermissionStatus;
   requestPermission: () => Promise<boolean>;
   refreshLocation: () => Promise<void>;
 }
 
-/**
- * useLocation — הוק מיקום GPS
- * Provides GPS location with permissions handling.
- * מספק מיקום GPS עם ניהול הרשאות
- */
+/** Request foreground location permission (platform-specific) */
+async function requestLocationPermissionNative(): Promise<boolean> {
+  if (Platform.OS === 'ios') {
+    const status = await Geolocation.requestAuthorization('whenInUse');
+    return status === 'granted';
+  }
+
+  // Android
+  const granted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    {
+      title: 'הרשאת מיקום',
+      message: 'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
+      buttonPositive: 'אשר',
+      buttonNegative: 'ביטול',
+    },
+  );
+  return granted === PermissionsAndroid.RESULTS.GRANTED;
+}
+
 export function useLocation(): UseLocationResult {
   const [location, setLocation] = useState<GeoCoords | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('undetermined');
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setPermissionStatus(status);
-      return status === 'granted';
+      const granted = await requestLocationPermissionNative();
+      setPermissionStatus(granted ? 'granted' : 'denied');
+      return granted;
     } catch (err) {
       console.error('[useLocation] Permission request failed:', err);
-      setError('שגיאה בבקשת הרשאת מיקום'); // Error requesting location permission
+      setError('שגיאה בבקשת הרשאת מיקום');
       return false;
     }
   }, []);
@@ -48,31 +72,36 @@ export function useLocation(): UseLocationResult {
       setIsLoading(true);
       setError(null);
 
-      const { status } = await Location.getForegroundPermissionsAsync();
-      setPermissionStatus(status);
-
-      if (status !== 'granted') {
-        const granted = await requestPermission();
-        if (!granted) {
-          setError('הרשאת מיקום לא אושרה'); // Location permission not granted
-          setIsLoading(false);
-          return;
-        }
+      const granted = await requestPermission();
+      if (!granted) {
+        setError('הרשאת מיקום לא אושרה');
+        setIsLoading(false);
+        return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      setLocation({
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-        accuracy: currentLocation.coords.accuracy,
-      });
+      Geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+          setIsLoading(false);
+        },
+        (positionError) => {
+          console.error('[useLocation] Error:', positionError);
+          setError('לא ניתן לקבל מיקום נוכחי');
+          setIsLoading(false);
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: 10000,
+        },
+      );
     } catch (err) {
-      console.error('[useLocation] Error getting location:', err);
-      setError('לא ניתן לקבל מיקום נוכחי'); // Cannot get current location
-    } finally {
+      console.error('[useLocation] Unexpected error:', err);
+      setError('לא ניתן לקבל מיקום נוכחי');
       setIsLoading(false);
     }
   }, [requestPermission]);

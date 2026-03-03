@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { I18nManager, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'react-native';
 
 import { AuthProvider } from './src/hooks/useAuth';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -60,7 +60,7 @@ export default function App(): React.JSX.Element {
       <SafeAreaProvider>
         <AuthProvider>
           <NavigationContainer linking={linking}>
-            <StatusBar style="auto" />
+            <StatusBar barStyle="default" />
             <RootNavigator />
           </NavigationContainer>
         </AuthProvider>
