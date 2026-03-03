@@ -67,7 +67,7 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
   }
 
   // Android 10+ needs separate background permission
-  if (Platform.Version >= 29) {
+  if (Number(Platform.Version) >= 29) {
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
       {
@@ -120,7 +120,7 @@ export async function requestCameraPermission(): Promise<boolean> {
 /** Check if media/photo library permission is granted */
 export async function hasMediaLibraryPermission(): Promise<boolean> {
   if (Platform.OS === 'ios') return true;
-  if (Platform.Version >= 33) {
+  if (Number(Platform.Version) >= 33) {
     return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
   }
   return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
@@ -130,7 +130,7 @@ export async function hasMediaLibraryPermission(): Promise<boolean> {
 export async function requestMediaLibraryPermission(): Promise<boolean> {
   if (Platform.OS === 'ios') return true;
 
-  const permission = Platform.Version >= 33
+  const permission = Number(Platform.Version) >= 33
     ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
     : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
 

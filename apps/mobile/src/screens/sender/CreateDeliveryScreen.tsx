@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
@@ -66,13 +66,12 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   };
 
   const pickPhoto = async (): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
       quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) {
-      updateField('photoUri', result.assets[0].uri);
+    if (!result.didCancel && result.assets?.[0]) {
+      updateField('photoUri', result.assets[0].uri!);
     }
   };
 

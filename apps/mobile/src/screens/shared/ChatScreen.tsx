@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
@@ -50,16 +50,16 @@ export function ChatScreen({ route }: Props): React.JSX.Element {
   }, [inputText, chatId, currentUser, sendMessage]);
 
   const handleImagePick = useCallback(async (): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
       quality: 0.7,
     });
 
-    if (!result.canceled && result.assets[0]) {
+    if (!result.didCancel && result.assets?.[0]) {
       await sendImage({
         chatId,
         senderId: currentUser!.uid,
-        imageUri: result.assets[0].uri,
+        imageUri: result.assets[0].uri!,
       });
     }
   }, [chatId, currentUser, sendImage]);

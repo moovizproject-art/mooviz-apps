@@ -1,12 +1,13 @@
 /**
  * Notifications Service — שירות התראות
  * FCM token management and local notification handling.
+ * Uses @notifee/react-native for local notifications on bare RN.
  * ניהול טוקן FCM וטיפול בהתראות מקומיות
  */
 
 import messaging from '@react-native-firebase/messaging';
 import firestore from '@react-native-firebase/firestore';
-import * as Notifications from 'expo-notifications';
+import notifee, { AndroidImportance } from '@notifee/react-native';
 import { Platform } from 'react-native';
 
 // ──────────────────────────────────────────────
@@ -83,6 +84,20 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 // ──────────────────────────────────────────────
+// Android Notification Channel
+// ──────────────────────────────────────────────
+
+/** Ensure the default Android notification channel exists (required Android 8+) */
+async function ensureChannel(): Promise<string> {
+  return notifee.createChannel({
+    id: 'mooviz-default',
+    name: 'MOOVIZ Notifications',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+  });
+}
+
+// ──────────────────────────────────────────────
 // Local Notifications
 // ──────────────────────────────────────────────
 
@@ -95,14 +110,12 @@ export async function showLocalNotification(
   body: string,
   data?: Record<string, string>,
 ): Promise<void> {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data: data || {},
-      sound: 'default',
-    },
-    trigger: null, // Immediate
+  const channelId = await ensureChannel();
+  await notifee.displayNotification({
+    title,
+    body,
+    data,
+    android: { channelId, smallIcon: 'ic_launcher', pressAction: { id: 'default' } },
   });
 }
 
@@ -116,17 +129,19 @@ export async function scheduleLocalNotification(
   triggerSeconds: number,
   data?: Record<string, string>,
 ): Promise<string> {
-  return await Notifications.scheduleNotificationAsync({
-    content: {
+  const channelId = await ensureChannel();
+  return await notifee.createTriggerNotification(
+    {
       title,
       body,
-      data: data || {},
-      sound: 'default',
+      data,
+      android: { channelId, smallIcon: 'ic_launcher', pressAction: { id: 'default' } },
     },
-    trigger: {
-      seconds: triggerSeconds,
+    {
+      type: 0, // TimestampTrigger
+      timestamp: Date.now() + triggerSeconds * 1000,
     },
-  });
+  );
 }
 
 /**
@@ -134,7 +149,7 @@ export async function scheduleLocalNotification(
  * ביטול כל ההתראות המתוזמנות
  */
 export async function cancelAllNotifications(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await notifee.cancelAllNotifications();
 }
 
 /**
@@ -143,6 +158,6 @@ export async function cancelAllNotifications(): Promise<void> {
  */
 export async function setBadgeCount(count: number): Promise<void> {
   if (Platform.OS === 'ios') {
-    await Notifications.setBadgeCountAsync(count);
+    await notifee.setBadgeCount(count);
   }
 }

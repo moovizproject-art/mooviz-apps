@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
@@ -55,15 +55,13 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   };
 
   const pickImage = async (field: 'profilePhotoUri' | 'kycDocumentUri'): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: field === 'profilePhotoUri',
-      aspect: field === 'profilePhotoUri' ? [1, 1] : undefined,
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      updateField(field, result.assets[0].uri);
+    if (!result.didCancel && result.assets?.[0]) {
+      updateField(field, result.assets[0].uri!);
     }
   };
 

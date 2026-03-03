@@ -110,7 +110,7 @@ export function useNotifications(): UseNotificationsResult {
     // Background/quit notification tap handler
     messaging().onNotificationOpenedApp((remoteMessage) => {
       console.log('[Notifications] Opened from background:', remoteMessage);
-      handleNotificationNavigation(remoteMessage.data);
+      handleNotificationNavigation(remoteMessage.data as Record<string, string> | undefined);
     });
 
     // Check if app was opened by notification from quit state
@@ -119,7 +119,7 @@ export function useNotifications(): UseNotificationsResult {
       .then((remoteMessage) => {
         if (remoteMessage) {
           console.log('[Notifications] Opened from quit state:', remoteMessage);
-          handleNotificationNavigation(remoteMessage.data);
+          handleNotificationNavigation(remoteMessage.data as Record<string, string> | undefined);
         }
       });
 

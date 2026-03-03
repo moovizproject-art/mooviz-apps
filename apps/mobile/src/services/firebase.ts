@@ -8,6 +8,7 @@
  */
 
 import firebase from '@react-native-firebase/app';
+import type { ReactNativeFirebase } from '@react-native-firebase/app';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
@@ -31,7 +32,7 @@ export function isFirebaseInitialized(): boolean {
   return firebase.apps.length > 0;
 }
 
-export function getFirebaseApp(): firebase.FirebaseApp {
+export function getFirebaseApp(): ReactNativeFirebase.FirebaseApp {
   if (!isFirebaseInitialized()) {
     throw new Error(
       'Firebase not initialized. Ensure google-services.json / GoogleService-Info.plist are configured.',
