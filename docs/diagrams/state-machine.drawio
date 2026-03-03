@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron">
+  <diagram name="Delivery Status State Machine" id="mooviz-fsm-1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0" defaultFontFamily="Helvetica">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ARROWS FIRST -->
+        <!-- New → Pending -->
+        <mxCell id="a1" value="Driver: &quot;I'm Interested&quot;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontFamily=Helvetica;fontSize=12;fontColor=#333333;" edge="1" parent="1" source="new" target="pending">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Pending → Waiting -->
+        <mxCell id="a2" value="Sender: Approve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontFamily=Helvetica;fontSize=12;fontColor=#333333;" edge="1" parent="1" source="pending" target="waiting">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Waiting → Picked Up -->
+        <mxCell id="a3" value="Driver: Pickup + Proof" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontFamily=Helvetica;fontSize=12;fontColor=#333333;" edge="1" parent="1" source="waiting" target="picked">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Picked Up → Delivered -->
+        <mxCell id="a4" value="Driver: Deliver + Proof" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontFamily=Helvetica;fontSize=12;fontColor=#333333;" edge="1" parent="1" source="picked" target="delivered">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Delivered → Completed -->
+        <mxCell id="a5" value="System: Both Confirm Payment" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontFamily=Helvetica;fontSize=12;fontColor=#333333;" edge="1" parent="1" source="delivered" target="completed">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- New → Cancelled (Sender) -->
+        <mxCell id="a6" value="Sender" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;fontFamily=Helvetica;fontSize=12;fontColor=#b85450;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="new" target="cancelled">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="60" y="150" />
+              <mxPoint x="60" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Pending → Cancelled -->
+        <mxCell id="a7" value="Sender or Driver" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;fontFamily=Helvetica;fontSize=12;fontColor=#b85450;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="pending" target="cancelled">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="80" y="280" />
+              <mxPoint x="80" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Waiting → Cancelled -->
+        <mxCell id="a8" value="Sender or Driver" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;fontFamily=Helvetica;fontSize=12;fontColor=#b85450;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="waiting" target="cancelled">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="100" y="410" />
+              <mxPoint x="100" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Pending → New (Driver cancels = revert) -->
+        <mxCell id="a9" value="Driver Cancel = Revert" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d6b656;dashed=1;fontFamily=Helvetica;fontSize=12;fontColor=#d6b656;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pending" target="new">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="640" y="280" />
+              <mxPoint x="640" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Pending timeout -->
+        <mxCell id="a10" value="Timeout: 72h → Auto-revert" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#999999;dashed=1;fontFamily=Helvetica;fontSize=11;fontColor=#999999;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="pending" target="new">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="262" />
+              <mxPoint x="680" y="168" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- TITLE -->
+        <mxCell id="title" value="MOOVIZ — Delivery Status State Machine" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="30" width="500" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- STATUS BOXES -->
+        <mxCell id="new" value="NEW DELIVERY&lt;br&gt;&lt;i&gt;Sender creates listing&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="110" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="pending" value="PENDING SENDER&lt;br&gt;APPROVAL&lt;br&gt;&lt;i&gt;Driver expressed interest&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="240" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="waiting" value="WAITING FOR&lt;br&gt;PICKUP&lt;br&gt;&lt;i&gt;Sender approved driver&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="370" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="picked" value="PICKED UP&lt;br&gt;&lt;i&gt;Driver has the package&lt;/i&gt;&lt;br&gt;&lt;b&gt;No cancellation!&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="500" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="delivered" value="DELIVERED&lt;br&gt;&lt;i&gt;Package at destination&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="630" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="completed" value="COMPLETED &amp;amp; PAID&lt;br&gt;&lt;i&gt;Both confirmed payment&lt;/i&gt;" style="ellipse;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="200" y="760" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cancelled" value="CANCELLED&lt;br&gt;&lt;i&gt;Pre-pickup only&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=16;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="480" y="500" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- LEGEND -->
+        <mxCell id="legend_title" value="Legend" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="400" width="80" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="— Normal transition" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="700" y="425" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="— Cancellation path" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="700" y="450" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="--- Revert / Timeout" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="700" y="475" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="All transitions validated server-side&lt;br&gt;All changes trigger: Push + Chat + Log" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="700" y="510" width="280" height="40" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

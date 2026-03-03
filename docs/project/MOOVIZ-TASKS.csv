@@ -1,0 +1,567 @@
+milestone,sprint,name,description,acceptance_criteria,tests_validation,priority,estimated_hours,depends_on,status
+M0.1,0,Create GitHub monorepo (KAL Solutions),"As CTO, I need to set up the GitHub repository under KAL Solutions org with a monorepo structure: /mobile (React Native), /functions (Cloud Functions), /admin (web admin panel), /shared (types/utils). Code stays in KAL repo; pushed to client remote after each paid milestone.","- GitHub repo created under KAL Solutions org with branch protection on main
+- Monorepo structure with mobile/, functions/, admin/, shared/ directories
+- .gitignore configured for RN, Node, and environment files
+- README with project overview and setup instructions
+- Client remote configured (push after milestone payment)","- Clone repo, verify structure
+- Verify branch protection rules
+- Verify .gitignore excludes node_modules, .env, build artifacts",3,2,,Not Started
+M0.1,0,Configure CI/CD pipelines,"Set up CI/CD for automated builds. EAS Build for React Native (iOS + Android), GitHub Actions for Cloud Functions deployment, and linting/testing on PR.","- GitHub Actions workflow for Cloud Functions (lint + deploy to dev)
+- EAS Build configuration for iOS and Android
+- PR checks: lint + type check
+- Deploy scripts for staging and production","- Push to develop branch triggers CI
+- EAS build runs successfully for both platforms
+- Functions deploy to dev Firebase project",3,3,,Not Started
+M0.1,0,Set up environment separation,"Create dev/staging/production environment configurations. Environment variables for Firebase config, API keys, and feature flags.","- .env.dev, .env.staging, .env.production files templated
+- Firebase project aliases configured (dev, production)
+- EAS build profiles for dev/preview/production
+- Secrets stored securely (not in repo)","- Build app with dev config, verify connects to dev Firebase
+- Build with production config, verify different project",3,2,,Not Started
+M0.1,0,Import tasks into KAL CRM,"Import MOOVIZ-TASKS.csv into KAL CRM project. Verify milestones and task dependencies are correctly mapped.","- KAL CRM project created for MOOVIZ
+- All tasks imported from CSV
+- Milestones M0-M4 set up
+- Task dependencies configured","- Verify all tasks visible in KAL CRM
+- Verify milestone grouping correct",4,1,,Not Started
+M0.2,0,Create Firebase projects (dev + production),"Set up two Firebase projects: mooviz-dev and mooviz-prod. Enable Auth, Firestore, Functions, Storage, FCM. Configure billing alerts.","- Two Firebase projects created and configured
+- All required services enabled
+- Billing alerts set at $50/$100/$200
+- Firebase CLI configured with project aliases","- firebase use dev — connects to dev project
+- firebase use prod — connects to prod project
+- All services visible in Firebase console",1,3,,Not Started
+M0.2,0,Configure Firebase Authentication,"Enable phone (SMS) and email OTP providers. Configure SMS templates. Set up authorized domains. Test with Firebase Auth emulator.","- Phone auth provider enabled
+- Email link auth enabled
+- SMS template configured (Hebrew + English)
+- Auth emulator working locally","- Send OTP to test phone number
+- Verify OTP succeeds
+- Test with emulator locally",1,2,,Not Started
+M0.2,0,Set up Firestore and Security Rules baseline,"Initialize Firestore in both projects. Deploy baseline security rules that deny all by default. Enable emulator for local development.","- Firestore initialized in both projects
+- Default deny-all security rules deployed
+- Firestore emulator configured
+- Composite indexes placeholder","- Attempt read without auth — denied
+- Emulator starts and accepts writes
+- Rules deploy without errors",1,2,,Not Started
+M0.2,0,Set up Cloud Storage and FCM,"Configure Cloud Storage buckets for images (proof photos, profile pics, item photos). Enable FCM for push notifications.","- Storage bucket created with folder structure
+- Storage security rules (authenticated uploads only)
+- FCM enabled, APNs key uploaded for iOS
+- Android FCM config added","- Upload test file via Firebase console
+- Verify storage rules block unauthenticated access
+- FCM test message sends successfully",2,2,,Not Started
+M0.3,0,Initialize React Native project,"Create React Native project (Expo managed or bare). Configure TypeScript, ESLint, Prettier. Set up path aliases and project structure.","- RN project runs on iOS simulator and Android emulator
+- TypeScript configured with strict mode
+- ESLint + Prettier configured
+- Folder structure: screens/, components/, services/, hooks/, utils/, types/","- npx expo start / react-native run-ios works
+- No TypeScript errors
+- Lint passes",2,3,,Not Started
+M0.3,0,Set up navigation structure,"Configure React Navigation with tab navigator (bottom tabs for Sender and Driver) and stack navigators for each flow. Support RTL.","- Bottom tab navigator with role-based tabs
+- Stack navigators for: Auth, Home, Deliveries, Feed, Chat, Profile, Settings
+- RTL layout support verified
+- Deep linking scaffold","- Navigate through all major screens (placeholder)
+- RTL mode shows correct layout direction
+- Tab bar switches based on user role",2,3,,Not Started
+M0.3,0,Build base component library,"Create reusable UI components: Button, TextInput, Card, Modal, Avatar, Badge, Rating Stars, Status Badge, LoadingIndicator, EmptyState, ErrorState.","- All base components created with props
+- Theme system (colors, typography, spacing)
+- RTL-aware components
+- Storybook or test screen showing all components","- Render each component in test screen
+- Verify RTL layout
+- Theme colors apply correctly",2,4,,Not Started
+M0.3,0,Integrate Google Maps SDK,"Add Google Maps to React Native project. Get API keys, configure for iOS and Android. Create base MapView component.","- Google Maps SDK integrated
+- API key configured for both platforms
+- Base MapView component renders
+- Marker and region components ready","- Map renders on iOS and Android
+- Markers display at coordinates
+- Map responds to gestures",2,3,,Not Started
+M1.1,1,Implement OTP login flow (SMS),"Core authentication: user enters phone number, receives SMS OTP, enters code, gets authenticated. This is the gate to everything — no auth means no app.","- Phone input screen with country code selector
+- OTP verification screen (6-digit code)
+- Firebase Auth phone sign-in working
+- Loading states during OTP send/verify
+- Error handling: invalid number, wrong code, expired code, rate limit","- Enter valid phone → receive SMS → enter code → authenticated
+- Enter wrong code → error message shown
+- Resend OTP after timeout works
+- Invalid phone number shows validation error",1,6,M0.2,Not Started
+M1.1,1,Implement OTP login flow (Email),"Alternative auth path: email link authentication. User enters email, receives magic link or code, gets authenticated.","- Email input screen
+- Email link / OTP verification
+- Firebase Auth email sign-in working
+- Fallback when SMS not available","- Enter email → receive link/code → verify → authenticated
+- Invalid email shows error
+- Email resend works",2,4,M0.2,Not Started
+M1.1,1,Implement auth state persistence,"Persist authentication state so users don't need to re-login. Handle token refresh, session expiry, and logout.","- Auth state persisted across app restarts
+- Token auto-refresh working
+- Logout clears session
+- Deep link to login if session expired","- Close app, reopen → still logged in
+- Logout → returns to login screen
+- After 1 hour → still authenticated (token refreshed)",1,3,M0.2,Not Started
+M1.2,1,Build registration form screen,"One-time registration for new users. All required fields from spec. Multi-step form for better UX. Validation on each step.","- Multi-step registration form
+- All fields: name, phone, email, city, role, profile photo, ID/license photo
+- Field validations per spec (name 2-60 chars, phone format, etc.)
+- Terms + privacy consent checkbox (required)
+- Progress indicator","- Fill all fields correctly → proceeds to next step
+- Skip required field → validation error shown
+- Phone format validation works for Israeli + international
+- Terms unchecked → cannot proceed",1,8,"M1.1,M0.3",Not Started
+M1.2,1,Implement profile photo upload,"Profile photo upload from camera or gallery. Resize/compress before upload. Default avatar if none provided.","- Camera capture option
+- Gallery selection option
+- Image resize/compress before upload
+- Upload to Cloud Storage
+- Default avatar for no-photo users","- Take photo → preview → upload → shown in profile
+- Select from gallery → same flow
+- Skip photo → default avatar shown
+- Large image compressed before upload",2,4,M0.2,Not Started
+M1.2,1,Implement KYC-Light (ID/license upload),"Upload ID card or driver license photo for admin verification. Camera or gallery import. Stored securely.","- Photo capture/import for ID document
+- Stored in Cloud Storage with user reference
+- KYC status field on user profile: pending/approved/rejected
+- Admin can view uploaded document","- Upload ID photo → stored with correct user reference
+- User profile shows KYC status
+- Admin panel shows uploaded document",2,4,M0.2,Not Started
+M1.2,1,Build profile view and edit screens,"User profile screen showing all details, rating, completed count. Edit capability for modifiable fields.","- Profile screen with all user data
+- Average rating display (stars)
+- Completed deliveries/trips count
+- Join date
+- Edit screen for modifiable fields (name, city, photo)","- Profile shows correct data
+- Edit name → saved → profile updated
+- Rating displays correctly
+- Completed count matches actual deliveries",2,4,M1.2,Not Started
+M1.3,1,Design and implement Firestore data models,"Define all Firestore collections and document schemas. This is the data backbone — users, deliveries, chats, ratings, reports, admin actions. Includes TypeScript interfaces.","- Users collection with all fields
+- Deliveries collection with all listing fields + status + participants
+- Chats collection with messages subcollection
+- Ratings collection
+- Reports collection
+- Admin actions collection
+- TypeScript interfaces for all models
+- Firestore indexes for common queries","- Create user document → all fields stored correctly
+- Create delivery → all listing fields + metadata stored
+- Query deliveries by status + location → returns results
+- TypeScript types match Firestore structure",1,8,"M1.2,M0.2",Not Started
+M1.3,1,Set up Firestore composite indexes,"Create composite indexes for queries: deliveries by status+geohash, user deliveries by userId+status, chats by deliveryId+timestamp, etc.","- All required composite indexes deployed
+- Query performance acceptable
+- No index errors in logs","- Run all planned queries → no missing index warnings
+- Feed query returns sorted results efficiently
+- Chat messages ordered by timestamp",2,2,M1.3,Not Started
+M1.4,1,Implement Firestore security rules,"Write security rules for all collections. Users can read/write own data, drivers see available deliveries, admins have elevated access.","- Users: read own, write own, admin read all
+- Deliveries: read by participants + drivers (if active), write by owner/participants
+- Chats: read/write by delivery participants only
+- Ratings: create by participants, read by all
+- Admin overrides for admin role","- Authenticated user reads own profile → success
+- User reads another user's profile → limited fields only
+- Driver reads active delivery feed → success
+- Non-participant reads chat → denied
+- Admin reads any document → success",1,6,M1.3,Not Started
+M1.4,1,Build Cloud Functions scaffold,"Set up Cloud Functions project with TypeScript. Create function structure: auth triggers, Firestore triggers, HTTP endpoints. Deploy pipeline.","- Cloud Functions project with TypeScript
+- Function groups: auth/, delivery/, chat/, notification/, admin/
+- Shared utils: validation, notifications, timestamps
+- Local emulator working
+- Deploy to dev project","- Deploy functions → no errors
+- Emulator runs all functions locally
+- TypeScript compiles cleanly",2,4,M0.2,Not Started
+M1.4,1,Implement RBAC utility functions,"Create role-based access control utilities for Cloud Functions. Validate user roles (sender/driver/admin) in function calls.","- getRoleFromToken() utility
+- requireRole() middleware for HTTP functions
+- isAdmin() check
+- Role validation in Firestore triggers","- Function called by sender with driver-only access → rejected
+- Admin function called by non-admin → rejected
+- Correct role → function executes",1,3,M1.4,Not Started
+M1.5,2,Build auth flow screens (complete),"Polish the auth flow: splash screen, welcome/onboarding slides, phone/email selection, OTP entry, registration routing.","- Splash screen with logo
+- Welcome screen with 2-3 onboarding slides
+- Auth method selection (phone/email)
+- OTP entry with auto-fill support
+- Route to registration if new user, home if returning","- Cold start → splash → welcome (first time) → auth → home
+- Returning user → splash → home (auto-login)
+- New user → splash → welcome → auth → registration → home",2,6,"M1.1,M0.3",Not Started
+M1.5,2,Implement global state management,"Set up state management for auth state, user profile, active deliveries, and notifications. React Context or Zustand.","- Auth context with user state
+- User profile context
+- Active deliveries state
+- Notification badge count
+- Persistent storage for offline cache","- Login → user state populated
+- Profile update → state reflects immediately
+- Delivery status change → state updates via listener",2,4,M0.3,Not Started
+M1.5,2,Build Firebase service layer,"Create service abstraction layer for all Firebase operations: auth, Firestore CRUD, Storage upload, FCM token management.","- AuthService: login, logout, getUser, onAuthChange
+- FirestoreService: CRUD with type safety
+- StorageService: upload, getURL, delete
+- FCMService: getToken, onMessage, onNotificationOpen","- Call AuthService.login() → Firebase auth triggered
+- Call FirestoreService.getDeliveries() → typed results
+- Call StorageService.upload() → file uploaded, URL returned",2,6,M0.2,Not Started
+M1.5,2,Implement error boundary and crash handling,"Global error boundary for React Native. Graceful error screens. Crash reporting setup.","- Error boundary component wrapping app
+- Fallback error screen with retry
+- Unhandled promise rejection handling
+- Console error logging (dev) / crash reporting (prod)","- Throw error in component → error screen shown, not crash
+- Press retry → app recovers
+- Unhandled rejection → caught and logged",2,3,M0.3,Not Started
+M1.6,2,Build home screen (role-based),"Home screen that adapts to user role. Sender sees create delivery CTA, driver sees find deliveries CTA. Greeting with name, social links.","- Role-based layout (sender vs driver)
+- Greeting: 'Hi {name}, glad to see you again'
+- Tagline: 'Connecting people on your way'
+- Primary CTA: 'Create new delivery' (sender) / 'Find nearby deliveries' (driver)
+- Social links: Facebook, Instagram, TikTok","- Login as sender → home shows 'Create new delivery'
+- Login as driver → home shows 'Find nearby deliveries'
+- Name appears in greeting
+- Social links open correct URLs",2,4,"M1.5,M1.2",Not Started
+M1.6,2,Build onboarding flow (first-time users),"First-time user onboarding with 2-3 slides explaining the app. Show only once per user.","- 2-3 onboarding slides with illustrations
+- Skip button
+- Dot navigation
+- Shown only on first launch (persisted flag)","- First launch → onboarding shown
+- Complete or skip → home screen
+- Subsequent launches → straight to home",3,3,M1.5,Not Started
+M2.1,2,Build create listing form,"Full listing creation form for senders. Address autocomplete via Google Places, photo upload, all required fields. Multi-step for better UX.","- All listing fields from spec implemented
+- Google Places autocomplete for addresses
+- Item photo upload (camera/gallery)
+- Date picker: ASAP or future date+time
+- Item type dropdown
+- Size selector (small/medium/large)
+- Price input with ₪ symbol
+- Notes field (optional)
+- Field validation per spec","- Fill all required fields → publish button enabled
+- Missing required field → validation error
+- Address autocomplete suggests real addresses
+- Photo uploads and shows preview
+- Price must be ≥ 1",1,10,"M1.3,M1.5",Not Started
+M2.1,3,Implement listing backend (create/edit/delete),"Cloud Functions and Firestore operations for listing CRUD. Server-side validation. Status initialization.","- createDelivery Cloud Function with validation
+- editDelivery (only if status=New and no driver)
+- deleteDelivery (only if status=New)
+- Initial status set to 'New Delivery'
+- Geohash generated from pickup coordinates","- Create listing → document in Firestore with correct fields
+- Edit listing before driver → success
+- Edit listing after driver assigned → rejected
+- Delete listing → document removed or status set",1,6,M1.4,Not Started
+M2.1,3,Build My Deliveries screen (Sender),"List of sender's deliveries with status, drill-down to details. Cancel, chat, navigate actions.","- List view with item photo, addresses, status badge
+- Drill into delivery: full details, action buttons
+- Cancel button (pre-pickup only)
+- Chat/phone buttons
+- Navigation button (status-dependent)
+- Report driver button","- Sender sees own deliveries with correct statuses
+- Tap delivery → shows full details
+- Cancel pre-pickup delivery → status changes
+- Cancel post-pickup → button disabled/hidden",2,6,"M2.1,M1.5",Not Started
+M2.2,3,Build driver feed screen,"Feed of available deliveries for drivers. Shows item photo, pickup address, destination, price. Filter controls.","- Scrollable feed of available listings
+- Each card: item photo, pickup, destination, price
+- Filter bar: size, city, distance radius
+- Pull-to-refresh
+- Empty state: 'No deliveries found in your area'","- Open feed → shows available listings
+- Apply filter → feed updates
+- No listings → empty state shown
+- Pull down → refreshes feed",1,8,"M1.3,M2.1",Not Started
+M2.2,3,Implement geohash-based radius search,"Backend logic for proximity search. Store driver location with geohash. Query deliveries within configurable radius.","- Geohash library integrated
+- Delivery documents include geohash field
+- Query function: getDeliveriesInRadius(lat, lng, radiusKm)
+- Haversine exact distance filter
+- Configurable radius: 1km/3km/5km","- Query with 3km radius near delivery → found
+- Query with 1km radius far from delivery → not found
+- Results sorted by distance
+- Performance: query returns in < 1 second",1,6,"M1.3,M1.4",Not Started
+M2.2,3,Implement 'I am Interested' action,"Driver clicks 'I'm Interested' — sets delivery to 'Pending Sender Approval', removes from feed, notifies sender.","- Button triggers status change via Cloud Function
+- Delivery removed from general feed
+- Visible only to sender + selected driver
+- Push notification sent to sender
+- Concurrency check: only one driver per delivery","- Click 'Interested' → status changes to 'Pending Sender Approval'
+- Delivery disappears from other drivers' feeds
+- Sender receives push notification
+- Second driver tries → rejected (already has interested driver)",1,4,"M2.2,M1.4",Not Started
+M2.3,3,Implement delivery status state machine (Cloud Function),"The most critical backend component. Cloud Function that validates and executes status transitions. All rules from the contract enforced server-side.","- Transition validation function
+- All 7 statuses with allowed transitions
+- Actor validation (who can trigger which transition)
+- Cancellation rules (blocked after Picked Up)
+- Concurrency locking (one driver per delivery)
+- Timeout logic (72h auto-revert)
+- Each transition triggers: status update, timestamp, actor log
+- Returns error for invalid transitions","- New → Pending (driver) → success
+- New → Picked Up → rejected (invalid transition)
+- Picked Up → Cancelled → rejected (blocked)
+- Pending for 72h → auto-reverts to New
+- Two drivers try to accept → only first succeeds
+- Status change records timestamp + actor",1,12,"M1.4,M2.1",Not Started
+M2.3,3,Build delivery detail screen with status actions,"Delivery detail screen showing all info and status-dependent action buttons. Different view for sender vs driver.","- Full delivery info display
+- Status badge with current state
+- Action buttons change by status and role
+- Sender: approve driver, cancel, view map, chat
+- Driver: picked up, delivered, cancel, navigate, chat
+- Timeline of status changes visible","- Sender sees 'Approve' button when pending
+- Driver sees 'Picked Up' button when waiting
+- After pickup, cancel button hidden
+- Timeline shows all status changes with timestamps",1,8,M2.3,Not Started
+M2.4,4,Implement driver location broadcasting,"Driver app broadcasts location at throttled intervals when on active delivery. Stored in Firestore with geohash.","- Location updates at configurable interval (e.g., 10-30 seconds)
+- Stored: lat, lng, geohash, heading, speed, updatedAt
+- Throttled to prevent excessive writes
+- Battery optimization (significant change filter)
+- Stop broadcasting when delivery completed","- Start delivery → location updates appear in Firestore
+- Updates every ~15 seconds during active delivery
+- Delivery completed → updates stop
+- Battery usage reasonable",1,6,"M2.3,M0.3",Not Started
+M2.4,4,Build live map tracking view,"Map screen showing both sender and driver positions. Route visualization. Status-based display states.","- Google Maps with both party markers
+- Driver position updates in real-time
+- Route line between pickup/destination
+- Status-based markers (pickup point, destination, current)
+- 'Location unavailable' fallback
+- Map auto-centers on relevant area","- Open tracking → see both markers on map
+- Driver moves → marker updates in real-time
+- GPS disabled → 'Location unavailable' message
+- Route line shows between points",1,8,"M2.4,M0.3",Not Started
+M2.4,4,Implement navigation deep links,"Launch Google Maps / Waze / Apple Maps with destination coordinates from delivery details.","- Navigation button in delivery details
+- Option to choose: Google Maps, Waze, Apple Maps
+- Deep link opens native app with destination
+- Status-dependent: pickup address or destination address","- Tap navigate → opens Google Maps/Waze with correct destination
+- During 'Waiting for Pickup' → navigates to pickup address
+- During 'Picked Up' → navigates to destination",3,3,M0.3,Not Started
+M2.5,4,Build real-time chat screen,"1:1 chat between sender and driver per delivery. Real-time messaging with Firestore listeners. Delivery info header.","- Chat screen with message bubbles
+- Real-time message sync (Firestore onSnapshot)
+- Delivery thumbnail + status in header
+- Phone call shortcut button
+- Keyboard handling and scroll behavior
+- Message timestamps","- Send message → appears for both parties instantly
+- Open chat → see all previous messages
+- New message from other party → appears in real-time
+- Phone button → opens dialer with counterpart number",1,10,"M1.3,M2.3",Not Started
+M2.5,4,Implement system messages in chat timeline,"Automatic system messages for every status change, even without user conversation. Timestamps and actor info.","- System message entries in chat for each status change
+- Format: status change description + timestamp + actor
+- Visual distinction from user messages
+- Hebrew message templates per spec","- Status changes to 'Pending' → system message in chat
+- Status changes to 'Approved' → system message
+- Status changes to 'Picked Up' → system message
+- Status changes to 'Delivered' → system message",1,4,M2.3,Not Started
+M2.5,4,Implement chat image upload,"Image upload in chat from camera or gallery. Compress before upload. Cloud Storage with delivery reference.","- Camera capture button in chat
+- Gallery selection button
+- Image compression before upload
+- Upload to Cloud Storage
+- Image preview in chat bubble
+- Upload progress indicator","- Take photo in chat → uploaded → preview shown
+- Select from gallery → same flow
+- Large image → compressed before upload
+- Both parties see the image",2,4,"M2.5,M0.2",Not Started
+M2.5,4,Implement proof system (pickup/delivery/payment),"Mandatory proof image uploads for status transitions. Proof of Pickup required for 'Picked Up', Proof of Delivery for 'Delivered'. Payment proof optional.","- Proof upload screen triggered on status action
+- Cannot complete Picked Up without proof image
+- Cannot complete Delivered without proof image
+- Proof of Payment option for sender
+- Metadata stored: deliveryId, uploadedBy, proofType, timestamp
+- Proof images visible in chat as system entries
+- Non-deletable by users","- Driver marks 'Picked Up' → must upload photo first
+- Skip photo → cannot complete status change
+- Upload photo → status change completes
+- Proof visible to both parties in chat timeline
+- Users cannot delete proof images",1,6,"M2.5,M2.3",Not Started
+M2.6,4,Implement Cloud Functions push notification triggers,"Server-side push triggers for all 8 notification events from the push matrix. Cloud Functions triggered by Firestore writes.","- Cloud Function for each event type
+- Firestore trigger on delivery status changes
+- Firestore trigger on new chat messages
+- FCM message construction with title/body/deep link
+- Geo-targeted push for new listings (radius query)
+- Basic deduplication for same listing","- Status changes → push sent to correct recipient(s)
+- New chat message → push to counterpart
+- New listing → push to drivers within radius
+- Duplicate notifications prevented for same event",1,10,"M1.4,M2.3",Not Started
+M2.6,4,Implement FCM client integration,"Receive and handle push notifications on mobile. Permission request, token management, notification tap handling, deep links.","- FCM permission request on first launch
+- Token stored in user document
+- Foreground notification display
+- Background notification handling
+- Notification tap → deep link to relevant screen
+- Badge count management","- Grant notification permission → token saved
+- Receive push while app open → in-app notification shown
+- Receive push while app closed → system notification
+- Tap notification → opens correct screen (delivery/chat/rating)",1,6,"M0.3,M0.2",Not Started
+M2.6,4,Implement in-app notification fallback,"When push notification is not delivered (OS restrictions), update in-app badge/indicator on next app open.","- Notification state synced from Firestore
+- Badge count on tab bar
+- Notification indicator on relevant screens
+- Updates on app foreground/resume","- Push blocked by OS → badge still shows on next open
+- Clear notification → badge decrements
+- All pending notifications visible in-app",2,4,M2.6,Not Started
+M2.7,5,Build payment confirmation UI,"Payment section in delivery details. Deep links to Bit/PayBox/bank. Sender marks 'Payment Sent', driver marks 'Payment Received'.","- Payment status section in delivery details
+- Visual badge: Pending → Sent → Confirmed → Completed
+- 'Pay via Bit' deep link button
+- 'Pay via PayBox' deep link button
+- 'Bank Transfer' option
+- 'Payment Sent' button for sender
+- 'Payment Received' button for driver","- After 'Delivered' → payment section visible
+- Tap 'Pay via Bit' → opens Bit app
+- Sender marks 'Payment Sent' → status updates
+- Driver marks 'Payment Received' → status updates
+- Both confirmed → 'Completed & Paid'",1,6,M2.3,Not Started
+M2.7,5,Implement payment confirmation backend,"Cloud Function handling payment confirmations. Triggers Completed & Paid status. Logs in timeline. Push notifications.","- confirmPayment Cloud Function
+- Validates actor (sender sends, driver receives)
+- Stores confirmation with timestamp + actor
+- When both confirm → auto-transition to 'Completed & Paid'
+- System message in chat for each confirmation
+- Push notification to counterpart","- Sender confirms → stored, push sent to driver
+- Driver confirms → stored, push sent to sender
+- Both confirmed → status changes to 'Completed & Paid'
+- Confirmation logged in chat timeline",1,4,"M2.3,M1.4",Not Started
+M2.8,5,Build admin panel authentication,"Web-based admin panel with secure login. Only admin role users can access.","- Web app (React or Next.js)
+- Firebase Auth integration
+- Admin role check on login
+- Redirect non-admin users
+- Session management","- Admin user logs in → dashboard shown
+- Non-admin logs in → access denied message
+- Session persists across page refresh",1,4,"M1.4,M0.1",Not Started
+M2.8,5,Build admin dashboard,"Dashboard showing key metrics: total users, active deliveries, deliveries this week, acceptance rate, active reports.","- Dashboard with metric cards
+- Real-time data from Firestore
+- Charts: deliveries/week trend, user growth
+- Quick links to management screens","- Dashboard loads with current metrics
+- Numbers match actual Firestore data
+- Charts render correctly",2,4,M2.8,Not Started
+M2.8,5,Build admin user management,"User listing with search, filter, view profile. Suspend, block, verify, restrict users.","- User list table with pagination
+- Search by name, phone, email
+- Filter by role, KYC status, blocked status
+- User detail: full profile, rating, deliveries, reports, KYC document
+- Actions: suspend, block, unblock, verify, restrict
+- All actions logged in audit trail","- Search user by phone → found
+- View user detail → shows all fields + KYC document
+- Block user → status changes, audit logged
+- Suspended user cannot login",1,8,M2.8,Not Started
+M2.8,5,Build admin delivery management,"Delivery listing with search, timeline view. Status override, force cancel, resolve. Proof and payment viewers.","- Delivery list table with filters (status, date, city)
+- Delivery detail: full timeline, status logs, payment logs
+- Proof image viewer (pickup/delivery/payment)
+- Admin override: change status manually
+- Force cancel delivery
+- Mark as resolved
+- All overrides logged in audit trail","- View delivery timeline → all status changes shown
+- View proof images → images display correctly
+- Override status → changes, audit logged
+- Force cancel → delivery cancelled, notifications sent",1,8,M2.8,Not Started
+M2.8,5,Build admin report & moderation tools,"Report management: view user reports, add admin notes, track moderation history. Rating/comment moderation.","- Report list with filters (type, status, date)
+- 5+ predefined report types
+- Admin notes per user/delivery
+- Remove abusive ratings/comments
+- Moderation action history (audit trail)
+- Report status: new, investigating, resolved","- View reports → list with correct types
+- Add admin note → saved and visible
+- Remove abusive comment → hidden from users
+- All moderation actions in audit trail",2,6,M2.8,Not Started
+M3.1,5,Build rating prompt and submission UI,"After delivery reaches 'Delivered', prompt both parties to rate. In-app screen + triggered by push notification.","- Rating screen: 1-5 star selector + optional comment (300 chars)
+- Triggered after 'Delivered' status
+- Push notification: 'Please rate your delivery'
+- Can rate later from My Deliveries / My Trips
+- One-time submission (cannot edit after)","- Delivery completed → rating prompt appears
+- Select stars + add comment → submit → saved
+- Try to rate again → 'Already rated' message
+- Skip → can rate later from personal screen",2,6,M2.7,Not Started
+M3.1,5,Implement rating backend and display,"Cloud Function for rating storage. Calculate user average. Display ratings on profiles and listings.","- createRating Cloud Function with validation
+- One rating per user per delivery enforced
+- User aggregate: average stars + total count updated on write
+- Rating display on user profile
+- Rating display on listing/delivery details","- Submit rating → stored in ratings collection
+- Try duplicate → rejected
+- User profile → shows updated average
+- Listing shows counterpart rating",2,4,"M1.4,M1.3",Not Started
+M3.2,6,Implement cancellation logic (complete),"Full cancellation flow with all edge cases. Status revert, feed restoration, notifications, timeline logging.","- Cancel button for both sender and driver (pre-pickup only)
+- Status reverts to 'New Delivery' (unless sender deletes)
+- Listing returns to driver feed
+- Push notification to counterpart
+- System message in chat: who cancelled + when
+- Cancel blocked after 'Picked Up'","- Cancel during 'Pending' → reverts to 'New', back in feed
+- Cancel during 'Waiting for Pickup' → same behavior
+- Attempt cancel after 'Picked Up' → blocked
+- Counterpart receives push + chat message",1,6,M2.3,Not Started
+M3.3,6,Build interstitial ad infrastructure,"Configurable launch screen supporting image/video content. Server-side targeting. Admin toggle. Disabled for launch.","- Interstitial screen component
+- Image/video display support
+- Configurable duration + skip button
+- Click-through link (external/in-app)
+- Server-side targeting rules (role, user flag, group)
+- Admin panel activation/deactivation
+- Disabled by default in production","- Enable in admin → interstitial shows on app launch
+- Disable → no interstitial
+- Skip button works
+- Click-through opens correct URL
+- Targeting by role works (only drivers see it, etc.)",3,6,M1.5,Not Started
+M3.4,6,Integrate analytics events,"Implement all 11 analytics events from Annex C using GA4 or Amplitude SDK.","- Analytics SDK integrated (GA4 or Amplitude)
+- All events tracked: sign_up, login_success, create_listing, publish_listing, view_listing, accept_listing, chat_opened, message_sent, delivery_done, rate_sent, share_app
+- Correct parameters for each event
+- Events fire in both debug and production","- Sign up → sign_up event logged with method + country
+- Create listing → create_listing event with item_type
+- All 11 events verified in analytics dashboard",3,4,M1.5,Not Started
+M3.5,6,Implement loading states across all screens,"Add loading indicators for all data fetch operations. Disable action buttons during critical operations.","- Loading spinner/skeleton for feed, details, chat, profile
+- Disabled buttons during status updates, publish, payment confirmation
+- Consistent loading component usage","- Open feed → loading indicator while fetching
+- Publish listing → button disabled during submit
+- Status update → button disabled until confirmed",2,4,"M2.4,M2.5,M2.6",Not Started
+M3.5,6,Implement empty states across all screens,"Proper empty state messaging for all list views when no data exists.","- Driver Feed: 'No deliveries found in your area' + change radius / refresh
+- My Trips: 'No active deliveries' + CTA
+- My Deliveries: 'No active deliveries' + CTA
+- Chat: empty state when no messages
+- Each with appropriate illustration or icon","- New driver with no nearby deliveries → empty state shown
+- New sender with no deliveries → empty state + 'Create delivery' CTA
+- Empty chat → appropriate message shown",2,3,"M2.2,M2.5",Not Started
+M3.5,6,Implement offline and error handling,"Graceful degradation when offline. Error states with retry. No duplicate submissions.","- Network state detection
+- Offline banner/indicator
+- Critical actions blocked with clear message when offline
+- Error state screens with retry button
+- Idempotent request handling (prevent double-tap)
+- Retry logic for transient failures","- Turn off network → offline indicator shown
+- Try to publish listing offline → blocked with message
+- Status update fails → error + retry button
+- Double-tap action button → only one request processed",1,6,"M2.4,M2.5,M2.6",Not Started
+M3.5,6,Implement GPS/location permission handling,"Handle GPS denied, disabled, or unavailable states gracefully across the app.","- Location permission request with explanation
+- GPS denied: manual city selection for driver feed
+- Publishing: requires address regardless of GPS (autocomplete)
+- Tracking: 'Location unavailable' without blocking other flows
+- Re-prompt option in settings","- Deny GPS → driver feed shows manual city selector
+- GPS off during tracking → 'Location unavailable' shown
+- Chat and status changes still work without GPS
+- Settings shows option to enable location",2,4,"M2.4,M2.2",Not Started
+M3.6,6,P0/P1 bug triage and fixing sprint,"Dedicated bug-fixing period. Address all P0 critical and P1 high-severity issues found during development and internal testing.","- All P0 bugs resolved
+- All P1 bugs resolved or documented with workaround
+- No app crashes on core flows
+- Performance acceptable on target devices","- End-to-end flow completes without errors
+- No crashes in 30 minutes of active use
+- All status transitions work correctly
+- Push notifications deliver reliably",1,16,"M3.1,M3.2,M3.5,M2.8",Not Started
+M3.6,6,Performance optimization,"Optimize app startup time, list rendering, image loading, and Firestore query efficiency.","- Home screen loads in < 2 seconds on 4G
+- Feed scrolling smooth (60fps)
+- Images lazy-loaded with placeholders
+- Firestore queries optimized (no unnecessary reads)","- Measure startup time → under 2 seconds
+- Scroll feed rapidly → no jank
+- Large images load progressively
+- Firebase usage dashboard shows efficient reads",2,4,M3.6,Not Started
+M3.7,6,Migrate existing Glide users,"Export user data from existing Glide-based app. Transform and import into Firestore. Validate and communicate to users.","- Export script for Glide user data
+- Data mapping: Glide fields → Firestore schema
+- Import script with validation
+- Reconciliation report (imported vs failed)
+- User communication plan (email/SMS about new app)","- Export Glide data → CSV/JSON
+- Import to Firestore → all users created
+- Validate: user count matches
+- Users can login to new app with existing phone/email",2,6,"M1.3,M1.2",Not Started
+M4.1,7,Production environment configuration,"Set up production Firebase/GCP project with proper security, monitoring, and backup.","- Production Firebase project fully configured
+- Production security rules deployed
+- Firestore backup schedule configured
+- GCP monitoring dashboards
+- Alerting for errors, high usage, billing
+- Environment variables set correctly","- Production project accessible
+- Security rules prevent unauthorized access
+- Backup runs on schedule
+- Alerts trigger on test conditions",1,4,M3.6,Not Started
+M4.1,7,Production build configuration,"Build production-ready iOS and Android builds with correct signing and environment config.","- iOS: production certificate + provisioning profile
+- Android: production keystore + signing config
+- Environment pointing to production Firebase
+- Debug tools disabled
+- App version and build number set","- iOS build → IPA signed with distribution certificate
+- Android build → signed AAB
+- Both connect to production Firebase
+- No debug menus or console logs in production",1,4,M4.1,Not Started
+M4.2,7,Submit to Apple App Store,"Prepare and submit iOS app to App Store Connect. All metadata, screenshots, privacy labels, review notes.","- App Store Connect listing complete
+- Screenshots for all required device sizes
+- App description (Hebrew + English)
+- Privacy nutrition labels filled
+- Test account credentials in review notes
+- Demo video if required
+- Build uploaded and submitted","- Build uploaded to App Store Connect
+- All required metadata filled
+- Review notes include test account
+- App submitted for review",1,4,"M4.1,M4.4",Not Started
+M4.3,7,Submit to Google Play Store,"Prepare and submit Android app to Google Play Console. Listing, screenshots, content rating, review.","- Play Console listing complete
+- Screenshots and feature graphic
+- App description (Hebrew + English)
+- Content rating questionnaire completed
+- Test account in review notes
+- AAB uploaded and submitted","- AAB uploaded to Play Console
+- Store listing complete with all required fields
+- Content rating approved
+- App submitted for review",1,4,"M4.1,M4.4",Not Started
+M4.4,7,Prepare store compliance materials,"Create Privacy Policy, Terms of Service pages. Permission usage descriptions. Native capabilities verification.","- Privacy Policy page (hosted URL)
+- Terms of Service page (hosted URL)
+- Permission descriptions: notifications, location, camera, photos
+- Native capabilities: push, deep links, share (for Apple)
+- iOS 13+ / Android 7+ compatibility verified","- Privacy Policy accessible at URL
+- ToS accessible at URL
+- All permissions have user-facing descriptions
+- App uses native features (not 'wrapped website')",1,4,M4.1,Not Started
+M4.5,7,Production handover and documentation,"Hand over all access, document architecture, and create runbook for operations.","- GitHub repo access transferred to client
+- Firebase/GCP project access shared
+- Architecture documentation (markdown)
+- Deployment runbook
+- Common operations guide
+- Environment variable documentation
+- Final sign-off meeting","- Client has GitHub access
+- Client has Firebase console access
+- Documentation covers: how to deploy, how to monitor, how to handle common issues
+- Sign-off document signed",2,6,"M4.2,M4.3",Not Started
