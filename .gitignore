@@ -55,10 +55,10 @@ build/
 # Test
 coverage/
 
-# Confidential docs — initDocs are spec docs, not tracked
+# Confidential docs — Docs/ is client-provided (logo, mockups, DB, specs), NOT tracked
+Docs/
+docs/
 initDocs/
-Docs/initDocs/
-# NOTE: docs/ (lowercase) IS tracked — it contains executed sprint logs and credentials
 
 # Secrets
 serviceAccountKey*.json
