@@ -1,0 +1,110 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the requesting user is an admin
+    function isAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper: check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: check if user owns the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // ───────────────────────────────────────────────
+    // Users
+    // ───────────────────────────────────────────────
+    match /users/{userId} {
+      // Authenticated users can read their own profile; admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can write their own profile only (not role field)
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']);
+
+      // Only admins can delete users or change role/status
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Deliveries
+    // ───────────────────────────────────────────────
+    match /deliveries/{deliveryId} {
+      // Sender can create a delivery
+      allow create: if isAuthenticated()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.status == 'new';
+
+      // Sender can read their own deliveries
+      allow read: if isAuthenticated()
+        && resource.data.senderId == request.auth.uid;
+
+      // Driver can read available deliveries (status == 'new') or assigned to them
+      allow read: if isAuthenticated()
+        && (resource.data.status == 'new' || resource.data.driverId == request.auth.uid);
+
+      // Admins can read all deliveries
+      allow read: if isAdmin();
+
+      // Status updates only via Cloud Functions (no direct client writes)
+      allow update: if false;
+
+      // Admins can delete deliveries
+      allow delete: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Chats
+    // ───────────────────────────────────────────────
+    match /chats/{chatId} {
+      // Only participants can read/write
+      allow read, write: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+
+      allow create: if isAuthenticated()
+        && request.auth.uid in request.resource.data.participants;
+
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated()
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+    }
+
+    // ───────────────────────────────────────────────
+    // Ratings
+    // ───────────────────────────────────────────────
+    match /ratings/{ratingId} {
+      // Authenticated users can create a rating
+      allow create: if isAuthenticated()
+        && request.resource.data.fromUserId == request.auth.uid;
+
+      // Ratings are publicly readable
+      allow read: if true;
+
+      // No updates or deletes
+      allow update, delete: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Reports
+    // ───────────────────────────────────────────────
+    match /reports/{reportId} {
+      // Authenticated users can create reports
+      allow create: if isAuthenticated()
+        && request.resource.data.reporterId == request.auth.uid;
+
+      // Only admins can read and manage reports
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "mooviz",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "functions",
+    "shared"
+  ],
+  "scripts": {
+    "dev:mobile": "turbo run dev --filter=@mooviz/mobile",
+    "dev:admin": "turbo run dev --filter=@mooviz/admin",
+    "dev:functions": "turbo run dev --filter=@mooviz/functions",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:admin": "firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

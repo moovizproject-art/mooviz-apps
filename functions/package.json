@@ -1,0 +1,33 @@
+{
+  "name": "@mooviz/functions",
+  "version": "1.0.0",
+  "description": "Firebase Cloud Functions for MOOVIZ delivery platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "deploy": "firebase deploy --only functions",
+    "lint": "eslint --ext .ts src/",
+    "lint:fix": "eslint --ext .ts src/ --fix",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "@mooviz/shared": "file:../shared",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-import": "^2.29.0",
+    "typescript": "^5.3.0"
+  },
+  "license": "UNLICENSED"
+}

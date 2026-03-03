@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Max file size: 5MB
+    function maxSize() {
+      return 5 * 1024 * 1024;
+    }
+
+    // Only image content types
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ───────────────────────────────────────────────
+    // Profile Photos
+    // Owner can write, public read
+    // ───────────────────────────────────────────────
+    match /profiles/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
+    // ───────────────────────────────────────────────
+    // Delivery Proof Photos
+    // Participants (sender/driver) can write, admin can read
+    // ───────────────────────────────────────────────
+    match /deliveries/{deliveryId}/proof/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && isImage()
+        && request.resource.size < maxSize();
+      allow read: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // KYC Documents
+    // Owner can write, admin can read
+    // ───────────────────────────────────────────────
+    match /kyc/{userId}/{allPaths=**} {
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+      allow read: if isAuthenticated()
+        && (request.auth.uid == userId || isAdmin());
+    }
+  }
+}

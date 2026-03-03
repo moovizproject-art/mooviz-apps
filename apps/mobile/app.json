@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "MOOVIZ",
+    "slug": "mooviz",
+    "scheme": "mooviz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A73E8"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mooviz.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "MOOVIZ needs your location to find nearby deliveries.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "MOOVIZ needs your location to track deliveries in progress.",
+        "NSCameraUsageDescription": "MOOVIZ needs camera access for proof-of-delivery photos.",
+        "NSPhotoLibraryUsageDescription": "MOOVIZ needs photo access to attach item images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A73E8"
+      },
+      "package": "com.mooviz.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      "expo-image-picker",
+      "expo-notifications",
+      "expo-camera",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": false
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true,
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
