@@ -1,8 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
-import { COLORS } from '../constants/colors';
-
 interface AvatarCircleProps {
   name: string;
   photoUrl?: string | null;

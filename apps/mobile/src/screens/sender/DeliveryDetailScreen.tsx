@@ -15,7 +15,6 @@ import { useDelivery } from '../../hooks/useDelivery';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { STATUS_CONFIG } from '../../constants/statusConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 

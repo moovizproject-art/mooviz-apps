@@ -10,7 +10,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useRoute } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -21,17 +21,19 @@ import { formatTime } from '../../utils/formatters';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { EmptyState } from '../../components/EmptyState';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
+type ChatRoomParams = RootStackParamList['ChatRoom'];
 
 /**
  * ChatScreen — מסך צ׳אט
  * 1:1 real-time chat with image upload support.
  * צ׳אט בזמן אמת עם אפשרות העלאת תמונות
  */
-export function ChatScreen({ route }: Props): React.JSX.Element {
-  const { chatId, recipientName } = route.params ?? { chatId: '', recipientName: '' };
+export function ChatScreen(): React.JSX.Element {
+  const route = useRoute();
+  const params = (route.params as ChatRoomParams) ?? { chatId: '', recipientName: '' };
+  const { chatId, recipientName } = params;
   const { currentUser } = useAuth();
-  const { messages, sendMessage, sendImage, isLoading } = useChat(chatId);
+  const { messages, sendMessage, sendImage } = useChat(chatId);
 
   const [inputText, setInputText] = useState<string>('');
   const flatListRef = useRef<FlatList<ChatMessage>>(null);

@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { I18nManager, LogBox } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
 
 import { AuthProvider } from './src/hooks/useAuth';
-import { RootNavigator } from './src/navigation/RootNavigator';
+import { RootNavigator, RootStackParamList } from './src/navigation/RootNavigator';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 // Force RTL layout for Hebrew-first UI
@@ -21,13 +21,17 @@ LogBox.ignoreLogs([
   'Setting a timer for a long period',
 ]);
 
-const linking = {
+const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['mooviz://', 'https://mooviz.app'],
   config: {
     screens: {
-      Login: 'login',
-      Register: 'register',
-      OTPVerification: 'otp',
+      AuthStack: {
+        screens: {
+          Login: 'login',
+          Register: 'register',
+          OTPVerification: 'otp',
+        },
+      },
       SenderTabs: {
         screens: {
           Home: 'home',
@@ -44,6 +48,10 @@ const linking = {
           Profile: 'profile',
         },
       },
+      ChatRoom: 'chat-room/:chatId',
+      SenderDeliveryDetail: 'delivery/:deliveryId',
+      DriverDeliveryDetail: 'driver-delivery/:deliveryId',
+      Rating: 'rating/:deliveryId',
     },
   },
 };

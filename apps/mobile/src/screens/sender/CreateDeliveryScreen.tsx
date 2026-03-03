@@ -17,7 +17,6 @@ import { COLORS } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { MapPicker } from '../../components/MapPicker';
-import { IMAGE_MAX_SIZE } from '../../constants/config';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateDelivery'>;
 

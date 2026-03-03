@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import firestore from '@react-native-firebase/firestore';
 
 import { useFirestore } from './useFirestore';

@@ -6,10 +6,9 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Slider from '@react-native-community/slider';
 
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import { DriverTabScreenProps } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useLocation } from '../../hooks/useLocation';
@@ -18,7 +17,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { MAX_DELIVERY_RADIUS_KM } from '../../constants/config';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'DriverTabs'>;
+type Props = DriverTabScreenProps<'Feed'>;
 
 /**
  * FeedScreen (Driver) — פיד משלוחים זמינים
