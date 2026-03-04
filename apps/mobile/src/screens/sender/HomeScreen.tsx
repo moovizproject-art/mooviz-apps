@@ -7,9 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import { SenderTabScreenProps } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
@@ -17,7 +15,7 @@ import { DeliveryCard } from '../../components/DeliveryCard';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'SenderTabs'>;
+type Props = SenderTabScreenProps<'Home'>;
 
 /**
  * HomeScreen (Sender) — מסך הבית של השולח

@@ -7,16 +7,14 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import { DriverTabScreenProps } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { EmptyState } from '../../components/EmptyState';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'DriverTabs'>;
+type Props = DriverTabScreenProps<'MyJobs'>;
 
 type TabKey = 'active' | 'completed';
 

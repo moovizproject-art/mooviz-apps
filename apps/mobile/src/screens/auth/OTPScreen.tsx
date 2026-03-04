@@ -25,7 +25,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
  * 6-digit OTP verification input.
  * הזנת קוד אימות בן 6 ספרות
  */
-export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
+export function OTPScreen({ route }: Props): React.JSX.Element {
   const { phoneNumber, verificationId } = route.params;
   const { login } = useAuth();
 

@@ -8,21 +8,19 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { RootStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { AvatarCircle } from '../../components/AvatarCircle';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'SenderTabs' | 'DriverTabs'>;
+// ProfileScreen is used in both Sender and Driver tab navigators.
+// No navigation prop needed — auth actions use hooks directly.
 
 /**
  * ProfileScreen — מסך פרופיל
  * View and edit profile info, display ratings.
  * צפייה ועריכת פרטי פרופיל, הצגת דירוגים
  */
-export function ProfileScreen({ navigation }: Props): React.JSX.Element {
+export function ProfileScreen(): React.JSX.Element {
   const { currentUser, logout, updateProfile } = useAuth();
 
   const [isEditing, setIsEditing] = useState<boolean>(false);

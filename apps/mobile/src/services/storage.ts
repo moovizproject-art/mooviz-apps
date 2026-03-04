@@ -5,7 +5,6 @@
  */
 
 import storage from '@react-native-firebase/storage';
-import { IMAGE_MAX_SIZE } from '../constants/config';
 
 // ──────────────────────────────────────────────
 // Upload

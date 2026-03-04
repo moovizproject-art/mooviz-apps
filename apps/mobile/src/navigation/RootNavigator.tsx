@@ -1,6 +1,7 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
+import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 import { useAuth } from '../hooks/useAuth';
@@ -52,15 +53,29 @@ export type DriverTabsParamList = {
 };
 
 export type RootStackParamList = {
-  AuthStack: undefined;
-  SenderTabs: undefined;
-  DriverTabs: undefined;
+  AuthStack: NavigatorScreenParams<AuthStackParamList>;
+  SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
+  DriverTabs: NavigatorScreenParams<DriverTabsParamList>;
   CreateDelivery: undefined;
   SenderDeliveryDetail: { deliveryId: string };
   DriverDeliveryDetail: { deliveryId: string };
   ChatRoom: { chatId: string; recipientName: string };
   Rating: { deliveryId: string; targetUserId: string };
 };
+
+/** Composite props for sender tab screens that navigate to root stack */
+export type SenderTabScreenProps<T extends keyof SenderTabsParamList> =
+  CompositeScreenProps<
+    BottomTabScreenProps<SenderTabsParamList, T>,
+    NativeStackScreenProps<RootStackParamList>
+  >;
+
+/** Composite props for driver tab screens that navigate to root stack */
+export type DriverTabScreenProps<T extends keyof DriverTabsParamList> =
+  CompositeScreenProps<
+    BottomTabScreenProps<DriverTabsParamList, T>,
+    NativeStackScreenProps<RootStackParamList>
+  >;
 
 // ──────────────────────────────────────────────
 // Stack & Tab navigators

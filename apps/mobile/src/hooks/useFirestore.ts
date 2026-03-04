@@ -117,6 +117,7 @@ export function useFirestore<T extends { id: string }>({
           setError(err as Error);
           setIsLoading(false);
         });
+      return undefined;
     }
   }, [collection, enabled, realtime, refreshCounter.current]);
 

@@ -29,11 +29,14 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
-# Environment
+# Environment — actual env files (NOT .env.example)
 .env
 .env.local
 .env.*.local
-*.env
+.env.dev
+.env.staging
+.env.prod
+.env.crm-api
 
 # IDE
 .vscode/
@@ -52,9 +55,10 @@ build/
 # Test
 coverage/
 
-# Confidential docs
-initDocs/
+# Confidential docs — Docs/ is client-provided (logo, mockups, DB, specs), NOT tracked
+Docs/
 docs/
+initDocs/
 
 # Secrets
 serviceAccountKey*.json

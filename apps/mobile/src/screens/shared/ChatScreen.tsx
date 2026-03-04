@@ -10,8 +10,8 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
+import { useRoute } from '@react-navigation/native';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
@@ -21,17 +21,19 @@ import { formatTime } from '../../utils/formatters';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { EmptyState } from '../../components/EmptyState';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
+type ChatRoomParams = RootStackParamList['ChatRoom'];
 
 /**
  * ChatScreen — מסך צ׳אט
  * 1:1 real-time chat with image upload support.
  * צ׳אט בזמן אמת עם אפשרות העלאת תמונות
  */
-export function ChatScreen({ route }: Props): React.JSX.Element {
-  const { chatId, recipientName } = route.params ?? { chatId: '', recipientName: '' };
+export function ChatScreen(): React.JSX.Element {
+  const route = useRoute();
+  const params = (route.params as ChatRoomParams) ?? { chatId: '', recipientName: '' };
+  const { chatId, recipientName } = params;
   const { currentUser } = useAuth();
-  const { messages, sendMessage, sendImage, isLoading } = useChat(chatId);
+  const { messages, sendMessage, sendImage } = useChat(chatId);
 
   const [inputText, setInputText] = useState<string>('');
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
@@ -50,16 +52,16 @@ export function ChatScreen({ route }: Props): React.JSX.Element {
   }, [inputText, chatId, currentUser, sendMessage]);
 
   const handleImagePick = useCallback(async (): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
       quality: 0.7,
     });
 
-    if (!result.canceled && result.assets[0]) {
+    if (!result.didCancel && result.assets?.[0]) {
       await sendImage({
         chatId,
         senderId: currentUser!.uid,
-        imageUri: result.assets[0].uri,
+        imageUri: result.assets[0].uri!,
       });
     }
   }, [chatId, currentUser, sendImage]);

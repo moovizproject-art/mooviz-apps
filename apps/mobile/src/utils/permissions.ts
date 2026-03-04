@@ -1,169 +1,186 @@
 /**
  * Permissions — הרשאות
- * Location, camera, and notification permission helpers.
+ * Location, camera, media, and notification permission helpers.
+ * Uses native PermissionsAndroid + library-specific APIs for bare RN.
  * כלי עיזר להרשאות מיקום, מצלמה והתראות
  */
-
-import * as Location from 'expo-location';
-import * as ImagePicker from 'expo-image-picker';
-import * as Notifications from 'expo-notifications';
-import { Alert, Linking, Platform } from 'react-native';
+import { Alert, Linking, Platform, PermissionsAndroid } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
+import messaging from '@react-native-firebase/messaging';
 
 // ──────────────────────────────────────────────
-// Location permissions
+// Location permissions — הרשאות מיקום
 // ──────────────────────────────────────────────
 
-/**
- * Check if location permission is granted.
- * בדיקה אם הרשאת מיקום אושרה
- */
+/** Check if location permission is granted */
 export async function hasLocationPermission(): Promise<boolean> {
-  const { status } = await Location.getForegroundPermissionsAsync();
-  return status === 'granted';
+  if (Platform.OS === 'ios') {
+    const status = await Geolocation.requestAuthorization('whenInUse');
+    return status === 'granted';
+  }
+  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
 }
 
-/**
- * Request location permission with explanation dialog.
- * בקשת הרשאת מיקום עם הסבר
- */
+/** Request foreground location permission with explanation dialog */
 export async function requestLocationPermission(): Promise<boolean> {
-  const { status: existing } = await Location.getForegroundPermissionsAsync();
-  if (existing === 'granted') return true;
+  if (Platform.OS === 'ios') {
+    const status = await Geolocation.requestAuthorization('whenInUse');
+    if (status !== 'granted') {
+      showPermissionDeniedAlert(
+        'הרשאת מיקום',
+        'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
+      );
+      return false;
+    }
+    return true;
+  }
 
-  const { status } = await Location.requestForegroundPermissionsAsync();
+  // Android
+  const granted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    {
+      title: 'הרשאת מיקום',
+      message: 'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
+      buttonPositive: 'אשר',
+      buttonNegative: 'ביטול',
+    },
+  );
 
-  if (status !== 'granted') {
+  if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
     showPermissionDeniedAlert(
       'הרשאת מיקום',
       'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
-      // MOOVIZ needs location access to find deliveries near you.
     );
     return false;
   }
-
   return true;
 }
 
-/**
- * Request background location permission (for active delivery tracking).
- * בקשת הרשאת מיקום ברקע (למעקב משלוחים פעילים)
- */
+/** Request background location permission (for active delivery tracking) */
 export async function requestBackgroundLocationPermission(): Promise<boolean> {
   const foreground = await requestLocationPermission();
   if (!foreground) return false;
 
-  const { status } = await Location.requestBackgroundPermissionsAsync();
+  if (Platform.OS === 'ios') {
+    const status = await Geolocation.requestAuthorization('always');
+    return status === 'granted';
+  }
 
-  if (status !== 'granted') {
-    showPermissionDeniedAlert(
-      'הרשאת מיקום ברקע',
-      'מעקב משלוחים בזמן אמת דורש הרשאת מיקום ברקע.',
-      // Real-time delivery tracking requires background location permission.
+  // Android 10+ needs separate background permission
+  if (Number(Platform.Version) >= 29) {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+      {
+        title: 'הרשאת מיקום ברקע',
+        message: 'מעקב משלוחים בזמן אמת דורש הרשאת מיקום ברקע.',
+        buttonPositive: 'אשר',
+        buttonNegative: 'ביטול',
+      },
     );
-    return false;
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
 
   return true;
 }
 
 // ──────────────────────────────────────────────
-// Camera permissions
+// Camera permissions — הרשאות מצלמה
 // ──────────────────────────────────────────────
 
-/**
- * Check if camera permission is granted.
- * בדיקה אם הרשאת מצלמה אושרה
- */
+/** Check if camera permission is granted */
 export async function hasCameraPermission(): Promise<boolean> {
-  const { status } = await ImagePicker.getCameraPermissionsAsync();
-  return status === 'granted';
+  if (Platform.OS === 'ios') return true; // Handled by Info.plist prompt
+  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA);
 }
 
-/**
- * Request camera permission.
- * בקשת הרשאת מצלמה
- */
+/** Request camera permission */
 export async function requestCameraPermission(): Promise<boolean> {
-  const { status: existing } = await ImagePicker.getCameraPermissionsAsync();
-  if (existing === 'granted') return true;
+  if (Platform.OS === 'ios') return true; // iOS prompts automatically via Info.plist
 
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  const granted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.CAMERA,
+    {
+      title: 'הרשאת מצלמה',
+      message: 'MOOVIZ צריך גישה למצלמה לצילום הוכחות איסוף ומסירה.',
+      buttonPositive: 'אשר',
+      buttonNegative: 'ביטול',
+    },
+  );
 
-  if (status !== 'granted') {
+  if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
     showPermissionDeniedAlert(
       'הרשאת מצלמה',
       'MOOVIZ צריך גישה למצלמה לצילום הוכחות איסוף ומסירה.',
-      // MOOVIZ needs camera access for pickup/delivery proof photos.
     );
     return false;
   }
-
   return true;
 }
 
-/**
- * Check if media library permission is granted.
- * בדיקה אם הרשאת גלריה אושרה
- */
+/** Check if media/photo library permission is granted */
 export async function hasMediaLibraryPermission(): Promise<boolean> {
-  const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-  return status === 'granted';
+  if (Platform.OS === 'ios') return true;
+  if (Number(Platform.Version) >= 33) {
+    return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
+  }
+  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
 }
 
-/**
- * Request media library permission.
- * בקשת הרשאת גלריה
- */
+/** Request media/photo library permission */
 export async function requestMediaLibraryPermission(): Promise<boolean> {
-  const { status: existing } = await ImagePicker.getMediaLibraryPermissionsAsync();
-  if (existing === 'granted') return true;
+  if (Platform.OS === 'ios') return true;
 
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const permission = Number(Platform.Version) >= 33
+    ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+    : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
 
-  if (status !== 'granted') {
+  const granted = await PermissionsAndroid.request(permission, {
+    title: 'הרשאת גלריה',
+    message: 'MOOVIZ צריך גישה לתמונות שלך לצורך צירוף תמונות פריט.',
+    buttonPositive: 'אשר',
+    buttonNegative: 'ביטול',
+  });
+
+  if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
     showPermissionDeniedAlert(
       'הרשאת גלריה',
       'MOOVIZ צריך גישה לתמונות שלך לצורך צירוף תמונות פריט.',
-      // MOOVIZ needs photo access to attach item images.
     );
     return false;
   }
-
   return true;
 }
 
 // ──────────────────────────────────────────────
-// Notification permissions
+// Notification permissions — הרשאות התראות
 // ──────────────────────────────────────────────
 
-/**
- * Check if notification permission is granted.
- * בדיקה אם הרשאת התראות אושרה
- */
+/** Check if notification permission is granted */
 export async function hasNotificationPermission(): Promise<boolean> {
-  const settings = await Notifications.getPermissionsAsync();
-  return settings.granted;
+  const authStatus = await messaging().hasPermission();
+  return (
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL
+  );
 }
 
-/**
- * Request notification permission.
- * בקשת הרשאת התראות
- */
+/** Request notification permission */
 export async function requestNotificationPermission(): Promise<boolean> {
-  const settings = await Notifications.getPermissionsAsync();
-  if (settings.granted) return true;
+  const hasIt = await hasNotificationPermission();
+  if (hasIt) return true;
 
-  const { granted } = await Notifications.requestPermissionsAsync();
+  const authStatus = await messaging().requestPermission();
+  const granted =
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
   if (!granted) {
     showPermissionDeniedAlert(
       'הרשאת התראות',
       'MOOVIZ צריך לשלוח לך התראות על עדכוני משלוחים והודעות.',
-      // MOOVIZ needs to send you notifications about delivery updates and messages.
     );
     return false;
   }
-
   return true;
 }
 
@@ -171,20 +188,15 @@ export async function requestNotificationPermission(): Promise<boolean> {
 // Helper
 // ──────────────────────────────────────────────
 
-/**
- * Show alert when permission is denied, with option to open settings.
- * הצגת התראה כשהרשאה נדחתה, עם אפשרות לפתוח הגדרות
- */
+/** Show alert when permission is denied, with option to open settings */
 function showPermissionDeniedAlert(title: string, message: string): void {
   Alert.alert(
     title,
     `${message}\n\nניתן לאשר בהגדרות המכשיר.`,
-    // You can grant permission in device settings.
     [
       { text: 'ביטול', style: 'cancel' },
       {
         text: 'פתח הגדרות',
-        // Open settings
         onPress: () => {
           if (Platform.OS === 'ios') {
             Linking.openURL('app-settings:');
