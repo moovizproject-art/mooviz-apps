@@ -29,8 +29,11 @@ export const onUserCreate = onDocumentCreated(
     // Set defaults for fields that may not have been provided
     const defaults: Record<string, unknown> = {};
 
-    if (!data.rating) {
-      defaults.rating = { average: 0, count: 0 };
+    if (!(data as Record<string, unknown>).ratingAsDriver) {
+      defaults.ratingAsDriver = { average: 0, count: 0 };
+    }
+    if (!(data as Record<string, unknown>).ratingAsSender) {
+      defaults.ratingAsSender = { average: 0, count: 0 };
     }
     if (data.completedDeliveries === undefined) {
       defaults.completedDeliveries = 0;
@@ -41,14 +44,23 @@ export const onUserCreate = onDocumentCreated(
     if (!data.kycStatus) {
       defaults.kycStatus = "pending";
     }
-    if (!data.fcmToken) {
-      defaults.fcmToken = "";
+    if (!(data as Record<string, unknown>).fcmTokens) {
+      defaults.fcmTokens = [];
     }
     if (!data.profilePhotoURL) {
       defaults.profilePhotoURL = "";
     }
     if (!data.kycDocumentURL) {
       defaults.kycDocumentURL = "";
+    }
+    if (!(data as Record<string, unknown>).activeMode) {
+      defaults.activeMode = "client";
+    }
+    if ((data as Record<string, unknown>).driverAvailable === undefined) {
+      defaults.driverAvailable = false;
+    }
+    if ((data as Record<string, unknown>).driverUnlocked === undefined) {
+      defaults.driverUnlocked = false;
     }
     if (!data.createdAt) {
       defaults.createdAt = now;
@@ -68,11 +80,11 @@ export const onUserCreate = onDocumentCreated(
         title: "Welcome to MOOVIZ!",
         titleHe: "!MOOVIZ-\u05D1\u05E8\u05D5\u05DB\u05D9\u05DD \u05D4\u05D1\u05D0\u05D9\u05DD \u05DC",
         body:
-          data.role === "driver"
+          (data as Record<string, unknown>).activeMode === "driver"
             ? "Start accepting deliveries in your area. Complete your KYC verification to get started."
             : "Create your first delivery and connect with trusted drivers nearby.",
         bodyHe:
-          data.role === "driver"
+          (data as Record<string, unknown>).activeMode === "driver"
             ? ".\u05D4\u05EA\u05D7\u05D9\u05DC\u05D5 \u05DC\u05E7\u05D1\u05DC \u05DE\u05E9\u05DC\u05D5\u05D7\u05D9\u05DD \u05D1\u05D0\u05D6\u05D5\u05E8 \u05E9\u05DC\u05DB\u05DD. \u05D4\u05E9\u05DC\u05D9\u05DE\u05D5 \u05D0\u05EA \u05D0\u05D9\u05DE\u05D5\u05EA \u05D4-KYC \u05DB\u05D3\u05D9 \u05DC\u05D4\u05EA\u05D7\u05D9\u05DC"
             : ".\u05E6\u05E8\u05D5 \u05D0\u05EA \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7 \u05D4\u05E8\u05D0\u05E9\u05D5\u05DF \u05E9\u05DC\u05DB\u05DD \u05D5\u05D4\u05EA\u05D7\u05D1\u05E8\u05D5 \u05DC\u05E0\u05D4\u05D2\u05D9\u05DD \u05D0\u05DE\u05D9\u05E0\u05D9\u05DD \u05D1\u05E1\u05D1\u05D9\u05D1\u05D4",
         type: "system",
@@ -80,7 +92,7 @@ export const onUserCreate = onDocumentCreated(
         createdAt: now,
       });
 
-    console.log(`User ${userId} created with role '${data.role}'`);
+    console.log(`User ${userId} created with activeMode '${(data as Record<string, unknown>).activeMode || "client"}'`);
   }
 );
 
