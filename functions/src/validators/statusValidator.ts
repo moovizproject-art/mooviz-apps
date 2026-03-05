@@ -2,7 +2,6 @@ import { HttpsError } from "firebase-functions/v2/https";
 import {
   DeliveryStatus,
   UserRole,
-  validateStatusTransition,
   STATUS_TRANSITIONS,
   TRANSITION_ACTORS,
   TERMINAL_STATUSES,
@@ -78,12 +77,11 @@ export function assertIsDriver(
 }
 
 /**
- * Validate that a user has a specific role.
+ * Validate that a user exists and has an active account.
  */
-export async function assertUserRole(
+export async function assertUserActive(
   db: FirebaseFirestore.Firestore,
-  userId: string,
-  expectedRole: UserRole
+  userId: string
 ): Promise<void> {
   const userDoc = await db.collection("users").doc(userId).get();
   if (!userDoc.exists) {
@@ -91,13 +89,28 @@ export async function assertUserRole(
   }
 
   const userData = userDoc.data();
-  if (userData?.role !== expectedRole) {
+  if (userData?.status !== "active") {
     throw new HttpsError(
       "permission-denied",
-      `This action requires '${expectedRole}' role`
+      "Your account is not active"
     );
   }
+}
 
+/**
+ * Validate that a user exists, is active, and has approved KYC.
+ * Required for driver actions (e.g., picking up, delivering).
+ */
+export async function assertDriverApproved(
+  db: FirebaseFirestore.Firestore,
+  userId: string
+): Promise<void> {
+  const userDoc = await db.collection("users").doc(userId).get();
+  if (!userDoc.exists) {
+    throw new HttpsError("not-found", "User not found");
+  }
+
+  const userData = userDoc.data();
   if (userData?.status !== "active") {
     throw new HttpsError(
       "permission-denied",
