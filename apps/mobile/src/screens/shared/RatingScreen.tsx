@@ -10,7 +10,8 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useDelivery } from '../../hooks/useDelivery';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Rating'>;
@@ -24,6 +25,8 @@ const STAR_COUNT = 5;
  */
 export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
   const { deliveryId, targetUserId } = route.params;
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const { submitRating } = useDelivery();
 
   const [rating, setRating] = useState<number>(0);
@@ -32,7 +35,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
 
   const handleSubmit = async (): Promise<void> => {
     if (rating === 0) {
-      Alert.alert('שגיאה', 'יש לבחור דירוג'); // Select a rating
+      Alert.alert('', t('rating.selectRating'));
       return;
     }
 
@@ -44,32 +47,28 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
         rating,
         comment: comment.trim() || undefined,
       });
-      Alert.alert('תודה!', 'הדירוג נשלח בהצלחה', [
-        { text: 'אישור', onPress: () => navigation.goBack() },
+      Alert.alert(t('rating.thanks'), t('rating.ratingSuccess'), [
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-      // Thanks! Rating submitted successfully
     } catch (err) {
-      Alert.alert('שגיאה', 'לא ניתן לשלוח דירוג. נסה שוב.');
+      Alert.alert('', t('rating.ratingError'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         {/* Title */}
-        <Text style={styles.title}>איך היה?</Text>
-        {/* How was it? */}
-        <Text style={styles.subtitle}>דרג את חוויית המשלוח</Text>
-        {/* Rate the delivery experience */}
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{t('rating.howWasIt')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('rating.rateExperience')}</Text>
 
         {/* Star rating */}
-        {/* דירוג כוכבים */}
         <View style={styles.starsRow}>
           {Array.from({ length: STAR_COUNT }, (_, i) => i + 1).map((star) => (
             <TouchableOpacity key={star} onPress={() => setRating(star)} style={styles.starButton}>
-              <Text style={[styles.star, star <= rating && styles.starActive]}>
+              <Text style={[styles.star, { color: colors.border }, star <= rating && styles.starActive]}>
                 {star <= rating ? '\u2605' : '\u2606'}
               </Text>
             </TouchableOpacity>
@@ -78,27 +77,24 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
 
         {/* Rating labels */}
         {rating > 0 && (
-          <Text style={styles.ratingLabel}>
-            {rating === 1 && 'גרוע'}
-            {rating === 2 && 'לא טוב'}
-            {rating === 3 && 'בסדר'}
-            {rating === 4 && 'טוב'}
-            {rating === 5 && 'מצוין!'}
-            {/* Poor / Not good / OK / Good / Excellent! */}
+          <Text style={[styles.ratingLabel, { color: colors.primary }]}>
+            {rating === 1 && t('rating.poor')}
+            {rating === 2 && t('rating.notGood')}
+            {rating === 3 && t('rating.ok')}
+            {rating === 4 && t('rating.good')}
+            {rating === 5 && t('rating.excellent')}
           </Text>
         )}
 
         {/* Comment input */}
-        {/* שדה תגובה */}
         <View style={styles.commentSection}>
-          <Text style={styles.commentLabel}>הוסף תגובה (אופציונלי)</Text>
-          {/* Add a comment (optional) */}
+          <Text style={[styles.commentLabel, { color: colors.textPrimary }]}>{t('rating.addComment')}</Text>
           <TextInput
-            style={styles.commentInput}
+            style={[styles.commentInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
             value={comment}
             onChangeText={setComment}
-            placeholder="ספר על החוויה שלך..."
-            placeholderTextColor={COLORS.textSecondary}
+            placeholder={t('rating.commentPlaceholder')}
+            placeholderTextColor={colors.inputPlaceholder}
             multiline
             numberOfLines={4}
             maxLength={500}
@@ -109,20 +105,18 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[styles.submitButton, { backgroundColor: colors.primary }, isSubmitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || rating === 0}
         >
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'שולח...' : 'שלח דירוג'}
-            {/* Sending... / Submit rating */}
+            {isSubmitting ? t('rating.submitting') : t('rating.submitRating')}
           </Text>
         </TouchableOpacity>
 
         {/* Skip */}
         <TouchableOpacity style={styles.skipButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.skipButtonText}>דלג</Text>
-          {/* Skip */}
+          <Text style={[styles.skipButtonText, { color: colors.textSecondary }]}>{t('rating.skip')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -132,7 +126,6 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -143,12 +136,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: COLORS.text,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
     marginTop: 8,
     marginBottom: 32,
     textAlign: 'center',
@@ -164,7 +155,6 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 44,
-    color: COLORS.border,
   },
   starActive: {
     color: '#FFB800',
@@ -172,7 +162,6 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.primary,
     marginBottom: 24,
   },
   commentSection: {
@@ -182,23 +171,18 @@ const styles = StyleSheet.create({
   commentLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
     textAlign: 'right',
     marginBottom: 8,
   },
   commentInput: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
     minHeight: 100,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
   },
   submitButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 48,
@@ -219,6 +203,5 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
   },
 });
