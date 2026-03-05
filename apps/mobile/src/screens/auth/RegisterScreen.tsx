@@ -6,75 +6,64 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Image,
   Alert,
+  I18nManager,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { launchImageLibrary } from 'react-native-image-picker';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
-import { sendOTP } from '../../services/auth';
+import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
-type UserRole = 'sender' | 'driver' | 'both';
-
 interface RegisterForm {
   fullName: string;
-  phone: string;
   email: string;
-  city: string;
-  role: UserRole;
-  profilePhotoUri: string | null;
-  kycDocumentUri: string | null;
+  password: string;
+  confirmPassword: string;
+  phone: string;
 }
 
+type FormField = keyof RegisterForm;
+
 /**
- * RegisterScreen — מסך הרשמה
- * Collects name, phone, email, city, role, profile photo, and KYC document.
- * אוסף שם, טלפון, אימייל, עיר, תפקיד, תמונת פרופיל ומסמך KYC
+ * RegisterScreen -- email+password registration with profile data
  */
 export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const [form, setForm] = useState<RegisterForm>({
     fullName: '',
-    phone: '',
     email: '',
-    city: '',
-    role: 'sender',
-    profilePhotoUri: null,
-    kycDocumentUri: null,
+    password: '',
+    confirmPassword: '',
+    phone: '',
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof RegisterForm, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
 
-  const updateField = <K extends keyof RegisterForm>(key: K, value: RegisterForm[K]): void => {
+  const updateField = (key: FormField, value: string): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  const pickImage = async (field: 'profilePhotoUri' | 'kycDocumentUri'): Promise<void> => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.8,
-    });
-
-    if (!result.didCancel && result.assets?.[0]) {
-      updateField(field, result.assets[0].uri!);
-    }
-  };
-
   const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof RegisterForm, string>> = {};
-    if (!validateRequired(form.fullName)) newErrors.fullName = 'שם מלא נדרש'; // Full name required
-    if (!validatePhone(form.phone)) newErrors.phone = 'מספר טלפון לא תקין'; // Invalid phone
-    if (!validateEmail(form.email)) newErrors.email = 'אימייל לא תקין'; // Invalid email
-    if (!validateRequired(form.city)) newErrors.city = 'עיר נדרשת'; // City required
+    const newErrors: Partial<Record<FormField, string>> = {};
 
-    // KYC document required for drivers
-    if ((form.role === 'driver' || form.role === 'both') && !form.kycDocumentUri) {
-      newErrors.kycDocumentUri = 'מסמך זיהוי נדרש לנהגים'; // KYC required for drivers
+    if (!validateRequired(form.fullName)) {
+      newErrors.fullName = 'שם מלא נדרש';
+    }
+    if (!validateEmail(form.email)) {
+      newErrors.email = 'כתובת אימייל לא תקינה';
+    }
+    if (!form.password || form.password.length < 8) {
+      newErrors.password = 'סיסמה חייבת להכיל לפחות 8 תווים';
+    }
+    if (form.password !== form.confirmPassword) {
+      newErrors.confirmPassword = 'הסיסמאות אינן תואמות';
+    }
+    if (!validatePhone(form.phone)) {
+      newErrors.phone = 'מספר טלפון לא תקין';
     }
 
     setErrors(newErrors);
@@ -86,35 +75,44 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
-      const verificationId = await sendOTP(form.phone);
+
+      // Step 1: Create Firebase Auth account
+      const credential = await registerWithEmail(form.email, form.password);
+
+      // Step 2: Create Firestore user document
+      await createUserDocument(credential.user.uid, {
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+      });
+
+      // Step 3: Navigate to OTP for phone verification
       navigation.navigate('OTPVerification', {
         phoneNumber: form.phone,
-        verificationId,
+        verificationId: '', // Will be sent on OTP screen mount
+        mode: 'register',
       });
-    } catch (err) {
-      Alert.alert('שגיאה', 'לא ניתן להשלים את ההרשמה. נסה שוב.');
-      // Error: Unable to complete registration
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code) {
+        Alert.alert('שגיאה', mapFirebaseAuthError(firebaseError.code));
+      } else {
+        Alert.alert('שגיאה', 'לא ניתן להשלים את ההרשמה. נסה שוב.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const roleOptions: { value: UserRole; label: string }[] = [
-    { value: 'sender', label: 'שולח' /* Sender */ },
-    { value: 'driver', label: 'נהג' /* Driver */ },
-    { value: 'both', label: 'שניהם' /* Both */ },
-  ];
+  const textAlign = I18nManager.isRTL ? 'right' as const : 'left' as const;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Header */}
-      {/* כותרת */}
       <Text style={styles.title}>הרשמה ל-MOOVIZ</Text>
       <Text style={styles.subtitle}>הצטרף לקהילת המשלוחים</Text>
-      {/* Join the delivery community */}
 
       {/* Full name */}
-      {/* שם מלא */}
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>שם מלא</Text>
         <TextInput
@@ -122,28 +120,13 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           value={form.fullName}
           onChangeText={(v) => updateField('fullName', v)}
           placeholder="ישראל ישראלי"
-          textAlign="right"
+          textAlign={textAlign}
+          editable={!isLoading}
         />
         {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
       </View>
 
-      {/* Phone */}
-      {/* טלפון */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>מספר טלפון</Text>
-        <TextInput
-          style={styles.input}
-          value={form.phone}
-          onChangeText={(v) => updateField('phone', v)}
-          placeholder="+972501234567"
-          keyboardType="phone-pad"
-          textAlign="right"
-        />
-        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-      </View>
-
       {/* Email */}
-      {/* אימייל */}
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>אימייל</Text>
         <TextInput
@@ -153,80 +136,59 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           placeholder="email@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
-          textAlign="right"
+          autoComplete="email"
+          textAlign={textAlign}
+          editable={!isLoading}
         />
         {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
       </View>
 
-      {/* City */}
-      {/* עיר */}
+      {/* Password */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>עיר</Text>
+        <Text style={styles.label}>סיסמה</Text>
         <TextInput
           style={styles.input}
-          value={form.city}
-          onChangeText={(v) => updateField('city', v)}
-          placeholder="תל אביב"
-          textAlign="right"
+          value={form.password}
+          onChangeText={(v) => updateField('password', v)}
+          placeholder="לפחות 8 תווים"
+          secureTextEntry
+          autoComplete="password-new"
+          textAlign={textAlign}
+          editable={!isLoading}
         />
-        {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
       </View>
 
-      {/* Role selection */}
-      {/* בחירת תפקיד */}
+      {/* Confirm password */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תפקיד</Text>
-        <View style={styles.roleRow}>
-          {roleOptions.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.roleChip, form.role === opt.value && styles.roleChipActive]}
-              onPress={() => updateField('role', opt.value)}
-            >
-              <Text
-                style={[
-                  styles.roleChipText,
-                  form.role === opt.value && styles.roleChipTextActive,
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={styles.label}>אימות סיסמה</Text>
+        <TextInput
+          style={styles.input}
+          value={form.confirmPassword}
+          onChangeText={(v) => updateField('confirmPassword', v)}
+          placeholder="הזן סיסמה שוב"
+          secureTextEntry
+          textAlign={textAlign}
+          editable={!isLoading}
+        />
+        {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
       </View>
 
-      {/* Profile photo */}
-      {/* תמונת פרופיל */}
+      {/* Phone */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תמונת פרופיל</Text>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('profilePhotoUri')}>
-          {form.profilePhotoUri ? (
-            <Image source={{ uri: form.profilePhotoUri }} style={styles.photoPreview} />
-          ) : (
-            <Text style={styles.uploadButtonText}>בחר תמונה</Text>
-          )}
-        </TouchableOpacity>
+        <Text style={styles.label}>מספר טלפון</Text>
+        <TextInput
+          style={styles.input}
+          value={form.phone}
+          onChangeText={(v) => updateField('phone', v)}
+          placeholder="050-1234567"
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          textAlign={textAlign}
+          editable={!isLoading}
+        />
+        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
       </View>
-
-      {/* KYC document — required for drivers */}
-      {/* מסמך זיהוי — נדרש לנהגים */}
-      {(form.role === 'driver' || form.role === 'both') && (
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>מסמך זיהוי (תעודת זהות / רישיון נהיגה)</Text>
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={() => pickImage('kycDocumentUri')}
-          >
-            {form.kycDocumentUri ? (
-              <Text style={styles.uploadButtonTextDone}>מסמך הועלה בהצלחה ✓</Text>
-            ) : (
-              <Text style={styles.uploadButtonText}>העלה מסמך</Text>
-            )}
-          </TouchableOpacity>
-          {errors.kycDocumentUri && <Text style={styles.errorText}>{errors.kycDocumentUri}</Text>}
-        </View>
-      )}
 
       {/* Submit */}
       <TouchableOpacity
@@ -236,15 +198,12 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       >
         <Text style={styles.submitButtonText}>
           {isLoading ? 'נרשם...' : 'הירשם'}
-          {/* Registering... / Register */}
         </Text>
       </TouchableOpacity>
 
       {/* Back to login */}
-      {/* חזרה להתחברות */}
       <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
         <Text style={styles.backLinkText}>כבר רשום? התחבר</Text>
-        {/* Already registered? Log in */}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -298,56 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     textAlign: 'right',
-  },
-  roleRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  roleChip: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  roleChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  roleChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  roleChipTextActive: {
-    color: '#FFFFFF',
-  },
-  uploadButton: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    borderStyle: 'dashed',
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  uploadButtonText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  uploadButtonTextDone: {
-    fontSize: 14,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  photoPreview: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
   },
   submitButton: {
     backgroundColor: COLORS.primary,
