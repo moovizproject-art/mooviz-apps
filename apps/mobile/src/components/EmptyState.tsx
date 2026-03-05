@@ -42,7 +42,8 @@ export function EmptyState({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingTop: 8,
+    paddingBottom: 48,
     paddingHorizontal: 32,
   },
   icon: {
