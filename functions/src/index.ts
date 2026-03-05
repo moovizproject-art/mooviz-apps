@@ -19,9 +19,15 @@ export {
 } from "./callable/deliveryCallable";
 
 export {
+  createUser,
   updateProfile,
   updateFCMToken,
+  removeFCMToken,
 } from "./callable/userCallable";
+
+export { reviewKYC } from "./callable/kycCallable";
+
+export { getEncryptionKey, decryptDocument } from "./callable/encryptionCallable";
 
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";

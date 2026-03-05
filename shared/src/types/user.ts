@@ -1,6 +1,7 @@
 import { firestore } from "firebase-admin";
 
 export type UserRole = "sender" | "driver";
+export type ActiveMode = "client" | "driver";
 export type KycStatus = "pending" | "approved" | "rejected";
 export type UserStatus = "active" | "suspended" | "blocked";
 
