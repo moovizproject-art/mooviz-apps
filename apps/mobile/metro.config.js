@@ -15,7 +15,8 @@ const config = {
       path.resolve(projectRoot, 'node_modules'),
       path.resolve(monorepoRoot, 'node_modules'),
     ],
-    disableHierarchicalLookup: true,
+    // Allow Metro to follow pnpm symlinks into .pnpm store
+    unstable_enableSymlinks: true,
   },
 };
 

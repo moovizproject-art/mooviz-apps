@@ -96,8 +96,21 @@ export function useFirestore<T extends { id: string }>({
           setIsLoading(false);
         },
         (err) => {
-          console.error(`[useFirestore] Error on ${collection}:`, err);
-          setError(err as Error);
+          const code = (err as { code?: string }).code;
+          const message = String(err);
+          const isRecoverable =
+            code === 'firestore/failed-precondition' ||
+            code === 'firestore/permission-denied' ||
+            message.includes('failed-precondition') ||
+            message.includes('permission-denied') ||
+            message.includes('requires an index');
+          if (isRecoverable) {
+            console.warn(`[useFirestore] ${collection}: ${code || 'unknown'} — showing empty state`);
+            setData([]);
+          } else {
+            console.error(`[useFirestore] Error on ${collection}:`, err);
+            setError(err as Error);
+          }
           setIsLoading(false);
         },
       );
@@ -113,8 +126,21 @@ export function useFirestore<T extends { id: string }>({
           setIsLoading(false);
         })
         .catch((err) => {
-          console.error(`[useFirestore] Error fetching ${collection}:`, err);
-          setError(err as Error);
+          const code = (err as { code?: string }).code;
+          const message = String(err);
+          const isRecoverable =
+            code === 'firestore/failed-precondition' ||
+            code === 'firestore/permission-denied' ||
+            message.includes('failed-precondition') ||
+            message.includes('permission-denied') ||
+            message.includes('requires an index');
+          if (isRecoverable) {
+            console.warn(`[useFirestore] ${collection}: ${code || 'unknown'} — showing empty state`);
+            setData([]);
+          } else {
+            console.error(`[useFirestore] Error fetching ${collection}:`, err);
+            setError(err as Error);
+          }
           setIsLoading(false);
         });
       return undefined;

@@ -5,7 +5,9 @@ import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/n
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 import { useAuth } from '../hooks/useAuth';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
+import { HomeIcon, PackageIcon, ChatIcon, ProfileIcon, TruckIcon, ClipboardIcon } from '../components/TabIcons';
 
 // Auth screens
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -24,6 +26,7 @@ import { MyDeliveriesScreen } from '../screens/sender/MyDeliveriesScreen';
 import { FeedScreen } from '../screens/driver/FeedScreen';
 import { DeliveryDetailScreen as DriverDeliveryDetail } from '../screens/driver/DeliveryDetailScreen';
 import { MyJobsScreen } from '../screens/driver/MyJobsScreen';
+import { DriverKYCScreen } from '../screens/driver/DriverKYCScreen';
 
 // Shared screens
 import { ChatScreen } from '../screens/shared/ChatScreen';
@@ -61,6 +64,7 @@ export type RootStackParamList = {
   SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
   DriverTabs: NavigatorScreenParams<DriverTabsParamList>;
   CreateDelivery: undefined;
+  DriverKYC: undefined;
   SenderDeliveryDetail: { deliveryId: string };
   DriverDeliveryDetail: { deliveryId: string };
   ChatRoom: { chatId: string; recipientName: string };
@@ -109,72 +113,98 @@ function AuthStack(): React.JSX.Element {
 }
 
 /** Sender bottom tabs: Home, MyDeliveries, Chat, Profile */
-// טאבים לשולח: דף הבית, המשלוחים שלי, צ׳אט, פרופיל
 function SenderTabs(): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <SenderTab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: { borderTopWidth: 1, borderTopColor: COLORS.border },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: { borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
       }}
     >
       <SenderTab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'ראשי' /* Home */ }}
+        options={{
+          tabBarLabel: t('tabs.home'),
+          tabBarIcon: ({ color }) => <HomeIcon color={color} />,
+        }}
       />
       <SenderTab.Screen
         name="MyDeliveries"
         component={MyDeliveriesScreen}
-        options={{ tabBarLabel: 'משלוחים' /* Deliveries */ }}
+        options={{
+          tabBarLabel: t('tabs.deliveries'),
+          tabBarIcon: ({ color }) => <PackageIcon color={color} />,
+        }}
       />
       <SenderTab.Screen
         name="Chat"
         component={ChatScreen}
-        options={{ tabBarLabel: 'צ׳אט' /* Chat */ }}
+        options={{
+          tabBarLabel: t('tabs.chat'),
+          tabBarIcon: ({ color }) => <ChatIcon color={color} />,
+        }}
       />
       <SenderTab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: 'פרופיל' /* Profile */ }}
+        options={{
+          tabBarLabel: t('tabs.profile'),
+          tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
+        }}
       />
     </SenderTab.Navigator>
   );
 }
 
 /** Driver bottom tabs: Feed, MyJobs, Chat, Profile */
-// טאבים לנהג: פיד, העבודות שלי, צ׳אט, פרופיל
 function DriverTabs(): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <DriverTab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: { borderTopWidth: 1, borderTopColor: COLORS.border },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: { borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
       }}
     >
       <DriverTab.Screen
         name="Feed"
         component={FeedScreen}
-        options={{ tabBarLabel: 'משלוחים' /* Feed */ }}
+        options={{
+          tabBarLabel: t('tabs.deliveries'),
+          tabBarIcon: ({ color }) => <TruckIcon color={color} />,
+        }}
       />
       <DriverTab.Screen
         name="MyJobs"
         component={MyJobsScreen}
-        options={{ tabBarLabel: 'העבודות שלי' /* My Jobs */ }}
+        options={{
+          tabBarLabel: t('driver.myJobs'),
+          tabBarIcon: ({ color }) => <ClipboardIcon color={color} />,
+        }}
       />
       <DriverTab.Screen
         name="Chat"
         component={ChatScreen}
-        options={{ tabBarLabel: 'צ׳אט' /* Chat */ }}
+        options={{
+          tabBarLabel: t('tabs.chat'),
+          tabBarIcon: ({ color }) => <ChatIcon color={color} />,
+        }}
       />
       <DriverTab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: 'פרופיל' /* Profile */ }}
+        options={{
+          tabBarLabel: t('tabs.profile'),
+          tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
+        }}
       />
     </DriverTab.Navigator>
   );
@@ -183,13 +213,14 @@ function DriverTabs(): React.JSX.Element {
 /** Root navigator — switches between Auth, Sender, and Driver flows */
 export function RootNavigator(): React.JSX.Element {
   const { currentUser, isLoading } = useAuth();
+  const { colors } = useTheme();
+  const { t } = useI18n();
 
   // Show loading spinner while checking auth state
-  // טוען... בודק מצב התחברות
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -197,54 +228,53 @@ export function RootNavigator(): React.JSX.Element {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!currentUser ? (
-        // Not authenticated — show auth flow
-        // לא מחובר — הצג מסך התחברות
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : currentUser.activeMode === 'driver' ? (
-        // Driver flow
-        // מסך נהג
         <>
           <Stack.Screen name="DriverTabs" component={DriverTabs} />
           <Stack.Screen
             name="DriverDeliveryDetail"
             component={DriverDeliveryDetail}
-            options={{ headerShown: true, title: 'פרטי משלוח' /* Delivery Details */ }}
+            options={{ headerShown: true, title: t('delivery.deliveryDetails') }}
           />
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: 'צ׳אט' }}
+            options={{ headerShown: true, title: t('tabs.chat') }}
           />
           <Stack.Screen
             name="Rating"
             component={RatingScreen}
-            options={{ headerShown: true, title: 'דירוג' /* Rating */ }}
+            options={{ headerShown: true, title: t('profile.rating') }}
           />
         </>
       ) : (
-        // Sender flow (default)
-        // מסך שולח
         <>
           <Stack.Screen name="SenderTabs" component={SenderTabs} />
           <Stack.Screen
+            name="DriverKYC"
+            component={DriverKYCScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="CreateDelivery"
             component={CreateDeliveryScreen}
-            options={{ headerShown: true, title: 'משלוח חדש' /* New Delivery */ }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="SenderDeliveryDetail"
             component={SenderDeliveryDetail}
-            options={{ headerShown: true, title: 'פרטי משלוח' /* Delivery Details */ }}
+            options={{ headerShown: true, title: t('delivery.deliveryDetails') }}
           />
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: 'צ׳אט' }}
+            options={{ headerShown: true, title: t('tabs.chat') }}
           />
           <Stack.Screen
             name="Rating"
             component={RatingScreen}
-            options={{ headerShown: true, title: 'דירוג' /* Rating */ }}
+            options={{ headerShown: true, title: t('profile.rating') }}
           />
         </>
       )}
@@ -257,6 +287,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
   },
 });

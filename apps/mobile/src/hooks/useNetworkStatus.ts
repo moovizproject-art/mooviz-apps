@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 
 interface NetworkStatus {
   isConnected: boolean;
@@ -9,6 +8,14 @@ interface NetworkStatus {
 
 const DEBOUNCE_MS = 300;
 
+// Lazy-load NetInfo to gracefully handle missing native module
+let NetInfoModule: typeof import('@react-native-community/netinfo').default | null = null;
+try {
+  NetInfoModule = require('@react-native-community/netinfo').default;
+} catch {
+  // NetInfo native module not linked — default to connected
+}
+
 export function useNetworkStatus(): NetworkStatus {
   const [status, setStatus] = useState<NetworkStatus>({
     isConnected: true,
@@ -17,7 +24,7 @@ export function useNetworkStatus(): NetworkStatus {
   });
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleNetworkChange = useCallback((state: NetInfoState) => {
+  const handleNetworkChange = useCallback((state: any) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -31,10 +38,12 @@ export function useNetworkStatus(): NetworkStatus {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(handleNetworkChange);
+    if (!NetInfoModule) {
+      return;
+    }
 
-    // Fetch initial state
-    NetInfo.fetch().then(handleNetworkChange);
+    const unsubscribe = NetInfoModule.addEventListener(handleNetworkChange);
+    NetInfoModule.fetch().then(handleNetworkChange);
 
     return () => {
       unsubscribe();
