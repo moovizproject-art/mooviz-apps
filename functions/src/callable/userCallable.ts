@@ -132,7 +132,8 @@ export const updateProfile = onCall(async (request) => {
 });
 
 /**
- * Update the user's FCM token for push notifications.
+ * Add an FCM token to the user's fcmTokens array for push notifications.
+ * Uses arrayUnion to avoid duplicates.
  */
 export const updateFCMToken = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -157,9 +158,113 @@ export const updateFCMToken = onCall(async (request) => {
   }
 
   await userRef.update({
-    fcmToken,
+    fcmTokens: admin.firestore.FieldValue.arrayUnion(fcmToken),
     updatedAt: admin.firestore.Timestamp.now(),
   });
 
-  return { success: true, message: "FCM token updated successfully" };
+  return { success: true, message: "FCM token added successfully" };
+});
+
+/**
+ * Remove an FCM token from the user's fcmTokens array.
+ * Used on logout or when a token becomes invalid.
+ */
+export const removeFCMToken = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { fcmToken } = request.data;
+
+  if (!fcmToken || typeof fcmToken !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      "fcmToken is required and must be a string"
+    );
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const userDoc = await userRef.get();
+
+  if (!userDoc.exists) {
+    throw new HttpsError("not-found", "User profile not found");
+  }
+
+  await userRef.update({
+    fcmTokens: admin.firestore.FieldValue.arrayRemove(fcmToken),
+    updatedAt: admin.firestore.Timestamp.now(),
+  });
+
+  return { success: true, message: "FCM token removed successfully" };
+});
+
+/**
+ * Create a new user profile document.
+ * Called after Firebase Auth registration to set up the Firestore user doc.
+ */
+export const createUser = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { fullName, email, phone, city } = request.data;
+
+  // Validate required fields
+  if (!fullName || typeof fullName !== "string" || fullName.trim().length < 2) {
+    throw new HttpsError("invalid-argument", "fullName must be at least 2 characters");
+  }
+  if (!email || typeof email !== "string") {
+    throw new HttpsError("invalid-argument", "email is required");
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new HttpsError("invalid-argument", "Invalid email format");
+  }
+  if (!phone || typeof phone !== "string") {
+    throw new HttpsError("invalid-argument", "phone is required");
+  }
+  // E.164 format check
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+    throw new HttpsError("invalid-argument", "Phone must be in E.164 format (e.g., +972501234567)");
+  }
+
+  // Check if user doc already exists
+  const existingDoc = await db.collection("users").doc(uid).get();
+  if (existingDoc.exists) {
+    throw new HttpsError("already-exists", "User profile already exists");
+  }
+
+  // Check for duplicate phone
+  const phoneCheck = await db.collection("users").where("phone", "==", phone).limit(1).get();
+  if (!phoneCheck.empty) {
+    throw new HttpsError("already-exists", "Phone number already registered");
+  }
+
+  const now = admin.firestore.Timestamp.now();
+
+  await db.collection("users").doc(uid).set({
+    uid,
+    fullName: fullName.trim(),
+    email,
+    phone,
+    city: city || "",
+    profilePhotoURL: "",
+    kycDocumentURL: "",
+    kycStatus: "pending",
+    ratingAsDriver: { average: 0, count: 0 },
+    ratingAsSender: { average: 0, count: 0 },
+    completedDeliveries: 0,
+    status: "active",
+    fcmTokens: [],
+    location: { lat: 0, lng: 0, geohash: "" },
+    activeMode: "client",
+    driverAvailable: false,
+    driverUnlocked: false,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return { success: true, message: "User profile created" };
 });
