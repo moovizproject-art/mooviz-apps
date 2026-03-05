@@ -57,9 +57,9 @@ export default function ReportsPage() {
 
         // Apply moderation action to reported user
         if (moderationAction === 'suspend') {
-          await suspendUser(selectedReport.reportedUserId, note);
+          await suspendUser(selectedReport.reportedUserId, note, admin.uid);
         } else if (moderationAction === 'block') {
-          await blockUser(selectedReport.reportedUserId, note);
+          await blockUser(selectedReport.reportedUserId, note, admin.uid);
         }
       } else {
         await dismissReport(selectedReport.id, note, admin.uid);
@@ -68,6 +68,7 @@ export default function ReportsPage() {
       setSelectedReport(null);
       setActionType(null);
       setNote('');
+      setModerationAction('warning');
     } finally {
       setActionLoading(false);
     }
@@ -85,7 +86,7 @@ export default function ReportsPage() {
       sortable: true,
       render: (r) => (
         <span className="text-sm text-gray-500">
-          {format(r.createdAt.toDate(), 'MMM d, yyyy')}
+          {r.createdAt ? format(r.createdAt.toDate(), 'MMM d, yyyy') : '-'}
         </span>
       ),
     },
@@ -93,7 +94,7 @@ export default function ReportsPage() {
       key: 'category',
       label: 'Category',
       render: (r) => (
-        <span className="text-sm font-medium">{categoryLabels[r.category]}</span>
+        <span className="text-sm font-medium">{categoryLabels[r.category] ?? r.category}</span>
       ),
     },
     {
@@ -107,7 +108,7 @@ export default function ReportsPage() {
           }}
           className="text-sm font-medium text-brand-600 hover:text-brand-700"
         >
-          {r.reporterName}
+          {r.reporterName || 'Unknown'}
         </button>
       ),
     },
@@ -122,13 +123,30 @@ export default function ReportsPage() {
           }}
           className="text-sm font-medium text-brand-600 hover:text-brand-700"
         >
-          {r.reportedUserName}
+          {r.reportedUserName || 'Unknown'}
         </button>
       ),
     },
     {
+      key: 'deliveryId',
+      label: 'Delivery',
+      render: (r) => r.deliveryId ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/deliveries/${r.deliveryId}`);
+          }}
+          className="font-mono text-xs text-brand-600 hover:text-brand-700"
+        >
+          {r.deliveryId.slice(0, 8)}...
+        </button>
+      ) : (
+        <span className="text-xs text-gray-400">N/A</span>
+      ),
+    },
+    {
       key: 'description',
-      label: 'Description',
+      label: 'Reason',
       render: (r) => (
         <p className="max-w-xs truncate text-sm text-gray-600">{r.description}</p>
       ),
@@ -222,6 +240,18 @@ export default function ReportsPage() {
           <option value="no_show">No Show</option>
           <option value="other">Other</option>
         </select>
+
+        {(statusFilter || categoryFilter) && (
+          <button
+            onClick={() => {
+              setStatusFilter('');
+              setCategoryFilter('');
+            }}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <DataTable
@@ -232,8 +262,53 @@ export default function ReportsPage() {
         emptyMessage="No reports found"
       />
 
-      {/* Resolve/Dismiss Dialog */}
-      {selectedReport && actionType && (
+      {/* Resolve Dialog */}
+      {selectedReport && actionType === 'resolve' && (
+        <ConfirmDialog
+          open={true}
+          onClose={() => {
+            setSelectedReport(null);
+            setActionType(null);
+            setNote('');
+            setModerationAction('warning');
+          }}
+          onConfirm={handleAction}
+          title="Resolve Report"
+          message={`Take action on the report against ${selectedReport.reportedUserName}.`}
+          confirmLabel="Resolve"
+          variant="warning"
+          loading={actionLoading}
+        >
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Moderation Action</label>
+              <select
+                value={moderationAction}
+                onChange={(e) => setModerationAction(e.target.value as ModerationAction)}
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                <option value="warning">Warning</option>
+                <option value="suspend">Suspend User</option>
+                <option value="block">Block User</option>
+                <option value="none">No Action</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Note</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                placeholder="Resolution details..."
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+          </div>
+        </ConfirmDialog>
+      )}
+
+      {/* Dismiss Dialog */}
+      {selectedReport && actionType === 'dismiss' && (
         <ConfirmDialog
           open={true}
           onClose={() => {
@@ -242,16 +317,23 @@ export default function ReportsPage() {
             setNote('');
           }}
           onConfirm={handleAction}
-          title={actionType === 'resolve' ? 'Resolve Report' : 'Dismiss Report'}
-          message={
-            actionType === 'resolve'
-              ? `Take action on the report against ${selectedReport.reportedUserName}.`
-              : `Dismiss the report against ${selectedReport.reportedUserName}. No action will be taken.`
-          }
-          confirmLabel={actionType === 'resolve' ? 'Resolve' : 'Dismiss'}
-          variant={actionType === 'resolve' ? 'warning' : 'info'}
+          title="Dismiss Report"
+          message={`Dismiss the report against ${selectedReport.reportedUserName}. No action will be taken.`}
+          confirmLabel="Dismiss"
+          variant="info"
           loading={actionLoading}
-        />
+        >
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">Note</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="Reason for dismissal..."
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+        </ConfirmDialog>
       )}
     </div>
   );
