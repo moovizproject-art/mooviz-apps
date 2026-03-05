@@ -12,7 +12,8 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { validateEmail } from '../../utils/validators';
 import { sendPasswordReset, mapFirebaseAuthError } from '../../services/auth';
 
@@ -22,6 +23,8 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
  * ForgotPasswordScreen -- send password reset email
  */
 export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const [email, setEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
     setSuccess(false);
 
     if (!validateEmail(email)) {
-      setError('כתובת אימייל לא תקינה');
+      setError(t('auth.invalidEmail'));
       return;
     }
 
@@ -45,7 +48,7 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
       if (firebaseError.code) {
         setError(mapFirebaseAuthError(firebaseError.code));
       } else {
-        setError('שגיאה בשליחת קישור לאיפוס סיסמה');
+        setError(t('auth.loginError'));
       }
     } finally {
       setIsLoading(false);
@@ -54,35 +57,36 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>איפוס סיסמה</Text>
-        <Text style={styles.subtitle}>
-          הזן את כתובת האימייל שלך ונשלח לך קישור לאיפוס סיסמה
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{t('auth.resetPassword')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {t('auth.resetSubtitle')}
         </Text>
 
         {success ? (
           <View style={styles.successSection}>
-            <Text style={styles.successText}>
-              קישור לאיפוס סיסמה נשלח לאימייל שלך
+            <Text style={[styles.successText, { color: colors.success }]}>
+              {t('auth.resetSent')}
             </Text>
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('Login')}
             >
-              <Text style={styles.buttonText}>חזרה להתחברות</Text>
+              <Text style={styles.buttonText}>{t('auth.backToLogin')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.inputSection}>
-            <Text style={styles.label}>אימייל</Text>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.email')}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
               value={email}
               onChangeText={setEmail}
               placeholder="email@example.com"
+              placeholderTextColor={colors.textTertiary}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -90,15 +94,15 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
               editable={!isLoading}
             />
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
 
             <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
               onPress={handleReset}
               disabled={isLoading || !email.trim()}
             >
               <Text style={styles.buttonText}>
-                {isLoading ? 'שולח...' : 'שלח קישור לאיפוס'}
+                {isLoading ? t('auth.sending') : t('auth.sendResetLink')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -108,7 +112,7 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
           style={styles.backLink}
           onPress={() => navigation.navigate('Login')}
         >
-          <Text style={styles.backLinkText}>חזרה להתחברות</Text>
+          <Text style={[styles.backLinkText, { color: colors.primary }]}>{t('auth.backToLogin')}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -118,7 +122,6 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -128,12 +131,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.text,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 32,
@@ -144,22 +145,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
     marginBottom: 8,
     textAlign: 'right',
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
   },
   errorText: {
-    color: COLORS.error,
     fontSize: 13,
     marginTop: 8,
     textAlign: 'right',
@@ -170,13 +166,11 @@ const styles = StyleSheet.create({
   },
   successText: {
     fontSize: 16,
-    color: COLORS.success,
     textAlign: 'center',
     marginBottom: 24,
     fontWeight: '600',
   },
   button: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -196,7 +190,6 @@ const styles = StyleSheet.create({
   },
   backLinkText: {
     fontSize: 14,
-    color: COLORS.primary,
     fontWeight: '600',
   },
 });

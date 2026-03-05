@@ -12,7 +12,8 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone } from '../../utils/validators';
 import { sendPhoneOTP, mapFirebaseAuthError } from '../../services/auth';
 
@@ -22,6 +23,8 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'AddPhone'>;
  * AddPhoneScreen -- for migrated users who need to add phone number
  */
 export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const [phone, setPhone] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
     setError(null);
 
     if (!validatePhone(phone)) {
-      setError('מספר טלפון לא תקין');
+      setError(t('auth.invalidPhone'));
       return;
     }
 
@@ -47,7 +50,7 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
       if (firebaseError.code) {
         setError(mapFirebaseAuthError(firebaseError.code));
       } else {
-        setError('שגיאה בשליחת קוד אימות');
+        setError(t('auth.otpError'));
       }
     } finally {
       setIsLoading(false);
@@ -60,45 +63,46 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>הוספת מספר טלפון</Text>
-        <Text style={styles.subtitle}>
-          הוסף מספר טלפון לחשבון שלך לאימות נוסף
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{t('auth.addPhone')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {t('auth.addPhoneSubtitle')}
         </Text>
 
         <View style={styles.inputSection}>
-          <Text style={styles.label}>מספר טלפון</Text>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.phone')}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
             value={phone}
             onChangeText={setPhone}
             placeholder="050-1234567"
+            placeholderTextColor={colors.textTertiary}
             keyboardType="phone-pad"
             autoComplete="tel"
             textAlign={I18nManager.isRTL ? 'right' : 'left'}
             editable={!isLoading}
           />
-          <Text style={styles.hint}>פורמט ישראלי: 050-1234567 או +972501234567</Text>
+          <Text style={[styles.hint, { color: colors.textTertiary }]}>{t('auth.phoneHint')}</Text>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
 
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
             onPress={handleSendOTP}
             disabled={isLoading || !phone.trim()}
           >
             <Text style={styles.buttonText}>
-              {isLoading ? 'שולח...' : 'שלח קוד אימות'}
+              {isLoading ? t('auth.sending') : t('auth.sendOtp')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Skip option */}
         <TouchableOpacity style={styles.skipLink} onPress={handleSkip}>
-          <Text style={styles.skipLinkText}>דלג לעת עתה</Text>
+          <Text style={[styles.skipLinkText, { color: colors.textSecondary }]}>{t('auth.skipForNow')}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -108,7 +112,6 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -118,12 +121,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.text,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 32,
@@ -134,34 +135,27 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
     marginBottom: 8,
     textAlign: 'right',
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
   },
   hint: {
     fontSize: 12,
-    color: COLORS.textTertiary,
     marginTop: 4,
     textAlign: 'right',
   },
   errorText: {
-    color: COLORS.error,
     fontSize: 13,
     marginTop: 8,
     textAlign: 'right',
   },
   button: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -181,7 +175,6 @@ const styles = StyleSheet.create({
   },
   skipLinkText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     fontWeight: '600',
   },
 });

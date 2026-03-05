@@ -12,7 +12,8 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { sendPhoneOTP, verifyAndLinkPhone, mapFirebaseAuthError } from '../../services/auth';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTPVerification'>;
@@ -25,6 +26,8 @@ const RESEND_COOLDOWN_SECONDS = 60;
  */
 export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const { phoneNumber, mode } = route.params;
+  const { colors } = useTheme();
+  const { t } = useI18n();
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
   const [verificationId, setVerificationId] = useState<string>(route.params.verificationId || '');
@@ -44,16 +47,18 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       setVerificationId(vId);
       setResendTimer(RESEND_COOLDOWN_SECONDS);
     } catch (err: unknown) {
-      const firebaseError = err as { code?: string };
-      if (firebaseError.code) {
+      const firebaseError = err as { code?: string; message?: string };
+      if (firebaseError.code === 'auth/operation-not-allowed') {
+        setError(t('auth.smsNotEnabled'));
+      } else if (firebaseError.code) {
         setError(mapFirebaseAuthError(firebaseError.code));
       } else {
-        setError('שגיאה בשליחת קוד אימות');
+        setError(t('auth.otpError'));
       }
     } finally {
       setIsSending(false);
     }
-  }, [phoneNumber]);
+  }, [phoneNumber, t]);
 
   useEffect(() => {
     if (!verificationId) {
@@ -98,12 +103,12 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const handleVerify = async (otpCode?: string): Promise<void> => {
     const fullCode = otpCode || code.join('');
     if (fullCode.length !== OTP_LENGTH) {
-      setError('יש להזין קוד בן 6 ספרות');
+      setError(t('auth.invalidCode'));
       return;
     }
 
     if (!verificationId) {
-      setError('לא התקבל מזהה אימות. שלח קוד חדש.');
+      setError(t('auth.noVerificationId'));
       return;
     }
 
@@ -113,8 +118,8 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       // Phone is now linked to the account
       // Auth state listener in useAuth will pick up the change
       if (mode === 'addPhone') {
-        Alert.alert('הצלחה', 'מספר הטלפון אומת בהצלחה', [
-          { text: 'אישור', onPress: () => navigation.goBack() },
+        Alert.alert(t('common.success'), t('auth.phoneVerified'), [
+          { text: t('common.confirm'), onPress: () => navigation.goBack() },
         ]);
       }
       // For register/login mode, the auth listener handles navigation
@@ -123,7 +128,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       if (firebaseError.code) {
         setError(mapFirebaseAuthError(firebaseError.code));
       } else {
-        setError('קוד אימות שגוי. נסה שוב.');
+        setError(t('auth.wrongCode'));
       }
       setCode(new Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
@@ -138,65 +143,92 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
         {/* Header */}
-        <Text style={styles.title}>אימות מספר טלפון</Text>
-        <Text style={styles.subtitle}>
-          {isSending ? 'שולח קוד אימות...' : `קוד אימות נשלח ל-${phoneNumber}`}
+        <Text style={[styles.title, { color: colors.textPrimary }]}>
+          {t('auth.phoneVerification')}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {isSending
+            ? t('auth.codeSending')
+            : t('auth.codeSent', { phone: phoneNumber })}
         </Text>
 
-        {/* OTP digit inputs */}
-        <View style={styles.otpRow}>
-          {code.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => { inputRefs.current[index] = ref; }}
-              style={[
-                styles.otpInput,
-                digit ? styles.otpInputFilled : null,
-                error ? styles.otpInputError : null,
-              ]}
-              value={digit}
-              onChangeText={(text) => handleDigitChange(text, index)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              textAlign="center"
-              selectTextOnFocus
-              editable={!isVerifying && !isSending}
-            />
-          ))}
+        {/* OTP digit inputs — wrapped in LTR to prevent RTL reversal */}
+        <View style={{ direction: 'ltr' }}>
+          <View style={styles.otpRow}>
+            {code.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => { inputRefs.current[index] = ref; }}
+                style={[
+                  styles.otpInput,
+                  { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surface },
+                  digit ? { borderColor: colors.primary } : null,
+                  error ? { borderColor: colors.error } : null,
+                ]}
+                value={digit}
+                onChangeText={(text) => handleDigitChange(text, index)}
+                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                textAlign="center"
+                textContentType={Platform.OS === 'ios' ? 'oneTimeCode' : undefined}
+                selectTextOnFocus
+                editable={!isVerifying && !isSending}
+              />
+            ))}
+          </View>
         </View>
 
         {/* Error message */}
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {error && (
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        )}
 
         {/* Verify button */}
         <TouchableOpacity
-          style={[styles.verifyButton, isVerifying && styles.verifyButtonDisabled]}
+          style={[styles.verifyButton, { backgroundColor: colors.primary }, isVerifying && styles.verifyButtonDisabled]}
           onPress={() => handleVerify()}
           disabled={isVerifying || isSending || code.some((d) => !d)}
         >
           <Text style={styles.verifyButtonText}>
-            {isVerifying ? 'מאמת...' : 'אמת קוד'}
+            {isVerifying ? t('auth.verifying') : t('auth.verify')}
           </Text>
         </TouchableOpacity>
 
         {/* Resend code */}
         <View style={styles.resendSection}>
           {resendTimer > 0 ? (
-            <Text style={styles.resendTimer}>
-              שליחה חוזרת בעוד {resendTimer} שניות
+            <Text style={[styles.resendTimer, { color: colors.textSecondary }]}>
+              {t('auth.resendIn', { seconds: resendTimer })}
             </Text>
           ) : (
             <TouchableOpacity onPress={handleResend} disabled={isSending}>
-              <Text style={styles.resendLink}>שלח קוד חדש</Text>
+              <Text style={[styles.resendLink, { color: colors.primary }]}>
+                {t('auth.resendCode')}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Skip in dev when phone auth is not enabled */}
+        {error && error.includes(t('auth.smsNotEnabled').substring(0, 5)) && __DEV__ && (
+          <TouchableOpacity
+            style={[styles.skipButton, { borderColor: colors.accent }]}
+            onPress={() => navigation.getParent()?.reset({
+              index: 0,
+              routes: [{ name: 'SenderTabs' as never }],
+            })}
+          >
+            <Text style={[styles.skipButtonText, { color: colors.accent }]}>
+              {t('auth.skipDev')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -205,7 +237,6 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -215,12 +246,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.text,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 32,
@@ -235,27 +264,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 56,
     borderWidth: 2,
-    borderColor: COLORS.border,
     borderRadius: 12,
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.text,
-    backgroundColor: COLORS.surface,
-  },
-  otpInputFilled: {
-    borderColor: COLORS.primary,
-  },
-  otpInputError: {
-    borderColor: COLORS.error,
   },
   errorText: {
-    color: COLORS.error,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 16,
   },
   verifyButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -275,11 +293,20 @@ const styles = StyleSheet.create({
   },
   resendTimer: {
     fontSize: 14,
-    color: COLORS.textSecondary,
   },
   resendLink: {
     fontSize: 14,
-    color: COLORS.primary,
     fontWeight: '700',
+  },
+  skipButton: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  skipButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,19 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  I18nManager,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
 import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
+
+const logo = require('../../assets/logo.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -32,6 +37,8 @@ type FormField = keyof RegisterForm;
  * RegisterScreen -- email+password registration with profile data
  */
 export function RegisterScreen({ navigation }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const [form, setForm] = useState<RegisterForm>({
     fullName: '',
     email: '',
@@ -41,6 +48,12 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
+  const [focusedField, setFocusedField] = useState<FormField | null>(null);
+
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
 
   const updateField = (key: FormField, value: string): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -51,19 +64,19 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     const newErrors: Partial<Record<FormField, string>> = {};
 
     if (!validateRequired(form.fullName)) {
-      newErrors.fullName = 'שם מלא נדרש';
+      newErrors.fullName = t('auth.fullNameRequired');
     }
     if (!validateEmail(form.email)) {
-      newErrors.email = 'כתובת אימייל לא תקינה';
+      newErrors.email = t('auth.invalidEmail');
     }
     if (!form.password || form.password.length < 8) {
-      newErrors.password = 'סיסמה חייבת להכיל לפחות 8 תווים';
+      newErrors.password = t('auth.passwordTooShort');
     }
     if (form.password !== form.confirmPassword) {
-      newErrors.confirmPassword = 'הסיסמאות אינן תואמות';
+      newErrors.confirmPassword = t('auth.passwordMismatch');
     }
     if (!validatePhone(form.phone)) {
-      newErrors.phone = 'מספר טלפון לא תקין';
+      newErrors.phone = t('auth.invalidPhone');
     }
 
     setErrors(newErrors);
@@ -76,210 +89,250 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     try {
       setIsLoading(true);
 
-      // Step 1: Create Firebase Auth account
       const credential = await registerWithEmail(form.email, form.password);
 
-      // Step 2: Create Firestore user document
       await createUserDocument(credential.user.uid, {
         fullName: form.fullName,
         email: form.email,
         phone: form.phone,
       });
 
-      // Step 3: Navigate to OTP for phone verification
       navigation.navigate('OTPVerification', {
         phoneNumber: form.phone,
-        verificationId: '', // Will be sent on OTP screen mount
+        verificationId: '',
         mode: 'register',
       });
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };
       if (firebaseError.code) {
-        Alert.alert('שגיאה', mapFirebaseAuthError(firebaseError.code));
+        Alert.alert(t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
       } else {
-        Alert.alert('שגיאה', 'לא ניתן להשלים את ההרשמה. נסה שוב.');
+        Alert.alert(t('auth.registerError'), t('auth.registerError'));
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const textAlign = I18nManager.isRTL ? 'right' as const : 'left' as const;
+  const renderInput = (
+    field: FormField,
+    placeholder: string,
+    options?: {
+      secureTextEntry?: boolean;
+      keyboardType?: 'email-address' | 'phone-pad' | 'default';
+      autoComplete?: string;
+      autoCapitalize?: 'none' | 'sentences';
+      ref?: React.RefObject<TextInput>;
+      nextRef?: React.RefObject<TextInput>;
+      returnKeyType?: 'next' | 'done';
+      onSubmitEditing?: () => void;
+    },
+  ) => (
+    <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.inputBg }, focusedField === field && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
+      <TextInput
+        ref={options?.ref}
+        style={[styles.input, { color: colors.textPrimary }]}
+        value={form[field]}
+        onChangeText={(v) => updateField(field, v)}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        secureTextEntry={options?.secureTextEntry}
+        keyboardType={options?.keyboardType || 'default'}
+        autoCapitalize={options?.autoCapitalize || 'sentences'}
+        textAlign="right"
+        editable={!isLoading}
+        onFocus={() => {
+          setFocusedField(field);
+        }}
+        onBlur={() => setFocusedField(null)}
+        returnKeyType={options?.returnKeyType || 'next'}
+        onSubmitEditing={options?.onSubmitEditing || (() => options?.nextRef?.current?.focus())}
+      />
+    </View>
+  );
+
+  const scrollRef = useRef<ScrollView>(null);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
-      <Text style={styles.title}>הרשמה ל-MOOVIZ</Text>
-      <Text style={styles.subtitle}>הצטרף לקהילת המשלוחים</Text>
+      <View style={styles.headerSection}>
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.registerSubtitle')}</Text>
+      </View>
 
       {/* Full name */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>שם מלא</Text>
-        <TextInput
-          style={styles.input}
-          value={form.fullName}
-          onChangeText={(v) => updateField('fullName', v)}
-          placeholder="ישראל ישראלי"
-          textAlign={textAlign}
-          editable={!isLoading}
-        />
-        {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.fullName')}</Text>
+        {renderInput('fullName', 'ישראל ישראלי', {
+          nextRef: emailRef,
+        })}
+        {errors.fullName && <Text style={[styles.errorText, { color: colors.error }]}>{errors.fullName}</Text>}
       </View>
 
       {/* Email */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>אימייל</Text>
-        <TextInput
-          style={styles.input}
-          value={form.email}
-          onChangeText={(v) => updateField('email', v)}
-          placeholder="email@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          textAlign={textAlign}
-          editable={!isLoading}
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.email')}</Text>
+        {renderInput('email', 'email@example.com', {
+          keyboardType: 'email-address',
+          autoCapitalize: 'none',
+          ref: emailRef,
+          nextRef: passwordRef,
+        })}
+        {errors.email && <Text style={[styles.errorText, { color: colors.error }]}>{errors.email}</Text>}
       </View>
 
       {/* Password */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>סיסמה</Text>
-        <TextInput
-          style={styles.input}
-          value={form.password}
-          onChangeText={(v) => updateField('password', v)}
-          placeholder="לפחות 8 תווים"
-          secureTextEntry
-          autoComplete="password-new"
-          textAlign={textAlign}
-          editable={!isLoading}
-        />
-        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.password')}</Text>
+        {renderInput('password', t('auth.password'), {
+          secureTextEntry: true,
+          ref: passwordRef,
+          nextRef: confirmRef,
+        })}
+        {errors.password && <Text style={[styles.errorText, { color: colors.error }]}>{errors.password}</Text>}
       </View>
 
       {/* Confirm password */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>אימות סיסמה</Text>
-        <TextInput
-          style={styles.input}
-          value={form.confirmPassword}
-          onChangeText={(v) => updateField('confirmPassword', v)}
-          placeholder="הזן סיסמה שוב"
-          secureTextEntry
-          textAlign={textAlign}
-          editable={!isLoading}
-        />
-        {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.confirmPassword')}</Text>
+        {renderInput('confirmPassword', t('auth.confirmPassword'), {
+          secureTextEntry: true,
+          ref: confirmRef,
+          nextRef: phoneRef,
+        })}
+        {errors.confirmPassword && <Text style={[styles.errorText, { color: colors.error }]}>{errors.confirmPassword}</Text>}
       </View>
 
       {/* Phone */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>מספר טלפון</Text>
-        <TextInput
-          style={styles.input}
-          value={form.phone}
-          onChangeText={(v) => updateField('phone', v)}
-          placeholder="050-1234567"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textAlign={textAlign}
-          editable={!isLoading}
-        />
-        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.phone')}</Text>
+        {renderInput('phone', '050-1234567', {
+          keyboardType: 'phone-pad',
+          ref: phoneRef,
+          returnKeyType: 'done',
+          onSubmitEditing: handleRegister,
+        })}
+        {errors.phone && <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>}
       </View>
 
       {/* Submit */}
       <TouchableOpacity
-        style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+        style={[styles.submitButton, { backgroundColor: colors.primary, shadowColor: colors.primary }, isLoading && styles.submitButtonDisabled]}
         onPress={handleRegister}
         disabled={isLoading}
+        activeOpacity={0.85}
       >
         <Text style={styles.submitButtonText}>
-          {isLoading ? 'נרשם...' : 'הירשם'}
+          {isLoading ? t('auth.registering') : t('auth.register')}
         </Text>
       </TouchableOpacity>
 
       {/* Back to login */}
       <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
-        <Text style={styles.backLinkText}>כבר רשום? התחבר</Text>
+        <Text style={[styles.backLinkText, { color: colors.textSecondary }]}>
+          {t('auth.alreadyRegistered')} <Text style={[styles.backLinkBold, { color: colors.primary }]}>{t('auth.loginNow')}</Text>
+        </Text>
       </TouchableOpacity>
+
+      <View style={styles.keyboardSpacer} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   contentContainer: {
-    padding: 24,
+    paddingHorizontal: 28,
     paddingBottom: 48,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.text,
-    textAlign: 'center',
-    marginTop: 48,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
+  headerSection: {
+    alignItems: 'center',
+    paddingTop: 50,
     marginBottom: 32,
   },
+  logo: {
+    width: 200,
+    height: 70,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+  },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 6,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
     textAlign: 'right',
   },
-  input: {
+  inputWrapper: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  input: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 16,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
+    writingDirection: 'rtl',
   },
   errorText: {
-    color: COLORS.error,
     fontSize: 13,
     marginTop: 4,
+    alignSelf: 'flex-start',
     textAlign: 'right',
   },
   submitButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   backLink: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 20,
   },
   backLinkText: {
     fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
+  },
+  backLinkBold: {
+    fontWeight: '700',
+  },
+  keyboardSpacer: {
+    height: 120,
   },
 });

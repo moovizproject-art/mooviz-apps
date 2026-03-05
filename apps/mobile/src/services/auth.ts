@@ -69,11 +69,24 @@ export async function sendPasswordReset(email: string): Promise<void> {
 /**
  * Step 2: Send phone OTP for linking to account.
  * Returns verificationId for use with verifyAndLinkPhone.
+ *
+ * Prerequisites for SMS OTP to work:
+ * 1. Firebase Console → Authentication → Sign-in method → Phone sign-in ENABLED
+ * 2. Android: SHA-1 and SHA-256 fingerprints registered in Firebase Console → Project Settings
+ * 3. iOS: APNs key or certificate configured for push-based verification
+ * 4. For testing: add test phone numbers in Firebase Console → Authentication → Phone → Phone numbers for testing
+ *
+ * Note: On some RN Firebase versions, verifyPhoneNumber may return a PhoneAuthState
+ * object instead of a plain string. If that happens, extract .verificationId from the result.
  */
 export async function sendPhoneOTP(phone: string): Promise<string> {
   const normalized = normalizePhoneNumber(phone);
-  const confirmation = await auth().verifyPhoneNumber(normalized);
-  return confirmation;
+  const result = await auth().verifyPhoneNumber(normalized);
+  // Handle both string and object return types across RN Firebase versions
+  if (typeof result === 'string') {
+    return result;
+  }
+  return (result as any).verificationId || result;
 }
 
 /**
