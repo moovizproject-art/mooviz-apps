@@ -6,26 +6,31 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 
-import { DriverTabScreenProps } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { DriverTabScreenProps } from '../../navigation/types';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useLocation } from '../../hooks/useLocation';
+import { AvailabilityToggle } from '../../components/AvailabilityToggle';
 import { DeliveryCard } from '../../components/DeliveryCard';
+import { GlassCard } from '../../components/GlassCard';
+import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
-import { LoadingScreen } from '../../components/LoadingScreen';
 import { MAX_DELIVERY_RADIUS_KM } from '../../constants/config';
+import { BRAND, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/design';
 
 type Props = DriverTabScreenProps<'Feed'>;
 
 /**
  * FeedScreen (Driver) — פיד משלוחים זמינים
- * Available deliveries with radius filter, geohash-based proximity query.
- * משלוחים זמינים עם סינון לפי רדיוס, שאילתות מבוססות geohash
+ * Glass morphism design with availability toggle, radius filter,
+ * nearby deliveries with pull-to-refresh and skeleton loading.
+ * עיצוב זכוכית עם מתג זמינות, סינון רדיוס, משלוחים קרובים
  */
 export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const [radiusKm, setRadiusKm] = useState<number>(10);
+  const [isAvailable, setIsAvailable] = useState<boolean>(true);
   const { location, isLoading: locationLoading } = useLocation();
 
   const { deliveries, isLoading, refresh } = useDelivery({
@@ -44,24 +49,28 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     [navigation],
   );
 
-  if (locationLoading) {
-    return <LoadingScreen />;
-  }
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
+  const renderHeader = (): React.JSX.Element => (
+    <View>
+      {/* Header title */}
+      {/* כותרת */}
       <View style={styles.header}>
         <Text style={styles.title}>משלוחים זמינים</Text>
-        {/* Available deliveries */}
+      </View>
+
+      {/* Availability toggle */}
+      {/* מתג זמינות */}
+      <View style={styles.toggleContainer}>
+        <AvailabilityToggle
+          isAvailable={isAvailable}
+          onToggle={setIsAvailable}
+        />
       </View>
 
       {/* Radius filter */}
       {/* סינון לפי מרחק */}
-      <View style={styles.filterSection}>
+      <GlassCard style={styles.filterCard} padding="lg">
         <View style={styles.filterHeader}>
           <Text style={styles.filterLabel}>רדיוס חיפוש</Text>
-          {/* Search radius */}
           <Text style={styles.filterValue}>{radiusKm} ק״מ</Text>
         </View>
         <Slider
@@ -71,27 +80,36 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           step={1}
           value={radiusKm}
           onValueChange={setRadiusKm}
-          minimumTrackTintColor={COLORS.primary}
-          maximumTrackTintColor={COLORS.border}
-          thumbTintColor={COLORS.primary}
+          minimumTrackTintColor={BRAND.primary}
+          maximumTrackTintColor={BRAND.border}
+          thumbTintColor={BRAND.primary}
         />
-      </View>
+      </GlassCard>
 
-      {/* Location status */}
-      {/* מצב מיקום */}
-      {!location && (
+      {/* Location warning */}
+      {/* אזהרת מיקום */}
+      {!location && !locationLoading && (
         <View style={styles.locationWarning}>
           <Text style={styles.locationWarningText}>
             לא ניתן לאתר את מיקומך. בדוק הרשאות GPS.
           </Text>
-          {/* Cannot determine location. Check GPS permissions. */}
         </View>
       )}
 
-      {/* Available deliveries list */}
-      {/* רשימת משלוחים זמינים */}
+      {/* Results count */}
+      {/* מספר תוצאות */}
+      {!isLoading && deliveries.length > 0 && (
+        <Text style={styles.resultsCount}>
+          {deliveries.length} משלוחים באזורך
+        </Text>
+      )}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
-        data={deliveries}
+        data={isLoading ? [] : deliveries}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <DeliveryCard
@@ -100,80 +118,106 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             showDistance
           />
         )}
+        ListHeaderComponent={renderHeader}
         ListEmptyComponent={
-          <EmptyState
-            icon="search"
-            message="אין משלוחים זמינים באזורך"
-            submessage="נסה להגדיל את רדיוס החיפוש"
-            /* No deliveries in your area / Try increasing radius */
+          isLoading || locationLoading ? (
+            <View style={styles.skeletonContainer}>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </View>
+          ) : (
+            <EmptyState
+              icon="search"
+              message="אין משלוחים זמינים באזורך"
+              submessage="נסה להגדיל את רדיוס החיפוש"
+            />
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refresh}
+            tintColor={BRAND.primary}
           />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
         contentContainerStyle={[
           styles.listContent,
-          deliveries.length === 0 && styles.emptyList,
+          !isLoading && deliveries.length === 0 && styles.emptyList,
         ]}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: BRAND.background,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 8,
+    paddingHorizontal: SPACING.xxl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.text,
+    ...TYPOGRAPHY.h1,
+    color: BRAND.textPrimary,
     textAlign: 'right',
   },
-  filterSection: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  toggleContainer: {
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.md,
+  },
+  filterCard: {
+    marginHorizontal: SPACING.xxl,
+    marginBottom: SPACING.md,
   },
   filterHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
+    ...TYPOGRAPHY.bodyBold,
+    color: BRAND.textPrimary,
   },
   filterValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.primary,
+    ...TYPOGRAPHY.bodyBold,
+    color: BRAND.primary,
   },
   slider: {
     width: '100%',
     height: 40,
   },
   locationWarning: {
-    marginHorizontal: 24,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.warningBg,
-    marginBottom: 12,
+    marginHorizontal: SPACING.xxl,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: BRAND.warningBg,
+    marginBottom: SPACING.md,
   },
   locationWarningText: {
-    fontSize: 13,
-    color: COLORS.warning,
+    ...TYPOGRAPHY.caption,
+    color: BRAND.warning,
+    textAlign: 'right',
+  },
+  resultsCount: {
+    ...TYPOGRAPHY.caption,
+    color: BRAND.textSecondary,
+    paddingHorizontal: SPACING.xxl,
+    marginBottom: SPACING.md,
     textAlign: 'right',
   },
   listContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingHorizontal: SPACING.xxl,
+    paddingBottom: SPACING.xxl,
+  },
+  skeletonContainer: {
+    gap: SPACING.md,
   },
   emptyList: {
     flex: 1,
