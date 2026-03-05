@@ -10,6 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 
 import { DriverTabScreenProps } from '../../navigation/types';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useLocation } from '../../hooks/useLocation';
 import { AvailabilityToggle } from '../../components/AvailabilityToggle';
@@ -17,8 +19,10 @@ import { DeliveryCard } from '../../components/DeliveryCard';
 import { GlassCard } from '../../components/GlassCard';
 import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
+import { TabHeader } from '../../components/TabHeader';
+import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { MAX_DELIVERY_RADIUS_KM } from '../../constants/config';
-import { BRAND, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/design';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/design';
 
 type Props = DriverTabScreenProps<'Feed'>;
 
@@ -29,6 +33,9 @@ type Props = DriverTabScreenProps<'Feed'>;
  * עיצוב זכוכית עם מתג זמינות, סינון רדיוס, משלוחים קרובים
  */
 export function FeedScreen({ navigation }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const drawer = useSettingsDrawer();
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [isAvailable, setIsAvailable] = useState<boolean>(true);
   const { location, isLoading: locationLoading } = useLocation();
@@ -51,14 +58,9 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
   const renderHeader = (): React.JSX.Element => (
     <View>
-      {/* Header title */}
-      {/* כותרת */}
-      <View style={styles.header}>
-        <Text style={styles.title}>משלוחים זמינים</Text>
-      </View>
+      <TabHeader title={t('driver.availableDeliveries')} onSettingsPress={drawer.open} />
 
       {/* Availability toggle */}
-      {/* מתג זמינות */}
       <View style={styles.toggleContainer}>
         <AvailabilityToggle
           isAvailable={isAvailable}
@@ -67,11 +69,10 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       </View>
 
       {/* Radius filter */}
-      {/* סינון לפי מרחק */}
       <GlassCard style={styles.filterCard} padding="lg">
         <View style={styles.filterHeader}>
-          <Text style={styles.filterLabel}>רדיוס חיפוש</Text>
-          <Text style={styles.filterValue}>{radiusKm} ק״מ</Text>
+          <Text style={[styles.filterLabel, { color: colors.textPrimary }]}>{t('driver.searchRadius')}</Text>
+          <Text style={[styles.filterValue, { color: colors.primary }]}>{radiusKm} {t('driver.km')}</Text>
         </View>
         <Slider
           style={styles.slider}
@@ -80,34 +81,32 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           step={1}
           value={radiusKm}
           onValueChange={setRadiusKm}
-          minimumTrackTintColor={BRAND.primary}
-          maximumTrackTintColor={BRAND.border}
-          thumbTintColor={BRAND.primary}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
         />
       </GlassCard>
 
       {/* Location warning */}
-      {/* אזהרת מיקום */}
       {!location && !locationLoading && (
-        <View style={styles.locationWarning}>
-          <Text style={styles.locationWarningText}>
-            לא ניתן לאתר את מיקומך. בדוק הרשאות GPS.
+        <View style={[styles.locationWarning, { backgroundColor: colors.warningBg }]}>
+          <Text style={[styles.locationWarningText, { color: colors.warning }]}>
+            {t('driver.locationWarning')}
           </Text>
         </View>
       )}
 
       {/* Results count */}
-      {/* מספר תוצאות */}
       {!isLoading && deliveries.length > 0 && (
-        <Text style={styles.resultsCount}>
-          {deliveries.length} משלוחים באזורך
+        <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>
+          {deliveries.length} {t('driver.deliveriesInArea')}
         </Text>
       )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <FlatList
         data={isLoading ? [] : deliveries}
         keyExtractor={(item) => item.id}
@@ -130,8 +129,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           ) : (
             <EmptyState
               icon="search"
-              message="אין משלוחים זמינים באזורך"
-              submessage="נסה להגדיל את רדיוס החיפוש"
+              message={t('driver.noDeliveriesNearby')}
+              submessage={t('driver.increaseRadius')}
             />
           )
         }
@@ -139,7 +138,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refresh}
-            tintColor={BRAND.primary}
+            tintColor={colors.primary}
           />
         }
         contentContainerStyle={[
@@ -148,6 +147,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         ]}
         showsVerticalScrollIndicator={false}
       />
+      <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
     </SafeAreaView>
   );
 }
@@ -155,17 +155,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BRAND.background,
-  },
-  header: {
-    paddingHorizontal: SPACING.xxl,
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.sm,
-  },
-  title: {
-    ...TYPOGRAPHY.h1,
-    color: BRAND.textPrimary,
-    textAlign: 'right',
   },
   toggleContainer: {
     paddingHorizontal: SPACING.xxl,
@@ -183,11 +172,9 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     ...TYPOGRAPHY.bodyBold,
-    color: BRAND.textPrimary,
   },
   filterValue: {
     ...TYPOGRAPHY.bodyBold,
-    color: BRAND.primary,
   },
   slider: {
     width: '100%',
@@ -197,17 +184,14 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.xxl,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: BRAND.warningBg,
     marginBottom: SPACING.md,
   },
   locationWarningText: {
     ...TYPOGRAPHY.caption,
-    color: BRAND.warning,
     textAlign: 'right',
   },
   resultsCount: {
     ...TYPOGRAPHY.caption,
-    color: BRAND.textSecondary,
     paddingHorizontal: SPACING.xxl,
     marginBottom: SPACING.md,
     textAlign: 'right',

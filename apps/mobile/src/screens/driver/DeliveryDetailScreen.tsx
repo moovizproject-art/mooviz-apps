@@ -11,7 +11,8 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -27,6 +28,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DriverDeliveryDetail'>;
  */
 export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.Element {
   const { deliveryId } = route.params;
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const { currentUser } = useAuth();
   const { getDeliveryById, expressInterest, updateDeliveryStatus, isLoading } = useDelivery();
   const delivery = getDeliveryById(deliveryId);
@@ -34,27 +37,20 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const handleExpressInterest = async (): Promise<void> => {
     try {
       await expressInterest(deliveryId, currentUser!.uid);
-      Alert.alert('הצלחה', 'הבעת העניין נשלחה לשולח!');
-      // Success: Interest expressed to sender!
+      Alert.alert('', t('driver.interestSent'));
     } catch (err) {
-      Alert.alert('שגיאה', 'לא ניתן לשלוח הבעת עניין. נסה שוב.');
-      // Error: Cannot express interest
+      Alert.alert('', t('driver.interestError'));
     }
   };
 
   const handleStatusUpdate = async (
     newStatus: 'picked_up' | 'in_transit' | 'delivered',
   ): Promise<void> => {
-    const statusLabels: Record<string, string> = {
-      picked_up: 'נאסף',
-      in_transit: 'בדרך',
-      delivered: 'נמסר',
-    };
     try {
       await updateDeliveryStatus(deliveryId, newStatus);
-      Alert.alert('עודכן', `הסטטוס עודכן ל: ${statusLabels[newStatus]}`);
+      Alert.alert('', t('driver.statusUpdated'));
     } catch (err) {
-      Alert.alert('שגיאה', 'לא ניתן לעדכן סטטוס');
+      Alert.alert('', t('driver.statusUpdateError'));
     }
   };
 
@@ -66,43 +62,39 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const isPending = delivery.status === 'pending';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       {/* Status */}
       <View style={styles.statusRow}>
         <StatusBadge status={delivery.status} />
-        <Text style={styles.deliveryId}>#{deliveryId.slice(0, 8)}</Text>
+        <Text style={[styles.deliveryId, { color: colors.textSecondary }]}>#{deliveryId.slice(0, 8)}</Text>
       </View>
 
       {/* Route info */}
-      {/* מידע על המסלול */}
-      <View style={styles.routeSection}>
+      <View style={[styles.routeSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.routePoint}>
-          <View style={[styles.routeDot, { backgroundColor: COLORS.success }]} />
+          <View style={[styles.routeDot, { backgroundColor: colors.success }]} />
           <View style={styles.routeInfo}>
-            <Text style={styles.routeLabel}>איסוף</Text>
-            {/* Pickup */}
-            <Text style={styles.routeAddress}>{delivery.pickup?.address || '—'}</Text>
+            <Text style={[styles.routeLabel, { color: colors.textSecondary }]}>{t('delivery.pickup')}</Text>
+            <Text style={[styles.routeAddress, { color: colors.textPrimary }]}>{delivery.pickup?.address || '—'}</Text>
           </View>
         </View>
-        <View style={styles.routeLine} />
+        <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
         <View style={styles.routePoint}>
-          <View style={[styles.routeDot, { backgroundColor: COLORS.error }]} />
+          <View style={[styles.routeDot, { backgroundColor: colors.error }]} />
           <View style={styles.routeInfo}>
-            <Text style={styles.routeLabel}>יעד</Text>
-            {/* Destination */}
-            <Text style={styles.routeAddress}>{delivery.destination?.address || '—'}</Text>
+            <Text style={[styles.routeLabel, { color: colors.textSecondary }]}>{t('delivery.destination')}</Text>
+            <Text style={[styles.routeAddress, { color: colors.textPrimary }]}>{delivery.destination?.address || '—'}</Text>
           </View>
         </View>
       </View>
 
       {/* Item details */}
-      {/* פרטי הפריט */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>פרטי הפריט</Text>
-        <Text style={styles.itemDescription}>{delivery.itemDescription}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('driver.itemDetails')}</Text>
+        <Text style={[styles.itemDescription, { color: colors.textPrimary }]}>{delivery.itemDescription}</Text>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>גודל:</Text>
-          <Text style={styles.detailValue}>{delivery.itemSize || '—'}</Text>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.size')}:</Text>
+          <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{delivery.itemSize || '—'}</Text>
         </View>
         {delivery.photoUrl && (
           <Image source={{ uri: delivery.photoUrl }} style={styles.itemPhoto} />
@@ -110,17 +102,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       </View>
 
       {/* Price */}
-      {/* מחיר */}
-      <View style={styles.priceSection}>
-        <Text style={styles.priceLabel}>תשלום</Text>
-        {/* Payment */}
-        <Text style={styles.priceValue}>₪{delivery.suggestedPrice || 0}</Text>
+      <View style={[styles.priceSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>{t('driver.payment')}</Text>
+        <Text style={[styles.priceValue, { color: colors.success }]}>₪{delivery.suggestedPrice || 0}</Text>
       </View>
 
       {/* Sender info */}
-      {/* פרטי השולח */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>השולח</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('driver.theSender')}</Text>
         <View style={styles.userCard}>
           <AvatarCircle
             name={delivery.senderName || ''}
@@ -128,9 +117,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             size={40}
           />
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{delivery.senderName}</Text>
-            <Text style={styles.userRating}>
-              {delivery.senderRating ? `${delivery.senderRating.toFixed(1)} ★` : 'חדש'}
+            <Text style={[styles.userName, { color: colors.textPrimary }]}>{delivery.senderName}</Text>
+            <Text style={[styles.userRating, { color: colors.textSecondary }]}>
+              {delivery.senderRating ? `${delivery.senderRating.toFixed(1)} ★` : t('delivery.newDriver')}
             </Text>
           </View>
         </View>
@@ -139,63 +128,57 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* Notes */}
       {delivery.notes && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>הערות</Text>
-          <Text style={styles.notesText}>{delivery.notes}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('driver.notes')}</Text>
+          <Text style={[styles.notesText, { color: colors.textSecondary }]}>{delivery.notes}</Text>
         </View>
       )}
 
       {/* Action buttons */}
-      {/* כפתורי פעולה */}
       <View style={styles.actionsSection}>
         {isPending && !isMyJob && (
-          <TouchableOpacity style={styles.interestButton} onPress={handleExpressInterest}>
-            <Text style={styles.interestButtonText}>הבעת עניין</Text>
-            {/* Express Interest */}
+          <TouchableOpacity style={[styles.interestButton, { backgroundColor: colors.primary }]} onPress={handleExpressInterest}>
+            <Text style={styles.interestButtonText}>{t('driver.expressInterest')}</Text>
           </TouchableOpacity>
         )}
 
         {isMyJob && delivery.status === 'matched' && (
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={() => handleStatusUpdate('picked_up')}
           >
-            <Text style={styles.actionButtonText}>אישור איסוף</Text>
-            {/* Confirm pickup */}
+            <Text style={styles.actionButtonText}>{t('driver.confirmPickup')}</Text>
           </TouchableOpacity>
         )}
 
         {isMyJob && delivery.status === 'picked_up' && (
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={() => handleStatusUpdate('in_transit')}
           >
-            <Text style={styles.actionButtonText}>יצאתי לדרך</Text>
-            {/* On my way */}
+            <Text style={styles.actionButtonText}>{t('driver.onMyWay')}</Text>
           </TouchableOpacity>
         )}
 
         {isMyJob && delivery.status === 'in_transit' && (
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: COLORS.success }]}
+            style={[styles.actionButton, { backgroundColor: colors.success }]}
             onPress={() => handleStatusUpdate('delivered')}
           >
-            <Text style={styles.actionButtonText}>אישור מסירה</Text>
-            {/* Confirm delivery */}
+            <Text style={styles.actionButtonText}>{t('driver.confirmDelivery')}</Text>
           </TouchableOpacity>
         )}
 
         {isMyJob && (
           <TouchableOpacity
-            style={styles.chatButton}
+            style={[styles.chatButton, { backgroundColor: colors.surface, borderColor: colors.primary }]}
             onPress={() =>
               navigation.navigate('ChatRoom', {
                 chatId: delivery.chatId || '',
-                recipientName: delivery.senderName || 'שולח',
+                recipientName: delivery.senderName || '',
               })
             }
           >
-            <Text style={styles.chatButtonText}>צ׳אט עם השולח</Text>
-            {/* Chat with sender */}
+            <Text style={[styles.chatButtonText, { color: colors.primary }]}>{t('driver.chatWithSender')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -206,7 +189,6 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   contentContainer: {
     padding: 24,
@@ -220,15 +202,12 @@ const styles = StyleSheet.create({
   },
   deliveryId: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     fontFamily: 'monospace',
   },
   routeSection: {
-    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginBottom: 24,
   },
   routePoint: {
@@ -247,19 +226,16 @@ const styles = StyleSheet.create({
   routeLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.textSecondary,
     textAlign: 'right',
   },
   routeAddress: {
     fontSize: 15,
-    color: COLORS.text,
     textAlign: 'right',
     marginTop: 2,
   },
   routeLine: {
     width: 2,
     height: 20,
-    backgroundColor: COLORS.border,
     marginRight: 5,
     marginVertical: 4,
   },
@@ -269,13 +245,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.text,
     textAlign: 'right',
     marginBottom: 8,
   },
   itemDescription: {
     fontSize: 15,
-    color: COLORS.text,
     textAlign: 'right',
     lineHeight: 22,
   },
@@ -288,11 +262,9 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   detailValue: {
     fontSize: 14,
-    color: COLORS.text,
   },
   itemPhoto: {
     width: '100%',
@@ -304,22 +276,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginBottom: 24,
   },
   priceLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   priceValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.success,
   },
   userCard: {
     flexDirection: 'row',
@@ -332,15 +300,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text,
   },
   userRating: {
     fontSize: 13,
-    color: COLORS.textSecondary,
   },
   notesText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     textAlign: 'right',
     lineHeight: 20,
   },
@@ -349,7 +314,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   interestButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -360,7 +324,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   actionButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -371,15 +334,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   chatButton: {
-    backgroundColor: COLORS.surface,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   chatButtonText: {
-    color: COLORS.primary,
     fontSize: 16,
     fontWeight: '700',
   },
