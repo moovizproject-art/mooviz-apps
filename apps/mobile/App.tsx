@@ -7,6 +7,7 @@ import { StatusBar } from 'react-native';
 import { AuthProvider } from './src/hooks/useAuth';
 import { RootNavigator, RootStackParamList } from './src/navigation/RootNavigator';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { OfflineBanner } from './src/components/OfflineBanner';
 
 // Force RTL layout for Hebrew-first UI
 // כפיית כיוון ימין-לשמאל עבור ממשק עברית
@@ -66,6 +67,7 @@ export default function App(): React.JSX.Element {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
+        <OfflineBanner />
         <AuthProvider>
           <NavigationContainer linking={linking}>
             <StatusBar barStyle="default" />
