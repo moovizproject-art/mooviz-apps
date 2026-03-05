@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
+import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 
 const logo = require('../../assets/logo.png');
 
@@ -32,6 +33,14 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
   const drawer = useSettingsDrawer();
+
+  // Request permissions on first launch
+  useEffect(() => {
+    (async () => {
+      await requestNotificationPermission();
+      await requestLocationPermission();
+    })();
+  }, []);
 
   const { deliveries, isLoading, refresh } = useDelivery({
     userId: currentUser?.uid,

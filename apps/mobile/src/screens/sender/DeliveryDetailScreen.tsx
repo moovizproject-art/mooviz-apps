@@ -13,6 +13,7 @@ import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useDelivery } from '../../hooks/useDelivery';
+import { useAuth } from '../../hooks/useAuth';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -28,7 +29,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { deliveryId } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { getDeliveryById, isLoading } = useDelivery();
+  const { currentUser } = useAuth();
+  const { getDeliveryById, isLoading } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
   const delivery = getDeliveryById(deliveryId);
 
   // Build status timeline steps

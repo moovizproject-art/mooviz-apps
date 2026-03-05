@@ -6,16 +6,17 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { uploadEncryptedProfilePhoto, getAuthorizedProfilePhoto, clearPhotoCache } from '../../services/encryption';
+import storage from '@react-native-firebase/storage';
+import { requestMediaLibraryPermission } from '../../utils/permissions';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
 /**
  * ProfileScreen — מסך פרופיל
@@ -26,6 +27,7 @@ export function ProfileScreen(): React.JSX.Element {
   const { t } = useI18n();
   const { currentUser, logout, updateProfile } = useAuth();
   const drawer = useSettingsDrawer();
+  const carAlert = useCarAlert();
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
@@ -36,7 +38,9 @@ export function ProfileScreen(): React.JSX.Element {
   // Load own profile photo on mount
   React.useEffect(() => {
     if (currentUser?.uid) {
-      getAuthorizedProfilePhoto(currentUser.uid).then(setOwnPhotoUri);
+      storage().ref(`users/${currentUser.uid}/profile.jpg`).getDownloadURL()
+        .then(setOwnPhotoUri)
+        .catch(() => {}); // no photo yet
     }
   }, [currentUser?.uid]);
 
@@ -47,13 +51,16 @@ export function ProfileScreen(): React.JSX.Element {
         city: editCity,
       });
       setIsEditing(false);
-      Alert.alert('', t('profile.profileUpdated'));
+      carAlert.show('success', t('common.success'), t('profile.profileUpdated'));
     } catch (err) {
-      Alert.alert('', t('profile.profileUpdateError'));
+      carAlert.show('error', t('common.error'), t('profile.profileUpdateError'));
     }
   };
 
   const handleChangePhoto = useCallback(async (): Promise<void> => {
+    const hasPermission = await requestMediaLibraryPermission();
+    if (!hasPermission) return;
+
     const result = await launchImageLibrary({
       mediaType: 'photo',
       quality: 0.7,
@@ -67,22 +74,21 @@ export function ProfileScreen(): React.JSX.Element {
     setUploadingPhoto(true);
     try {
       const uri = result.assets[0].uri;
-      // Upload to temp path → Cloud Function encrypts → stores encrypted version
-      await uploadEncryptedProfilePhoto(currentUser.uid, uri);
-      // Refresh cached photo
-      clearPhotoCache(currentUser.uid);
-      const newPhotoUri = await getAuthorizedProfilePhoto(currentUser.uid);
-      setOwnPhotoUri(newPhotoUri);
-      Alert.alert('', t('profile.photoUpdated'));
+      const ref = storage().ref(`users/${currentUser.uid}/profile.jpg`);
+      await ref.putFile(uri, { contentType: 'image/jpeg' });
+      const downloadUrl = await ref.getDownloadURL();
+      setOwnPhotoUri(downloadUrl);
+      carAlert.show('success', t('common.success'), t('profile.photoUpdated'));
     } catch (err) {
-      Alert.alert('', t('profile.photoError'));
+      console.error('[ProfileScreen] Photo upload error:', err);
+      carAlert.show('error', t('common.error'), t('profile.photoError'));
     } finally {
       setUploadingPhoto(false);
     }
-  }, [currentUser, t]);
+  }, [currentUser, t, carAlert]);
 
   const handleLogout = (): void => {
-    Alert.alert(t('profile.logoutTitle'), t('profile.logoutConfirm'), [
+    carAlert.show('info', t('profile.logoutTitle'), t('profile.logoutConfirm'), [
       { text: t('profile.cancelEdit'), style: 'cancel' },
       { text: t('profile.logout'), style: 'destructive', onPress: () => logout() },
     ]);
@@ -204,6 +210,14 @@ export function ProfileScreen(): React.JSX.Element {
       </ScrollView>
 
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
+      <CarAlert
+        visible={carAlert.visible}
+        type={carAlert.type}
+        title={carAlert.title}
+        message={carAlert.message}
+        buttons={carAlert.buttons}
+        onDismiss={carAlert.dismiss}
+      />
     </View>
   );
 }
@@ -269,7 +283,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    textAlign: 'right',
     marginBottom: 12,
   },
   ratingRow: {
@@ -308,7 +321,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 4,
-    textAlign: 'right',
   },
   input: {
     borderWidth: 1,

@@ -37,6 +37,15 @@ service firebase.storage {
       allow read: if false;
     }
 
+    // Profile photo — direct upload (before encryption Cloud Functions are deployed)
+    match /users/{userId}/profile.jpg {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
     match /users/{userId}/profile.enc {
       // Encrypted files: no client read/write
       // Only Cloud Functions (admin SDK) access these
@@ -48,6 +57,18 @@ service firebase.storage {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
+    // ───────────────────────────────────────────────
+    // Delivery Item Photos
+    // Sender uploads item photo when creating delivery
+    // ───────────────────────────────────────────────
+    match /deliveries/{senderId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && request.auth.uid == senderId
         && isImage()
         && request.resource.size < maxSize();
     }

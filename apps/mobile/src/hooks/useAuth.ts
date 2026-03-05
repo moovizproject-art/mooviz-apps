@@ -3,6 +3,8 @@ import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { User } from '../types';
 
+const SESSION_MAX_DAYS = 30;
+
 // ──────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────
@@ -15,6 +17,10 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   register: (data: Partial<User>) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  refreshFirebaseUser: () => Promise<void>;
+  refreshUserDoc: () => Promise<void>;
+  forceOtp: boolean;
+  setForceOtp: (val: boolean) => void;
 }
 
 // ──────────────────────────────────────────────
@@ -35,6 +41,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [, setRefreshTick] = useState(0);
+  const [forceOtp, setForceOtp] = useState<boolean>(false);
 
   // Listen to Firebase auth state changes
   useEffect(() => {
@@ -43,10 +51,36 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
       if (fbUser) {
         try {
-          // Fetch user profile from Firestore
-          const doc = await firestore().collection('users').doc(fbUser.uid).get();
+          // Fetch user profile from Firestore (retry once on permission-denied — can happen during auth token refresh)
+          let doc;
+          try {
+            doc = await firestore().collection('users').doc(fbUser.uid).get();
+          } catch (retryErr: any) {
+            if (retryErr?.code === 'firestore/permission-denied') {
+              console.log('[useAuth] Permission denied, retrying after token refresh...');
+              await fbUser.getIdToken(true); // force token refresh
+              doc = await firestore().collection('users').doc(fbUser.uid).get();
+            } else {
+              throw retryErr;
+            }
+          }
           if (doc.exists) {
             const data = doc.data();
+
+            // Check 30-day session expiry
+            const lastLogin = data?.lastLoginAt?.toDate();
+            if (lastLogin) {
+              const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
+              if (daysSinceLogin > SESSION_MAX_DAYS) {
+                console.log('[useAuth] Session expired after', Math.floor(daysSinceLogin), 'days');
+                await auth().signOut();
+                setCurrentUser(null);
+                setFirebaseUser(null);
+                setIsLoading(false);
+                return;
+              }
+            }
+
             setCurrentUser({
               uid: fbUser.uid,
               fullName: data?.fullName || fbUser.displayName || '',
@@ -67,6 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               fcmTokens: data?.fcmTokens || [],
               location: data?.location || { lat: 0, lng: 0, geohash: '' },
               migratedFrom: data?.migratedFrom,
+              lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
               createdAt: data?.createdAt?.toDate() || new Date(),
               updatedAt: data?.updatedAt?.toDate(),
             });
@@ -131,6 +166,31 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     await firestore().collection('users').doc(user.uid).set(profile, { merge: true });
   }, []);
 
+  const refreshFirebaseUser = useCallback(async (): Promise<void> => {
+    const user = auth().currentUser;
+    if (user) {
+      await user.reload();
+      // reload() updates properties in-place on the same object reference.
+      // Bump a tick counter to force React to re-render with fresh values.
+      setFirebaseUser(auth().currentUser);
+      setRefreshTick((n) => n + 1);
+    }
+  }, []);
+
+  const refreshUserDoc = useCallback(async (): Promise<void> => {
+    const user = auth().currentUser;
+    if (!user) return;
+    const doc = await firestore().collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      const data = doc.data();
+      setCurrentUser((prev) => prev ? {
+        ...prev,
+        lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
+        updatedAt: data?.updatedAt?.toDate(),
+      } : prev);
+    }
+  }, []);
+
   const updateProfile = useCallback(async (data: Partial<User>): Promise<void> => {
     if (!currentUser) throw new Error('Not authenticated');
 
@@ -150,6 +210,10 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     logout,
     register,
     updateProfile,
+    refreshFirebaseUser,
+    refreshUserDoc,
+    forceOtp,
+    setForceOtp,
   };
 
   return React.createElement(AuthContext.Provider, { value }, children);

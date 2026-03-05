@@ -280,7 +280,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    alignSelf: 'flex-start',
     textAlign: 'right',
   },
   inputWrapper: {
@@ -301,7 +300,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     marginTop: 4,
-    alignSelf: 'flex-start',
     textAlign: 'right',
   },
   submitButton: {

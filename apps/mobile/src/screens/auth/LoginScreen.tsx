@@ -18,6 +18,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
+import firestore from '@react-native-firebase/firestore';
+import { useAuth } from '../../hooks/useAuth';
 import { validateEmail } from '../../utils/validators';
 import { signInWithEmail, mapFirebaseAuthError } from '../../services/auth';
 
@@ -32,6 +34,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export function LoginScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t, locale, setLocale } = useI18n();
+  const { setForceOtp } = useAuth();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -40,21 +43,24 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const passwordRef = useRef<TextInput>(null);
   const { width: screenWidth } = useWindowDimensions();
-  const truckX = useRef(new Animated.Value(screenWidth)).current;
+  // Under RTL, absolute pos defaults to right edge. translateX: 0 = right edge, negative = leftward.
+  const truckX = useRef(new Animated.Value(45)).current; // start just off visible right edge
   const truckBounce = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    truckX.setValue(screenWidth);
+    const offRight = 45;                     // just past visible right
+    const offLeft = -(screenWidth + 45);     // just past visible left
+    truckX.setValue(offRight);
     const drive = Animated.loop(
       Animated.sequence([
         Animated.timing(truckX, {
-          toValue: -60,
+          toValue: offLeft,
           duration: 6000,
           easing: Easing.linear,
           useNativeDriver: false,
         }),
         Animated.timing(truckX, {
-          toValue: screenWidth,
+          toValue: offRight,
           duration: 0,
           useNativeDriver: false,
         }),
@@ -96,7 +102,14 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
-      await signInWithEmail(email, password);
+      // Set flag BEFORE signIn so RootNavigator knows OTP is required
+      setForceOtp(true);
+      const cred = await signInWithEmail(email, password);
+      // Stamp login time + clear OTP timestamp
+      await firestore().collection('users').doc(cred.user.uid).update({
+        lastLoginAt: firestore.FieldValue.serverTimestamp(),
+        lastOtpAt: firestore.FieldValue.delete(),
+      }).catch(() => {});
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };
       if (firebaseError.code) {
@@ -129,12 +142,12 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
         <View style={styles.spacer} />
 
-        {/* Animated truck — drives right-to-left for Hebrew RTL */}
+        {/* Animated truck — translateX is NOT flipped by RTL, unlike 'left' */}
         <View style={styles.truckTrack}>
           <Animated.View
             style={[
               styles.truckWrap,
-              { left: truckX, top: truckBounce },
+              { transform: [{ translateX: truckX }, { translateY: truckBounce }] },
             ]}
           >
             <Image
@@ -211,17 +224,17 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        {/* Language toggle */}
+        {/* Language toggle — Hebrew first so it appears on the right under RTL */}
         <View style={styles.langRow}>
-          <TouchableOpacity onPress={() => setLocale('en')}>
-            <Text style={[styles.langText, { color: colors.textTertiary }, locale === 'en' && { color: colors.primary, fontWeight: '700' }]}>
-              EN
-            </Text>
-          </TouchableOpacity>
-          <Text style={[styles.langDivider, { color: colors.textTertiary }]}>|</Text>
           <TouchableOpacity onPress={() => setLocale('he')}>
             <Text style={[styles.langText, { color: colors.textTertiary }, locale === 'he' && { color: colors.primary, fontWeight: '700' }]}>
               עב
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.langDivider, { color: colors.textTertiary }]}>|</Text>
+          <TouchableOpacity onPress={() => setLocale('en')}>
+            <Text style={[styles.langText, { color: colors.textTertiary }, locale === 'en' && { color: colors.primary, fontWeight: '700' }]}>
+              EN
             </Text>
           </TouchableOpacity>
         </View>
@@ -289,8 +302,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    alignSelf: 'flex-start',
-    textAlign: 'right',
   },
   labelSpacing: {
     marginTop: 16,
@@ -313,8 +324,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     marginTop: 8,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   button: {
     borderRadius: 12,

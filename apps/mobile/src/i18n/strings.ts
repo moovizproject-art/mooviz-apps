@@ -14,6 +14,7 @@ export const strings = {
     success: { he: 'הצלחה', en: 'Success' } as LocaleStrings,
     confirm: { he: 'אישור', en: 'Confirm' } as LocaleStrings,
     cancel: { he: 'ביטול', en: 'Cancel' } as LocaleStrings,
+    done: { he: 'סיום', en: 'Done' } as LocaleStrings,
     submit: { he: 'שלח', en: 'Submit' } as LocaleStrings,
     save: { he: 'שמור', en: 'Save' } as LocaleStrings,
     back: { he: 'חזרה', en: 'Back' } as LocaleStrings,
@@ -87,6 +88,12 @@ export const strings = {
     creatingDelivery: { he: 'יוצר משלוח...', en: 'Creating delivery...' } as LocaleStrings,
     addDelivery: { he: 'הוספת משלוח', en: 'Add delivery' } as LocaleStrings,
     newDeliveries: { he: 'משלוחים חדשים', en: 'New deliveries' } as LocaleStrings,
+    helpTitle: { he: 'איך ליצור משלוח?', en: 'How to create a delivery?' } as LocaleStrings,
+    helpBody: {
+      he: '1. הזן כתובת איסוף — המקום ממנו ייאסף הפריט\n\n2. הזן כתובת יעד — לאן לשלוח\n\n3. תאר את הפריט — כמה שיותר פרטים, יותר טוב\n\n4. בחר גודל — קטן (מעטפה), בינוני (קופסה), גדול (רהיט)\n\n5. הוסף תמונה — עוזר לנהגים להבין מה לאסוף\n\n6. קבע תאריך איסוף — מתי הפריט מוכן\n\n7. הצע מחיר — כמה אתה מוכן לשלם\n\n8. הערות — קוד כניסה, קומה, הנחיות מיוחדות',
+      en: '1. Enter pickup address — where the item will be collected\n\n2. Enter destination — where to deliver\n\n3. Describe the item — the more detail, the better\n\n4. Choose size — small (envelope), medium (box), large (furniture)\n\n5. Add a photo — helps drivers understand what to pick up\n\n6. Set pickup date — when the item is ready\n\n7. Suggest a price — how much you are willing to pay\n\n8. Notes — entry code, floor, special instructions',
+    } as LocaleStrings,
+    gotIt: { he: 'הבנתי', en: 'Got it' } as LocaleStrings,
   },
 
   // ── Auth ──
@@ -141,6 +148,14 @@ export const strings = {
     invalidPhone: { he: 'מספר טלפון לא תקין', en: 'Invalid phone number' } as LocaleStrings,
     registerError: { he: 'לא ניתן להשלים את ההרשמה. נסה שוב.', en: 'Cannot complete registration. Try again.' } as LocaleStrings,
     otpError: { he: 'שגיאה בשליחת קוד אימות', en: 'Error sending verification code' } as LocaleStrings,
+    verifyEmail: { he: 'אימות כתובת אימייל', en: 'Verify your email' } as LocaleStrings,
+    emailVerificationSubtitle: { he: 'שלחנו קישור אימות ל-{email}. בדוק את תיבת הדואר שלך ולחץ על הקישור.', en: 'We sent a verification link to {email}. Check your inbox and tap the link.' } as LocaleStrings,
+    emailVerificationSent: { he: 'אימייל אימות נשלח מחדש', en: 'Verification email resent' } as LocaleStrings,
+    emailNotYetVerified: { he: 'האימייל עדיין לא אומת. בדוק את תיבת הדואר שלך.', en: 'Email not yet verified. Check your inbox.' } as LocaleStrings,
+    iVerified: { he: 'אימתתי — המשך', en: 'I verified — continue' } as LocaleStrings,
+    resendEmailVerification: { he: 'שלח אימייל אימות מחדש', en: 'Resend verification email' } as LocaleStrings,
+    verifyPhone: { he: 'אימות מספר טלפון', en: 'Verify your phone' } as LocaleStrings,
+    phoneVerificationSubtitle: { he: 'אמת את מספר הטלפון שלך כדי להשלים את ההתחברות', en: 'Verify your phone number to complete authentication' } as LocaleStrings,
   },
 
   // ── KYC ──

@@ -33,7 +33,7 @@ export function ScreenHeader({ title, onBack, rightElement }: ScreenHeaderProps)
           <Text style={[styles.title, { color: colors.headerText }]} numberOfLines={1}>
             {title}
           </Text>
-          {rightElement || <View style={styles.backButton} />}
+          {rightElement || <View style={styles.placeholder} />}
         </View>
       </View>
     </>
@@ -69,6 +69,10 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     transform: [{ rotate: '-45deg' }],
     marginRight: -3,
+  },
+  placeholder: {
+    width: 40,
+    height: 40,
   },
   title: {
     fontSize: 20,

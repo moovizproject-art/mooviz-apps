@@ -220,10 +220,10 @@ export function DriverKYCScreen(): React.JSX.Element {
               style={[
                 styles.submitButton,
                 { backgroundColor: colors.primary },
-                isUploading && styles.submitButtonDisabled,
+                (isUploading || !acceptedTerms) && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={isUploading}
+              disabled={isUploading || !acceptedTerms}
             >
               {isUploading ? (
                 <ActivityIndicator color="#FFFFFF" />

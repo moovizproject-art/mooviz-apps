@@ -7,6 +7,8 @@ import {
   ScrollView,
   Alert,
   Image,
+  Modal,
+  Animated,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -42,7 +44,10 @@ interface DeliveryForm {
 
 export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const { currentUser } = useAuth();
-  const { createDelivery } = useDelivery();
+  const { createDelivery } = useDelivery({
+    userId: currentUser?.uid,
+    role: 'sender',
+  });
   const { colors } = useTheme();
   const { t } = useI18n();
 
@@ -59,6 +64,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const [showPickupMap, setShowPickupMap] = useState(false);
   const [showDestinationMap, setShowDestinationMap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const updateField = <K extends keyof DeliveryForm>(key: K, value: DeliveryForm[K]): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -117,11 +123,21 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     { value: 'large', label: t('form.sizeLarge') },
   ];
 
+  const infoButton = (
+    <TouchableOpacity
+      style={styles.infoButton}
+      onPress={() => setShowHelp(true)}
+    >
+      <Text style={styles.infoIcon}>?</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
         title={t('form.newDeliveries')}
         onBack={() => navigation.goBack()}
+        rightElement={infoButton}
       />
       <ScrollView
         style={styles.scrollView}
@@ -294,6 +310,28 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Help modal */}
+      <Modal visible={showHelp} transparent animationType="fade" onRequestClose={() => setShowHelp(false)}>
+        <View style={styles.helpOverlay}>
+          <View style={[styles.helpCard, { backgroundColor: colors.background }]}>
+            <View style={[styles.helpHeader, { backgroundColor: colors.primary }]}>
+              <Text style={styles.helpHeaderTitle}>{t('form.helpTitle')}</Text>
+            </View>
+            <ScrollView style={styles.helpScroll} contentContainerStyle={styles.helpScrollContent}>
+              <Text style={[styles.helpBody, { color: colors.textPrimary }]}>
+                {t('form.helpBody')}
+              </Text>
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.helpButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowHelp(false)}
+            >
+              <Text style={styles.helpButtonText}>{t('form.gotIt')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -397,6 +435,77 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     ...TYPOGRAPHY.button,
+    fontWeight: '700',
+  },
+  infoButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoIcon: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  helpOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  helpCard: {
+    width: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+    maxHeight: '75%',
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+  },
+  helpHeader: {
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  helpHeaderIcon: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  helpHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  helpScroll: {
+    maxHeight: 400,
+  },
+  helpScrollContent: {
+    padding: 24,
+  },
+  helpBody: {
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  helpButton: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  helpButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '700',
   },
 });

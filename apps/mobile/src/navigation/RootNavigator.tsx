@@ -33,6 +33,9 @@ import { ChatScreen } from '../screens/shared/ChatScreen';
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { RatingScreen } from '../screens/shared/RatingScreen';
 
+// Verification screens
+import { EmailVerificationScreen } from '../screens/auth/EmailVerificationScreen';
+
 // ──────────────────────────────────────────────
 // Navigation param types
 // ──────────────────────────────────────────────
@@ -61,6 +64,9 @@ export type DriverTabsParamList = {
 
 export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
+  EmailVerification: undefined;
+  PhoneVerification: undefined;
+  PhoneOTP: { phoneNumber: string; verificationId: string; mode?: 'register' | 'login' | 'addPhone' };
   SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
   DriverTabs: NavigatorScreenParams<DriverTabsParamList>;
   CreateDelivery: undefined;
@@ -210,9 +216,9 @@ function DriverTabs(): React.JSX.Element {
   );
 }
 
-/** Root navigator — switches between Auth, Sender, and Driver flows */
+/** Root navigator — switches between Auth, Verification, and App flows */
 export function RootNavigator(): React.JSX.Element {
-  const { currentUser, isLoading } = useAuth();
+  const { currentUser, firebaseUser, isLoading, forceOtp } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
 
@@ -225,9 +231,66 @@ export function RootNavigator(): React.JSX.Element {
     );
   }
 
+  // Verification gates:
+  // 1. Not logged in → Auth flow
+  // 2. Firestore loading → spinner (don't flash login screen)
+  // 3. Email not verified → EmailVerification screen
+  // 4. Phone not linked → AddPhone → OTP flow
+  // 5. Both verified → App
+  const needsEmailVerification = firebaseUser && !firebaseUser.emailVerified;
+  // Phone OTP required on every fresh login (2FA).
+  // forceOtp is set by LoginScreen before signIn — immune to Firestore race conditions.
+  const needsPhoneOtp = (() => {
+    if (!firebaseUser) return false;
+    // Fresh login → always require OTP
+    if (forceOtp) return true;
+    // Phone not linked at all → need to link + verify
+    if (!firebaseUser.phoneNumber) return true;
+    // Phone linked but no recent OTP → need re-verification
+    if (!currentUser?.lastOtpAt) return true;
+    const daysSinceOtp = (Date.now() - currentUser.lastOtpAt.getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceOtp > 30;
+  })();
+  // Keep old name for navigator conditions
+  const needsPhoneVerification = needsPhoneOtp;
+
+  // Debug logging for verification gates
+  if (firebaseUser) {
+    console.log('[RootNavigator] Gate check — emailVerified:', firebaseUser.emailVerified,
+      'phoneNumber:', firebaseUser.phoneNumber,
+      'currentUser:', !!currentUser,
+      'lastOtpAt:', currentUser?.lastOtpAt,
+      'needsEmail:', !!needsEmailVerification,
+      'needsPhone:', !!needsPhoneVerification);
+  }
+
+  // firebaseUser exists but Firestore doc not loaded yet → show loading
+  // We need currentUser to check lastOtpAt, so wait for it
+  if (firebaseUser && !currentUser && !needsEmailVerification) {
+    // Only exception: phone not linked at all → can show AddPhone right away
+    if (!firebaseUser.phoneNumber) {
+      // Fall through to show PhoneVerification screen
+    } else {
+      return (
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      );
+    }
+  }
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!currentUser ? (
+      {!firebaseUser ? (
+        <Stack.Screen name="AuthStack" component={AuthStack} />
+      ) : needsEmailVerification ? (
+        <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
+      ) : needsPhoneVerification ? (
+        <>
+          <Stack.Screen name="PhoneVerification" component={AddPhoneScreen} />
+          <Stack.Screen name="PhoneOTP" component={OTPScreen} />
+        </>
+      ) : !currentUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : currentUser.activeMode === 'driver' ? (
         <>

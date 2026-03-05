@@ -81,12 +81,28 @@ export async function sendPasswordReset(email: string): Promise<void> {
  */
 export async function sendPhoneOTP(phone: string): Promise<string> {
   const normalized = normalizePhoneNumber(phone);
-  const result = await auth().verifyPhoneNumber(normalized);
-  // Handle both string and object return types across RN Firebase versions
-  if (typeof result === 'string') {
-    return result;
+  console.log('[sendPhoneOTP] Sending to:', normalized);
+
+  try {
+    const result = await auth().verifyPhoneNumber(normalized);
+    console.log('[sendPhoneOTP] Result type:', typeof result, result);
+    if (typeof result === 'string') {
+      return result;
+    }
+    // On Android, result may be an object with verificationId
+    return (result as any).verificationId || String(result);
+  } catch (err: unknown) {
+    const error = err as { code?: string; message?: string; userInfo?: { code?: string; message?: string } };
+    console.log('[sendPhoneOTP] Error:', error.code, error.message);
+    // Map known error codes
+    const msg = error.message || error.userInfo?.message || '';
+    if (error.code?.includes('17006') || msg.includes('17006') || msg.includes('region')) {
+      const regionError = new Error('SMS region not enabled in Firebase Console') as any;
+      regionError.code = 'auth/sms-region-not-enabled';
+      throw regionError;
+    }
+    throw err;
   }
-  return (result as any).verificationId || result;
 }
 
 /**
@@ -99,7 +115,21 @@ export async function verifyAndLinkPhone(
   const credential = auth.PhoneAuthProvider.credential(verificationId, code);
   const currentUser = auth().currentUser;
   if (!currentUser) throw new Error('No authenticated user');
-  await currentUser.linkWithCredential(credential);
+
+  // Check if phone is already linked
+  const hasPhone = currentUser.providerData.some(
+    (p) => p.providerId === 'phone',
+  );
+
+  if (hasPhone) {
+    // Phone already linked (2FA re-verification).
+    // signInWithCredential with the phone credential returns the same user
+    // since the phone is linked to this account. This validates the OTP code.
+    await auth().signInWithCredential(credential);
+  } else {
+    // First time — link phone to the email account
+    await currentUser.linkWithCredential(credential);
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -136,6 +166,7 @@ export async function createUserDocument(
     activeMode: 'client',
     driverAvailable: false,
     driverUnlocked: false,
+    lastLoginAt: firestore.FieldValue.serverTimestamp(),
     createdAt: firestore.FieldValue.serverTimestamp(),
     updatedAt: firestore.FieldValue.serverTimestamp(),
   });
@@ -174,6 +205,14 @@ export function mapFirebaseAuthError(code: string): string {
     'auth/credential-already-in-use': 'פרטי ההתחברות כבר בשימוש',
     'auth/requires-recent-login': 'נדרשת התחברות מחדש',
     'auth/network-request-failed': 'בעיית רשת, בדוק את החיבור לאינטרנט',
+    'auth/missing-client-identifier': 'חסר מזהה לקוח. הפעל reCAPTCHA או הוסף SHA-1.',
+    'auth/app-not-authorized': 'האפליקציה לא מורשית לשימוש ב-Firebase Auth.',
+    'auth/captcha-check-failed': 'בדיקת reCAPTCHA נכשלה.',
+    'auth/sms-region-not-enabled': 'שליחת SMS לא מופעלת לאזור זה. יש להפעיל ב-Firebase Console.',
   };
+  // Handle SMS region error (code 17006)
+  if (code.includes('17006') || code.includes('region')) {
+    return 'שליחת SMS לא מופעלת לאזור זה. הפעל ב-Firebase Console → Authentication → Settings → SMS Region Policy.';
+  }
   return errors[code] || 'שגיאה לא צפויה, נסה שוב';
 }

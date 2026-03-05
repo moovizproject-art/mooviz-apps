@@ -7,16 +7,28 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
+  StatusBar,
+  Image,
+  ScrollView,
+  Animated,
+  Easing,
+  ActivityIndicator,
+  I18nManager,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { useAuth } from '../../hooks/useAuth';
 import { sendPhoneOTP, verifyAndLinkPhone, mapFirebaseAuthError } from '../../services/auth';
+import { VerificationStepper } from '../../components/VerificationStepper';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'OTPVerification'>;
+const logo = require('../../assets/logo.png');
+
+type Props = NativeStackScreenProps<any, any>;
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -28,6 +40,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const { phoneNumber, mode } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { refreshFirebaseUser, refreshUserDoc, setForceOtp } = useAuth();
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
   const [verificationId, setVerificationId] = useState<string>(route.params.verificationId || '');
@@ -35,10 +48,44 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const [isSending, setIsSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState<number>(RESEND_COOLDOWN_SECONDS);
+  const carAlert = useCarAlert();
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
-  // Auto-send OTP on mount if no verificationId was passed
+  // Scale animation for each digit box
+  const scaleAnims = useRef(
+    Array.from({ length: OTP_LENGTH }, () => new Animated.Value(1)),
+  ).current;
+
+  // Pop animation when a digit box gets focus
+  const animateFocus = useCallback((index: number) => {
+    setFocusedIndex(index);
+    Animated.sequence([
+      Animated.timing(scaleAnims[index], {
+        toValue: 1.15,
+        duration: 150,
+        easing: Easing.out(Easing.back(2)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnims[index], {
+        toValue: 1.05,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scaleAnims]);
+
+  // Settle animation when a digit is filled
+  const animateSettle = useCallback((index: number) => {
+    Animated.spring(scaleAnims[index], {
+      toValue: 1,
+      friction: 5,
+      tension: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnims]);
+
   const sendOTP = useCallback(async (): Promise<void> => {
     try {
       setIsSending(true);
@@ -48,12 +95,10 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       setResendTimer(RESEND_COOLDOWN_SECONDS);
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };
-      if (firebaseError.code === 'auth/operation-not-allowed') {
-        setError(t('auth.smsNotEnabled'));
-      } else if (firebaseError.code) {
+      if (firebaseError.code) {
         setError(mapFirebaseAuthError(firebaseError.code));
       } else {
-        setError(t('auth.otpError'));
+        setError(firebaseError.message || t('auth.otpError'));
       }
     } finally {
       setIsSending(false);
@@ -66,7 +111,6 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Countdown timer for resend
   useEffect(() => {
     if (resendTimer <= 0) return;
     const timer = setInterval(() => {
@@ -82,19 +126,22 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     setCode(newCode);
     setError(null);
 
-    // Auto-advance to next input
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
+    if (digit) {
+      // Settle current box
+      animateSettle(index);
+      // Move to next and pop it
+      if (index < OTP_LENGTH - 1) {
+        inputRefs.current[index + 1]?.focus();
+        animateFocus(index + 1);
+      }
     }
 
-    // Auto-submit when all digits filled
     if (newCode.every((d) => d.length === 1)) {
       handleVerify(newCode.join(''));
     }
   };
 
   const handleKeyPress = (key: string, index: number): void => {
-    // Handle backspace -- move to previous input
     if (key === 'Backspace' && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -115,14 +162,23 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     try {
       setIsVerifying(true);
       await verifyAndLinkPhone(verificationId, fullCode);
-      // Phone is now linked to the account
-      // Auth state listener in useAuth will pick up the change
-      if (mode === 'addPhone') {
-        Alert.alert(t('common.success'), t('auth.phoneVerified'), [
-          { text: t('common.confirm'), onPress: () => navigation.goBack() },
-        ]);
+      console.log('[OTPScreen] Phone verified successfully');
+      // Stamp lastOtpAt so 30-day auto-login skips OTP
+      const uid = auth().currentUser?.uid;
+      if (uid) {
+        await firestore().collection('users').doc(uid).update({
+          lastOtpAt: firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
       }
-      // For register/login mode, the auth listener handles navigation
+      // Refresh user data first, then show alert — transition happens on dismiss
+      await refreshFirebaseUser();
+      await refreshUserDoc();
+      carAlert.show('success', t('common.success'), t('auth.phoneVerified'), [
+        {
+          text: t('common.confirm'),
+          onPress: () => setForceOtp(false),
+        },
+      ]);
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };
       if (firebaseError.code) {
@@ -137,99 +193,116 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     }
   };
 
-  const handleResend = async (): Promise<void> => {
-    await sendOTP();
-  };
-
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        {/* Header */}
-        <Text style={[styles.title, { color: colors.textPrimary }]}>
-          {t('auth.phoneVerification')}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {isSending
-            ? t('auth.codeSending')
-            : t('auth.codeSent', { phone: phoneNumber })}
-        </Text>
+      <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
-        {/* OTP digit inputs — wrapped in LTR to prevent RTL reversal */}
-        <View style={{ direction: 'ltr' }}>
-          <View style={styles.otpRow}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {/* Blue header */}
+        <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <View style={styles.backChevron} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => auth().signOut()}>
+            <Text style={styles.cancelText}>{t('auth.backToLogin')}</Text>
+          </TouchableOpacity>
+          <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
+            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          </View>
+          <Text style={[styles.headerTitle, { color: colors.headerText }]}>
+            {t('auth.phoneVerification')}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.headerTextSecondary }]}>
+            {isSending
+              ? t('auth.codeSending')
+              : t('auth.codeSent', { phone: phoneNumber })}
+          </Text>
+        </View>
+
+        {/* OTP form */}
+        <View style={styles.formSection}>
+          {/* OTP digit inputs — use row-reverse so RTL flips it back to LTR order (1→6) */}
+          <View style={[styles.otpRow, I18nManager.isRTL && { flexDirection: 'row-reverse' }]}>
             {code.map((digit, index) => (
-              <TextInput
+              <Animated.View
                 key={index}
-                ref={(ref) => { inputRefs.current[index] = ref; }}
-                style={[
-                  styles.otpInput,
-                  { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surface },
-                  digit ? { borderColor: colors.primary } : null,
-                  error ? { borderColor: colors.error } : null,
-                ]}
-                value={digit}
-                onChangeText={(text) => handleDigitChange(text, index)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
-                keyboardType="number-pad"
-                maxLength={1}
-                textAlign="center"
-                textContentType={Platform.OS === 'ios' ? 'oneTimeCode' : undefined}
-                selectTextOnFocus
-                editable={!isVerifying && !isSending}
-              />
+                style={{ transform: [{ scale: scaleAnims[index] }] }}
+              >
+                <TextInput
+                  ref={(ref) => { inputRefs.current[index] = ref; }}
+                  style={[
+                    styles.otpInput,
+                    { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surface },
+                    focusedIndex === index && !digit && { borderColor: colors.primary, borderWidth: 2.5 },
+                    digit ? { borderColor: colors.primary, backgroundColor: colors.primary + '10' } : null,
+                    error ? { borderColor: colors.error } : null,
+                  ]}
+                  value={digit}
+                  onChangeText={(text) => handleDigitChange(text, index)}
+                  onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+                  onFocus={() => animateFocus(index)}
+                  onBlur={() => animateSettle(index)}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  textAlign="center"
+                  textContentType={Platform.OS === 'ios' ? 'oneTimeCode' : undefined}
+                  selectTextOnFocus
+                  editable={!isVerifying && !isSending}
+                />
+              </Animated.View>
             ))}
+          </View>
+
+          {error && (
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          )}
+
+          <TouchableOpacity
+            style={[styles.verifyButton, { backgroundColor: colors.primary }, isVerifying && styles.verifyButtonDisabled]}
+            onPress={() => handleVerify()}
+            disabled={isVerifying || isSending || code.some((d) => !d)}
+            activeOpacity={0.85}
+          >
+            {isVerifying ? (
+              <View style={styles.buttonLoadingRow}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={[styles.verifyButtonText, { marginLeft: 10 }]}>{t('auth.verifying')}</Text>
+              </View>
+            ) : (
+              <Text style={styles.verifyButtonText}>{t('auth.verify')}</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.resendSection}>
+            {resendTimer > 0 ? (
+              <Text style={[styles.resendTimer, { color: colors.textSecondary }]}>
+                {t('auth.resendIn', { seconds: resendTimer })}
+              </Text>
+            ) : (
+              <TouchableOpacity onPress={sendOTP} disabled={isSending}>
+                <Text style={[styles.resendLink, { color: colors.primary }]}>
+                  {t('auth.resendCode')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* Error message */}
-        {error && (
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-        )}
+        {/* Step indicator with car */}
+        <VerificationStepper currentStep={1} />
+      </ScrollView>
 
-        {/* Verify button */}
-        <TouchableOpacity
-          style={[styles.verifyButton, { backgroundColor: colors.primary }, isVerifying && styles.verifyButtonDisabled]}
-          onPress={() => handleVerify()}
-          disabled={isVerifying || isSending || code.some((d) => !d)}
-        >
-          <Text style={styles.verifyButtonText}>
-            {isVerifying ? t('auth.verifying') : t('auth.verify')}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Resend code */}
-        <View style={styles.resendSection}>
-          {resendTimer > 0 ? (
-            <Text style={[styles.resendTimer, { color: colors.textSecondary }]}>
-              {t('auth.resendIn', { seconds: resendTimer })}
-            </Text>
-          ) : (
-            <TouchableOpacity onPress={handleResend} disabled={isSending}>
-              <Text style={[styles.resendLink, { color: colors.primary }]}>
-                {t('auth.resendCode')}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Skip in dev when phone auth is not enabled */}
-        {error && error.includes(t('auth.smsNotEnabled').substring(0, 5)) && __DEV__ && (
-          <TouchableOpacity
-            style={[styles.skipButton, { borderColor: colors.accent }]}
-            onPress={() => navigation.getParent()?.reset({
-              index: 0,
-              routes: [{ name: 'SenderTabs' as never }],
-            })}
-          >
-            <Text style={[styles.skipButtonText, { color: colors.accent }]}>
-              {t('auth.skipDev')}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <CarAlert
+        visible={carAlert.visible}
+        type={carAlert.type}
+        title={carAlert.title}
+        message={carAlert.message}
+        buttons={carAlert.buttons}
+        onDismiss={carAlert.dismiss}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -238,21 +311,76 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
+  scrollContent: {
+    flexGrow: 1,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    alignItems: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  backChevron: {
+    width: 11,
+    height: 11,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 2.5,
+    borderColor: '#FFFFFF',
+    transform: [{ rotate: '-45deg' }],
+    marginRight: -3,
+  },
+  cancelButton: {
+    position: 'absolute',
+    top: 22,
+    right: 16,
+    zIndex: 10,
+  },
+  cancelText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  logoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  logoImage: {
+    width: 50,
+    height: 50,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  formSection: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 32,
   },
   otpRow: {
     flexDirection: 'row',
@@ -282,6 +410,11 @@ const styles = StyleSheet.create({
   verifyButtonDisabled: {
     opacity: 0.6,
   },
+  buttonLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   verifyButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -297,16 +430,5 @@ const styles = StyleSheet.create({
   resendLink: {
     fontSize: 14,
     fontWeight: '700',
-  },
-  skipButton: {
-    alignItems: 'center',
-    marginTop: 24,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 12,
-  },
-  skipButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

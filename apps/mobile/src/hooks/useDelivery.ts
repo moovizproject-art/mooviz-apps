@@ -138,9 +138,23 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         GEOHASH_PRECISION,
       );
 
+      // Upload photo to Storage if provided
+      let photoUrl: string | null = null;
+      if (input.photoUri) {
+        try {
+          const { uploadImage } = require('../services/storage');
+          const path = `deliveries/${input.senderId}/${Date.now()}.jpg`;
+          photoUrl = await uploadImage(input.photoUri, path);
+        } catch (err) {
+          console.warn('[useDelivery] Photo upload failed, continuing without photo:', err);
+        }
+      }
+
+      const now = firestore.FieldValue.serverTimestamp();
       const deliveryData = {
         senderId: input.senderId,
-        status: 'pending',
+        driverId: null,
+        status: 'new',
         pickup: {
           ...input.pickup,
           geohash: pickupGeohash,
@@ -148,12 +162,16 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         destination: input.destination,
         itemDescription: input.itemDescription,
         itemSize: input.itemSize,
-        photoUri: input.photoUri,
+        photoUrl,
         suggestedPrice: input.suggestedPrice,
         scheduledDate: input.scheduledDate,
         notes: input.notes,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        payment: { senderConfirmed: false, driverConfirmed: false },
+        proof: {},
+        statusHistory: [{ status: 'new', timestamp: new Date().toISOString() }],
+        interestedDrivers: [],
+        createdAt: now,
+        updatedAt: now,
       };
 
       const docRef = await firestore().collection('deliveries').add(deliveryData);

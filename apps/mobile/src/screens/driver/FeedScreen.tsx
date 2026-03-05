@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { MAX_DELIVERY_RADIUS_KM } from '../../constants/config';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/design';
+import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 
 type Props = DriverTabScreenProps<'Feed'>;
 
@@ -36,6 +37,14 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
   const drawer = useSettingsDrawer();
+  // Request permissions on first launch
+  useEffect(() => {
+    (async () => {
+      await requestNotificationPermission();
+      await requestLocationPermission();
+    })();
+  }, []);
+
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [isAvailable, setIsAvailable] = useState<boolean>(true);
   const { location, isLoading: locationLoading } = useLocation();

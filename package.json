@@ -18,6 +18,7 @@
     "deploy:admin": "firebase deploy --only hosting"
   },
   "devDependencies": {
+    "firebase-tools": "^15.9.0",
     "turbo": "^2.0.0"
   },
   "packageManager": "pnpm@9.0.0",

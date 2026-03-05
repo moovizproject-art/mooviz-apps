@@ -63,6 +63,7 @@ export interface User {
   fcmTokens: string[];
   location: UserLocation;
   migratedFrom?: string;
+  lastOtpAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 }

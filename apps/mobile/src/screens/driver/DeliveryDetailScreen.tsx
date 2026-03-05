@@ -31,7 +31,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
-  const { getDeliveryById, expressInterest, updateDeliveryStatus, isLoading } = useDelivery();
+  const { getDeliveryById, expressInterest, updateDeliveryStatus, isLoading } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const delivery = getDeliveryById(deliveryId);
 
   const handleExpressInterest = async (): Promise<void> => {

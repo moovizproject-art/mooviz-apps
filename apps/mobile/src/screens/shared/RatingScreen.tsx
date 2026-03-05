@@ -13,6 +13,7 @@ import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useDelivery } from '../../hooks/useDelivery';
+import { useAuth } from '../../hooks/useAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Rating'>;
 
@@ -27,7 +28,8 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
   const { deliveryId, targetUserId } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { submitRating } = useDelivery();
+  const { currentUser } = useAuth();
+  const { submitRating } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
 
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');

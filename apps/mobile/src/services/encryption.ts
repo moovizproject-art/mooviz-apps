@@ -14,7 +14,14 @@
  */
 
 import storage from '@react-native-firebase/storage';
-import functions from '@react-native-firebase/functions';
+
+// Cloud Functions may not be installed yet — lazy-load to avoid crash
+let functions: typeof import('@react-native-firebase/functions').default | null = null;
+try {
+  functions = require('@react-native-firebase/functions').default;
+} catch {
+  console.warn('[Encryption] @react-native-firebase/functions not installed — photo encryption disabled');
+}
 
 // Cache to avoid re-fetching photos on every render
 const photoCache = new Map<string, { data: string | null; expiresAt: number }>();
@@ -38,6 +45,7 @@ export async function uploadEncryptedProfilePhoto(
   await ref.putFile(localUri, { contentType: 'image/jpeg' });
 
   // Step 2: Call Cloud Function to encrypt
+  if (!functions) throw new Error('Firebase Functions not installed');
   const result = await functions().httpsCallable('uploadProfilePhoto')({});
 
   // Step 3: Invalidate cache
@@ -65,6 +73,10 @@ export async function getAuthorizedProfilePhoto(
   }
 
   try {
+    if (!functions) {
+      // Cloud Functions not available — skip encrypted photos
+      return null;
+    }
     const result = await functions().httpsCallable('getAuthorizedPhoto')({
       targetUserId,
     });

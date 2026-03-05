@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
 
 interface ThemedInputProps extends Omit<TextInputProps, 'style'> {
@@ -27,6 +28,7 @@ export function ThemedInput({
   ...inputProps
 }: ThemedInputProps): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [focused, setFocused] = useState(false);
 
   const borderColor = focused ? colors.inputBorderFocused : colors.inputBorder;
@@ -95,7 +97,7 @@ export function ThemedInput({
         <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
         {required && (
           <Text style={[styles.required, { color: colors.textSecondary }]}>
-            {required ? 'Required' : ''}
+            {t('form.required')}
           </Text>
         )}
       </View>
