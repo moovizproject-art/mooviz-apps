@@ -132,7 +132,8 @@ export const updateProfile = onCall(async (request) => {
 });
 
 /**
- * Update the user's FCM token for push notifications.
+ * Add an FCM token to the user's fcmTokens array for push notifications.
+ * Uses arrayUnion to avoid duplicates.
  */
 export const updateFCMToken = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -157,9 +158,43 @@ export const updateFCMToken = onCall(async (request) => {
   }
 
   await userRef.update({
-    fcmToken,
+    fcmTokens: admin.firestore.FieldValue.arrayUnion(fcmToken),
     updatedAt: admin.firestore.Timestamp.now(),
   });
 
-  return { success: true, message: "FCM token updated successfully" };
+  return { success: true, message: "FCM token added successfully" };
+});
+
+/**
+ * Remove an FCM token from the user's fcmTokens array.
+ * Used on logout or when a token becomes invalid.
+ */
+export const removeFCMToken = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { fcmToken } = request.data;
+
+  if (!fcmToken || typeof fcmToken !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      "fcmToken is required and must be a string"
+    );
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const userDoc = await userRef.get();
+
+  if (!userDoc.exists) {
+    throw new HttpsError("not-found", "User profile not found");
+  }
+
+  await userRef.update({
+    fcmTokens: admin.firestore.FieldValue.arrayRemove(fcmToken),
+    updatedAt: admin.firestore.Timestamp.now(),
+  });
+
+  return { success: true, message: "FCM token removed successfully" };
 });
