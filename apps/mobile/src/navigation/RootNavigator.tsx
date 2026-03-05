@@ -11,6 +11,8 @@ import { COLORS } from '../constants/colors';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { OTPScreen } from '../screens/auth/OTPScreen';
+import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
+import { AddPhoneScreen } from '../screens/auth/AddPhoneScreen';
 
 // Sender screens
 import { HomeScreen } from '../screens/sender/HomeScreen';
@@ -35,7 +37,9 @@ import { RatingScreen } from '../screens/shared/RatingScreen';
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
-  OTPVerification: { phoneNumber: string; verificationId: string };
+  OTPVerification: { phoneNumber: string; verificationId: string; mode?: 'register' | 'login' | 'addPhone' };
+  ForgotPassword: undefined;
+  AddPhone: undefined;
 };
 
 export type SenderTabsParamList = {
@@ -98,6 +102,8 @@ function AuthStack(): React.JSX.Element {
       <AuthStackNav.Screen name="Login" component={LoginScreen} />
       <AuthStackNav.Screen name="Register" component={RegisterScreen} />
       <AuthStackNav.Screen name="OTPVerification" component={OTPScreen} />
+      <AuthStackNav.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStackNav.Screen name="AddPhone" component={AddPhoneScreen} />
     </AuthStackNav.Navigator>
   );
 }
@@ -194,7 +200,7 @@ export function RootNavigator(): React.JSX.Element {
         // Not authenticated — show auth flow
         // לא מחובר — הצג מסך התחברות
         <Stack.Screen name="AuthStack" component={AuthStack} />
-      ) : currentUser.role === 'driver' ? (
+      ) : currentUser.activeMode === 'driver' ? (
         // Driver flow
         // מסך נהג
         <>
