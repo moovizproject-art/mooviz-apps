@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
-import { verifyOTP, sendOTP } from '../../services/auth';
-import { useAuth } from '../../hooks/useAuth';
+import { sendPhoneOTP, verifyAndLinkPhone, mapFirebaseAuthError } from '../../services/auth';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTPVerification'>;
 
@@ -21,20 +21,45 @@ const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
- * OTPScreen — מסך אימות קוד
- * 6-digit OTP verification input.
- * הזנת קוד אימות בן 6 ספרות
+ * OTPScreen -- 6-digit OTP verification for phone linking
  */
-export function OTPScreen({ route }: Props): React.JSX.Element {
-  const { phoneNumber, verificationId } = route.params;
-  const { login } = useAuth();
+export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
+  const { phoneNumber, mode } = route.params;
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
+  const [verificationId, setVerificationId] = useState<string>(route.params.verificationId || '');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [isSending, setIsSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState<number>(RESEND_COOLDOWN_SECONDS);
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  // Auto-send OTP on mount if no verificationId was passed
+  const sendOTP = useCallback(async (): Promise<void> => {
+    try {
+      setIsSending(true);
+      setError(null);
+      const vId = await sendPhoneOTP(phoneNumber);
+      setVerificationId(vId);
+      setResendTimer(RESEND_COOLDOWN_SECONDS);
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code) {
+        setError(mapFirebaseAuthError(firebaseError.code));
+      } else {
+        setError('שגיאה בשליחת קוד אימות');
+      }
+    } finally {
+      setIsSending(false);
+    }
+  }, [phoneNumber]);
+
+  useEffect(() => {
+    if (!verificationId) {
+      sendOTP();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Countdown timer for resend
   useEffect(() => {
@@ -64,7 +89,7 @@ export function OTPScreen({ route }: Props): React.JSX.Element {
   };
 
   const handleKeyPress = (key: string, index: number): void => {
-    // Handle backspace — move to previous input
+    // Handle backspace -- move to previous input
     if (key === 'Backspace' && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -73,16 +98,33 @@ export function OTPScreen({ route }: Props): React.JSX.Element {
   const handleVerify = async (otpCode?: string): Promise<void> => {
     const fullCode = otpCode || code.join('');
     if (fullCode.length !== OTP_LENGTH) {
-      setError('יש להזין קוד בן 6 ספרות'); // Enter 6-digit code
+      setError('יש להזין קוד בן 6 ספרות');
+      return;
+    }
+
+    if (!verificationId) {
+      setError('לא התקבל מזהה אימות. שלח קוד חדש.');
       return;
     }
 
     try {
       setIsVerifying(true);
-      const user = await verifyOTP(verificationId, fullCode);
-      await login(user);
-    } catch (err) {
-      setError('קוד אימות שגוי. נסה שוב.'); // Invalid code, try again
+      await verifyAndLinkPhone(verificationId, fullCode);
+      // Phone is now linked to the account
+      // Auth state listener in useAuth will pick up the change
+      if (mode === 'addPhone') {
+        Alert.alert('הצלחה', 'מספר הטלפון אומת בהצלחה', [
+          { text: 'אישור', onPress: () => navigation.goBack() },
+        ]);
+      }
+      // For register/login mode, the auth listener handles navigation
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code) {
+        setError(mapFirebaseAuthError(firebaseError.code));
+      } else {
+        setError('קוד אימות שגוי. נסה שוב.');
+      }
       setCode(new Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     } finally {
@@ -91,13 +133,7 @@ export function OTPScreen({ route }: Props): React.JSX.Element {
   };
 
   const handleResend = async (): Promise<void> => {
-    try {
-      await sendOTP(phoneNumber);
-      setResendTimer(RESEND_COOLDOWN_SECONDS);
-      setError(null);
-    } catch (err) {
-      setError('שגיאה בשליחת קוד חדש'); // Error resending code
-    }
+    await sendOTP();
   };
 
   return (
@@ -107,16 +143,12 @@ export function OTPScreen({ route }: Props): React.JSX.Element {
     >
       <View style={styles.content}>
         {/* Header */}
-        {/* כותרת */}
         <Text style={styles.title}>אימות מספר טלפון</Text>
-        {/* Phone number verification */}
         <Text style={styles.subtitle}>
-          קוד אימות נשלח ל-{phoneNumber}
+          {isSending ? 'שולח קוד אימות...' : `קוד אימות נשלח ל-${phoneNumber}`}
         </Text>
-        {/* Verification code sent to... */}
 
         {/* OTP digit inputs */}
-        {/* שדות הזנת קוד */}
         <View style={styles.otpRow}>
           {code.map((digit, index) => (
             <TextInput
@@ -134,7 +166,7 @@ export function OTPScreen({ route }: Props): React.JSX.Element {
               maxLength={1}
               textAlign="center"
               selectTextOnFocus
-              editable={!isVerifying}
+              editable={!isVerifying && !isSending}
             />
           ))}
         </View>
@@ -143,30 +175,25 @@ export function OTPScreen({ route }: Props): React.JSX.Element {
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         {/* Verify button */}
-        {/* כפתור אימות */}
         <TouchableOpacity
           style={[styles.verifyButton, isVerifying && styles.verifyButtonDisabled]}
           onPress={() => handleVerify()}
-          disabled={isVerifying || code.some((d) => !d)}
+          disabled={isVerifying || isSending || code.some((d) => !d)}
         >
           <Text style={styles.verifyButtonText}>
             {isVerifying ? 'מאמת...' : 'אמת קוד'}
-            {/* Verifying... / Verify code */}
           </Text>
         </TouchableOpacity>
 
         {/* Resend code */}
-        {/* שליחת קוד מחדש */}
         <View style={styles.resendSection}>
           {resendTimer > 0 ? (
             <Text style={styles.resendTimer}>
               שליחה חוזרת בעוד {resendTimer} שניות
-              {/* Resend in X seconds */}
             </Text>
           ) : (
-            <TouchableOpacity onPress={handleResend}>
+            <TouchableOpacity onPress={handleResend} disabled={isSending}>
               <Text style={styles.resendLink}>שלח קוד חדש</Text>
-              {/* Send new code */}
             </TouchableOpacity>
           )}
         </View>
