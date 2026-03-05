@@ -1,109 +1,18 @@
 /**
- * Auth Service — שירות אימות
- * Authentication functions: send OTP, verify OTP, sign out.
- * פונקציות אימות: שליחת OTP, אימות OTP, התנתקות
+ * Auth Service -- email+password registration with phone OTP linking
  */
 
-import auth from '@react-native-firebase/auth';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import { MoovizUser } from '../hooks/useAuth';
 
 // ──────────────────────────────────────────────
-// OTP Authentication
-// ──────────────────────────────────────────────
-
-/**
- * Send OTP verification code to phone number.
- * שליחת קוד אימות OTP למספר טלפון
- *
- * @param phoneOrEmail - Phone in E.164 format or email address
- * @returns verificationId for use with verifyOTP
- */
-export async function sendOTP(phoneOrEmail: string): Promise<string> {
-  // Normalize Israeli phone numbers
-  const phone = normalizePhoneNumber(phoneOrEmail);
-
-  const confirmation = await auth().signInWithPhoneNumber(phone);
-
-  if (!confirmation.verificationId) {
-    throw new Error('Failed to send verification code');
-  }
-
-  return confirmation.verificationId;
-}
-
-/**
- * Verify OTP code and sign in.
- * אימות קוד OTP והתחברות
- *
- * @param verificationId - From sendOTP
- * @param code - 6-digit OTP code
- * @returns Authenticated MoovizUser
- */
-export async function verifyOTP(verificationId: string, code: string): Promise<MoovizUser> {
-  const credential = auth.PhoneAuthProvider.credential(verificationId, code);
-  const userCredential = await auth().signInWithCredential(credential);
-  const firebaseUser = userCredential.user;
-
-  // Fetch or create user profile
-  // שליפה או יצירת פרופיל משתמש
-  const userDoc = await firestore().collection('users').doc(firebaseUser.uid).get();
-
-  if (userDoc.exists) {
-    const data = userDoc.data();
-    return {
-      uid: firebaseUser.uid,
-      displayName: data?.displayName || firebaseUser.displayName,
-      email: data?.email || firebaseUser.email,
-      phone: data?.phone || firebaseUser.phoneNumber,
-      photoUrl: data?.photoUrl || firebaseUser.photoURL,
-      role: data?.role || 'sender',
-      city: data?.city || null,
-      rating: data?.rating || null,
-      totalDeliveries: data?.totalDeliveries || 0,
-      totalRatings: data?.totalRatings || 0,
-      kycVerified: data?.kycVerified || false,
-      createdAt: data?.createdAt?.toDate() || new Date(),
-    };
-  }
-
-  // First-time user
-  // משתמש חדש
-  const newUser: MoovizUser = {
-    uid: firebaseUser.uid,
-    displayName: firebaseUser.displayName,
-    email: firebaseUser.email,
-    phone: firebaseUser.phoneNumber,
-    photoUrl: firebaseUser.photoURL,
-    role: 'sender',
-    city: null,
-    rating: null,
-    totalDeliveries: 0,
-    totalRatings: 0,
-    kycVerified: false,
-    createdAt: new Date(),
-  };
-
-  return newUser;
-}
-
-/**
- * Sign out the current user.
- * התנתקות המשתמש הנוכחי
- */
-export async function signOut(): Promise<void> {
-  await auth().signOut();
-}
-
-// ──────────────────────────────────────────────
-// Helpers
+// Phone normalizer
 // ──────────────────────────────────────────────
 
 /**
  * Normalize Israeli phone numbers to E.164 format.
- * נרמול מספרי טלפון ישראליים לפורמט E.164
  */
-function normalizePhoneNumber(input: string): string {
+export function normalizePhoneNumber(input: string): string {
   let phone = input.replace(/[\s\-()]/g, '');
 
   // Israeli number starting with 0 -> +972
@@ -117,4 +26,141 @@ function normalizePhoneNumber(input: string): string {
   }
 
   return phone;
+}
+
+// ──────────────────────────────────────────────
+// Email + Password Auth
+// ──────────────────────────────────────────────
+
+/**
+ * Step 1: Register with email+password.
+ * Sends email verification automatically.
+ */
+export async function registerWithEmail(
+  email: string,
+  password: string,
+): Promise<FirebaseAuthTypes.UserCredential> {
+  const credential = await auth().createUserWithEmailAndPassword(email, password);
+  await credential.user.sendEmailVerification();
+  return credential;
+}
+
+/**
+ * Login with email+password.
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string,
+): Promise<FirebaseAuthTypes.UserCredential> {
+  return auth().signInWithEmailAndPassword(email, password);
+}
+
+/**
+ * Send password reset email.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  await auth().sendPasswordResetEmail(email);
+}
+
+// ──────────────────────────────────────────────
+// Phone OTP (for linking to existing account)
+// ──────────────────────────────────────────────
+
+/**
+ * Step 2: Send phone OTP for linking to account.
+ * Returns verificationId for use with verifyAndLinkPhone.
+ */
+export async function sendPhoneOTP(phone: string): Promise<string> {
+  const normalized = normalizePhoneNumber(phone);
+  const confirmation = await auth().verifyPhoneNumber(normalized);
+  return confirmation;
+}
+
+/**
+ * Step 3: Verify phone OTP and link to current account.
+ */
+export async function verifyAndLinkPhone(
+  verificationId: string,
+  code: string,
+): Promise<void> {
+  const credential = auth.PhoneAuthProvider.credential(verificationId, code);
+  const currentUser = auth().currentUser;
+  if (!currentUser) throw new Error('No authenticated user');
+  await currentUser.linkWithCredential(credential);
+}
+
+// ──────────────────────────────────────────────
+// Firestore user document
+// ──────────────────────────────────────────────
+
+/**
+ * Create Firestore user document after registration.
+ */
+export async function createUserDocument(
+  uid: string,
+  data: {
+    fullName: string;
+    email: string;
+    phone: string;
+    city?: string;
+  },
+): Promise<void> {
+  await firestore().collection('users').doc(uid).set({
+    uid,
+    fullName: data.fullName,
+    email: data.email,
+    phone: normalizePhoneNumber(data.phone),
+    city: data.city || '',
+    profilePhotoURL: '',
+    kycDocumentURL: '',
+    kycStatus: 'pending',
+    ratingAsDriver: { average: 0, count: 0 },
+    ratingAsSender: { average: 0, count: 0 },
+    completedDeliveries: 0,
+    status: 'active',
+    fcmTokens: [],
+    location: { lat: 0, lng: 0, geohash: '' },
+    activeMode: 'client',
+    driverAvailable: false,
+    driverUnlocked: false,
+    createdAt: firestore.FieldValue.serverTimestamp(),
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+// ──────────────────────────────────────────────
+// Sign out
+// ──────────────────────────────────────────────
+
+/**
+ * Sign out the current user.
+ */
+export async function signOut(): Promise<void> {
+  await auth().signOut();
+}
+
+// ──────────────────────────────────────────────
+// Error mapping
+// ──────────────────────────────────────────────
+
+/**
+ * Map Firebase Auth error codes to Hebrew messages.
+ */
+export function mapFirebaseAuthError(code: string): string {
+  const errors: Record<string, string> = {
+    'auth/email-already-in-use': 'כתובת האימייל כבר בשימוש',
+    'auth/invalid-email': 'כתובת אימייל לא תקינה',
+    'auth/operation-not-allowed': 'הפעולה אינה מורשית',
+    'auth/weak-password': 'הסיסמה חלשה מדי (מינימום 8 תווים)',
+    'auth/user-disabled': 'החשבון הושעה',
+    'auth/user-not-found': 'משתמש לא נמצא',
+    'auth/wrong-password': 'סיסמה שגויה',
+    'auth/too-many-requests': 'יותר מדי ניסיונות, נסה שוב מאוחר יותר',
+    'auth/invalid-verification-code': 'קוד אימות שגוי',
+    'auth/invalid-verification-id': 'מזהה אימות לא תקין',
+    'auth/credential-already-in-use': 'פרטי ההתחברות כבר בשימוש',
+    'auth/requires-recent-login': 'נדרשת התחברות מחדש',
+    'auth/network-request-failed': 'בעיית רשת, בדוק את החיבור לאינטרנט',
+  };
+  return errors[code] || 'שגיאה לא צפויה, נסה שוב';
 }
