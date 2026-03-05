@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import {
   BarChart,
   Bar,
@@ -12,23 +14,32 @@ import {
   Legend,
 } from 'recharts';
 import StatsCard from '../components/StatsCard';
-import { useStats, useDeliveryChart, useStatusDistribution } from '../hooks/useStats';
+import StatusBadge from '../components/StatusBadge';
+import {
+  useStats,
+  useDeliveryChart,
+  useStatusDistribution,
+  useRecentActivity,
+  useMigrationStats,
+} from '../hooks/useStats';
 
 const STATUS_COLORS: Record<string, string> = {
   new: '#3B82F6',
-  accepted: '#6366F1',
-  picked_up: '#8B5CF6',
-  in_transit: '#F59E0B',
+  pending: '#6366F1',
+  waiting: '#8B5CF6',
+  picked_up: '#F59E0B',
   delivered: '#22C55E',
-  confirmed: '#10B981',
+  completed_paid: '#10B981',
   cancelled: '#9CA3AF',
-  disputed: '#EF4444',
 };
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useStats();
+  const navigate = useNavigate();
+  const { data: stats } = useStats();
   const { data: chartData, isLoading: chartLoading } = useDeliveryChart(14);
   const { data: statusData, isLoading: statusLoading } = useStatusDistribution();
+  const { data: recentActivity } = useRecentActivity();
+  const { data: migrationStats } = useMigrationStats();
 
   return (
     <div className="space-y-6">
@@ -63,8 +74,8 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatsCard
-          title="Revenue"
-          value={stats ? `$${stats.totalRevenue.toLocaleString()}` : '$0'}
+          title="Revenue (ILS)"
+          value={stats ? `${stats.totalRevenue.toLocaleString()} ILS` : '0 ILS'}
           color="green"
         />
         <StatsCard
@@ -148,6 +159,127 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Recent Deliveries */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-gray-900">Recent Deliveries</h3>
+            <button
+              onClick={() => navigate('/deliveries')}
+              className="text-sm font-medium text-brand-600 hover:text-brand-700"
+            >
+              View all
+            </button>
+          </div>
+          <div className="mt-4 divide-y divide-gray-100">
+            {recentActivity?.recentDeliveries.length === 0 && (
+              <p className="py-4 text-sm text-gray-400">No deliveries yet</p>
+            )}
+            {recentActivity?.recentDeliveries.map((delivery) => (
+              <div
+                key={delivery.id}
+                onClick={() => navigate(`/deliveries/${delivery.id}`)}
+                className="flex cursor-pointer items-center justify-between py-3 hover:bg-gray-50"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-gray-900">
+                    {delivery.title}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {delivery.pickup.city} &rarr; {delivery.destination.city}
+                  </p>
+                </div>
+                <div className="ml-4 flex items-center gap-3">
+                  <StatusBadge status={delivery.status} />
+                  <span className="whitespace-nowrap text-xs text-gray-400">
+                    {format(delivery.createdAt.toDate(), 'MMM d')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Registrations */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-gray-900">Recent Registrations</h3>
+            <button
+              onClick={() => navigate('/users')}
+              className="text-sm font-medium text-brand-600 hover:text-brand-700"
+            >
+              View all
+            </button>
+          </div>
+          <div className="mt-4 divide-y divide-gray-100">
+            {recentActivity?.recentUsers.length === 0 && (
+              <p className="py-4 text-sm text-gray-400">No users yet</p>
+            )}
+            {recentActivity?.recentUsers.map((user) => (
+              <div
+                key={user.id}
+                onClick={() => navigate(`/users/${user.id}`)}
+                className="flex cursor-pointer items-center justify-between py-3 hover:bg-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
+                    {user.fullName
+                      .split(' ')
+                      .map((p) => p.charAt(0))
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    user.role === 'driver' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {user.role}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {format(user.createdAt.toDate(), 'MMM d')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Migration Stats */}
+      {migrationStats && migrationStats.totalMigrated > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-gray-900">Migration Status (Glide)</h3>
+          <p className="mt-1 text-sm text-gray-500">Users migrated from the Glide platform</p>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-lg bg-blue-50 p-4">
+              <p className="text-sm font-medium text-blue-700">Total Migrated</p>
+              <p className="mt-1 text-2xl font-bold text-blue-900">
+                {migrationStats.totalMigrated}
+              </p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="text-sm font-medium text-yellow-700">Pending Password Setup</p>
+              <p className="mt-1 text-2xl font-bold text-yellow-900">
+                {migrationStats.pendingPassword}
+              </p>
+            </div>
+            <div className="rounded-lg bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-700">Missing Phone</p>
+              <p className="mt-1 text-2xl font-bold text-red-900">
+                {migrationStats.missingPhone}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

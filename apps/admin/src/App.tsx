@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { useAuth, useAuthProvider, AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -28,7 +28,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function App() {
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -50,5 +50,15 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+  );
+}
+
+export default function App() {
+  const authState = useAuthProvider();
+
+  return (
+    <AuthProvider value={authState}>
+      <AppRoutes />
+    </AuthProvider>
   );
 }

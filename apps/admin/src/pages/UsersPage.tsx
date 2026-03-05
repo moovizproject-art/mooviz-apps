@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import DataTable, { type Column } from '../components/DataTable';
 import UserAvatar from '../components/UserAvatar';
 import { useUsers } from '../hooks/useFirestore';
@@ -32,10 +33,10 @@ export default function UsersPage() {
 
   const columns: Column<AppUser>[] = [
     {
-      key: 'displayName',
+      key: 'fullName',
       label: 'User',
       render: (user) => (
-        <UserAvatar name={user.displayName} photoURL={user.photoURL} role={user.role} />
+        <UserAvatar name={user.fullName || user.displayName} photoURL={user.photoURL} role={user.role} />
       ),
     },
     {
@@ -46,17 +47,6 @@ export default function UsersPage() {
     {
       key: 'phone',
       label: 'Phone',
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (user) => (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass[user.status]}`}
-        >
-          {user.status.replace('_', ' ')}
-        </span>
-      ),
     },
     {
       key: 'kycStatus',
@@ -70,21 +60,40 @@ export default function UsersPage() {
       ),
     },
     {
-      key: 'deliveryCount',
-      label: 'Deliveries',
-      sortable: true,
-      className: 'text-right',
-    },
-    {
-      key: 'rating',
-      label: 'Rating',
-      sortable: true,
+      key: 'activeMode',
+      label: 'Active Mode',
       render: (user) => (
-        <span className="text-sm text-gray-700">
-          {user.rating > 0 ? user.rating.toFixed(1) : '-'}
+        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+          user.activeMode === 'driver'
+            ? 'bg-green-100 text-green-700'
+            : user.activeMode === 'sender'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-500'
+        }`}>
+          {user.activeMode ?? 'N/A'}
         </span>
       ),
-      className: 'text-right',
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (user) => (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass[user.status]}`}
+        >
+          {user.status.replace('_', ' ')}
+        </span>
+      ),
+    },
+    {
+      key: 'createdAt',
+      label: 'Joined',
+      sortable: true,
+      render: (user) => (
+        <span className="text-sm text-gray-500">
+          {user.createdAt ? format(user.createdAt.toDate(), 'MMM d, yyyy') : '-'}
+        </span>
+      ),
     },
   ];
 
@@ -130,6 +139,19 @@ export default function UsersPage() {
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
+
+        {(roleFilter || statusFilter || kycFilter) && (
+          <button
+            onClick={() => {
+              setRoleFilter('');
+              setStatusFilter('');
+              setKycFilter('');
+            }}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <DataTable
@@ -138,7 +160,7 @@ export default function UsersPage() {
         keyField="id"
         onRowClick={(user) => navigate(`/users/${user.id}`)}
         searchable
-        searchFields={['displayName', 'email', 'phone']}
+        searchFields={['fullName', 'displayName', 'email', 'phone']}
         loading={isLoading}
         emptyMessage="No users found"
       />

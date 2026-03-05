@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DocumentSnapshot } from 'firebase/firestore';
 import { useState, useCallback } from 'react';
 import { getUsers, getUserById, type UsersQueryParams, type AppUser } from '../services/users';
