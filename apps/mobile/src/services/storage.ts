@@ -53,7 +53,7 @@ export async function uploadProfilePhoto(
   userId: string,
   localUri: string,
 ): Promise<string> {
-  const path = `users/${userId}/profile.jpg`;
+  const path = `profiles/${userId}/profile.jpg`;
   return uploadImage(localUri, path);
 }
 
