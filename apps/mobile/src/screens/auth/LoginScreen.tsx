@@ -7,49 +7,50 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  I18nManager,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { COLORS } from '../../constants/colors';
-import { validatePhone, validateEmail } from '../../utils/validators';
-import { sendOTP } from '../../services/auth';
+import { validateEmail } from '../../utils/validators';
+import { signInWithEmail, mapFirebaseAuthError } from '../../services/auth';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 /**
- * LoginScreen — מסך התחברות
- * Phone number or email input with OTP trigger.
- * שדה מספר טלפון / אימייל ושליחת קוד אימות
+ * LoginScreen -- email+password login
  */
 export function LoginScreen({ navigation }: Props): React.JSX.Element {
-  const [phoneOrEmail, setPhoneOrEmail] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSendOTP = async (): Promise<void> => {
+  const handleLogin = async (): Promise<void> => {
     setError(null);
 
-    // Validate input — phone (E.164) or email
-    const isPhone = phoneOrEmail.startsWith('+') || /^\d/.test(phoneOrEmail);
-    if (isPhone && !validatePhone(phoneOrEmail)) {
-      setError('מספר טלפון לא תקין'); // Invalid phone number
+    if (!validateEmail(email)) {
+      setError('כתובת אימייל לא תקינה');
       return;
     }
-    if (!isPhone && !validateEmail(phoneOrEmail)) {
-      setError('כתובת אימייל לא תקינה'); // Invalid email
+
+    if (!password || password.length < 8) {
+      setError('סיסמה חייבת להכיל לפחות 8 תווים');
       return;
     }
 
     try {
       setIsLoading(true);
-      const verificationId = await sendOTP(phoneOrEmail);
-      navigation.navigate('OTPVerification', {
-        phoneNumber: phoneOrEmail,
-        verificationId,
-      });
-    } catch (err) {
-      setError('שגיאה בשליחת קוד אימות. נסה שוב.'); // Error sending OTP
+      await signInWithEmail(email, password);
+      // Auth state listener in useAuth will handle navigation
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code) {
+        setError(mapFirebaseAuthError(firebaseError.code));
+      } else {
+        setError('שגיאה בהתחברות. נסה שוב.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -62,28 +63,37 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
     >
       <View style={styles.content}>
         {/* Logo / Brand section */}
-        {/* סקשן לוגו / מותג */}
         <View style={styles.brandSection}>
           <Text style={styles.brandTitle}>MOOVIZ</Text>
           <Text style={styles.brandSubtitle}>
             משלוחים קהילתיים — פשוט, מהיר, אמין
           </Text>
-          {/* Community deliveries — simple, fast, reliable */}
         </View>
 
         {/* Input section */}
-        {/* סקשן קלט */}
         <View style={styles.inputSection}>
-          <Text style={styles.label}>טלפון או אימייל</Text>
-          {/* Phone or Email */}
+          <Text style={styles.label}>אימייל</Text>
           <TextInput
             style={styles.input}
-            value={phoneOrEmail}
-            onChangeText={setPhoneOrEmail}
-            placeholder="050-1234567 או email@example.com"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="email@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
-            textAlign="right"
+            autoComplete="email"
+            textAlign={I18nManager.isRTL ? 'right' : 'left'}
+            editable={!isLoading}
+          />
+
+          <Text style={[styles.label, styles.labelSpacing]}>סיסמה</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="סיסמה (לפחות 8 תווים)"
+            secureTextEntry
+            autoComplete="password"
+            textAlign={I18nManager.isRTL ? 'right' : 'left'}
             editable={!isLoading}
           />
 
@@ -91,18 +101,24 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleSendOTP}
-            disabled={isLoading || !phoneOrEmail.trim()}
+            onPress={handleLogin}
+            disabled={isLoading || !email.trim() || !password}
           >
             <Text style={styles.buttonText}>
-              {isLoading ? 'שולח...' : 'שלח קוד אימות'}
-              {/* Sending... / Send verification code */}
+              {isLoading ? 'מתחבר...' : 'התחברות'}
             </Text>
+          </TouchableOpacity>
+
+          {/* Forgot password */}
+          <TouchableOpacity
+            style={styles.forgotLink}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.forgotLinkText}>שכחת סיסמה?</Text>
           </TouchableOpacity>
         </View>
 
         {/* Register link */}
-        {/* קישור להרשמה */}
         <TouchableOpacity
           style={styles.registerLink}
           onPress={() => navigation.navigate('Register')}
@@ -110,7 +126,6 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
           <Text style={styles.registerText}>
             עדיין לא רשום? <Text style={styles.registerTextBold}>הירשם עכשיו</Text>
           </Text>
-          {/* Not registered? Register now */}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -153,6 +168,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'right',
   },
+  labelSpacing: {
+    marginTop: 16,
+  },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -183,6 +201,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  forgotLink: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  forgotLinkText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   registerLink: {
     alignItems: 'center',
