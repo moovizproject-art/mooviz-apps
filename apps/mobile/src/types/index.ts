@@ -48,6 +48,7 @@ export interface User {
   email: string | null;
   phone: string | null;
   profilePhotoURL: string | null;
+  profilePhotoPath?: string | null;
   role: UserRole;
   activeMode: ActiveMode;
   driverAvailable: boolean;

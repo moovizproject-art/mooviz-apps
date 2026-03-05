@@ -46,16 +46,11 @@ export async function uploadImage(
 }
 
 /**
- * Upload a profile photo.
- * העלאת תמונת פרופיל
+ * Upload a profile photo (encrypted).
+ * Uses the encryption service for server-side AES-256 encryption.
+ * העלאת תמונת פרופיל (מוצפנת)
  */
-export async function uploadProfilePhoto(
-  userId: string,
-  localUri: string,
-): Promise<string> {
-  const path = `profiles/${userId}/profile.jpg`;
-  return uploadImage(localUri, path);
-}
+export { uploadEncryptedProfilePhoto as uploadProfilePhoto } from './encryption';
 
 /**
  * Upload a delivery item photo.

@@ -27,7 +27,12 @@ export {
 
 export { reviewKYC } from "./callable/kycCallable";
 
-export { getEncryptionKey, decryptDocument } from "./callable/encryptionCallable";
+export {
+  uploadProfilePhoto,
+  getAuthorizedPhoto,
+  getEncryptionKey,
+  decryptDocument,
+} from "./callable/encryptionCallable";
 
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";
