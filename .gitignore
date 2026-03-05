@@ -19,9 +19,9 @@ dist/
 # React Native
 ios/Pods/
 ios/build/
-android/.gradle/
-android/app/build/
-android/build/
+**/.gradle/
+**/android/app/build/
+**/android/build/
 
 # Firebase
 .firebase/
