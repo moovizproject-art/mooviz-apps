@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -13,10 +12,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { MapPicker } from '../../components/MapPicker';
+import { ThemedInput } from '../../components/ThemedInput';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateDelivery'>;
 
@@ -37,14 +40,11 @@ interface DeliveryForm {
   notes: string;
 }
 
-/**
- * CreateDeliveryScreen — מסך יצירת משלוח
- * Form: pickup/destination map, item details, photo, price, date.
- * טופס: נקודת איסוף/יעד, פרטי פריט, תמונה, מחיר, תאריך
- */
 export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const { currentUser } = useAuth();
   const { createDelivery } = useDelivery();
+  const { colors } = useTheme();
+  const { t } = useI18n();
 
   const [form, setForm] = useState<DeliveryForm>({
     pickup: null,
@@ -56,9 +56,9 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     scheduledDate: '',
     notes: '',
   });
-  const [showPickupMap, setShowPickupMap] = useState<boolean>(false);
-  const [showDestinationMap, setShowDestinationMap] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showPickupMap, setShowPickupMap] = useState(false);
+  const [showDestinationMap, setShowDestinationMap] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = <K extends keyof DeliveryForm>(key: K, value: DeliveryForm[K]): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -75,17 +75,16 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   };
 
   const handleSubmit = async (): Promise<void> => {
-    // Validation
     if (!form.pickup) {
-      Alert.alert('שגיאה', 'יש לבחור נקודת איסוף'); // Select pickup point
+      Alert.alert(t('common.error'), t('delivery.errorPickup'));
       return;
     }
     if (!form.destination) {
-      Alert.alert('שגיאה', 'יש לבחור יעד'); // Select destination
+      Alert.alert(t('common.error'), t('delivery.errorDestination'));
       return;
     }
     if (!form.itemDescription.trim()) {
-      Alert.alert('שגיאה', 'יש להוסיף תיאור פריט'); // Add item description
+      Alert.alert(t('common.error'), t('delivery.errorDescription'));
       return;
     }
 
@@ -102,39 +101,46 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         scheduledDate: form.scheduledDate || null,
         notes: form.notes,
       });
-      Alert.alert('הצלחה', 'המשלוח נוצר בהצלחה!', [
-        { text: 'אישור', onPress: () => navigation.goBack() },
+      Alert.alert(t('common.success'), t('delivery.createdSuccess'), [
+        { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
-      // Success: Delivery created!
-    } catch (err) {
-      Alert.alert('שגיאה', 'לא ניתן ליצור משלוח. נסה שוב.');
-      // Error: Cannot create delivery
+    } catch {
+      Alert.alert(t('common.error'), t('delivery.createError'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const sizeOptions: { value: DeliveryForm['itemSize']; label: string }[] = [
-    { value: 'small', label: 'קטן' /* Small */ },
-    { value: 'medium', label: 'בינוני' /* Medium */ },
-    { value: 'large', label: 'גדול' /* Large */ },
+    { value: 'small', label: t('form.sizeSmall') },
+    { value: 'medium', label: t('form.sizeMedium') },
+    { value: 'large', label: t('form.sizeLarge') },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Pickup location */}
-      {/* נקודת איסוף */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>נקודת איסוף</Text>
-        <TouchableOpacity
-          style={styles.locationButton}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScreenHeader
+        title={t('form.newDeliveries')}
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Title */}
+        <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
+          {t('form.addDelivery')}
+        </Text>
+
+        {/* Pickup */}
+        <ThemedInput
+          label={t('form.pickupAddress')}
+          required
+          placeholder={t('form.pickupPlaceholder')}
           onPress={() => setShowPickupMap(true)}
-        >
-          <Text style={form.pickup ? styles.locationText : styles.locationPlaceholder}>
-            {form.pickup?.address || 'בחר מיקום איסוף'}
-            {/* Select pickup location */}
-          </Text>
-        </TouchableOpacity>
+          displayValue={form.pickup?.address}
+        />
         {showPickupMap && (
           <MapPicker
             onLocationSelect={(point) => {
@@ -144,21 +150,15 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
             onCancel={() => setShowPickupMap(false)}
           />
         )}
-      </View>
 
-      {/* Destination */}
-      {/* יעד */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>יעד</Text>
-        <TouchableOpacity
-          style={styles.locationButton}
+        {/* Destination */}
+        <ThemedInput
+          label={t('form.destination')}
+          required
+          placeholder={t('form.destinationPlaceholder')}
           onPress={() => setShowDestinationMap(true)}
-        >
-          <Text style={form.destination ? styles.locationText : styles.locationPlaceholder}>
-            {form.destination?.address || 'בחר יעד'}
-            {/* Select destination */}
-          </Text>
-        </TouchableOpacity>
+          displayValue={form.destination?.address}
+        />
         {showDestinationMap && (
           <MapPicker
             onLocationSelect={(point) => {
@@ -168,226 +168,235 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
             onCancel={() => setShowDestinationMap(false)}
           />
         )}
-      </View>
 
-      {/* Item description */}
-      {/* תיאור הפריט */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תיאור הפריט</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
+        {/* Item description */}
+        <ThemedInput
+          label={t('form.itemDescription')}
+          required
+          placeholder={t('form.itemDescPlaceholder')}
           value={form.itemDescription}
           onChangeText={(v) => updateField('itemDescription', v)}
-          placeholder="מה אתה שולח? (למשל: חבילה קטנה, מסמכים...)"
           multiline
           numberOfLines={3}
-          textAlign="right"
           textAlignVertical="top"
         />
-      </View>
 
-      {/* Item size */}
-      {/* גודל הפריט */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>גודל</Text>
-        <View style={styles.sizeRow}>
-          {sizeOptions.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.sizeChip, form.itemSize === opt.value && styles.sizeChipActive]}
-              onPress={() => updateField('itemSize', opt.value)}
-            >
-              <Text
+        {/* Item size */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>
+            {t('form.itemSize')}
+          </Text>
+          <View style={styles.sizeRow}>
+            {sizeOptions.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
                 style={[
-                  styles.sizeChipText,
-                  form.itemSize === opt.value && styles.sizeChipTextActive,
+                  styles.sizeChip,
+                  { borderColor: colors.border, backgroundColor: colors.inputBg },
+                  form.itemSize === opt.value && { backgroundColor: colors.primary, borderColor: colors.primary },
                 ]}
+                onPress={() => updateField('itemSize', opt.value)}
               >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.sizeChipText,
+                    { color: colors.textPrimary },
+                    form.itemSize === opt.value && { color: colors.textInverse },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
 
-      {/* Item photo */}
-      {/* תמונת הפריט */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תמונת הפריט (אופציונלי)</Text>
-        <TouchableOpacity style={styles.photoButton} onPress={pickPhoto}>
-          {form.photoUri ? (
-            <Image source={{ uri: form.photoUri }} style={styles.photoPreview} />
-          ) : (
-            <Text style={styles.photoButtonText}>הוסף תמונה</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        {/* Photo */}
+        <View style={styles.fieldGroup}>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>
+              {t('form.itemPhoto')}
+            </Text>
+            <Text style={[styles.optionalText, { color: colors.textTertiary }]}>
+              {t('form.optional')}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.photoButton, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
+            onPress={pickPhoto}
+          >
+            {form.photoUri ? (
+              <Image source={{ uri: form.photoUri }} style={styles.photoPreview} />
+            ) : (
+              <>
+                <Text style={styles.photoIcon}>📷</Text>
+                <Text style={[styles.photoButtonText, { color: colors.primary }]}>
+                  {t('form.chooseImage')}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
 
-      {/* Suggested price */}
-      {/* מחיר מוצע */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>מחיר מוצע (₪)</Text>
-        <TextInput
-          style={styles.input}
-          value={form.suggestedPrice}
-          onChangeText={(v) => updateField('suggestedPrice', v)}
-          placeholder="0"
-          keyboardType="numeric"
-          textAlign="right"
-        />
-      </View>
-
-      {/* Scheduled date */}
-      {/* תאריך מבוקש */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תאריך מבוקש (אופציונלי)</Text>
-        <TextInput
-          style={styles.input}
+        {/* Pickup date */}
+        <ThemedInput
+          label={t('form.pickupDate')}
+          required
+          icon="📅"
+          placeholder={t('form.datePlaceholder')}
           value={form.scheduledDate}
           onChangeText={(v) => updateField('scheduledDate', v)}
-          placeholder="DD/MM/YYYY"
-          textAlign="right"
         />
-      </View>
 
-      {/* Notes */}
-      {/* הערות */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>הערות נוספות</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
+        {/* Price */}
+        <ThemedInput
+          label={t('form.suggestedPrice')}
+          required
+          placeholder="0"
+          value={form.suggestedPrice}
+          onChangeText={(v) => updateField('suggestedPrice', v)}
+          keyboardType="numeric"
+        />
+
+        {/* Notes */}
+        <ThemedInput
+          label={t('form.notes')}
+          placeholder={t('form.notesPlaceholder')}
           value={form.notes}
           onChangeText={(v) => updateField('notes', v)}
-          placeholder="הנחיות מיוחדות, קוד כניסה וכו׳..."
           multiline
           numberOfLines={2}
-          textAlign="right"
           textAlignVertical="top"
         />
-      </View>
 
-      {/* Submit */}
-      <TouchableOpacity
-        style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-      >
-        <Text style={styles.submitButtonText}>
-          {isSubmitting ? 'יוצר משלוח...' : 'צור משלוח'}
-          {/* Creating delivery... / Create delivery */}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.cancelButton, { borderColor: colors.border }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+              {t('common.cancel')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
+              {isSubmitting ? t('form.creatingDelivery') : t('common.submit')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   contentContainer: {
-    padding: 24,
+    padding: SPACING.xxl,
     paddingBottom: 48,
   },
+  formTitle: {
+    ...TYPOGRAPHY.h2,
+    textAlign: 'center',
+    marginBottom: SPACING.xxl,
+  },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: SPACING.lg,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 6,
+    ...TYPOGRAPHY.bodyBold,
+    fontSize: 15,
+    fontWeight: '700',
     textAlign: 'right',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
-  },
-  textArea: {
-    minHeight: 80,
-  },
-  locationButton: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: COLORS.surface,
-  },
-  locationText: {
-    fontSize: 16,
-    color: COLORS.text,
-    textAlign: 'right',
-  },
-  locationPlaceholder: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
+  optionalText: {
+    ...TYPOGRAPHY.caption,
   },
   sizeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING.sm,
   },
   sizeChip: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  sizeChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    ...SHADOWS.sm,
   },
   sizeChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
-  },
-  sizeChipTextActive: {
-    color: '#FFFFFF',
   },
   photoButton: {
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.lg,
     borderStyle: 'dashed',
-    paddingVertical: 32,
+    paddingVertical: SPACING.xxxl,
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    ...SHADOWS.sm,
+  },
+  photoIcon: {
+    fontSize: 28,
+    marginBottom: SPACING.sm,
   },
   photoButtonText: {
     fontSize: 14,
-    color: COLORS.primary,
     fontWeight: '600',
   },
   photoPreview: {
     width: 120,
     height: 120,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.lg,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.xxl,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    ...TYPOGRAPHY.button,
   },
   submitButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    flex: 1,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
     alignItems: 'center',
-    marginTop: 24,
+    ...SHADOWS.md,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    ...TYPOGRAPHY.button,
     fontWeight: '700',
   },
 });

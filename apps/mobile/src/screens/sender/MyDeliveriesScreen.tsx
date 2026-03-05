@@ -8,21 +8,18 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SenderTabScreenProps } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { EmptyState } from '../../components/EmptyState';
+import { TabHeader } from '../../components/TabHeader';
+import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 
 type Props = SenderTabScreenProps<'MyDeliveries'>;
 
 type TabKey = 'active' | 'completed' | 'cancelled';
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'active', label: 'פעילים' /* Active */ },
-  { key: 'completed', label: 'הושלמו' /* Completed */ },
-  { key: 'cancelled', label: 'בוטלו' /* Cancelled */ },
-];
 
 const STATUS_MAP: Record<TabKey, string[]> = {
   active: ['pending', 'matched', 'picked_up', 'in_transit'],
@@ -37,12 +34,21 @@ const STATUS_MAP: Record<TabKey, string[]> = {
  */
 export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('active');
+  const { colors } = useTheme();
+  const drawer = useSettingsDrawer();
+  const { t } = useI18n();
   const { currentUser } = useAuth();
   const { deliveries, isLoading, refresh } = useDelivery({
     userId: currentUser?.uid,
     role: 'sender',
     statusFilter: STATUS_MAP[activeTab],
   });
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'active', label: t('delivery.active') },
+    { key: 'completed', label: t('delivery.completed') },
+    { key: 'cancelled', label: t('delivery.cancelled') },
+  ];
 
   const handleDeliveryPress = useCallback(
     (deliveryId: string) => {
@@ -53,37 +59,40 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
 
   const emptyMessages: Record<TabKey, { message: string; submessage: string }> = {
     active: {
-      message: 'אין משלוחים פעילים',
-      submessage: 'צור משלוח חדש מהמסך הראשי',
+      message: t('delivery.noActive'),
+      submessage: t('delivery.noActiveHint'),
     },
     completed: {
-      message: 'אין משלוחים שהושלמו',
-      submessage: 'משלוחים שהושלמו יופיעו כאן',
+      message: t('delivery.noCompleted'),
+      submessage: t('delivery.noCompletedHint'),
     },
     cancelled: {
-      message: 'אין משלוחים שבוטלו',
-      submessage: 'משלוחים שבוטלו יופיעו כאן',
+      message: t('delivery.noCancelled'),
+      submessage: t('delivery.noCancelledHint'),
     },
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>המשלוחים שלי</Text>
-        {/* My Deliveries */}
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TabHeader title={t('delivery.myDeliveries')} onSettingsPress={drawer.open} />
 
       {/* Tab bar */}
-      {/* טאבים */}
       <View style={styles.tabBar}>
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            style={[
+              styles.tab,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              activeTab === tab.key && { backgroundColor: colors.primary, borderColor: colors.primary },
+            ]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+            <Text style={[
+              styles.tabText,
+              { color: colors.textSecondary },
+              activeTab === tab.key && styles.tabTextActive,
+            ]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -91,7 +100,6 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
       </View>
 
       {/* Delivery list */}
-      {/* רשימת משלוחים */}
       <FlatList
         data={deliveries}
         keyExtractor={(item) => item.id}
@@ -105,13 +113,16 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
             submessage={emptyMessages[activeTab].submessage}
           />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={colors.primary} />
+        }
         contentContainerStyle={[
           styles.listContent,
           deliveries.length === 0 && styles.emptyList,
         ]}
         showsVerticalScrollIndicator={false}
       />
+      <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
     </View>
   );
 }
@@ -119,7 +130,6 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   header: {
     paddingHorizontal: 24,
@@ -129,12 +139,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: COLORS.text,
     textAlign: 'right',
   },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 24,
+    marginTop: 30,
     marginBottom: 16,
     gap: 8,
   },
@@ -143,18 +153,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   tabTextActive: {
     color: '#FFFFFF',

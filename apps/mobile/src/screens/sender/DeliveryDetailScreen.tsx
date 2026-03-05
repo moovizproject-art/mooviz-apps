@@ -10,7 +10,8 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useDelivery } from '../../hooks/useDelivery';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
@@ -25,21 +26,22 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
  */
 export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.Element {
   const { deliveryId } = route.params;
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const { getDeliveryById, isLoading } = useDelivery();
   const delivery = getDeliveryById(deliveryId);
 
   // Build status timeline steps
-  // בניית שלבי ציר הזמן
   const timelineSteps = useMemo(() => {
     const steps = [
-      { key: 'pending', label: 'ממתין לנהג' /* Waiting for driver */ },
-      { key: 'matched', label: 'נהג נמצא' /* Driver found */ },
-      { key: 'picked_up', label: 'נאסף' /* Picked up */ },
-      { key: 'in_transit', label: 'בדרך' /* In transit */ },
-      { key: 'delivered', label: 'נמסר' /* Delivered */ },
+      { key: 'pending', label: t('delivery.waitingForDriver') },
+      { key: 'matched', label: t('delivery.driverFound') },
+      { key: 'picked_up', label: t('status.pickedUp') },
+      { key: 'in_transit', label: t('status.inTransit') },
+      { key: 'delivered', label: t('status.delivered') },
     ];
     return steps;
-  }, []);
+  }, [t]);
 
   if (isLoading || !delivery) {
     return <LoadingScreen />;
@@ -48,18 +50,15 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const currentStepIndex = timelineSteps.findIndex((s) => s.key === delivery.status);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       {/* Status badge */}
-      {/* תג סטטוס */}
       <View style={styles.statusSection}>
         <StatusBadge status={delivery.status} />
       </View>
 
       {/* Status timeline */}
-      {/* ציר זמן סטטוס */}
       <View style={styles.timelineSection}>
-        <Text style={styles.sectionTitle}>מעקב משלוח</Text>
-        {/* Delivery tracking */}
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('delivery.deliveryTracking')}</Text>
         {timelineSteps.map((step, index) => {
           const isCompleted = index <= currentStepIndex;
           const isCurrent = index === currentStepIndex;
@@ -68,22 +67,26 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               <View
                 style={[
                   styles.timelineDot,
-                  isCompleted && styles.timelineDotCompleted,
+                  { backgroundColor: colors.border },
+                  isCompleted && { backgroundColor: colors.success },
                   isCurrent && styles.timelineDotCurrent,
+                  isCurrent && { backgroundColor: colors.primary },
                 ]}
               />
               {index < timelineSteps.length - 1 && (
                 <View
                   style={[
                     styles.timelineLine,
-                    isCompleted && styles.timelineLineCompleted,
+                    { backgroundColor: colors.border },
+                    isCompleted && { backgroundColor: colors.success },
                   ]}
                 />
               )}
               <Text
                 style={[
                   styles.timelineLabel,
-                  isCompleted && styles.timelineLabelCompleted,
+                  { color: colors.textSecondary },
+                  isCompleted && { color: colors.textPrimary, fontWeight: '600' },
                 ]}
               >
                 {step.label}
@@ -94,25 +97,24 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       </View>
 
       {/* Delivery details */}
-      {/* פרטי המשלוח */}
       <View style={styles.detailsSection}>
-        <Text style={styles.sectionTitle}>פרטי המשלוח</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('delivery.deliveryDetails')}</Text>
 
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>מ:</Text>
-          <Text style={styles.detailValue}>{delivery.pickup?.address || '—'}</Text>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.from')}:</Text>
+          <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{delivery.pickup?.address || '—'}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>אל:</Text>
-          <Text style={styles.detailValue}>{delivery.destination?.address || '—'}</Text>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.to')}:</Text>
+          <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{delivery.destination?.address || '—'}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>פריט:</Text>
-          <Text style={styles.detailValue}>{delivery.itemDescription || '—'}</Text>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.item')}:</Text>
+          <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{delivery.itemDescription || '—'}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>מחיר:</Text>
-          <Text style={styles.detailValue}>₪{delivery.suggestedPrice || 0}</Text>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.priceLabel')}:</Text>
+          <Text style={[styles.detailValue, { color: colors.textPrimary }]}>₪{delivery.suggestedPrice || 0}</Text>
         </View>
 
         {delivery.photoUrl && (
@@ -121,50 +123,45 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       </View>
 
       {/* Map placeholder */}
-      {/* מפה */}
-      <View style={styles.mapPlaceholder}>
-        <Text style={styles.mapPlaceholderText}>מפה — מיקום הנהג בזמן אמת</Text>
-        {/* Map — Real-time driver location */}
+      <View style={[styles.mapPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.mapPlaceholderText, { color: colors.textSecondary }]}>{t('delivery.mapPlaceholder')}</Text>
       </View>
 
       {/* Driver info (when matched) */}
-      {/* פרטי נהג (כשנמצא התאמה) */}
       {delivery.driverId && (
         <View style={styles.driverSection}>
-          <Text style={styles.sectionTitle}>הנהג שלך</Text>
-          {/* Your driver */}
-          <View style={styles.driverCard}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('delivery.driverInfo')}</Text>
+          <View style={[styles.driverCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <AvatarCircle
               name={delivery.driverName || ''}
               photoUrl={delivery.driverPhotoUrl}
               size={48}
             />
             <View style={styles.driverInfo}>
-              <Text style={styles.driverName}>{delivery.driverName}</Text>
-              <Text style={styles.driverRating}>
-                {delivery.driverRating ? `${delivery.driverRating.toFixed(1)} ★` : 'חדש'}
+              <Text style={[styles.driverName, { color: colors.textPrimary }]}>{delivery.driverName}</Text>
+              <Text style={[styles.driverRating, { color: colors.textSecondary }]}>
+                {delivery.driverRating ? `${delivery.driverRating.toFixed(1)} ★` : t('delivery.newDriver')}
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.chatButton}
+              style={[styles.chatButton, { backgroundColor: colors.primary }]}
               onPress={() =>
                 navigation.navigate('ChatRoom', {
                   chatId: delivery.chatId || '',
-                  recipientName: delivery.driverName || 'נהג',
+                  recipientName: delivery.driverName || '',
                 })
               }
             >
-              <Text style={styles.chatButtonText}>צ׳אט</Text>
+              <Text style={styles.chatButtonText}>{t('tabs.chat')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
       {/* Actions based on status */}
-      {/* פעולות לפי סטטוס */}
       {delivery.status === 'delivered' && !delivery.rated && (
         <TouchableOpacity
-          style={styles.rateButton}
+          style={[styles.rateButton, { backgroundColor: colors.accent }]}
           onPress={() =>
             navigation.navigate('Rating', {
               deliveryId: delivery.id,
@@ -172,8 +169,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             })
           }
         >
-          <Text style={styles.rateButtonText}>דרג את הנהג</Text>
-          {/* Rate the driver */}
+          <Text style={styles.rateButtonText}>{t('delivery.rateDriver')}</Text>
         </TouchableOpacity>
       )}
     </ScrollView>
@@ -183,7 +179,6 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   contentContainer: {
     padding: 24,
@@ -196,7 +191,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text,
     textAlign: 'right',
     marginBottom: 12,
   },
@@ -214,14 +208,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: COLORS.border,
     marginLeft: 12,
   },
-  timelineDotCompleted: {
-    backgroundColor: COLORS.success,
-  },
   timelineDotCurrent: {
-    backgroundColor: COLORS.primary,
     borderWidth: 3,
     borderColor: 'rgba(26,115,232,0.3)',
     width: 20,
@@ -234,18 +223,9 @@ const styles = StyleSheet.create({
     top: 20,
     width: 2,
     height: 24,
-    backgroundColor: COLORS.border,
-  },
-  timelineLineCompleted: {
-    backgroundColor: COLORS.success,
   },
   timelineLabel: {
     fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  timelineLabelCompleted: {
-    color: COLORS.text,
-    fontWeight: '600',
   },
   detailsSection: {
     marginBottom: 24,
@@ -259,11 +239,9 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   detailValue: {
     fontSize: 14,
-    color: COLORS.text,
     flex: 1,
     textAlign: 'right',
   },
@@ -276,16 +254,13 @@ const styles = StyleSheet.create({
   mapPlaceholder: {
     height: 200,
     borderRadius: 12,
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   mapPlaceholderText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
   },
   driverSection: {
     marginBottom: 24,
@@ -293,11 +268,9 @@ const styles = StyleSheet.create({
   driverCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   driverInfo: {
     flex: 1,
@@ -306,15 +279,12 @@ const styles = StyleSheet.create({
   driverName: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.text,
   },
   driverRating: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     marginTop: 2,
   },
   chatButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -325,7 +295,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   rateButton: {
-    backgroundColor: COLORS.accent,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
