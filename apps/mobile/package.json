@@ -35,7 +35,8 @@
     "react-native-reanimated": "^3.8.0",
     "react-native-safe-area-context": "^4.9.0",
     "react-native-screens": "^3.30.0",
-    "react-native-vision-camera": "^3.9.0"
+    "react-native-vision-camera": "^3.9.0",
+    "@react-native-community/netinfo": "^11.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
@@ -58,7 +59,7 @@
       "^@/(.*)$": "<rootDir>/src/$1"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(@react-native|react-native|@react-navigation|react-native-maps|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|@react-native-firebase|ngeohash|react-native-vision-camera|@notifee|react-native-geolocation-service|react-native-image-picker|react-native-config)/)"
+      "node_modules/(?!(@react-native|react-native|@react-navigation|react-native-maps|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|@react-native-firebase|ngeohash|react-native-vision-camera|@notifee|react-native-geolocation-service|react-native-image-picker|react-native-config|@react-native-community)/)"
     ],
     "setupFiles": [
       "./jest.setup.js"
