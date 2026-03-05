@@ -22,27 +22,43 @@ export default function DeliveriesPage() {
 
   const columns: Column<Delivery>[] = [
     {
-      key: 'title',
-      label: 'Delivery',
+      key: 'id',
+      label: 'ID',
       render: (d) => (
-        <div>
-          <p className="font-medium text-gray-900">{d.title}</p>
-          <p className="text-xs text-gray-500">{d.id.slice(0, 8)}...</p>
-        </div>
+        <span className="font-mono text-xs text-gray-500">{d.id.slice(0, 8)}...</span>
       ),
     },
     {
       key: 'senderName',
       label: 'Sender',
       sortable: true,
+      render: (d) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/users/${d.senderId}`);
+          }}
+          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          {d.senderName || 'Unknown'}
+        </button>
+      ),
     },
     {
       key: 'driverName',
       label: 'Driver',
-      render: (d) => (
-        <span className={d.driverName ? 'text-gray-900' : 'text-gray-400'}>
-          {d.driverName ?? 'Unassigned'}
-        </span>
+      render: (d) => d.driverId ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/users/${d.driverId}`);
+          }}
+          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          {d.driverName || 'Unknown'}
+        </button>
+      ) : (
+        <span className="text-gray-400">Unassigned</span>
       ),
     },
     {
@@ -50,7 +66,7 @@ export default function DeliveriesPage() {
       label: 'Route',
       render: (d) => (
         <span className="text-sm">
-          {d.pickup.city} &rarr; {d.destination.city}
+          {d.pickup.city || '-'} &rarr; {d.destination.city || '-'}
         </span>
       ),
     },
@@ -65,18 +81,18 @@ export default function DeliveriesPage() {
       sortable: true,
       render: (d) => (
         <span className="font-medium">
-          {d.currency} {d.price.toFixed(2)}
+          {d.price.toFixed(0)} {d.currency}
         </span>
       ),
       className: 'text-right',
     },
     {
       key: 'createdAt',
-      label: 'Date',
+      label: 'Created',
       sortable: true,
       render: (d) => (
         <span className="text-sm text-gray-500">
-          {format(d.createdAt.toDate(), 'MMM d, yyyy')}
+          {d.createdAt ? format(d.createdAt.toDate(), 'MMM d, yyyy') : '-'}
         </span>
       ),
     },
@@ -100,13 +116,12 @@ export default function DeliveriesPage() {
           >
             <option value="">All</option>
             <option value="new">New</option>
-            <option value="accepted">Accepted</option>
+            <option value="pending">Pending</option>
+            <option value="waiting">Waiting</option>
             <option value="picked_up">Picked Up</option>
-            <option value="in_transit">In Transit</option>
             <option value="delivered">Delivered</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="completed_paid">Completed</option>
             <option value="cancelled">Cancelled</option>
-            <option value="disputed">Disputed</option>
           </select>
         </div>
 
