@@ -60,7 +60,7 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(@react-native|react-native|@react-navigation|react-native-maps|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|@react-native-firebase|ngeohash|react-native-vision-camera|@notifee|react-native-geolocation-service|react-native-image-picker|react-native-config)/)"
     ],
-    "setupFilesAfterSetup": [
+    "setupFiles": [
       "./jest.setup.js"
     ]
   },
