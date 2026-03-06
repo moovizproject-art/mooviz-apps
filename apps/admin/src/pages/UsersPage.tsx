@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import DataTable, { type Column } from '../components/DataTable';
 import UserAvatar from '../components/UserAvatar';
 import { useUsers } from '../hooks/useFirestore';
+import { useI18n } from '../i18n/I18nContext';
 import type { AppUser, UserRole, UserStatus, KycStatus } from '../services/users';
 
 const kycBadgeClass: Record<KycStatus, string> = {
@@ -20,6 +21,7 @@ const statusBadgeClass: Record<UserStatus, string> = {
 };
 
 export default function UsersPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
   const [statusFilter, setStatusFilter] = useState<UserStatus | ''>('');
@@ -34,23 +36,23 @@ export default function UsersPage() {
   const columns: Column<AppUser>[] = [
     {
       key: 'fullName',
-      label: 'User',
+      label: t('users.user'),
       render: (user) => (
         <UserAvatar name={user.fullName || user.displayName} photoURL={user.photoURL} role={user.role} />
       ),
     },
     {
       key: 'email',
-      label: 'Email',
+      label: t('users.email'),
       sortable: true,
     },
     {
       key: 'phone',
-      label: 'Phone',
+      label: t('users.phone'),
     },
     {
       key: 'kycStatus',
-      label: 'KYC',
+      label: t('users.kyc'),
       render: (user) => (
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${kycBadgeClass[user.kycStatus]}`}
@@ -61,7 +63,7 @@ export default function UsersPage() {
     },
     {
       key: 'activeMode',
-      label: 'Active Mode',
+      label: t('users.activeMode'),
       render: (user) => (
         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
           user.activeMode === 'driver'
@@ -76,7 +78,7 @@ export default function UsersPage() {
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('users.status'),
       render: (user) => (
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass[user.status]}`}
@@ -87,7 +89,7 @@ export default function UsersPage() {
     },
     {
       key: 'createdAt',
-      label: 'Joined',
+      label: t('users.joined'),
       sortable: true,
       render: (user) => (
         <span className="text-sm text-gray-500">
@@ -100,8 +102,8 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Users</h2>
-        <p className="mt-1 text-sm text-gray-500">Manage platform users, KYC, and access</p>
+        <h2 className="text-2xl font-bold text-gray-900">{t('users.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('users.subtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -111,10 +113,10 @@ export default function UsersPage() {
           onChange={(e) => setRoleFilter(e.target.value as UserRole | '')}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         >
-          <option value="">All Roles</option>
-          <option value="sender">Sender</option>
-          <option value="driver">Driver</option>
-          <option value="both">Both</option>
+          <option value="">{t('users.allRoles')}</option>
+          <option value="sender">{t('users.sender')}</option>
+          <option value="driver">{t('users.driver')}</option>
+          <option value="both">{t('users.both')}</option>
         </select>
 
         <select
@@ -122,11 +124,11 @@ export default function UsersPage() {
           onChange={(e) => setStatusFilter(e.target.value as UserStatus | '')}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         >
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-          <option value="blocked">Blocked</option>
-          <option value="pending_kyc">Pending KYC</option>
+          <option value="">{t('users.allStatuses')}</option>
+          <option value="active">{t('users.active')}</option>
+          <option value="suspended">{t('users.suspended')}</option>
+          <option value="blocked">{t('users.blocked')}</option>
+          <option value="pending_kyc">{t('users.pendingKyc')}</option>
         </select>
 
         <select
@@ -134,10 +136,10 @@ export default function UsersPage() {
           onChange={(e) => setKycFilter(e.target.value as KycStatus | '')}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         >
-          <option value="">All KYC</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="">{t('users.allKyc')}</option>
+          <option value="pending">{t('users.pending')}</option>
+          <option value="approved">{t('users.approved')}</option>
+          <option value="rejected">{t('users.rejected')}</option>
         </select>
 
         {(roleFilter || statusFilter || kycFilter) && (
@@ -149,7 +151,7 @@ export default function UsersPage() {
             }}
             className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
           >
-            Clear filters
+            {t('users.clearFilters')}
           </button>
         )}
       </div>
@@ -162,7 +164,7 @@ export default function UsersPage() {
         searchable
         searchFields={['fullName', 'displayName', 'email', 'phone']}
         loading={isLoading}
-        emptyMessage="No users found"
+        emptyMessage={t('users.noUsers')}
       />
     </div>
   );

@@ -15,6 +15,7 @@ import {
 } from '../services/reports';
 import { suspendUser, blockUser } from '../services/users';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../i18n/I18nContext';
 
 const statusClasses: Record<ReportStatus, string> = {
   open: 'bg-red-100 text-red-800',
@@ -23,17 +24,18 @@ const statusClasses: Record<ReportStatus, string> = {
   dismissed: 'bg-gray-100 text-gray-800',
 };
 
-const categoryLabels: Record<ReportCategory, string> = {
-  harassment: 'Harassment',
-  fraud: 'Fraud',
-  damage: 'Damage',
-  no_show: 'No Show',
-  other: 'Other',
-};
-
 export default function ReportsPage() {
   const navigate = useNavigate();
   const { user: admin } = useAuth();
+  const { t } = useI18n();
+
+  const categoryLabels: Record<ReportCategory, string> = {
+    harassment: t('reports.harassment'),
+    fraud: t('reports.fraud'),
+    damage: t('reports.damage'),
+    no_show: t('reports.noShow'),
+    other: t('reports.other'),
+  };
   const invalidate = useInvalidate();
   const [statusFilter, setStatusFilter] = useState<ReportStatus | ''>('');
   const [categoryFilter, setCategoryFilter] = useState<ReportCategory | ''>('');
@@ -82,7 +84,7 @@ export default function ReportsPage() {
   const columns: Column<Report>[] = [
     {
       key: 'createdAt',
-      label: 'Date',
+      label: t('reports.date'),
       sortable: true,
       render: (r) => (
         <span className="text-sm text-gray-500">
@@ -92,14 +94,14 @@ export default function ReportsPage() {
     },
     {
       key: 'category',
-      label: 'Category',
+      label: t('reports.category'),
       render: (r) => (
         <span className="text-sm font-medium">{categoryLabels[r.category] ?? r.category}</span>
       ),
     },
     {
       key: 'reporterName',
-      label: 'Reporter',
+      label: t('reports.reporter'),
       render: (r) => (
         <button
           onClick={(e) => {
@@ -108,13 +110,13 @@ export default function ReportsPage() {
           }}
           className="text-sm font-medium text-brand-600 hover:text-brand-700"
         >
-          {r.reporterName || 'Unknown'}
+          {r.reporterName || t('deliveries.unknown')}
         </button>
       ),
     },
     {
       key: 'reportedUserName',
-      label: 'Reported User',
+      label: t('reports.reportedUser'),
       render: (r) => (
         <button
           onClick={(e) => {
@@ -123,13 +125,13 @@ export default function ReportsPage() {
           }}
           className="text-sm font-medium text-brand-600 hover:text-brand-700"
         >
-          {r.reportedUserName || 'Unknown'}
+          {r.reportedUserName || t('deliveries.unknown')}
         </button>
       ),
     },
     {
       key: 'deliveryId',
-      label: 'Delivery',
+      label: t('reports.delivery'),
       render: (r) => r.deliveryId ? (
         <button
           onClick={(e) => {
@@ -146,14 +148,14 @@ export default function ReportsPage() {
     },
     {
       key: 'description',
-      label: 'Reason',
+      label: t('reports.reason'),
       render: (r) => (
         <p className="max-w-xs truncate text-sm text-gray-600">{r.description}</p>
       ),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('deliveries.status'),
       render: (r) => (
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClasses[r.status]}`}
@@ -164,7 +166,7 @@ export default function ReportsPage() {
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: t('reports.actions'),
       render: (r) => (
         <div className="flex gap-2">
           {r.status === 'open' && (
@@ -175,7 +177,7 @@ export default function ReportsPage() {
               }}
               className="rounded px-2 py-1 text-xs font-medium text-yellow-700 hover:bg-yellow-50"
             >
-              Investigate
+              {t('reports.investigate')}
             </button>
           )}
           {(r.status === 'open' || r.status === 'investigating') && (
@@ -188,7 +190,7 @@ export default function ReportsPage() {
                 }}
                 className="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
               >
-                Resolve
+                {t('reports.resolve')}
               </button>
               <button
                 onClick={(e) => {
@@ -198,7 +200,7 @@ export default function ReportsPage() {
                 }}
                 className="rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50"
               >
-                Dismiss
+                {t('reports.dismiss')}
               </button>
             </>
           )}
@@ -210,8 +212,8 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Reports</h2>
-        <p className="mt-1 text-sm text-gray-500">User reports and moderation queue</p>
+        <h2 className="text-2xl font-bold text-gray-900">{t('reports.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('reports.subtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -221,11 +223,11 @@ export default function ReportsPage() {
           onChange={(e) => setStatusFilter(e.target.value as ReportStatus | '')}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         >
-          <option value="">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="investigating">Investigating</option>
-          <option value="resolved">Resolved</option>
-          <option value="dismissed">Dismissed</option>
+          <option value="">{t('reports.allStatuses')}</option>
+          <option value="open">{t('reports.open')}</option>
+          <option value="investigating">{t('reports.investigating')}</option>
+          <option value="resolved">{t('reports.resolved')}</option>
+          <option value="dismissed">{t('reports.dismissed')}</option>
         </select>
 
         <select
@@ -233,12 +235,12 @@ export default function ReportsPage() {
           onChange={(e) => setCategoryFilter(e.target.value as ReportCategory | '')}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         >
-          <option value="">All Categories</option>
-          <option value="harassment">Harassment</option>
-          <option value="fraud">Fraud</option>
-          <option value="damage">Damage</option>
-          <option value="no_show">No Show</option>
-          <option value="other">Other</option>
+          <option value="">{t('reports.allCategories')}</option>
+          <option value="harassment">{t('reports.harassment')}</option>
+          <option value="fraud">{t('reports.fraud')}</option>
+          <option value="damage">{t('reports.damage')}</option>
+          <option value="no_show">{t('reports.noShow')}</option>
+          <option value="other">{t('reports.other')}</option>
         </select>
 
         {(statusFilter || categoryFilter) && (
@@ -249,7 +251,7 @@ export default function ReportsPage() {
             }}
             className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
           >
-            Clear filters
+            {t('reports.clearFilters')}
           </button>
         )}
       </div>
@@ -259,7 +261,7 @@ export default function ReportsPage() {
         data={reports ?? []}
         keyField="id"
         loading={isLoading}
-        emptyMessage="No reports found"
+        emptyMessage={t('reports.noReports')}
       />
 
       {/* Resolve Dialog */}
@@ -273,33 +275,33 @@ export default function ReportsPage() {
             setModerationAction('warning');
           }}
           onConfirm={handleAction}
-          title="Resolve Report"
-          message={`Take action on the report against ${selectedReport.reportedUserName}.`}
-          confirmLabel="Resolve"
+          title={t('reports.resolveTitle')}
+          message={t('reports.resolveMsg').replace('{name}', selectedReport.reportedUserName)}
+          confirmLabel={t('reports.resolve')}
           variant="warning"
           loading={actionLoading}
         >
           <div className="mt-4 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Moderation Action</label>
+              <label className="block text-sm font-medium text-gray-700">{t('reports.moderationAction')}</label>
               <select
                 value={moderationAction}
                 onChange={(e) => setModerationAction(e.target.value as ModerationAction)}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
-                <option value="warning">Warning</option>
-                <option value="suspend">Suspend User</option>
-                <option value="block">Block User</option>
-                <option value="none">No Action</option>
+                <option value="warning">{t('reports.warning')}</option>
+                <option value="suspend">{t('reports.suspendUser')}</option>
+                <option value="block">{t('reports.blockUser')}</option>
+                <option value="none">{t('reports.noAction')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Note</label>
+              <label className="block text-sm font-medium text-gray-700">{t('reports.note')}</label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
-                placeholder="Resolution details..."
+                placeholder={t('reports.resolutionPlaceholder')}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
@@ -317,19 +319,19 @@ export default function ReportsPage() {
             setNote('');
           }}
           onConfirm={handleAction}
-          title="Dismiss Report"
-          message={`Dismiss the report against ${selectedReport.reportedUserName}. No action will be taken.`}
-          confirmLabel="Dismiss"
+          title={t('reports.dismissTitle')}
+          message={t('reports.dismissMsg').replace('{name}', selectedReport.reportedUserName)}
+          confirmLabel={t('reports.dismiss')}
           variant="info"
           loading={actionLoading}
         >
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">Note</label>
+            <label className="block text-sm font-medium text-gray-700">{t('reports.note')}</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              placeholder="Reason for dismissal..."
+              placeholder={t('reports.dismissPlaceholder')}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>

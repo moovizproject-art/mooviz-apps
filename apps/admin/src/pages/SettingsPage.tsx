@@ -24,6 +24,8 @@ interface AppSettings {
 interface NotificationTemplate {
   title: string;
   body: string;
+  title_he: string;
+  body_he: string;
   enabled: boolean;
 }
 
@@ -40,26 +42,36 @@ const defaultSettings: AppSettings = {
     deliveryCreated: {
       title: 'New Delivery Request',
       body: 'A new delivery has been created near your area.',
+      title_he: 'בקשת משלוח חדשה',
+      body_he: 'משלוח חדש נוצר באזור שלך.',
       enabled: true,
     },
     deliveryAccepted: {
       title: 'Delivery Accepted',
       body: 'Your delivery has been accepted by a driver.',
+      title_he: 'המשלוח אושר',
+      body_he: 'המשלוח שלך התקבל על ידי נהג.',
       enabled: true,
     },
     deliveryPickedUp: {
       title: 'Package Picked Up',
       body: 'Your package has been picked up and is on its way.',
+      title_he: 'החבילה נאספה',
+      body_he: 'החבילה שלך נאספה והיא בדרך.',
       enabled: true,
     },
     deliveryCompleted: {
       title: 'Delivery Completed',
       body: 'Your delivery has been completed successfully.',
+      title_he: 'המשלוח הושלם',
+      body_he: 'המשלוח שלך הושלם בהצלחה.',
       enabled: true,
     },
     deliveryCancelled: {
       title: 'Delivery Cancelled',
       body: 'A delivery has been cancelled.',
+      title_he: 'המשלוח בוטל',
+      body_he: 'משלוח בוטל.',
       enabled: true,
     },
   },
@@ -124,17 +136,17 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage platform configuration</p>
+          <h2 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t('settings.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
-          {saved && <span className="text-sm text-green-600">Settings saved!</span>}
+          {saved && <span className="text-sm text-green-600">{t('settings.saved')}</span>}
           <button
             onClick={handleSave}
             disabled={saving}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? t('settings.saving') : t('settings.save')}
           </button>
         </div>
       </div>
@@ -169,10 +181,10 @@ export default function SettingsPage() {
 
       {/* General Settings */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900">General</h3>
+        <h3 className="text-base font-semibold text-gray-900">{t('settings.general')}</h3>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Platform Name</label>
+            <label className="block text-sm font-medium text-gray-700">{t('settings.platformName')}</label>
             <input
               type="text"
               value={settings.platformName}
@@ -181,7 +193,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Support Email</label>
+            <label className="block text-sm font-medium text-gray-700">{t('settings.supportEmail')}</label>
             <input
               type="email"
               value={settings.supportEmail}
@@ -190,7 +202,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Currency</label>
+            <label className="block text-sm font-medium text-gray-700">{t('settings.currency')}</label>
             <select
               value={settings.currency}
               onChange={(e) => setSettings((s) => ({ ...s, currency: e.target.value }))}
@@ -204,7 +216,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Max Delivery Distance (km)
+              {t('settings.maxDistance')}
             </label>
             <input
               type="number"
@@ -220,11 +232,11 @@ export default function SettingsPage() {
 
       {/* Pricing */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900">Pricing</h3>
+        <h3 className="text-base font-semibold text-gray-900">{t('settings.pricing')}</h3>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Base Fee ({settings.currency})
+              {t('settings.baseFee')} ({settings.currency})
             </label>
             <input
               type="number"
@@ -236,7 +248,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Per-km Fee ({settings.currency})
+              {t('settings.perKmFee')} ({settings.currency})
             </label>
             <input
               type="number"
@@ -251,7 +263,7 @@ export default function SettingsPage() {
 
       {/* Feature Flags */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900">Features</h3>
+        <h3 className="text-base font-semibold text-gray-900">{t('settings.features')}</h3>
         <div className="mt-4 space-y-4">
           <label className="flex items-center gap-3">
             <input
@@ -261,9 +273,9 @@ export default function SettingsPage() {
               className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
             />
             <div>
-              <p className="text-sm font-medium text-gray-700">Require KYC for drivers</p>
+              <p className="text-sm font-medium text-gray-700">{t('settings.kycRequired')}</p>
               <p className="text-xs text-gray-500">
-                Drivers must complete identity verification before accepting deliveries
+                {t('settings.kycRequiredDesc')}
               </p>
             </div>
           </label>
@@ -277,9 +289,9 @@ export default function SettingsPage() {
               className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
             />
             <div>
-              <p className="text-sm font-medium text-gray-700">Auto-match drivers</p>
+              <p className="text-sm font-medium text-gray-700">{t('settings.autoMatch')}</p>
               <p className="text-xs text-gray-500">
-                Automatically assign nearby drivers to new deliveries
+                {t('settings.autoMatchDesc')}
               </p>
             </div>
           </label>
@@ -288,7 +300,7 @@ export default function SettingsPage() {
 
       {/* Notification Templates */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900">Notification Templates</h3>
+        <h3 className="text-base font-semibold text-gray-900">{t('settings.notifications')}</h3>
         <div className="mt-4 space-y-6">
           {(
             Object.entries(settings.notifications) as [
@@ -308,27 +320,57 @@ export default function SettingsPage() {
                     onChange={(e) => updateNotification(key, 'enabled', e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                   />
-                  <span className="text-xs text-gray-500">Enabled</span>
+                  <span className="text-xs text-gray-500">{t('settings.enabled')}</span>
                 </label>
               </div>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500">Title</label>
-                  <input
-                    type="text"
-                    value={template.title}
-                    onChange={(e) => updateNotification(key, 'title', e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
+              {/* English */}
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">English</p>
+                <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">{t('settings.notifTitle')}</label>
+                    <input
+                      type="text"
+                      value={template.title}
+                      onChange={(e) => updateNotification(key, 'title', e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">{t('settings.notifBody')}</label>
+                    <input
+                      type="text"
+                      value={template.body}
+                      onChange={(e) => updateNotification(key, 'body', e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500">Body</label>
-                  <input
-                    type="text"
-                    value={template.body}
-                    onChange={(e) => updateNotification(key, 'body', e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
+              </div>
+              {/* Hebrew */}
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">עברית</p>
+                <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">{t('settings.notifTitle')}</label>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={template.title_he}
+                      onChange={(e) => updateNotification(key, 'title_he', e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">{t('settings.notifBody')}</label>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={template.body_he}
+                      onChange={(e) => updateNotification(key, 'body_he', e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

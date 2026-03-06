@@ -7,6 +7,7 @@ import { StatusBar } from 'react-native';
 import { AuthProvider } from './src/hooks/useAuth';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { I18nProvider } from './src/i18n/I18nContext';
+import { SoundProvider } from './src/hooks/useSound';
 import { RootNavigator, RootStackParamList } from './src/navigation/RootNavigator';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { OfflineBanner } from './src/components/OfflineBanner';
@@ -72,12 +73,14 @@ export default function App(): React.JSX.Element {
         <I18nProvider>
           <SafeAreaProvider>
             <OfflineBanner />
-            <AuthProvider>
-              <NavigationContainer linking={linking}>
-                <StatusBar barStyle="light-content" />
-                <RootNavigator />
-              </NavigationContainer>
-            </AuthProvider>
+            <SoundProvider>
+              <AuthProvider>
+                <NavigationContainer linking={linking}>
+                  <StatusBar barStyle="light-content" />
+                  <RootNavigator />
+                </NavigationContainer>
+              </AuthProvider>
+            </SoundProvider>
           </SafeAreaProvider>
         </I18nProvider>
       </ThemeProvider>

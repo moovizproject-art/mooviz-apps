@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { useAuth } from '../hooks/useAuth';
+import { useSound } from '../hooks/useSound';
 import { ProfileIcon } from './TabIcons';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
 
@@ -34,14 +35,21 @@ interface SettingsDrawerProps {
 export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerProps): React.JSX.Element | null {
   const { colors, isDark, setMode: setThemeMode } = useTheme();
   const { t, locale, setLocale } = useI18n();
-  const { currentUser } = useAuth();
+  const { currentUser, updateProfile } = useAuth();
+  const { soundEnabled, setSoundEnabled } = useSound();
   const navigation = useNavigation<any>();
   const driverUnlocked = currentUser?.driverUnlocked ?? false;
 
-  const handleBecomeDriver = useCallback(() => {
+  const handleBecomeDriver = useCallback(async () => {
     onClose();
-    navigation.navigate('DriverKYC');
-  }, [navigation, onClose]);
+    if (driverUnlocked) {
+      // KYC approved — switch to driver mode
+      await updateProfile({ activeMode: 'driver' });
+    } else {
+      // KYC not done — go to KYC screen
+      navigation.navigate('DriverKYC');
+    }
+  }, [navigation, onClose, driverUnlocked, updateProfile]);
 
   const handleGoToProfile = useCallback(() => {
     onClose();
@@ -89,7 +97,7 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
               )}
             </View>
             <Text style={[styles.menuText, { color: colors.textPrimary }]}>
-              {t('home.connectAsDriver')}
+              {driverUnlocked ? t('home.driver') : t('home.connectAsDriver')}
             </Text>
           </TouchableOpacity>
 
@@ -123,6 +131,18 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
             </View>
             <Text style={[styles.menuText, { color: colors.textPrimary }]}>
               {isDark ? t('home.lightMode') : t('home.darkMode')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setSoundEnabled(!soundEnabled)}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: soundEnabled ? '#E8F5E9' : '#FFEBEE' }]}>
+              <Text style={styles.flagEmoji}>{soundEnabled ? '\u{1F50A}' : '\u{1F507}'}</Text>
+            </View>
+            <Text style={[styles.menuText, { color: colors.textPrimary }]}>
+              {soundEnabled ? t('home.soundOn') : t('home.soundOff')}
             </Text>
           </TouchableOpacity>
 

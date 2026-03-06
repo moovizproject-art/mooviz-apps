@@ -9,6 +9,9 @@ import DeliveriesPage from './pages/DeliveriesPage';
 import DeliveryDetailPage from './pages/DeliveryDetailPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import EmailPage from './pages/EmailPage';
+import MigrationPage from './pages/MigrationPage';
+import ChatsPage from './pages/ChatsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -46,6 +49,9 @@ function AppRoutes() {
         <Route path="deliveries" element={<DeliveriesPage />} />
         <Route path="deliveries/:deliveryId" element={<DeliveryDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="chats" element={<ChatsPage />} />
+        <Route path="email" element={<EmailPage />} />
+        <Route path="migration" element={<MigrationPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

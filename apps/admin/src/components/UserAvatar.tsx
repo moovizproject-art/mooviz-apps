@@ -1,4 +1,6 @@
 import type { UserRole } from '../services/users';
+import avatarDriver from '../assets/avatar-driver.png';
+import avatarSender from '../assets/avatar-sender.jpg';
 
 interface UserAvatarProps {
   name: string;
@@ -47,11 +49,11 @@ export default function UserAvatar({ name, photoURL, role, size = 'md' }: UserAv
             className={`${sizeClasses[size]} rounded-full object-cover ring-2 ${roleColors[role]}`}
           />
         ) : (
-          <div
-            className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-gray-200 font-medium text-gray-600 ring-2 ${roleColors[role]}`}
-          >
-            {initials}
-          </div>
+          <img
+            src={role === 'driver' ? avatarDriver : avatarSender}
+            alt={name}
+            className={`${sizeClasses[size]} rounded-full object-cover ring-2 ${roleColors[role]} bg-gray-100`}
+          />
         )}
       </div>
       <div>

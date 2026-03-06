@@ -1,17 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   Modal,
   Keyboard,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import Config from 'react-native-config';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/tokens';
+import { GOOGLE_MAPS_API_KEY } from '../constants/config';
 
 interface GeoPoint {
   latitude: number;
@@ -25,31 +27,96 @@ interface MapPickerProps {
   initialLocation?: { latitude: number; longitude: number };
 }
 
+interface Prediction {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
+const PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
+
 /**
- * MapPicker — Google Places autocomplete address picker
- * Uses react-native-google-places-autocomplete for street/city search.
- * Returns lat/lng + formatted address.
+ * MapPicker — Address picker using Google Places HTTP API directly.
+ * Avoids react-native-google-places-autocomplete (broken hooks with pnpm).
+ * Types address → fetches predictions → user taps → fetches place details → returns lat/lng.
  */
 export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const ref = useRef<any>(null);
+  const [query, setQuery] = useState('');
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    // Auto-focus the input
-    setTimeout(() => ref.current?.focus(), 300);
+  const fetchPredictions = useCallback((text: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!text.trim() || !GOOGLE_MAPS_API_KEY) {
+      setPredictions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const url = `${PLACES_BASE}/autocomplete/json?input=${encodeURIComponent(text)}&key=${GOOGLE_MAPS_API_KEY}&language=he&components=country:il`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.predictions) {
+          setPredictions(json.predictions);
+        }
+      } catch {
+        // silently fail — user can still submit manually
+      }
+    }, 300);
   }, []);
 
-  const handleSelect = (data: any, details: any) => {
+  const handleTextChange = useCallback((text: string) => {
+    setQuery(text);
+    fetchPredictions(text);
+  }, [fetchPredictions]);
+
+  const handleSelectPrediction = useCallback(async (prediction: Prediction) => {
     Keyboard.dismiss();
-    if (details?.geometry?.location) {
+    setLoading(true);
+    try {
+      const url = `${PLACES_BASE}/details/json?place_id=${prediction.place_id}&fields=geometry,formatted_address&key=${GOOGLE_MAPS_API_KEY}&language=he`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.result?.geometry?.location) {
+        onLocationSelect({
+          latitude: json.result.geometry.location.lat,
+          longitude: json.result.geometry.location.lng,
+          address: json.result.formatted_address || prediction.description,
+        });
+      } else {
+        // Fallback: use description without coords
+        onLocationSelect({
+          latitude: 0,
+          longitude: 0,
+          address: prediction.description,
+        });
+      }
+    } catch {
       onLocationSelect({
-        latitude: details.geometry.location.lat,
-        longitude: details.geometry.location.lng,
-        address: data.description || data.structured_formatting?.main_text || '',
+        latitude: 0,
+        longitude: 0,
+        address: prediction.description,
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [onLocationSelect]);
+
+  const handleManualSubmit = useCallback(() => {
+    if (!query.trim()) return;
+    Keyboard.dismiss();
+    onLocationSelect({
+      latitude: 0,
+      longitude: 0,
+      address: query.trim(),
+    });
+  }, [query, onLocationSelect]);
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
@@ -67,40 +134,71 @@ export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React
           <View style={styles.cancelButton} />
         </View>
 
-        {/* Autocomplete */}
-        <GooglePlacesAutocomplete
-          ref={ref}
-          placeholder={t('form.addressPlaceholder')}
-          onPress={handleSelect}
-          fetchDetails
-          query={{
-            key: Config.GOOGLE_MAPS_API_KEY || '',
-            language: 'he',
-            components: 'country:il',
-          }}
-          styles={{
-            container: styles.autocompleteContainer,
-            textInput: [
+        {/* Search input */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={[
               styles.textInput,
               {
                 backgroundColor: colors.inputBg,
                 borderColor: colors.inputBorder,
                 color: colors.textPrimary,
               },
-            ],
-            listView: [styles.listView, { backgroundColor: colors.background }],
-            row: [styles.row, { backgroundColor: colors.surface }],
-            description: { color: colors.textPrimary },
-            separator: { backgroundColor: colors.border },
-            poweredContainer: { display: 'none' },
-          }}
-          textInputProps={{
-            placeholderTextColor: colors.inputPlaceholder,
-            writingDirection: 'rtl',
-          }}
-          enablePoweredByContainer={false}
-          nearbyPlacesAPI="GooglePlacesSearch"
-          debounce={300}
+            ]}
+            placeholder={t('form.addressPlaceholder')}
+            placeholderTextColor={colors.inputPlaceholder}
+            value={query}
+            onChangeText={handleTextChange}
+            autoFocus
+            writingDirection="rtl"
+            returnKeyType="done"
+            onSubmitEditing={handleManualSubmit}
+          />
+        </View>
+
+        {loading && (
+          <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
+        )}
+
+        {/* Predictions list */}
+        <FlatList
+          data={predictions}
+          keyExtractor={(item) => item.place_id}
+          keyboardShouldPersistTaps="handled"
+          style={styles.list}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+              onPress={() => handleSelectPrediction(item)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.rowMain, { color: colors.textPrimary }]}>
+                {item.structured_formatting?.main_text || item.description}
+              </Text>
+              {item.structured_formatting?.secondary_text && (
+                <Text style={[styles.rowSecondary, { color: colors.textSecondary }]}>
+                  {item.structured_formatting.secondary_text}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            query.trim().length > 0 && predictions.length === 0 && !loading ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  {t('form.manualAddressHint')}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.confirmButton, { backgroundColor: query.trim() ? colors.primary : colors.border }]}
+                  onPress={handleManualSubmit}
+                  disabled={!query.trim()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.confirmButtonText}>{t('form.confirmAddress')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
         />
       </View>
     </Modal>
@@ -131,8 +229,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     fontWeight: '600',
   },
-  autocompleteContainer: {
-    flex: 1,
+  searchContainer: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
   },
@@ -144,13 +241,46 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     height: 48,
   },
-  listView: {
-    borderRadius: BORDER_RADIUS.lg,
+  loader: {
+    marginTop: SPACING.md,
+  },
+  list: {
+    flex: 1,
+    paddingHorizontal: SPACING.lg,
     marginTop: SPACING.sm,
-    overflow: 'hidden',
   },
   row: {
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.xs,
+  },
+  rowMain: {
+    ...TYPOGRAPHY.bodySmall,
+    fontWeight: '600',
+  },
+  rowSecondary: {
+    ...TYPOGRAPHY.caption,
+    marginTop: 2,
+  },
+  emptyContainer: {
+    paddingTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.md,
+  },
+  emptyText: {
+    ...TYPOGRAPHY.bodySmall,
+    textAlign: 'center',
+  },
+  confirmButton: {
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

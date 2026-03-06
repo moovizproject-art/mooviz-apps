@@ -27,6 +27,7 @@
   },
   "pnpm": {
     "overrides": {
+      "react": "18.2.0",
       "react-native-reanimated": "3.15.5",
       "react-native-gesture-handler": "2.20.2",
       "react-native-maps": "1.18.2",

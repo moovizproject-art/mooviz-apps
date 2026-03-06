@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
+import { useSound } from '../hooks/useSound';
 
 const carImage = require('../assets/car.png');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,6 +32,8 @@ interface CarAlertProps {
   message: string;
   buttons?: CarAlertButton[];
   onDismiss: () => void;
+  /** Override the default sound for this alert type */
+  soundOverride?: 'success' | 'error' | 'question' | 'payment' | 'driver_interested' | 'new_delivery';
 }
 
 /**
@@ -39,9 +42,10 @@ interface CarAlertProps {
  * Error: car hits a stop sign and bounces back.
  * Info: car idles with gentle bounce.
  */
-export function CarAlert({ visible, type, title, message, buttons, onDismiss }: CarAlertProps): React.JSX.Element {
+export function CarAlert({ visible, type, title, message, buttons, onDismiss, soundOverride }: CarAlertProps): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { play } = useSound();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -66,6 +70,12 @@ export function CarAlert({ visible, type, title, message, buttons, onDismiss }: 
       resetAnimations();
       return;
     }
+
+    // Play sound based on alert type (or override)
+    if (soundOverride) play(soundOverride);
+    else if (type === 'success') play('success');
+    else if (type === 'error') play('error');
+    else play('question');
 
     // Modal entrance
     Animated.parallel([
@@ -295,6 +305,7 @@ interface CarAlertState {
   title: string;
   message: string;
   buttons?: CarAlertButton[];
+  soundOverride?: CarAlertProps['soundOverride'];
 }
 
 export function useCarAlert() {
@@ -306,8 +317,8 @@ export function useCarAlert() {
   });
 
   const show = useCallback(
-    (type: CarAlertType, title: string, message: string, buttons?: CarAlertButton[]) => {
-      setState({ visible: true, type, title, message, buttons });
+    (type: CarAlertType, title: string, message: string, buttons?: CarAlertButton[], soundOverride?: CarAlertProps['soundOverride']) => {
+      setState({ visible: true, type, title, message, buttons, soundOverride });
     },
     [],
   );

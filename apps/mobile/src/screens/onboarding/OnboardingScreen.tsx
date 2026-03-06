@@ -11,10 +11,12 @@ import {
   Image,
   ViewToken,
   Platform,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
+import { useSound } from '../../hooks/useSound';
 
 const logo = require('../../assets/logo.png');
 const carImage = require('../../assets/car.png');
@@ -79,11 +81,12 @@ const PAGES: PageData[] = [
 
 const BLUE = '#1565C0';
 const BLUE_LIGHT = '#1E88E5';
-const HEADER_HEIGHT = SCREEN_HEIGHT * 0.22;
+const HEADER_HEIGHT = SCREEN_HEIGHT * 0.28;
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { play } = useSound();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const carX = useRef(new Animated.Value(-80)).current;
@@ -109,13 +112,14 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
   }, [currentIndex, carX, fadeAnim]);
 
   const handleComplete = useCallback(async () => {
+    play('success');
     try {
       await AsyncStorage.setItem('@onboarding_complete', 'true');
     } catch {
       // proceed anyway
     }
     onComplete();
-  }, [onComplete]);
+  }, [onComplete, play]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < PAGES.length - 1) {
@@ -155,44 +159,49 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
             transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
           },
         ]}>
-          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>{t(item.titleKey)}</Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }} bounces={false}>
+            <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>{t(item.titleKey)}</Text>
 
-          {item.subtitleKey && (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t(item.subtitleKey)}</Text>
-          )}
+            {item.subtitleKey && (
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t(item.subtitleKey)}</Text>
+            )}
 
-          {/* Illustration below title/subtitle */}
-          {hasImage && (
-            <View style={styles.illustrationArea}>
-              <Image source={pageImages[item.key]} style={styles.illustration} resizeMode="cover" />
-            </View>
-          )}
+            {/* Illustration below title/subtitle */}
+            {hasImage && (
+              <View style={styles.illustrationArea}>
+                <Image source={pageImages[item.key]} style={styles.illustration} resizeMode="cover" />
+              </View>
+            )}
 
-          {item.bullets && (
-            <View style={styles.bulletList}>
-              {item.bullets.map((bullet, i) => (
-                <View key={i} style={[styles.bulletRow, { backgroundColor: '#F0F7FF' }]}>
-                  <View style={styles.bulletIconBg}>
-                    <Text style={styles.bulletIcon}>{bullet.icon}</Text>
+            {item.bullets && (
+              <View style={styles.bulletList}>
+                {item.bullets.map((bullet, i) => (
+                  <View key={i} style={[styles.bulletRow, { backgroundColor: '#F0F7FF' }]}>
+                    <View style={styles.bulletIconBg}>
+                      <Text style={styles.bulletIcon}>{bullet.icon}</Text>
+                    </View>
+                    <Text style={[styles.bulletText, { color: colors.textPrimary }]}>{t(bullet.textKey)}</Text>
                   </View>
-                  <Text style={[styles.bulletText, { color: colors.textPrimary }]}>{t(bullet.textKey)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+                ))}
+              </View>
+            )}
 
-          {item.isLast && (
-            <View style={styles.lastPageExtra}>
-              <Image source={logo} style={styles.footerLogo} resizeMode="contain" />
-            </View>
-          )}
+            {item.isLast && (
+              <View style={styles.lastPageExtra}>
+                <Image source={logo} style={styles.footerLogo} resizeMode="contain" />
+              </View>
+            )}
+          </ScrollView>
         </Animated.View>
       </View>
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    // Force LTR for the entire onboarding so horizontal FlatList, dots, and
+    // buttons always flow left-to-right regardless of device RTL setting.
+    // Text inside cards is centered so it reads fine in Hebrew.
+    <View style={[styles.container, { backgroundColor: colors.background, direction: 'ltr' as any }]}>
       <FlatList
         ref={flatListRef}
         data={PAGES}
@@ -204,6 +213,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         scrollEventThrottle={16}
+        getItemLayout={(_, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
         style={styles.flatList}
       />
 
@@ -233,15 +243,15 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
       <View style={styles.buttonsRow}>
         {currentIndex < PAGES.length - 1 ? (
           <>
+            <TouchableOpacity onPress={handleComplete} style={styles.skipButton}>
+              <Text style={[styles.skipText, { color: colors.textSecondary }]}>{t('onboarding.skip')}</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.nextButton, { backgroundColor: BLUE }]}
               onPress={handleNext}
               activeOpacity={0.8}
             >
               <Text style={styles.nextButtonText}>{t('onboarding.next')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleComplete} style={styles.skipButton}>
-              <Text style={[styles.skipText, { color: colors.textSecondary }]}>{t('onboarding.skip')}</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -277,11 +287,12 @@ const styles = StyleSheet.create({
     paddingTop: 52,
     position: 'relative',
     overflow: 'hidden',
+    zIndex: 1,
   },
   logoCircle: {
-    width: 108,
-    height: 108,
-    borderRadius: 54,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -297,8 +308,8 @@ const styles = StyleSheet.create({
     }),
   },
   logoInCircle: {
-    width: 72,
-    height: 72,
+    width: 64,
+    height: 64,
   },
   illustrationArea: {
     alignItems: 'center',
@@ -306,7 +317,7 @@ const styles = StyleSheet.create({
   },
   illustration: {
     width: SCREEN_WIDTH * 0.75,
-    height: SCREEN_WIDTH * 0.42,
+    height: SCREEN_WIDTH * 0.35,
     borderRadius: 16,
   },
   waveCurve: {
@@ -370,7 +381,8 @@ const styles = StyleSheet.create({
   lastPageExtra: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    minHeight: 80,
+    marginTop: 24,
   },
   footerLogo: {
     width: 220,
@@ -412,7 +424,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   buttonsRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,

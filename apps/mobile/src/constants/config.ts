@@ -62,6 +62,9 @@ export const DEEP_LINK_SCHEME = 'mooviz://';
 /** Support email */
 export const SUPPORT_EMAIL = 'support@mooviz.app';
 
+/** Google Maps API key (also set in android/app/build.gradle manifestPlaceholders) */
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyASJMulop0DTV45RGzzrREnxSYhMx4qRrU';
+
 /** Default map region — Israel center (Tel Aviv) */
 // אזור מפה ברירת מחדל — מרכז ישראל (תל אביב)
 export const DEFAULT_MAP_REGION = {

@@ -34,5 +34,7 @@ export {
   decryptDocument,
 } from "./callable/encryptionCallable";
 
+export { sendBulkEmail } from "./callable/emailCallable";
+
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";

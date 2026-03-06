@@ -10,6 +10,7 @@ import notifee, { AndroidImportance } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
 
 import { useAuth } from './useAuth';
+import { playSound } from '../services/sound';
 
 // ──────────────────────────────────────────────
 // Types
@@ -95,6 +96,13 @@ export function useNotifications(): UseNotificationsResult {
         console.log('[Notifications] Foreground message:', remoteMessage);
 
         if (remoteMessage.notification) {
+          // Play sound based on notification type
+          const notifType = remoteMessage.data?.type as string | undefined;
+          if (notifType === 'new_listing_nearby') playSound('new_delivery');
+          else if (notifType === 'driver_interested') playSound('driver_interested');
+          else if (notifType === 'payment_confirmed') playSound('payment');
+          else playSound('success');
+
           const channelId = await ensureAndroidChannel();
 
           await notifee.displayNotification({

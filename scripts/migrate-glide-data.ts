@@ -151,8 +151,7 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
     const phone = row['PhoneNumber']?.trim();
     const role = row['Role']?.trim();
 
-    if (!email) {
-      stats.errors.push(`Row ${stats.usersProcessed}: missing email`);
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       stats.usersSkipped++;
       continue;
     }
@@ -205,6 +204,8 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
           activeMode: isDriver ? 'driver' : 'client',
           driverAvailable: false,
           driverUnlocked: isDriver,
+          role: isDriver ? 'driver' : 'sender',
+          passwordSetUp: false,
           migratedFrom: 'glide',
           createdAt: admin.firestore.Timestamp.now(),
           updatedAt: admin.firestore.Timestamp.now(),
@@ -393,7 +394,7 @@ async function migrateMessages(emailToUid: Map<string, string>, dryRun: boolean)
     });
 
     // Add messages as subcollection
-    const batch = db.batch();
+    let batch = db.batch();
     let batchCount = 0;
 
     for (const msg of sortedMsgs) {
@@ -414,9 +415,10 @@ async function migrateMessages(emailToUid: Map<string, string>, dryRun: boolean)
       batchCount++;
       created++;
 
-      // Firestore batch limit is 500
+      // Firestore batch limit is 500; create new batch after commit
       if (batchCount >= 450) {
         await batch.commit();
+        batch = db.batch();
         batchCount = 0;
       }
     }
