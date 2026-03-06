@@ -13,7 +13,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Slider from '@react-native-community/slider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { DriverTabScreenProps } from '../../navigation/types';
@@ -27,7 +26,6 @@ import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
 import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
-import { MAX_DELIVERY_RADIUS_KM } from '../../constants/config';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/design';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 
@@ -243,23 +241,31 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         />
       </GlassCard>
 
-      {/* Notification range slider */}
+      {/* Notification range */}
       <GlassCard style={styles.section} padding="lg">
         <View style={styles.sectionRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>{t('driver.notificationRange')}</Text>
           <Text style={[styles.sectionValue, { color: colors.primary }]}>{prefs.radiusKm} {t('driver.km')}</Text>
         </View>
-        <Slider
-          style={styles.slider}
-          minimumValue={1}
-          maximumValue={MAX_DELIVERY_RADIUS_KM}
-          step={1}
-          value={prefs.radiusKm}
-          onValueChange={(v) => updatePref('radiusKm', v)}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
+        <View style={styles.rangeRow}>
+          {[5, 10, 15, 25, 50].map((km) => (
+            <Pressable
+              key={km}
+              onPress={() => updatePref('radiusKm', km)}
+              style={[
+                styles.rangeChip,
+                {
+                  backgroundColor: prefs.radiusKm === km ? colors.primary : colors.surface,
+                  borderColor: prefs.radiusKm === km ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.rangeChipText, { color: prefs.radiusKm === km ? colors.textInverse : colors.textPrimary }]}>
+                {km}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </GlassCard>
 
       {/* Delivery sizes */}
@@ -494,10 +500,22 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  slider: {
-    width: '100%',
-    height: 40,
-    marginTop: SPACING.xs,
+  rangeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  rangeChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+  },
+  rangeChipText: {
+    ...TYPOGRAPHY.small,
+    fontWeight: '700',
   },
   textInput: {
     borderWidth: 1,

@@ -79,26 +79,32 @@ export function useLocation(): UseLocationResult {
         return;
       }
 
-      Geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-          });
-          setIsLoading(false);
-        },
-        (positionError) => {
-          console.error('[useLocation] Error:', positionError);
-          setError('לא ניתן לקבל מיקום נוכחי');
-          setIsLoading(false);
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 15000,
-          maximumAge: 10000,
-        },
-      );
+      try {
+        Geolocation.getCurrentPosition(
+          (position) => {
+            setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+            });
+            setIsLoading(false);
+          },
+          (positionError) => {
+            console.error('[useLocation] Error:', positionError);
+            setError('לא ניתן לקבל מיקום נוכחי');
+            setIsLoading(false);
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 15000,
+            maximumAge: 10000,
+          },
+        );
+      } catch (nativeErr) {
+        console.error('[useLocation] Native module error:', nativeErr);
+        setError('שירות מיקום לא זמין');
+        setIsLoading(false);
+      }
     } catch (err) {
       console.error('[useLocation] Unexpected error:', err);
       setError('לא ניתן לקבל מיקום נוכחי');
