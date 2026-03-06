@@ -293,6 +293,9 @@ export const strings = {
     itemDetails: { he: 'פרטי הפריט', en: 'Item details' } as LocaleStrings,
     payment: { he: 'תשלום', en: 'Payment' } as LocaleStrings,
     notes: { he: 'הערות', en: 'Notes' } as LocaleStrings,
+    // Header
+    greeting: { he: 'שלום {name} 👋', en: 'Hey {name} 👋' } as LocaleStrings,
+    subtitle: { he: 'מוכן לצאת לדרך?', en: 'Ready to hit the road?' } as LocaleStrings,
     // Radar & status
     scanning: { he: 'סורק משלוחים...', en: 'Scanning for deliveries...' } as LocaleStrings,
     available: { he: 'זמין', en: 'Available' } as LocaleStrings,

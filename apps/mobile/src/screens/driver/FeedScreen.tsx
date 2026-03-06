@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Image,
+  TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,16 +21,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DriverTabScreenProps } from '../../navigation/types';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useLocation } from '../../hooks/useLocation';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { GlassCard } from '../../components/GlassCard';
 import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
-import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/design';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
+
+const logo = require('../../assets/logo.png');
 
 type Props = DriverTabScreenProps<'Feed'>;
 
@@ -73,7 +78,11 @@ const DEFAULT_PREFS: DriverPreferences = {
 export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { currentUser } = useAuth();
   const drawer = useSettingsDrawer();
+
+  const fullName = currentUser?.fullName || '';
+  const firstName = fullName.split(' ')[0] || fullName;
 
   // Request permissions on first launch
   useEffect(() => {
@@ -109,12 +118,15 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
   // ── Location & deliveries ──
   const { location, isLoading: locationLoading } = useLocation();
+  // Memoize nearLocation to prevent infinite re-fetch loops
+  const nearLocation = useMemo(
+    () => location ? { latitude: location.latitude, longitude: location.longitude } : undefined,
+    [location?.latitude, location?.longitude],
+  );
   const { deliveries, isLoading, refresh } = useDelivery({
     role: 'driver',
     statusFilter: ['pending'],
-    nearLocation: location
-      ? { latitude: location.latitude, longitude: location.longitude }
-      : undefined,
+    nearLocation,
     radiusKm: prefs.radiusKm,
   });
 
@@ -205,7 +217,24 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
   const renderHeader = (): React.JSX.Element => (
     <View>
-      <TabHeader title={t('driver.availableDeliveries')} onSettingsPress={drawer.open} />
+      {/* ── Blue Header (same as Home) ── */}
+      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
+        <View style={styles.headerTopRow}>
+          <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
+            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          </View>
+          <TouchableOpacity style={styles.settingsButton} onPress={drawer.open}>
+            <Text style={styles.settingsIcon}>{'\u2699'}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={[styles.greeting, { color: colors.headerText }]}>
+          {t('driver.greeting', { name: firstName })}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.headerTextSecondary }]}>
+          {t('driver.subtitle')}
+        </Text>
+      </View>
 
       {/* Radar + availability */}
       {renderRadar()}
@@ -435,6 +464,61 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+  // ── Header ──
+  header: {
+    paddingHorizontal: SPACING.xxl,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xl,
+    borderBottomLeftRadius: BORDER_RADIUS.xxl,
+    borderBottomRightRadius: BORDER_RADIUS.xxl,
+    alignItems: 'center',
+    ...SHADOWS.lg,
+  },
+  headerTopRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+  logoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.md,
+  },
+  logoImage: {
+    width: 52,
+    height: 52,
+  },
+  settingsButton: {
+    position: 'absolute',
+    left: 0,
+    top: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIcon: {
+    fontSize: 22,
+    color: '#FFFFFF',
+  },
+  greeting: {
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 4,
+    opacity: 0.85,
   },
 
   // ── Radar ──
