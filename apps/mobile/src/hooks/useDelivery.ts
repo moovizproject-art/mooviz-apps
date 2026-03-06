@@ -115,13 +115,27 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     return clauses.length > 0 ? clauses : undefined;
   }, [options?.userId, options?.role, options?.statusFilter, options?.nearLocation, options?.radiusKm]);
 
-  const { data, isLoading, refresh } = useFirestore<Delivery>({
+  // Skip server-side orderBy when using compound where clauses (driver feed)
+  // to avoid requiring composite indexes — sort client-side instead
+  const needsCompoundQuery = (whereClauses?.length ?? 0) > 1;
+
+  const { data: rawData, isLoading, refresh } = useFirestore<Delivery>({
     collection: 'deliveries',
     where: whereClauses,
-    orderBy: ['createdAt', 'desc'],
+    orderBy: needsCompoundQuery ? undefined : ['createdAt', 'desc'],
     limit: 50,
     enabled: true,
   });
+
+  // Client-side sort when we skipped server orderBy
+  const data = useMemo(() => {
+    if (!needsCompoundQuery) return rawData;
+    return [...rawData].sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [rawData, needsCompoundQuery]);
 
   const getDeliveryById = useCallback(
     (id: string): Delivery | undefined => {

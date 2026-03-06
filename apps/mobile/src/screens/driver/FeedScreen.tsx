@@ -1,15 +1,12 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   StyleSheet,
-  RefreshControl,
   Switch,
   Pressable,
   TextInput,
-  Animated,
-  Easing,
   Dimensions,
   Image,
   TouchableOpacity,
@@ -33,12 +30,12 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/des
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 
 const logo = require('../../assets/logo.png');
+const radarGif = require('../../assets/radar.gif');
 
 type Props = DriverTabScreenProps<'Feed'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const RADAR_SIZE = 180;
-const RING_COUNT = 3;
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const VEHICLE_TYPES = ['bicycle', 'bike', 'car', 'truck'] as const;
@@ -117,7 +114,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   }, []);
 
   // ── Location & deliveries ──
-  const { location, isLoading: locationLoading } = useLocation();
+  const { location, isLoading: locationLoading, error: locationError } = useLocation();
   // Memoize nearLocation to prevent infinite re-fetch loops
   const nearLocation = useMemo(
     () => location ? { latitude: location.latitude, longitude: location.longitude } : undefined,
@@ -129,7 +126,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     nearLocation,
     radiusKm: prefs.radiusKm,
   });
-
   const handleDeliveryPress = useCallback(
     (deliveryId: string) => {
       navigation.navigate('DriverDeliveryDetail', { deliveryId });
@@ -137,62 +133,15 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     [navigation],
   );
 
-  // ── Radar animation ──
-  const ringAnims = useRef(
-    Array.from({ length: RING_COUNT }, () => new Animated.Value(0)),
-  ).current;
-
-  useEffect(() => {
-    if (!prefs.isAvailable) {
-      ringAnims.forEach((a) => a.setValue(0));
-      return;
-    }
-    const animations = ringAnims.map((anim, i) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(i * 600),
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 1800,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ]),
-      ),
-    );
-    animations.forEach((a) => a.start());
-    return () => animations.forEach((a) => a.stop());
-  }, [prefs.isAvailable, ringAnims]);
-
   const renderRadar = () => (
     <View style={styles.radarContainer}>
-      <View style={[styles.radarOuter, { borderColor: prefs.isAvailable ? colors.primary : colors.border }]}>
-        {prefs.isAvailable && ringAnims.map((anim, i) => {
-          const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.2] });
-          const opacity = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.6, 0.3, 0] });
-          return (
-            <Animated.View
-              key={i}
-              style={[
-                styles.radarRing,
-                {
-                  borderColor: colors.primary,
-                  transform: [{ scale }],
-                  opacity,
-                },
-              ]}
-            />
-          );
-        })}
-        <View style={[styles.radarCenter, { backgroundColor: prefs.isAvailable ? colors.primary : colors.border }]}>
-          <Text style={styles.radarIcon}>{prefs.isAvailable ? '\u{1F4E1}' : '\u{23F8}'}</Text>
+      {prefs.isAvailable ? (
+        <Image source={radarGif} style={styles.radarGif} resizeMode="contain" />
+      ) : (
+        <View style={[styles.radarPaused, { borderColor: colors.border }]}>
+          <Text style={styles.radarIcon}>{'\u{23F8}'}</Text>
         </View>
-      </View>
+      )}
       <Text style={[styles.radarLabel, { color: prefs.isAvailable ? colors.primary : colors.textSecondary }]}>
         {prefs.isAvailable ? t('driver.scanning') : t('driver.occupied')}
       </Text>
@@ -417,45 +366,38 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <FlatList
-        data={isLoading ? [] : deliveries}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <DeliveryCard
-            delivery={item}
-            onPress={() => handleDeliveryPress(item.id)}
-            showDistance
+      <ScrollView
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {renderHeader()}
+
+        {/* Delivery cards */}
+        {(isLoading || locationLoading) && !locationError ? (
+          <View style={styles.skeletonContainer}>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
+        ) : deliveries.length > 0 ? (
+          deliveries.map((item) => (
+            <View key={item.id} style={styles.cardWrapper}>
+              <DeliveryCard
+                delivery={item}
+                onPress={() => handleDeliveryPress(item.id)}
+                showDistance
+              />
+            </View>
+          ))
+        ) : (
+          <EmptyState
+            icon="search"
+            message={locationError ? t('driver.locationWarning') : t('driver.noDeliveriesNearby')}
+            submessage={locationError ? '' : t('driver.increaseRadius')}
           />
         )}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          isLoading || locationLoading ? (
-            <View style={styles.skeletonContainer}>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </View>
-          ) : (
-            <EmptyState
-              icon="search"
-              message={t('driver.noDeliveriesNearby')}
-              submessage={t('driver.increaseRadius')}
-            />
-          )
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refresh}
-            tintColor={colors.primary}
-          />
-        }
-        contentContainerStyle={[
-          styles.listContent,
-          !isLoading && deliveries.length === 0 && styles.emptyList,
-        ]}
-        showsVerticalScrollIndicator={false}
-      />
+      </ScrollView>
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
     </SafeAreaView>
   );
@@ -466,11 +408,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // ── Header ──
+  // ── Header (matches HomeScreen) ──
   header: {
     paddingHorizontal: SPACING.xxl,
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.xxxl,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
     alignItems: 'center',
@@ -483,21 +425,21 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.md,
   },
   logoImage: {
-    width: 52,
-    height: 52,
+    width: 60,
+    height: 60,
   },
   settingsButton: {
     position: 'absolute',
-    left: 0,
-    top: 16,
+    right: 0,
+    top: 0,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -510,23 +452,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   greeting: {
-    fontSize: 22,
+    fontSize: 25,
     fontWeight: '700',
     textAlign: 'center',
+    marginBottom: SPACING.xs,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
-    marginTop: 4,
-    opacity: 0.85,
+    marginBottom: SPACING.md,
   },
 
   // ── Radar ──
   radarContainer: {
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
+    paddingVertical: SPACING.md,
   },
-  radarOuter: {
+  radarGif: {
+    width: SCREEN_WIDTH * 0.6,
+    height: SCREEN_WIDTH * 0.45,
+  },
+  radarPaused: {
     width: RADAR_SIZE,
     height: RADAR_SIZE,
     borderRadius: RADAR_SIZE / 2,
@@ -534,28 +481,14 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  radarRing: {
-    position: 'absolute',
-    width: RADAR_SIZE - 20,
-    height: RADAR_SIZE - 20,
-    borderRadius: (RADAR_SIZE - 20) / 2,
-    borderWidth: 2,
-  },
-  radarCenter: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.md,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   radarIcon: {
-    fontSize: 28,
+    fontSize: 40,
   },
   radarLabel: {
     ...TYPOGRAPHY.bodyBold,
-    marginTop: SPACING.md,
+    marginTop: SPACING.sm,
   },
 
   // ── Sections ──
@@ -682,14 +615,13 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
   },
   listContent: {
-    paddingHorizontal: SPACING.xxl,
     paddingBottom: SPACING.xxl,
+  },
+  cardWrapper: {
+    paddingHorizontal: SPACING.xxl,
   },
   skeletonContainer: {
     gap: SPACING.md,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
+    paddingHorizontal: SPACING.xxl,
   },
 });

@@ -10,10 +10,11 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/tokens';
-import { GOOGLE_MAPS_API_KEY } from '../constants/config';
+import { GOOGLE_MAPS_API_KEY, DEFAULT_MAP_REGION } from '../constants/config';
 
 interface GeoPoint {
   latitude: number;
@@ -36,20 +37,33 @@ interface Prediction {
   };
 }
 
+type PickerMode = 'search' | 'map';
+
 const PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
+const GEOCODE_BASE = 'https://maps.googleapis.com/maps/api/geocode';
 
 /**
- * MapPicker — Address picker using Google Places HTTP API directly.
- * Avoids react-native-google-places-autocomplete (broken hooks with pnpm).
- * Types address → fetches predictions → user taps → fetches place details → returns lat/lng.
+ * MapPicker — Two-step address picker:
+ * 1. Search mode: type address, get autocomplete suggestions
+ * 2. Map mode: see selected location on map, drag pin to fine-tune, confirm
  */
-export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React.JSX.Element {
+export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPickerProps): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+
+  const [mode, setMode] = useState<PickerMode>('search');
   const [query, setQuery] = useState('');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<GeoPoint | null>(
+    initialLocation
+      ? { latitude: initialLocation.latitude, longitude: initialLocation.longitude, address: '' }
+      : null,
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapRef = useRef<MapView>(null);
+
+  // ── Search / Autocomplete ──
 
   const fetchPredictions = useCallback((text: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -66,7 +80,7 @@ export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React
           setPredictions(json.predictions);
         }
       } catch {
-        // silently fail — user can still submit manually
+        // silently fail
       }
     }, 300);
   }, []);
@@ -84,13 +98,16 @@ export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React
       const res = await fetch(url);
       const json = await res.json();
       if (json.result?.geometry?.location) {
-        onLocationSelect({
+        const point: GeoPoint = {
           latitude: json.result.geometry.location.lat,
           longitude: json.result.geometry.location.lng,
           address: json.result.formatted_address || prediction.description,
-        });
+        };
+        setSelectedPoint(point);
+        setQuery(point.address);
+        setMode('map');
       } else {
-        // Fallback: use description without coords
+        // No coords — let user confirm text only
         onLocationSelect({
           latitude: 0,
           longitude: 0,
@@ -111,13 +128,138 @@ export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React
   const handleManualSubmit = useCallback(() => {
     if (!query.trim()) return;
     Keyboard.dismiss();
+    // If we have a selected point with coords, go to map mode
+    if (selectedPoint && selectedPoint.latitude !== 0) {
+      setMode('map');
+      return;
+    }
+    // Otherwise submit text-only
     onLocationSelect({
       latitude: 0,
       longitude: 0,
       address: query.trim(),
     });
-  }, [query, onLocationSelect]);
+  }, [query, selectedPoint, onLocationSelect]);
 
+  // ── Map mode handlers ──
+
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+    if (!GOOGLE_MAPS_API_KEY) return '';
+    try {
+      const url = `${GEOCODE_BASE}/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=he`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.results?.[0]?.formatted_address) {
+        return json.results[0].formatted_address;
+      }
+    } catch {
+      // ignore
+    }
+    return '';
+  }, []);
+
+  const handleMarkerDragEnd = useCallback(async (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    setLoading(true);
+    const address = await reverseGeocode(latitude, longitude);
+    setSelectedPoint({ latitude, longitude, address: address || query });
+    if (address) setQuery(address);
+    setLoading(false);
+  }, [reverseGeocode, query]);
+
+  const handleMapPress = useCallback(async (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    setLoading(true);
+    const address = await reverseGeocode(latitude, longitude);
+    const point = { latitude, longitude, address: address || query };
+    setSelectedPoint(point);
+    if (address) setQuery(address);
+    setLoading(false);
+  }, [reverseGeocode, query]);
+
+  const handleConfirmLocation = useCallback(() => {
+    if (selectedPoint) {
+      onLocationSelect(selectedPoint);
+    }
+  }, [selectedPoint, onLocationSelect]);
+
+  const handleBackToSearch = useCallback(() => {
+    setMode('search');
+    setPredictions([]);
+  }, []);
+
+  // ── Map region ──
+  const mapRegion: Region = selectedPoint && selectedPoint.latitude !== 0
+    ? {
+        latitude: selectedPoint.latitude,
+        longitude: selectedPoint.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      }
+    : DEFAULT_MAP_REGION;
+
+  // ── Render ──
+
+  if (mode === 'map' && selectedPoint) {
+    return (
+      <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
+        <View style={[styles.overlay, { backgroundColor: colors.background }]}>
+          {/* Map header */}
+          <View style={[styles.mapHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={handleBackToSearch} style={styles.backButton}>
+              <Text style={[styles.backArrow, { color: colors.primary }]}>{'<'}</Text>
+            </TouchableOpacity>
+            <View style={styles.mapHeaderCenter}>
+              <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+                {selectedPoint.address || t('form.selectAddress')}
+              </Text>
+              {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />}
+            </View>
+            <View style={styles.backButton} />
+          </View>
+
+          {/* Map */}
+          <View style={styles.mapContainer}>
+            <MapView
+              ref={mapRef}
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={mapRegion}
+              onPress={handleMapPress}
+              showsUserLocation
+              showsMyLocationButton
+            >
+              <Marker
+                coordinate={{ latitude: selectedPoint.latitude, longitude: selectedPoint.longitude }}
+                draggable
+                onDragEnd={handleMarkerDragEnd}
+              />
+            </MapView>
+
+            {/* Hint overlay */}
+            <View style={[styles.mapHint, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.mapHintText, { color: colors.textSecondary }]}>
+                {t('form.dragPinHint')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Confirm button */}
+          <View style={[styles.confirmContainer, { backgroundColor: colors.background }]}>
+            <TouchableOpacity
+              style={[styles.confirmButton, { backgroundColor: colors.primary }]}
+              onPress={handleConfirmLocation}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmButtonText}>{t('form.confirmAddress')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Search mode
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
       <View style={[styles.overlay, { backgroundColor: colors.background }]}>
@@ -131,7 +273,18 @@ export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React
           <Text style={[styles.title, { color: colors.textPrimary }]}>
             {t('form.selectAddress')}
           </Text>
-          <View style={styles.cancelButton} />
+          <TouchableOpacity
+            onPress={() => {
+              if (selectedPoint && selectedPoint.latitude !== 0) {
+                setMode('map');
+              }
+            }}
+            style={styles.cancelButton}
+          >
+            <Text style={[styles.mapToggleText, { color: selectedPoint ? colors.primary : colors.textTertiary }]}>
+              {t('form.mapView')}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Search input */}
@@ -218,6 +371,19 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
     borderBottomWidth: 1,
   },
+  mapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+  },
+  mapHeaderCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.sm,
+  },
   title: {
     ...TYPOGRAPHY.h3,
     textAlign: 'center',
@@ -228,6 +394,21 @@ const styles = StyleSheet.create({
   cancelText: {
     ...TYPOGRAPHY.body,
     fontWeight: '600',
+  },
+  mapToggleText: {
+    ...TYPOGRAPHY.bodySmall,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backArrow: {
+    fontSize: 24,
+    fontWeight: '700',
   },
   searchContainer: {
     paddingHorizontal: SPACING.lg,
@@ -272,6 +453,35 @@ const styles = StyleSheet.create({
   emptyText: {
     ...TYPOGRAPHY.bodySmall,
     textAlign: 'center',
+  },
+  // Map mode
+  mapContainer: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
+  mapHint: {
+    position: 'absolute',
+    top: SPACING.md,
+    alignSelf: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.full,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  mapHintText: {
+    ...TYPOGRAPHY.caption,
+    fontWeight: '600',
+  },
+  confirmContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    paddingBottom: SPACING.xxl,
   },
   confirmButton: {
     borderRadius: BORDER_RADIUS.lg,

@@ -39,17 +39,22 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
   const { soundEnabled, setSoundEnabled } = useSound();
   const navigation = useNavigation<any>();
   const driverUnlocked = currentUser?.driverUnlocked ?? false;
+  const activeMode = currentUser?.activeMode ?? 'sender';
+  const isDriverMode = activeMode === 'driver';
 
-  const handleBecomeDriver = useCallback(async () => {
+  const handleModeSwitch = useCallback(async () => {
     onClose();
-    if (driverUnlocked) {
+    if (isDriverMode) {
+      // Already driver — switch back to sender
+      await updateProfile({ activeMode: 'sender' });
+    } else if (driverUnlocked) {
       // KYC approved — switch to driver mode
       await updateProfile({ activeMode: 'driver' });
     } else {
       // KYC not done — go to KYC screen
       navigation.navigate('DriverKYC');
     }
-  }, [navigation, onClose, driverUnlocked, updateProfile]);
+  }, [navigation, onClose, driverUnlocked, isDriverMode, updateProfile]);
 
   const handleGoToProfile = useCallback(() => {
     onClose();
@@ -87,17 +92,27 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleBecomeDriver}>
-            <View style={[styles.menuIconBg, { backgroundColor: '#E8F0FE' }]}>
-              <Image source={carImage} style={styles.carIcon} resizeMode="contain" />
-              {!driverUnlocked && (
-                <View style={styles.lockBadge}>
-                  <Text style={styles.lockIcon}>🔒</Text>
-                </View>
+          <TouchableOpacity style={styles.menuItem} onPress={handleModeSwitch}>
+            <View style={[styles.menuIconBg, { backgroundColor: isDriverMode ? '#FFF3E0' : '#E8F0FE' }]}>
+              {isDriverMode ? (
+                <Text style={styles.flagEmoji}>{'\u{1F4E6}'}</Text>
+              ) : (
+                <>
+                  <Image source={carImage} style={styles.carIcon} resizeMode="contain" />
+                  {!driverUnlocked && (
+                    <View style={styles.lockBadge}>
+                      <Text style={styles.lockIcon}>{'\u{1F512}'}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
             <Text style={[styles.menuText, { color: colors.textPrimary }]}>
-              {driverUnlocked ? t('home.driver') : t('home.connectAsDriver')}
+              {isDriverMode
+                ? t('home.switchToSender')
+                : driverUnlocked
+                  ? t('home.switchToDriver')
+                  : t('home.connectAsDriver')}
             </Text>
           </TouchableOpacity>
 

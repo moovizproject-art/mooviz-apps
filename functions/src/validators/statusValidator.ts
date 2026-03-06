@@ -77,6 +77,28 @@ export function assertIsDriver(
 }
 
 /**
+ * Validate that a user has the required role.
+ */
+export async function assertUserRole(
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  requiredRole: string
+): Promise<void> {
+  const userDoc = await db.collection("users").doc(userId).get();
+  if (!userDoc.exists) {
+    throw new HttpsError("not-found", "User not found");
+  }
+  const userData = userDoc.data();
+  const role = userData?.role ?? userData?.activeMode;
+  if (role !== requiredRole) {
+    throw new HttpsError(
+      "permission-denied",
+      `This action requires the '${requiredRole}' role`
+    );
+  }
+}
+
+/**
  * Validate that a user exists and has an active account.
  */
 export async function assertUserActive(

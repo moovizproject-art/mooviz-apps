@@ -29,7 +29,7 @@ function delay(ms: number): Promise<void> {
  * Batches sends in groups of 50 with rate limiting.
  */
 export const sendBulkEmail = functions.onCall(
-  { secrets: [smtpUser, smtpPass] },
+  { secrets: [smtpUser, smtpPass], cors: true },
   async (request) => {
     // Validate caller is admin
     if (!request.auth) {

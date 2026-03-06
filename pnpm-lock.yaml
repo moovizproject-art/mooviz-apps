@@ -202,8 +202,8 @@ importers:
   functions:
     dependencies:
       '@mooviz/shared':
-        specifier: file:../shared
-        version: link:../shared
+        specifier: file:./mooviz-shared-1.0.0.tgz
+        version: file:functions/mooviz-shared-1.0.0.tgz
       firebase-admin:
         specifier: ^12.0.0
         version: 12.7.0
@@ -1755,6 +1755,10 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
+    resolution: {integrity: sha512-P0pjNYsuN6VOkdwnW2iyogoTm4TIs1w/CHYe5tN+PwLbekBoGKPCMH7j4+elLgqH8J6xSuKf3lQSbr4eP9DyQQ==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -9051,6 +9055,13 @@ snapshots:
       zod: 3.25.76
       zod-to-json-schema: 3.25.1(zod@3.25.76)
     transitivePeerDependencies:
+      - supports-color
+
+  '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
+    dependencies:
+      firebase-admin: 12.7.0
+    transitivePeerDependencies:
+      - encoding
       - supports-color
 
   '@nodelib/fs.scandir@2.1.5':
