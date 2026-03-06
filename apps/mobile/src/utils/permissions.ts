@@ -164,10 +164,24 @@ export async function hasNotificationPermission(): Promise<boolean> {
   );
 }
 
-/** Request notification permission */
+/** Request notification permission — handles Android 13+ POST_NOTIFICATIONS */
 export async function requestNotificationPermission(): Promise<boolean> {
   const hasIt = await hasNotificationPermission();
   if (hasIt) return true;
+
+  // Android 13+ (API 33) requires explicit runtime permission
+  if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+      showPermissionDeniedAlert(
+        'הרשאת התראות',
+        'MOOVIZ צריך לשלוח לך התראות על עדכוני משלוחים והודעות.',
+      );
+      return false;
+    }
+  }
 
   const authStatus = await messaging().requestPermission();
   const granted =

@@ -5,6 +5,7 @@
  * רישום טוקן FCM וטיפול בהתראות
  */
 import { useState, useEffect, useCallback } from 'react';
+import { Platform, PermissionsAndroid } from 'react-native';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
@@ -37,9 +38,20 @@ export function useNotifications(): UseNotificationsResult {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean>(false);
 
-  /** Request notification permissions via FCM */
+  /** Request notification permissions — Android 13+ needs explicit runtime permission */
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
+      // Android 13+ (API 33) requires POST_NOTIFICATIONS runtime permission
+      if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+          setHasPermission(false);
+          return false;
+        }
+      }
+
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||

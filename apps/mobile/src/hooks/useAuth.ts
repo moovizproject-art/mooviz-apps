@@ -188,11 +188,30 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     const doc = await firestore().collection('users').doc(user.uid).get();
     if (doc.exists) {
       const data = doc.data();
-      setCurrentUser((prev) => prev ? {
-        ...prev,
-        lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
-        updatedAt: data?.updatedAt?.toDate(),
-      } : prev);
+      // Full reload — handles both existing users (partial update) and new
+      // registrations where currentUser is still null after OTP verification.
+      setCurrentUser((prev) => {
+        const base = prev || {
+          uid: user.uid,
+          fullName: data?.fullName || '',
+          email: data?.email || user.email || '',
+          phone: data?.phone || user.phoneNumber || '',
+          city: data?.city || '',
+          role: data?.role || 'sender',
+          activeMode: data?.activeMode || 'sender',
+          profilePhotoURL: data?.profilePhotoURL || '',
+          kycStatus: data?.kycStatus || 'pending',
+          rating: data?.rating || { average: 0, count: 0 },
+          completedDeliveries: data?.completedDeliveries || 0,
+          status: data?.status || 'active',
+          createdAt: data?.createdAt?.toDate() || new Date(),
+        };
+        return {
+          ...base,
+          lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
+          updatedAt: data?.updatedAt?.toDate(),
+        };
+      });
     }
   }, []);
 
