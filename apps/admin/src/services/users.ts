@@ -138,9 +138,9 @@ export async function getUserById(userId: string): Promise<AppUser | null> {
 
 export async function searchUsers(searchQuery: string): Promise<AppUser[]> {
   // Firestore does not support full-text search natively.
-  // We fetch recent users and filter client-side for the admin panel.
-  // For production scale, consider Algolia or Typesense.
-  const q = query(usersRef, orderBy('createdAt', 'desc'), limit(200));
+  // We fetch all users and filter client-side for the admin panel.
+  // No orderBy — ensures docs without createdAt are still included.
+  const q = query(usersRef, limit(500));
   const snapshot = await getDocs(q);
   const lower = searchQuery.toLowerCase();
 
