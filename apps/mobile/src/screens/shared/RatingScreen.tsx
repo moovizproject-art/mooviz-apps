@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -14,6 +13,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useAuth } from '../../hooks/useAuth';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Rating'>;
 
@@ -28,6 +28,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
   const { deliveryId, targetUserId } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
+  const carAlert = useCarAlert();
   const { currentUser } = useAuth();
   const { submitRating } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
 
@@ -37,7 +38,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
 
   const handleSubmit = async (): Promise<void> => {
     if (rating === 0) {
-      Alert.alert('', t('rating.selectRating'));
+      carAlert.show('error', t('common.error'), t('rating.selectRating'));
       return;
     }
 
@@ -49,11 +50,11 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
         rating,
         comment: comment.trim() || undefined,
       });
-      Alert.alert(t('rating.thanks'), t('rating.ratingSuccess'), [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      carAlert.show('success', t('rating.thanks'), t('rating.ratingSuccess'), [
+        { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      Alert.alert('', t('rating.ratingError'));
+      carAlert.show('error', t('common.error'), t('rating.ratingError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +101,6 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
             multiline
             numberOfLines={4}
             maxLength={500}
-            textAlign="right"
             textAlignVertical="top"
           />
         </View>
@@ -121,6 +121,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
           <Text style={[styles.skipButtonText, { color: colors.textSecondary }]}>{t('rating.skip')}</Text>
         </TouchableOpacity>
       </View>
+      <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
     </View>
   );
 }
@@ -173,7 +174,6 @@ const styles = StyleSheet.create({
   commentLabel: {
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'right',
     marginBottom: 8,
   },
   commentInput: {

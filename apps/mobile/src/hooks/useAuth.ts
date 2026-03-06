@@ -46,7 +46,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
   // Listen to Firebase auth state changes
   useEffect(() => {
+    console.log('[useAuth] Setting up onAuthStateChanged listener');
     const unsubscribe = auth().onAuthStateChanged(async (fbUser: FirebaseAuthTypes.User | null) => {
+      console.log('[useAuth] onAuthStateChanged fired, user:', fbUser?.uid || 'null');
       setFirebaseUser(fbUser);
 
       if (fbUser) {
@@ -94,6 +96,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               city: data?.city || null,
               kycStatus: data?.kycStatus || 'pending',
               kycDocumentURL: data?.kycDocumentURL || null,
+              kycIdURL: data?.kycIdURL || null,
               ratingAsDriver: data?.ratingAsDriver || { average: 0, count: 0 },
               ratingAsSender: data?.ratingAsSender || { average: 0, count: 0 },
               completedDeliveries: data?.completedDeliveries || 0,
@@ -116,6 +119,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       } else {
         setCurrentUser(null);
       }
+      console.log('[useAuth] Setting isLoading=false');
       setIsLoading(false);
     });
 
@@ -153,6 +157,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       city: data.city || '',
       kycStatus: 'pending',
       kycDocumentURL: '',
+      kycIdURL: '',
       ratingAsDriver: { average: 0, count: 0 },
       ratingAsSender: { average: 0, count: 0 },
       completedDeliveries: 0,

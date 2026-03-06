@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { useI18n, type Locale } from '../i18n/I18nContext';
 
 interface AppSettings {
   platformName: string;
@@ -65,6 +66,7 @@ const defaultSettings: AppSettings = {
 };
 
 export default function SettingsPage() {
+  const { t, locale, setLocale } = useI18n();
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -133,6 +135,34 @@ export default function SettingsPage() {
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+
+      {/* Language */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="text-base font-semibold text-gray-900">{t('settings.language')}</h3>
+        <p className="mt-1 text-sm text-gray-500">{t('settings.languageDesc')}</p>
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={() => setLocale('he')}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              locale === 'he'
+                ? 'bg-brand-600 text-white'
+                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {t('settings.hebrew')}
+          </button>
+          <button
+            onClick={() => setLocale('en')}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              locale === 'en'
+                ? 'bg-brand-600 text-white'
+                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {t('settings.english')}
           </button>
         </div>
       </div>

@@ -197,13 +197,11 @@ const styles = StyleSheet.create({
   },
   locationWarningText: {
     ...TYPOGRAPHY.caption,
-    textAlign: 'right',
   },
   resultsCount: {
     ...TYPOGRAPHY.caption,
     paddingHorizontal: SPACING.xxl,
     marginBottom: SPACING.md,
-    textAlign: 'right',
   },
   listContent: {
     paddingHorizontal: SPACING.xxl,

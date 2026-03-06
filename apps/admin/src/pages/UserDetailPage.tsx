@@ -12,11 +12,12 @@ import {
   suspendUser,
   blockUser,
   reactivateUser,
+  deleteUser,
 } from '../services/users';
 import { getUserDeliveries, type Delivery } from '../services/deliveries';
 import { useQuery } from '@tanstack/react-query';
 
-type AdminAction = 'approve_kyc' | 'reject_kyc' | 'suspend' | 'block' | 'reactivate' | null;
+type AdminAction = 'approve_kyc' | 'reject_kyc' | 'suspend' | 'block' | 'reactivate' | 'delete' | null;
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -40,9 +41,12 @@ export default function UserDetailPage() {
     enabled: !!userId,
   });
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
   async function executeAction() {
     if (!userId || !admin) return;
     setActionLoading(true);
+    setActionError(null);
     try {
       switch (activeAction) {
         case 'approve_kyc':
@@ -60,10 +64,20 @@ export default function UserDetailPage() {
         case 'reactivate':
           await reactivateUser(userId, admin.uid);
           break;
+        case 'delete':
+          await deleteUser(userId, admin.uid);
+          invalidate('users');
+          setActiveAction(null);
+          navigate('/users');
+          return;
       }
       invalidate('users');
       setActiveAction(null);
       setActionReason('');
+    } catch (err) {
+      console.error(`[Admin] Action ${activeAction} failed:`, err);
+      const message = err instanceof Error ? err.message : 'Action failed';
+      setActionError(message);
     } finally {
       setActionLoading(false);
     }
@@ -109,6 +123,18 @@ export default function UserDetailPage() {
           &larr; Back to Users
         </button>
       </div>
+
+      {/* Error Banner */}
+      {actionError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-800">{actionError}</p>
+            <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-600 text-sm">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Profile Card */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -160,6 +186,12 @@ export default function UserDetailPage() {
                 Reactivate
               </button>
             )}
+            <button
+              onClick={() => setActiveAction('delete')}
+              className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+            >
+              Delete
+            </button>
           </div>
         </div>
 
@@ -220,43 +252,82 @@ export default function UserDetailPage() {
 
         {/* KYC Documents */}
         <div className="mt-4">
-          {user.kycDocumentURL ? (
+          {(user.kycDocumentURL || user.kycIdURL) ? (
             <div className="space-y-4">
               <p className="text-sm font-medium text-gray-700">Uploaded Documents</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <div className="bg-gray-50 px-3 py-2">
-                    <p className="text-xs font-medium text-gray-500">License / ID Document</p>
+                {/* License Document */}
+                {user.kycDocumentURL && (
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <div className="bg-gray-50 px-3 py-2">
+                      <p className="text-xs font-medium text-gray-500">Driver License</p>
+                    </div>
+                    <div className="p-2">
+                      <img
+                        src={user.kycDocumentURL}
+                        alt="Driver License"
+                        className="max-h-64 w-full rounded object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'flex h-40 items-center justify-center text-gray-400 text-sm';
+                            fallback.textContent = 'Unable to load image';
+                            parent.appendChild(fallback);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
+                      <a
+                        href={user.kycDocumentURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                      >
+                        Open in new tab
+                      </a>
+                    </div>
                   </div>
-                  <div className="p-2">
-                    <img
-                      src={user.kycDocumentURL}
-                      alt="KYC Document"
-                      className="max-h-64 w-full rounded object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          const fallback = document.createElement('div');
-                          fallback.className = 'flex h-40 items-center justify-center text-gray-400 text-sm';
-                          fallback.textContent = 'Unable to load image';
-                          parent.appendChild(fallback);
-                        }
-                      }}
-                    />
+                )}
+                {/* ID Card Document */}
+                {user.kycIdURL && (
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <div className="bg-gray-50 px-3 py-2">
+                      <p className="text-xs font-medium text-gray-500">ID Card</p>
+                    </div>
+                    <div className="p-2">
+                      <img
+                        src={user.kycIdURL}
+                        alt="ID Card"
+                        className="max-h-64 w-full rounded object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'flex h-40 items-center justify-center text-gray-400 text-sm';
+                            fallback.textContent = 'Unable to load image';
+                            parent.appendChild(fallback);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
+                      <a
+                        href={user.kycIdURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                      >
+                        Open in new tab
+                      </a>
+                    </div>
                   </div>
-                  <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
-                    <a
-                      href={user.kycDocumentURL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                    >
-                      Open in new tab
-                    </a>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           ) : (
@@ -438,6 +509,18 @@ export default function UserDetailPage() {
         message={`Reactivate ${user.fullName || user.displayName}? Their account will be restored to active status.`}
         confirmLabel="Reactivate"
         variant="info"
+        loading={actionLoading}
+      />
+
+      {/* Delete User */}
+      <ConfirmDialog
+        open={activeAction === 'delete'}
+        onClose={() => setActiveAction(null)}
+        onConfirm={executeAction}
+        title="Delete User"
+        message={`Permanently delete ${user.fullName || user.displayName}? This action cannot be undone. All user data will be removed from Firestore.`}
+        confirmLabel="Delete Permanently"
+        variant="danger"
         loading={actionLoading}
       />
     </div>

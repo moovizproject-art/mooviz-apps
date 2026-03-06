@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +17,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
 import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
 const logo = require('../../assets/logo.png');
 
@@ -39,6 +39,7 @@ type FormField = keyof RegisterForm;
 export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const carAlert = useCarAlert();
   const [form, setForm] = useState<RegisterForm>({
     fullName: '',
     email: '',
@@ -105,9 +106,9 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };
       if (firebaseError.code) {
-        Alert.alert(t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
+        carAlert.show('error', t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
       } else {
-        Alert.alert(t('auth.registerError'), t('auth.registerError'));
+        carAlert.show('error', t('auth.registerError'), t('auth.registerError'));
       }
     } finally {
       setIsLoading(false);
@@ -247,6 +248,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
 
       <View style={styles.keyboardSpacer} />
     </ScrollView>
+    <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
     </KeyboardAvoidingView>
   );
 }
@@ -280,7 +282,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    textAlign: 'right',
   },
   inputWrapper: {
     borderWidth: 1,
@@ -300,7 +301,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     marginTop: 4,
-    textAlign: 'right',
   },
   submitButton: {
     borderRadius: 12,

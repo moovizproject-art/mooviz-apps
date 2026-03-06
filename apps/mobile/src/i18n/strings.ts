@@ -170,6 +170,7 @@ export const strings = {
     idSelected: { he: 'תעודת זהות נבחרה', en: 'ID photo selected' } as LocaleStrings,
     terms: { he: 'אני מאשר/ת את תנאי השימוש לנהגים ומתחייב/ת לעמוד בדרישות הבטיחות', en: 'I accept the driver terms of use and commit to safety requirements' } as LocaleStrings,
     submitForApproval: { he: 'שלח לאישור', en: 'Submit for approval' } as LocaleStrings,
+    updateDocuments: { he: 'עדכן מסמכים', en: 'Update documents' } as LocaleStrings,
     status: { he: 'סטטוס', en: 'Status' } as LocaleStrings,
     pending: { he: 'ממתין לאישור', en: 'Pending approval' } as LocaleStrings,
     approved: { he: 'מאושר', en: 'Approved' } as LocaleStrings,
@@ -328,6 +329,35 @@ export const strings = {
     startConversation: { he: 'התחל שיחה עם {name}', en: 'Start a conversation with {name}' } as LocaleStrings,
     messagePlaceholder: { he: 'כתוב הודעה...', en: 'Write a message...' } as LocaleStrings,
     send: { he: 'שלח', en: 'Send' } as LocaleStrings,
+  },
+
+  // ── Onboarding ──
+  onboarding: {
+    welcome: { he: 'ברוכים הבאים', en: 'Welcome' } as LocaleStrings,
+    welcomeTagline: { he: 'הקהילה שמחברת בין שולחים לנהגים', en: 'The community connecting senders with drivers' } as LocaleStrings,
+    welcomeBullet1: { he: 'שכנים עוזרים לשכנים', en: 'Neighbors helping neighbors' } as LocaleStrings,
+    welcomeBullet2: { he: 'מהיר, בטוח ובמחיר הוגן', en: 'Fast, safe, and fairly priced' } as LocaleStrings,
+    welcomeBullet3: { he: 'זמין בכל רגע, בכל מקום', en: 'Available anytime, anywhere' } as LocaleStrings,
+    senderTitle: { he: 'שלח חבילה בקלות', en: 'Send a package easily' } as LocaleStrings,
+    senderBullet1: { he: 'פרסם משלוח תוך שניות', en: 'Post a delivery in seconds' } as LocaleStrings,
+    senderBullet2: { he: 'נהגים מהאזור יציעו מחיר', en: 'Local drivers will offer a price' } as LocaleStrings,
+    senderBullet3: { he: 'עקוב אחרי המשלוח בזמן אמת', en: 'Track your delivery in real time' } as LocaleStrings,
+    driverTitle: { he: 'הרווח בדרך שלך', en: 'Earn on your way' } as LocaleStrings,
+    driverBullet1: { he: 'מצא משלוחים בקרבתך', en: 'Find deliveries near you' } as LocaleStrings,
+    driverBullet2: { he: 'עבוד לפי הזמנים שלך', en: 'Work on your schedule' } as LocaleStrings,
+    driverBullet3: { he: 'קבל תשלום ישיר ומהיר', en: 'Get paid fast and direct' } as LocaleStrings,
+    getStarted: { he: 'בואו נתחיל!', en: "Let's go!" } as LocaleStrings,
+    getStartedSubtitle: { he: 'הצטרפו לקהילת MOOVIZ עוד היום', en: 'Join the MOOVIZ community today' } as LocaleStrings,
+    next: { he: 'הבא', en: 'Next' } as LocaleStrings,
+    skip: { he: 'דלג', en: 'Skip' } as LocaleStrings,
+  },
+
+  // ── Error Boundary ──
+  errorBoundary: {
+    title: { he: 'אופס! משהו השתבש', en: 'Oops! Something went wrong' } as LocaleStrings,
+    message: { he: 'המכונית נתקעה... נסה שוב', en: 'The car got stuck... Try again' } as LocaleStrings,
+    retry: { he: 'נסה שוב', en: 'Try again' } as LocaleStrings,
+    goHome: { he: 'חזור לדף הבית', en: 'Go to home' } as LocaleStrings,
   },
 } as const;
 

@@ -19,6 +19,7 @@ export default function LoginPage() {
       await signIn(email, password);
       navigate('/', { replace: true });
     } catch (err) {
+      console.error('[LoginPage] Sign in error:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);

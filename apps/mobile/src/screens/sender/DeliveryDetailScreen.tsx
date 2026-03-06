@@ -193,7 +193,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    textAlign: 'right',
     marginBottom: 12,
   },
   timelineSection: {
@@ -245,7 +244,6 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 14,
     flex: 1,
-    textAlign: 'right',
   },
   itemPhoto: {
     width: '100%',

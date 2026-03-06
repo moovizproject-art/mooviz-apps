@@ -35,6 +35,9 @@ export type ClientTabsParamList = {
   Profile: undefined;
 };
 
+/** Alias — RootNavigator uses SenderTabsParamList */
+export type SenderTabsParamList = ClientTabsParamList;
+
 // ──────────────────────────────────────────────
 // Driver Tabs
 // ──────────────────────────────────────────────
@@ -52,7 +55,11 @@ export type DriverTabsParamList = {
 
 export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
+  EmailVerification: undefined;
+  PhoneVerification: undefined;
+  PhoneOTP: { phoneNumber: string; verificationId: string; mode?: 'register' | 'login' | 'addPhone' };
   ClientTabs: NavigatorScreenParams<ClientTabsParamList>;
+  SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
   DriverTabs: NavigatorScreenParams<DriverTabsParamList>;
   CreateDelivery: undefined;
   SenderDeliveryDetail: { deliveryId: string };
@@ -81,6 +88,9 @@ export type ClientTabScreenProps<T extends keyof ClientTabsParamList> =
     BottomTabScreenProps<ClientTabsParamList, T>,
     NativeStackScreenProps<RootStackParamList>
   >;
+
+/** Alias — RootNavigator uses SenderTabScreenProps */
+export type SenderTabScreenProps<T extends keyof SenderTabsParamList> = ClientTabScreenProps<T>;
 
 /** Props for screens within the driver tabs */
 export type DriverTabScreenProps<T extends keyof DriverTabsParamList> =

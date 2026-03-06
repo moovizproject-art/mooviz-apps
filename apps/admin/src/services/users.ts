@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   addDoc,
   query,
   where,
@@ -31,6 +32,7 @@ export interface AppUser {
   status: UserStatus;
   kycStatus: KycStatus;
   kycDocumentURL: string | null;
+  kycIdURL: string | null;
   kycRejectionReason: string | null;
   driverUnlocked: boolean;
   profilePhotoURL: string | null;
@@ -79,6 +81,7 @@ function normalizeUser(docSnap: DocumentSnapshot): AppUser {
     status: data.status ?? 'active',
     kycStatus: data.kycStatus ?? 'pending',
     kycDocumentURL: data.kycDocumentURL ?? null,
+    kycIdURL: data.kycIdURL ?? null,
     kycRejectionReason: data.kycRejectionReason ?? null,
     driverUnlocked: data.driverUnlocked ?? false,
     profilePhotoURL: data.profilePhotoURL ?? null,
@@ -112,7 +115,7 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
   }
 
   constraints.push(orderBy('createdAt', 'desc'));
-  constraints.push(limit(params.pageSize ?? 50));
+  constraints.push(limit(params.pageSize ?? 200));
 
   if (params.lastDoc) {
     constraints.push(startAfter(params.lastDoc));
@@ -288,4 +291,16 @@ export async function getMigratedUsersCount(): Promise<{
     pendingPassword,
     missingPhone,
   };
+}
+
+export async function deleteUser(userId: string, adminId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId));
+
+  await addDoc(collection(db, 'adminActions'), {
+    adminId,
+    action: 'user_deleted',
+    targetUserId: userId,
+    details: {},
+    timestamp: Timestamp.now(),
+  });
 }

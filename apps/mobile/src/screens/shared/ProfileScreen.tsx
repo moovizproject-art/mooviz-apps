@@ -174,7 +174,6 @@ export function ProfileScreen(): React.JSX.Element {
                   style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
                   value={editName}
                   onChangeText={setEditName}
-                  textAlign="right"
                 />
               </View>
               <View style={styles.fieldGroup}>
@@ -183,7 +182,6 @@ export function ProfileScreen(): React.JSX.Element {
                   style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
                   value={editCity}
                   onChangeText={setEditCity}
-                  textAlign="right"
                 />
               </View>
               <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>

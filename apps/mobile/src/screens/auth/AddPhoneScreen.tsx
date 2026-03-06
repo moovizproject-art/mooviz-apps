@@ -18,6 +18,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { RootStackParamList } from '../../navigation/types';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone } from '../../utils/validators';
@@ -26,7 +27,7 @@ import { VerificationStepper } from '../../components/VerificationStepper';
 
 const logo = require('../../assets/logo.png');
 
-type Props = NativeStackScreenProps<any, any>;
+type Props = NativeStackScreenProps<RootStackParamList, 'PhoneVerification'>;
 
 /**
  * AddPhoneScreen -- phone verification gate (required before app access)
@@ -55,8 +56,7 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
         const verificationId = await sendPhoneOTP(phoneNumber);
         console.log('[AddPhoneScreen] Got verificationId:', verificationId?.substring(0, 20) + '...');
         const otpParams = { phoneNumber, verificationId, mode: 'addPhone' as const };
-        try { navigation.navigate('PhoneOTP', otpParams); }
-        catch { navigation.navigate('OTPVerification', otpParams); }
+        navigation.navigate('PhoneOTP', otpParams);
       } catch (err: unknown) {
         const firebaseError = err as { code?: string; message?: string };
         if (firebaseError.code) {
@@ -113,11 +113,7 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
       setIsLoading(true);
       const verificationId = await sendPhoneOTP(phone);
       const otpParams = { phoneNumber: phone, verificationId, mode: 'addPhone' as const };
-      try {
-        navigation.navigate('PhoneOTP', otpParams);
-      } catch {
-        navigation.navigate('OTPVerification', otpParams);
-      }
+      navigation.navigate('PhoneOTP', otpParams);
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };
       if (firebaseError.code) {

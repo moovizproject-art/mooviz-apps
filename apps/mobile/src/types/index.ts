@@ -56,6 +56,7 @@ export interface User {
   city: string | null;
   kycStatus: KycStatus;
   kycDocumentURL: string | null;
+  kycIdURL: string | null;
   ratingAsDriver: UserRating;
   ratingAsSender: UserRating;
   completedDeliveries: number;

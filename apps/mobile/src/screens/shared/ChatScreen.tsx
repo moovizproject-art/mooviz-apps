@@ -207,7 +207,6 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 20,
-    textAlign: 'right',
   },
   ownMessageText: {
     color: '#FFFFFF',

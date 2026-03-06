@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   Image,
   Modal,
   Animated,
@@ -22,6 +21,7 @@ import { MapPicker } from '../../components/MapPicker';
 import { ThemedInput } from '../../components/ThemedInput';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateDelivery'>;
 
@@ -50,6 +50,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   });
   const { colors } = useTheme();
   const { t } = useI18n();
+  const carAlert = useCarAlert();
 
   const [form, setForm] = useState<DeliveryForm>({
     pickup: null,
@@ -82,15 +83,15 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
 
   const handleSubmit = async (): Promise<void> => {
     if (!form.pickup) {
-      Alert.alert(t('common.error'), t('delivery.errorPickup'));
+      carAlert.show('error', t('common.error'), t('delivery.errorPickup'));
       return;
     }
     if (!form.destination) {
-      Alert.alert(t('common.error'), t('delivery.errorDestination'));
+      carAlert.show('error', t('common.error'), t('delivery.errorDestination'));
       return;
     }
     if (!form.itemDescription.trim()) {
-      Alert.alert(t('common.error'), t('delivery.errorDescription'));
+      carAlert.show('error', t('common.error'), t('delivery.errorDescription'));
       return;
     }
 
@@ -107,11 +108,11 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         scheduledDate: form.scheduledDate || null,
         notes: form.notes,
       });
-      Alert.alert(t('common.success'), t('delivery.createdSuccess'), [
+      carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
         { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
     } catch {
-      Alert.alert(t('common.error'), t('delivery.createError'));
+      carAlert.show('error', t('common.error'), t('delivery.createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -332,6 +333,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </View>
       </Modal>
+      <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
     </View>
   );
 }
@@ -365,7 +367,6 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyBold,
     fontSize: 15,
     fontWeight: '700',
-    textAlign: 'right',
   },
   optionalText: {
     ...TYPOGRAPHY.caption,

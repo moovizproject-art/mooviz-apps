@@ -6,7 +6,7 @@ service cloud.firestore {
     // Helper: check if the requesting user is an admin
     function isAdmin() {
       return request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
     // Helper: check if user is authenticated
@@ -115,6 +115,14 @@ service cloud.firestore {
     // ───────────────────────────────────────────────
     match /adminActions/{actionId} {
       allow read, write: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Config — admin only
+    // ───────────────────────────────────────────────
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

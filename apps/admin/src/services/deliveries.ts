@@ -159,7 +159,7 @@ export async function getDeliveries(params: DeliveriesQueryParams = {}): Promise
   }
 
   constraints.push(orderBy('createdAt', 'desc'));
-  constraints.push(limit(params.pageSize ?? 50));
+  constraints.push(limit(params.pageSize ?? 200));
 
   if (params.lastDoc) {
     constraints.push(startAfter(params.lastDoc));

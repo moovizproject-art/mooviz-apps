@@ -146,7 +146,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    textAlign: 'right',
   },
   input: {
     borderWidth: 1,
@@ -158,7 +157,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     marginTop: 8,
-    textAlign: 'right',
   },
   successSection: {
     alignItems: 'center',

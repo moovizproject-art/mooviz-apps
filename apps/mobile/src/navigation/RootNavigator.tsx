@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../theme/ThemeContext';
@@ -221,6 +224,20 @@ export function RootNavigator(): React.JSX.Element {
   const { currentUser, firebaseUser, isLoading, forceOtp } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    console.log('[RootNavigator] Checking onboarding status...');
+    AsyncStorage.getItem('@onboarding_complete').then((val) => {
+      console.log('[RootNavigator] onboarding_complete =', val);
+      setOnboardingDone(val === 'true');
+    }).catch((err) => {
+      console.error('[RootNavigator] AsyncStorage error:', err);
+      setOnboardingDone(false);
+    });
+  }, []);
+
+  console.log('[RootNavigator] Render — isLoading:', isLoading, 'onboardingDone:', onboardingDone, 'firebaseUser:', !!firebaseUser, 'currentUser:', !!currentUser);
 
   // Show loading spinner while checking auth state
   if (isLoading) {
@@ -229,6 +246,19 @@ export function RootNavigator(): React.JSX.Element {
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
+  }
+
+  // Show onboarding on first launch (before auth)
+  if (onboardingDone === null) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!onboardingDone) {
+    return <OnboardingScreen onComplete={() => setOnboardingDone(true)} />;
   }
 
   // Verification gates:
@@ -280,6 +310,7 @@ export function RootNavigator(): React.JSX.Element {
   }
 
   return (
+    <ErrorBoundary fallbackColors={{ background: colors.background, textPrimary: colors.textPrimary, textSecondary: colors.textSecondary, primary: colors.primary, border: colors.border, error: colors.error }}>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!firebaseUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
@@ -342,6 +373,7 @@ export function RootNavigator(): React.JSX.Element {
         </>
       )}
     </Stack.Navigator>
+    </ErrorBoundary>
   );
 }
 

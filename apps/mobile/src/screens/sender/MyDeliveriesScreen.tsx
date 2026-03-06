@@ -7,7 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { SenderTabScreenProps } from '../../navigation/RootNavigator';
+import { SenderTabScreenProps } from '../../navigation/types';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    textAlign: 'right',
   },
   tabBar: {
     flexDirection: 'row',

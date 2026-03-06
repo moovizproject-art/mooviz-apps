@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Image,
   StatusBar,
@@ -14,12 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
 import firestore from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage';
 
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { uploadImage } from '../../services/storage';
 import { useAuth } from '../../hooks/useAuth';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import type { KycStatus } from '../../types';
 
 const logo = require('../../assets/logo.png');
@@ -29,13 +30,36 @@ export function DriverKYCScreen(): React.JSX.Element {
   const { currentUser } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
+  const carAlert = useCarAlert();
   const uid = currentUser?.uid || '';
 
   const [licenseUri, setLicenseUri] = useState<string | null>(null);
   const [idUri, setIdUri] = useState<string | null>(null);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [remoteLicenseUrl, setRemoteLicenseUrl] = useState<string | null>(null);
+  const [remoteIdUrl, setRemoteIdUrl] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(currentUser?.kycStatus === 'pending');
   const [isUploading, setIsUploading] = useState(false);
   const [kycStatus, setKycStatus] = useState<KycStatus>(currentUser?.kycStatus || 'pending');
+
+  // Load previously uploaded KYC images from Storage
+  useEffect(() => {
+    if (!uid) return;
+    const loadExisting = async () => {
+      try {
+        const licUrl = await storage().ref(`kyc/${uid}/license.jpg`).getDownloadURL();
+        setRemoteLicenseUrl(licUrl);
+      } catch {
+        // No license uploaded yet
+      }
+      try {
+        const idUrl = await storage().ref(`kyc/${uid}/id.jpg`).getDownloadURL();
+        setRemoteIdUrl(idUrl);
+      } catch {
+        // No ID uploaded yet
+      }
+    };
+    loadExisting();
+  }, [uid]);
 
   const pickImage = async (setter: (uri: string | null) => void): Promise<void> => {
     const result: ImagePickerResponse = await launchImageLibrary({
@@ -50,41 +74,56 @@ export function DriverKYCScreen(): React.JSX.Element {
   };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!licenseUri) {
-      Alert.alert(t('common.error'), t('kyc.errorLicense'));
+    const hasLicense = licenseUri || remoteLicenseUrl;
+    const hasId = idUri || remoteIdUrl;
+
+    if (!hasLicense) {
+      carAlert.show('error', t('common.error'), t('kyc.errorLicense'));
       return;
     }
-    if (!idUri) {
-      Alert.alert(t('common.error'), t('kyc.errorId'));
+    if (!hasId) {
+      carAlert.show('error', t('common.error'), t('kyc.errorId'));
       return;
     }
     if (!acceptedTerms) {
-      Alert.alert(t('common.error'), t('kyc.errorTerms'));
+      carAlert.show('error', t('common.error'), t('kyc.errorTerms'));
       return;
     }
     if (!uid) {
-      Alert.alert(t('common.error'), t('common.error'));
+      carAlert.show('error', t('common.error'), t('common.error'));
       return;
     }
 
     try {
       setIsUploading(true);
-      const [licenseUrl] = await Promise.all([
-        uploadImage(licenseUri, `kyc/${uid}/license.jpg`),
-        uploadImage(idUri, `kyc/${uid}/id.jpg`),
-      ]);
+      // Only upload new images if user picked new ones
+      const uploads: Promise<string>[] = [];
+      if (licenseUri) uploads.push(uploadImage(licenseUri, `kyc/${uid}/license.jpg`));
+      if (idUri) uploads.push(uploadImage(idUri, `kyc/${uid}/id.jpg`));
+
+      const results = await Promise.all(uploads);
+      // Determine final URLs: use newly uploaded or keep existing remote URLs
+      let resultIdx = 0;
+      const licenseUrl = licenseUri ? results[resultIdx++] : remoteLicenseUrl;
+      const idUrl = idUri ? results[resultIdx++] : remoteIdUrl;
 
       await firestore().collection('users').doc(uid).update({
         kycDocumentURL: licenseUrl,
+        kycIdURL: idUrl,
         kycStatus: 'pending',
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
 
       setKycStatus('pending');
-      Alert.alert(t('common.success'), t('kyc.uploadSuccess'));
+      // Update remote URLs with newly uploaded ones
+      if (licenseUri) setRemoteLicenseUrl(results[0]);
+      if (idUri) setRemoteIdUrl(licenseUri ? results[1] : results[0]);
+      setLicenseUri(null);
+      setIdUri(null);
+      carAlert.show('success', t('common.success'), t('kyc.uploadSuccess'));
     } catch (error) {
       console.error('[DriverKYCScreen] Upload error:', error);
-      Alert.alert(t('common.error'), t('kyc.uploadError'));
+      carAlert.show('error', t('common.error'), t('kyc.uploadError'));
     } finally {
       setIsUploading(false);
     }
@@ -103,7 +142,9 @@ export function DriverKYCScreen(): React.JSX.Element {
   };
 
   const statusDisplay = getStatusDisplay();
-  const canSubmit = kycStatus === 'pending' || kycStatus === 'rejected';
+  const hasExistingDocs = remoteLicenseUrl || remoteIdUrl;
+  const isPendingWithDocs = kycStatus === 'pending' && hasExistingDocs;
+  const isFormLocked = isPendingWithDocs && !licenseUri && !idUri; // Lock when pending, unless user picked new images
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -145,7 +186,7 @@ export function DriverKYCScreen(): React.JSX.Element {
           </Text>
         </View>
 
-        {canSubmit && (
+        {kycStatus !== 'approved' && (
           <View style={styles.formSection}>
             {/* License */}
             <View style={styles.fieldGroup}>
@@ -158,16 +199,24 @@ export function DriverKYCScreen(): React.JSX.Element {
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.uploadButton, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
+                style={[styles.uploadButton, { borderColor: colors.border, backgroundColor: colors.inputBg }, isFormLocked && { opacity: 0.7 }]}
                 onPress={() => pickImage(setLicenseUri)}
-                disabled={isUploading}
+                disabled={isUploading || isFormLocked}
               >
-                <Text style={{ fontSize: 28, marginBottom: SPACING.sm }}>📄</Text>
+                {licenseUri || remoteLicenseUrl ? (
+                  <Image
+                    source={{ uri: licenseUri || remoteLicenseUrl! }}
+                    style={styles.previewImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={{ fontSize: 28, marginBottom: SPACING.sm }}>📄</Text>
+                )}
                 <Text style={[
                   styles.uploadText,
-                  { color: licenseUri ? colors.success : colors.primary },
+                  { color: (licenseUri || remoteLicenseUrl) ? colors.success : colors.primary },
                 ]}>
-                  {licenseUri ? t('kyc.licenseSelected') : t('kyc.selectLicense')}
+                  {(licenseUri || remoteLicenseUrl) ? t('kyc.licenseSelected') : t('kyc.selectLicense')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -183,25 +232,33 @@ export function DriverKYCScreen(): React.JSX.Element {
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.uploadButton, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
+                style={[styles.uploadButton, { borderColor: colors.border, backgroundColor: colors.inputBg }, isFormLocked && { opacity: 0.7 }]}
                 onPress={() => pickImage(setIdUri)}
-                disabled={isUploading}
+                disabled={isUploading || isFormLocked}
               >
-                <Text style={{ fontSize: 28, marginBottom: SPACING.sm }}>🪪</Text>
+                {idUri || remoteIdUrl ? (
+                  <Image
+                    source={{ uri: idUri || remoteIdUrl! }}
+                    style={styles.previewImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={{ fontSize: 28, marginBottom: SPACING.sm }}>🪪</Text>
+                )}
                 <Text style={[
                   styles.uploadText,
-                  { color: idUri ? colors.success : colors.primary },
+                  { color: (idUri || remoteIdUrl) ? colors.success : colors.primary },
                 ]}>
-                  {idUri ? t('kyc.idSelected') : t('kyc.selectId')}
+                  {(idUri || remoteIdUrl) ? t('kyc.idSelected') : t('kyc.selectId')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Terms */}
             <TouchableOpacity
-              style={styles.termsRow}
-              onPress={() => setAcceptedTerms(!acceptedTerms)}
-              disabled={isUploading}
+              style={[styles.termsRow, isFormLocked && { opacity: 0.6 }]}
+              onPress={() => !isFormLocked && setAcceptedTerms(!acceptedTerms)}
+              disabled={isUploading || isFormLocked}
             >
               <View style={[
                 styles.checkbox,
@@ -215,24 +272,26 @@ export function DriverKYCScreen(): React.JSX.Element {
               </Text>
             </TouchableOpacity>
 
-            {/* Submit */}
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                { backgroundColor: colors.primary },
-                (isUploading || !acceptedTerms) && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={isUploading || !acceptedTerms}
-            >
-              {isUploading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
-                  {t('kyc.submitForApproval')}
-                </Text>
-              )}
-            </TouchableOpacity>
+            {/* Submit / Update */}
+            {(licenseUri || idUri || !hasExistingDocs) && (
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  { backgroundColor: colors.primary },
+                  (isUploading || !acceptedTerms) && styles.submitButtonDisabled,
+                ]}
+                onPress={handleSubmit}
+                disabled={isUploading || !acceptedTerms}
+              >
+                {isUploading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
+                    {hasExistingDocs ? t('kyc.updateDocuments') : t('kyc.submitForApproval')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -244,6 +303,7 @@ export function DriverKYCScreen(): React.JSX.Element {
           </View>
         )}
       </ScrollView>
+      <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
     </SafeAreaView>
   );
 }
@@ -364,6 +424,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.sm,
+  },
+  previewImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.sm,
   },
   uploadText: {
     fontSize: 14,

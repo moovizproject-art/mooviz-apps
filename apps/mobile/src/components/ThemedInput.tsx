@@ -81,7 +81,6 @@ export function ThemedInput({
         <TextInput
           style={[styles.input, { color: colors.textPrimary }]}
           placeholderTextColor={colors.inputPlaceholder}
-          textAlign="right"
           writingDirection="rtl"
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -120,7 +119,6 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyBold,
     fontSize: 15,
     fontWeight: '700',
-    textAlign: 'right',
   },
   required: {
     ...TYPOGRAPHY.caption,
@@ -147,6 +145,5 @@ const styles = StyleSheet.create({
   inputText: {
     flex: 1,
     ...TYPOGRAPHY.body,
-    textAlign: 'right',
   },
 });

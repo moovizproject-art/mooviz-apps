@@ -1,9 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
-
-import { COLORS } from '../constants/colors';
-import { useLocation } from '../hooks/useLocation';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Keyboard,
+} from 'react-native';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import Config from 'react-native-config';
+import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
+import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/tokens';
 
 interface GeoPoint {
   latitude: number;
@@ -14,158 +22,135 @@ interface GeoPoint {
 interface MapPickerProps {
   onLocationSelect: (point: GeoPoint) => void;
   onCancel: () => void;
-  initialRegion?: Region;
+  initialLocation?: { latitude: number; longitude: number };
 }
 
-// Default region: Israel center
-// אזור ברירת מחדל: מרכז ישראל
-const DEFAULT_REGION: Region = {
-  latitude: 32.0853,
-  longitude: 34.7818,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
-
 /**
- * MapPicker — בוחר מיקום במפה
- * Google Maps with pin placement for address selection.
- * מפת גוגל עם סיכה לבחירת כתובת
+ * MapPicker — Google Places autocomplete address picker
+ * Uses react-native-google-places-autocomplete for street/city search.
+ * Returns lat/lng + formatted address.
  */
-export function MapPicker({
-  onLocationSelect,
-  onCancel,
-  initialRegion,
-}: MapPickerProps): React.JSX.Element {
-  const { location } = useLocation();
+export function MapPicker({ onLocationSelect, onCancel }: MapPickerProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const ref = useRef<any>(null);
 
-  const startRegion: Region = initialRegion || (location
-    ? {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      }
-    : DEFAULT_REGION);
-
-  const [selectedPoint, setSelectedPoint] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-
-  const handleMapPress = useCallback((event: MapPressEvent) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    setSelectedPoint({ latitude, longitude });
+  useEffect(() => {
+    // Auto-focus the input
+    setTimeout(() => ref.current?.focus(), 300);
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    if (!selectedPoint) return;
-
-    // TODO: Reverse geocode to get address string
-    // TODO: ג׳יאוקודינג הפוך לקבלת כתובת
-    onLocationSelect({
-      latitude: selectedPoint.latitude,
-      longitude: selectedPoint.longitude,
-      address: `${selectedPoint.latitude.toFixed(4)}, ${selectedPoint.longitude.toFixed(4)}`,
-    });
-  }, [selectedPoint, onLocationSelect]);
+  const handleSelect = (data: any, details: any) => {
+    Keyboard.dismiss();
+    if (details?.geometry?.location) {
+      onLocationSelect({
+        latitude: details.geometry.location.lat,
+        longitude: details.geometry.location.lng,
+        address: data.description || data.structured_formatting?.main_text || '',
+      });
+    }
+  };
 
   return (
-    <Modal animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.container}>
+    <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
+      <View style={[styles.overlay, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onCancel}>
-            <Text style={styles.cancelText}>ביטול</Text>
-            {/* Cancel */}
-          </TouchableOpacity>
-          <Text style={styles.title}>בחר מיקום</Text>
-          {/* Select location */}
-          <TouchableOpacity onPress={handleConfirm} disabled={!selectedPoint}>
-            <Text style={[styles.confirmText, !selectedPoint && styles.confirmTextDisabled]}>
-              אישור
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+              {t('common.cancel')}
             </Text>
-            {/* Confirm */}
           </TouchableOpacity>
-        </View>
-
-        {/* Map */}
-        <MapView
-          style={styles.map}
-          initialRegion={startRegion}
-          onPress={handleMapPress}
-          showsUserLocation
-          showsMyLocationButton
-        >
-          {selectedPoint && (
-            <Marker
-              coordinate={selectedPoint}
-              draggable
-              onDragEnd={(e) =>
-                setSelectedPoint(e.nativeEvent.coordinate)
-              }
-            />
-          )}
-        </MapView>
-
-        {/* Instructions */}
-        {/* הנחיות */}
-        <View style={styles.instructions}>
-          <Text style={styles.instructionsText}>
-            {selectedPoint
-              ? 'לחץ אישור או גרור את הסיכה למיקום המדויק'
-              : 'לחץ על המפה לבחירת מיקום'}
-            {/* Tap confirm or drag pin / Tap map to select */}
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
+            {t('form.selectAddress')}
           </Text>
+          <View style={styles.cancelButton} />
         </View>
+
+        {/* Autocomplete */}
+        <GooglePlacesAutocomplete
+          ref={ref}
+          placeholder={t('form.addressPlaceholder')}
+          onPress={handleSelect}
+          fetchDetails
+          query={{
+            key: Config.GOOGLE_MAPS_API_KEY || '',
+            language: 'he',
+            components: 'country:il',
+          }}
+          styles={{
+            container: styles.autocompleteContainer,
+            textInput: [
+              styles.textInput,
+              {
+                backgroundColor: colors.inputBg,
+                borderColor: colors.inputBorder,
+                color: colors.textPrimary,
+              },
+            ],
+            listView: [styles.listView, { backgroundColor: colors.background }],
+            row: [styles.row, { backgroundColor: colors.surface }],
+            description: { color: colors.textPrimary },
+            separator: { backgroundColor: colors.border },
+            poweredContainer: { display: 'none' },
+          }}
+          textInputProps={{
+            placeholderTextColor: colors.inputPlaceholder,
+            writingDirection: 'rtl',
+          }}
+          enablePoweredByContainer={false}
+          nearbyPlacesAPI="GooglePlacesSearch"
+          debounce={300}
+        />
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    paddingTop: 50,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
+    ...TYPOGRAPHY.h3,
+    textAlign: 'center',
+  },
+  cancelButton: {
+    width: 60,
   },
   cancelText: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.body,
+    fontWeight: '600',
   },
-  confirmText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  confirmTextDisabled: {
-    opacity: 0.4,
-  },
-  map: {
+  autocompleteContainer: {
     flex: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
   },
-  instructions: {
-    padding: 16,
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+  textInput: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    ...TYPOGRAPHY.body,
+    height: 48,
   },
-  instructionsText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+  listView: {
+    borderRadius: BORDER_RADIUS.lg,
+    marginTop: SPACING.sm,
+    overflow: 'hidden',
+  },
+  row: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
 });

@@ -8,13 +8,19 @@ import {
   Animated,
   Dimensions,
   Linking,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { useAuth } from '../hooks/useAuth';
-import { CarIcon, ProfileIcon } from './TabIcons';
+import { ProfileIcon } from './TabIcons';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
+
+const carImage = require('../assets/car.png');
+const socialFacebook = require('../assets/social/facebook.png');
+const socialInstagram = require('../assets/social/instagram.png');
+const socialTiktok = require('../assets/social/tiktok.png');
 
 const DRAWER_WIDTH = 280;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -75,7 +81,7 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
 
           <TouchableOpacity style={styles.menuItem} onPress={handleBecomeDriver}>
             <View style={[styles.menuIconBg, { backgroundColor: '#E8F0FE' }]}>
-              <CarIcon color="#1A73E8" size={20} />
+              <Image source={carImage} style={styles.carIcon} resizeMode="contain" />
               {!driverUnlocked && (
                 <View style={styles.lockBadge}>
                   <Text style={styles.lockIcon}>🔒</Text>
@@ -126,26 +132,22 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
             </Text>
             <View style={styles.socialRow}>
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#1877F2' }]}
+                style={styles.socialButton}
                 onPress={() => Linking.openURL('https://facebook.com/mooviz')}
               >
-                <Text style={[styles.socialLabel, { color: '#FFFFFF' }]}>f</Text>
+                <Image source={socialFacebook} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#E4405F' }]}
+                style={styles.socialButton}
                 onPress={() => Linking.openURL('https://instagram.com/mooviz')}
               >
-                <View style={styles.igIcon}>
-                  <View style={[styles.igBox, { borderColor: '#FFFFFF' }]}>
-                    <View style={[styles.igDot, { backgroundColor: '#FFFFFF' }]} />
-                  </View>
-                </View>
+                <Image source={socialInstagram} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#000000' }]}
+                style={styles.socialButton}
                 onPress={() => Linking.openURL('https://tiktok.com/@mooviz')}
               >
-                <Text style={[styles.socialLabel, { color: '#FFFFFF' }]}>♪</Text>
+                <Image source={socialTiktok} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
             </View>
           </View>
@@ -225,6 +227,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  carIcon: {
+    width: 24,
+    height: 24,
+  },
   menuText: {
     ...TYPOGRAPHY.body,
     fontWeight: '500',
@@ -268,26 +274,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  socialLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  igIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  igBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 5,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  igDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+  socialImage: {
+    width: 40,
+    height: 40,
   },
 });

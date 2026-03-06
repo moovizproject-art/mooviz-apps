@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
   Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,6 +17,7 @@ import { useDelivery } from '../../hooks/useDelivery';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DriverDeliveryDetail'>;
 
@@ -30,6 +30,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { deliveryId } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
+  const carAlert = useCarAlert();
   const { currentUser } = useAuth();
   const { getDeliveryById, expressInterest, updateDeliveryStatus, isLoading } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const delivery = getDeliveryById(deliveryId);
@@ -37,9 +38,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const handleExpressInterest = async (): Promise<void> => {
     try {
       await expressInterest(deliveryId, currentUser!.uid);
-      Alert.alert('', t('driver.interestSent'));
+      carAlert.show('success', t('common.success'), t('driver.interestSent'));
     } catch (err) {
-      Alert.alert('', t('driver.interestError'));
+      carAlert.show('error', t('common.error'), t('driver.interestError'));
     }
   };
 
@@ -48,9 +49,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   ): Promise<void> => {
     try {
       await updateDeliveryStatus(deliveryId, newStatus);
-      Alert.alert('', t('driver.statusUpdated'));
+      carAlert.show('success', t('common.success'), t('driver.statusUpdated'));
     } catch (err) {
-      Alert.alert('', t('driver.statusUpdateError'));
+      carAlert.show('error', t('common.error'), t('driver.statusUpdateError'));
     }
   };
 
@@ -62,6 +63,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const isPending = delivery.status === 'pending';
 
   return (
+    <>
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       {/* Status */}
       <View style={styles.statusRow}>
@@ -183,6 +185,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         )}
       </View>
     </ScrollView>
+    <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
+    </>
   );
 }
 
@@ -226,11 +230,9 @@ const styles = StyleSheet.create({
   routeLabel: {
     fontSize: 12,
     fontWeight: '600',
-    textAlign: 'right',
   },
   routeAddress: {
     fontSize: 15,
-    textAlign: 'right',
     marginTop: 2,
   },
   routeLine: {
@@ -245,12 +247,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    textAlign: 'right',
     marginBottom: 8,
   },
   itemDescription: {
     fontSize: 15,
-    textAlign: 'right',
     lineHeight: 22,
   },
   detailRow: {
@@ -306,7 +306,6 @@ const styles = StyleSheet.create({
   },
   notesText: {
     fontSize: 14,
-    textAlign: 'right',
     lineHeight: 20,
   },
   actionsSection: {
