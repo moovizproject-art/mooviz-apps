@@ -94,11 +94,17 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
   const carX = useRef(new Animated.Value(-80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // ⚠️ DO NOT ADD RTL HACKS HERE — no `inverted`, no `scaleX`, no `direction: 'ltr'`,
-  // no reversed arrays. The horizontal FlatList works correctly in RTL as-is:
-  // • Index 0 (welcome) shows first on the right edge
-  // • Swiping left naturally advances to the next page
-  // • Tested on physical Hebrew RTL device — any "fix" will BREAK it.
+  // ⚠️ RTL: Force FlatList to start at index 0 on mount. In RTL the initial
+  // scroll position can land on the wrong end. Do NOT use inverted/scaleX/
+  // direction/'ltr'/reversed arrays — all tested and broken on physical device.
+  useEffect(() => {
+    if (isRTL) {
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index: 0, animated: false });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   useEffect(() => {
     fadeAnim.setValue(0);
