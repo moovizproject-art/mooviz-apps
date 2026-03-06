@@ -34,7 +34,11 @@ export function SoundProvider({ children }: { children: ReactNode }): React.JSX.
 
   const play = useCallback((name: SoundName) => {
     if (soundEnabled) {
-      playSoundRaw(name);
+      try {
+        playSoundRaw(name).catch(() => { /* swallow */ });
+      } catch {
+        // Native bridge crash — swallow to prevent app crash
+      }
     }
   }, [soundEnabled]);
 

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ViewToken,
   Platform,
   ScrollView,
+  I18nManager,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../theme/ThemeContext';
@@ -21,6 +22,7 @@ import { useSound } from '../../hooks/useSound';
 const logo = require('../../assets/logo.png');
 const carImage = require('../../assets/car.png');
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const isRTL = I18nManager.isRTL;
 
 // Onboarding illustrations
 const pageImages: Record<string, any> = {
@@ -91,6 +93,12 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
   const flatListRef = useRef<FlatList>(null);
   const carX = useRef(new Animated.Value(-80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // ⚠️ DO NOT ADD RTL HACKS HERE — no `inverted`, no `scaleX`, no `direction: 'ltr'`,
+  // no reversed arrays. The horizontal FlatList works correctly in RTL as-is:
+  // • Index 0 (welcome) shows first on the right edge
+  // • Swiping left naturally advances to the next page
+  // • Tested on physical Hebrew RTL device — any "fix" will BREAK it.
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -198,10 +206,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
   };
 
   return (
-    // Force LTR for the entire onboarding so horizontal FlatList, dots, and
-    // buttons always flow left-to-right regardless of device RTL setting.
-    // Text inside cards is centered so it reads fine in Hebrew.
-    <View style={[styles.container, { backgroundColor: colors.background, direction: 'ltr' as any }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         ref={flatListRef}
         data={PAGES}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Image,
   TouchableOpacity,
   StatusBar,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +32,6 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/des
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 
 const logo = require('../../assets/logo.png');
-const radarGif = require('../../assets/radar.gif');
 
 type Props = DriverTabScreenProps<'Feed'>;
 
@@ -133,16 +134,71 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     [navigation],
   );
 
+  // ── Radar sweep animation ──
+  const sweepAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!prefs.isAvailable) {
+      sweepAnim.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.timing(sweepAnim, {
+        toValue: 1,
+        duration: 3000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [prefs.isAvailable, sweepAnim]);
+
+  const sweepRotate = sweepAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const radarColor = colors.primary;
+  const RING_SIZES = [RADAR_SIZE, RADAR_SIZE * 0.7, RADAR_SIZE * 0.4, RADAR_SIZE * 0.15];
+
   const renderRadar = () => (
     <View style={styles.radarContainer}>
-      {prefs.isAvailable ? (
-        <Image source={radarGif} style={styles.radarGif} resizeMode="contain" />
-      ) : (
-        <View style={[styles.radarPaused, { borderColor: colors.border }]}>
-          <Text style={styles.radarIcon}>{'\u{23F8}'}</Text>
-        </View>
-      )}
-      <Text style={[styles.radarLabel, { color: prefs.isAvailable ? colors.primary : colors.textSecondary }]}>
+      <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
+        {/* Concentric circles */}
+        {RING_SIZES.map((size, i) => (
+          <View
+            key={i}
+            style={[
+              styles.radarRing,
+              {
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                borderColor: prefs.isAvailable ? radarColor : colors.border,
+                opacity: 0.3 + i * 0.1,
+              },
+            ]}
+          />
+        ))}
+        {/* Sweep beam */}
+        {prefs.isAvailable && (
+          <Animated.View
+            style={[
+              styles.sweepBeam,
+              {
+                transform: [{ rotate: sweepRotate }],
+              },
+            ]}
+          >
+            <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
+            <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
+          </Animated.View>
+        )}
+        {/* Center dot */}
+        <View style={[styles.radarCenter, { backgroundColor: prefs.isAvailable ? radarColor : colors.border }]} />
+      </View>
+      <Text style={[styles.radarLabel, { color: prefs.isAvailable ? radarColor : colors.textSecondary }]}>
         {prefs.isAvailable ? t('driver.scanning') : t('driver.occupied')}
       </Text>
     </View>
@@ -467,28 +523,44 @@ const styles = StyleSheet.create({
   // ── Radar ──
   radarContainer: {
     alignItems: 'center',
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.lg,
   },
-  radarGif: {
-    width: SCREEN_WIDTH * 0.6,
-    height: SCREEN_WIDTH * 0.45,
-  },
-  radarPaused: {
-    width: RADAR_SIZE,
-    height: RADAR_SIZE,
-    borderRadius: RADAR_SIZE / 2,
-    borderWidth: 2,
-    borderStyle: 'dashed',
+  radarOuter: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
   },
-  radarIcon: {
-    fontSize: 40,
+  radarRing: {
+    position: 'absolute',
+    borderWidth: 1,
+  },
+  sweepBeam: {
+    position: 'absolute',
+    width: RADAR_SIZE,
+    height: RADAR_SIZE,
+    alignItems: 'center',
+  },
+  sweepLine: {
+    width: 2,
+    height: RADAR_SIZE / 2,
+    opacity: 0.8,
+  },
+  sweepGlow: {
+    position: 'absolute',
+    top: 0,
+    width: RADAR_SIZE / 2,
+    height: RADAR_SIZE / 2,
+    borderBottomLeftRadius: RADAR_SIZE / 2,
+    opacity: 0.08,
+    transform: [{ translateX: RADAR_SIZE / 4 }],
+  },
+  radarCenter: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   radarLabel: {
     ...TYPOGRAPHY.bodyBold,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
   },
 
   // ── Sections ──
