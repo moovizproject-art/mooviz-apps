@@ -8,6 +8,7 @@ import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 import { useAuth } from '../hooks/useAuth';
+import { useNotifications } from '../hooks/useNotifications';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { HomeIcon, PackageIcon, ChatIcon, ProfileIcon, TruckIcon, ClipboardIcon } from '../components/TabIcons';
@@ -222,6 +223,7 @@ function DriverTabs(): React.JSX.Element {
 /** Root navigator — switches between Auth, Verification, and App flows */
 export function RootNavigator(): React.JSX.Element {
   const { currentUser, firebaseUser, isLoading, forceOtp } = useAuth();
+  useNotifications(); // Register FCM token & handle foreground/background notifications
   const { colors } = useTheme();
   const { t } = useI18n();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
