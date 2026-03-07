@@ -124,7 +124,8 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     where: whereClauses,
     orderBy: needsCompoundQuery ? undefined : ['createdAt', 'desc'],
     limit: 50,
-    enabled: true,
+    // Disable query until userId is available for user-scoped queries (not proximity feed)
+    enabled: options?.nearLocation ? true : !!(options?.userId),
   });
 
   // Client-side sort when we skipped server orderBy

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import firestore, {
   FirebaseFirestoreTypes,
 } from '@react-native-firebase/firestore';
@@ -48,7 +48,7 @@ export function useFirestore<T extends { id: string }>({
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  const refreshCounter = useRef<number>(0);
+  const [refreshKey, setRefreshKey] = useState<number>(0);
 
   const defaultTransform = useCallback(
     (doc: FirebaseFirestoreTypes.DocumentSnapshot): T => {
@@ -58,6 +58,13 @@ export function useFirestore<T extends { id: string }>({
   );
 
   const transformFn = transform || defaultTransform;
+
+  // Serialize query params so useEffect re-subscribes when they change
+  const whereKey = useMemo(
+    () => (whereClauses ? JSON.stringify(whereClauses) : ''),
+    [whereClauses],
+  );
+  const orderByKey = orderBy ? `${orderBy[0]}_${orderBy[1]}` : '';
 
   useEffect(() => {
     if (!enabled) {
@@ -145,10 +152,10 @@ export function useFirestore<T extends { id: string }>({
         });
       return undefined;
     }
-  }, [collection, enabled, realtime, refreshCounter.current]);
+  }, [collection, enabled, realtime, whereKey, orderByKey, limit, refreshKey]);
 
   const refresh = useCallback(() => {
-    refreshCounter.current += 1;
+    setRefreshKey((k) => k + 1);
   }, []);
 
   return { data, isLoading, error, refresh };
