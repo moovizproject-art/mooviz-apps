@@ -1,6 +1,7 @@
 import { firestore } from "firebase-admin";
 
 export type UserRole = "sender" | "driver";
+export type ActiveMode = "client" | "driver";
 export type KycStatus = "pending" | "approved" | "rejected";
 export type UserStatus = "active" | "suspended" | "blocked";
 
@@ -22,23 +23,28 @@ export interface User {
   email?: string;
   city: string;
   role: UserRole;
+  activeMode: ActiveMode;
+  driverAvailable: boolean;
+  driverUnlocked: boolean;
   profilePhotoURL: string;
   kycDocumentURL: string;
   kycStatus: KycStatus;
-  rating: UserRating;
+  ratingAsDriver: UserRating;
+  ratingAsSender: UserRating;
   completedDeliveries: number;
   status: UserStatus;
-  fcmToken: string;
+  fcmTokens: string[];
   location: UserLocation;
+  migratedFrom?: string;
   createdAt: firestore.Timestamp;
+  updatedAt?: firestore.Timestamp;
 }
 
 export interface UserCreateData {
   fullName: string;
   phone: string;
   email?: string;
-  city: string;
-  role: UserRole;
+  city?: string;
   profilePhotoURL?: string;
   kycDocumentURL?: string;
 }
@@ -47,8 +53,13 @@ export interface UserUpdateData {
   fullName?: string;
   email?: string;
   city?: string;
+  activeMode?: ActiveMode;
+  driverAvailable?: boolean;
+  driverUnlocked?: boolean;
   profilePhotoURL?: string;
   kycDocumentURL?: string;
-  fcmToken?: string;
+  kycStatus?: KycStatus;
+  fcmTokens?: string[];
   location?: UserLocation;
+  migratedFrom?: string;
 }

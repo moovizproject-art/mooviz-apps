@@ -19,9 +19,22 @@ export {
 } from "./callable/deliveryCallable";
 
 export {
+  createUser,
   updateProfile,
   updateFCMToken,
+  removeFCMToken,
 } from "./callable/userCallable";
+
+export { reviewKYC } from "./callable/kycCallable";
+
+export {
+  uploadProfilePhoto,
+  getAuthorizedPhoto,
+  getEncryptionKey,
+  decryptDocument,
+} from "./callable/encryptionCallable";
+
+export { sendBulkEmail } from "./callable/emailCallable";
 
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";

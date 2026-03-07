@@ -94,7 +94,8 @@ export async function getNearbyDriverTokens(
 
   for (const doc of snapshot.docs) {
     const data = doc.data();
-    const fcmToken = data.fcmToken;
+    const tokens = data.fcmTokens;
+    const fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
 
     // Skip drivers without FCM tokens
     if (!fcmToken || typeof fcmToken !== "string" || fcmToken.length === 0) {

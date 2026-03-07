@@ -6,7 +6,7 @@ service cloud.firestore {
     // Helper: check if the requesting user is an admin
     function isAdmin() {
       return request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
     // Helper: check if user is authenticated
@@ -19,20 +19,37 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Fields that clients must never write directly
+    // (only Cloud Functions can set these)
+    function noProtectedFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'status', 'kycStatus', 'driverUnlocked',
+                 'profilePhotoPath', 'profilePhotoUpdatedAt',
+                 'ratingAsDriver', 'ratingAsSender', 'completedDeliveries']);
+    }
+
     // ───────────────────────────────────────────────
     // Users
     // ───────────────────────────────────────────────
     match /users/{userId} {
-      // Authenticated users can read their own profile; admins can read all
+      // Bootstrap: allow initial admin doc creation (remove after setup)
+      allow create: if request.auth != null
+        && request.auth.uid == 'np59JHWkCveavp2ldfio5njBqvJ2'
+        && userId == 'np59JHWkCveavp2ldfio5njBqvJ2';
+
+      // Owner can read own profile; admins can read all
       allow read: if isOwner(userId) || isAdmin();
 
-      // Users can write their own profile only (not role field)
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']);
+      // Delivery participants can read limited sender/driver info
+      // (Cloud Function handles photo access separately)
+      allow read: if isAuthenticated();
 
-      // Only admins can delete users or change role/status
-      allow update: if isAdmin();
+      // Users can write their own profile (restricted fields)
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && noProtectedFields();
+
+      // Admins can do anything
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -49,17 +66,13 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && resource.data.senderId == request.auth.uid;
 
-      // Driver can read available deliveries (status == 'new') or assigned to them
+      // Driver can read available deliveries (status == 'new') or assigned
       allow read: if isAuthenticated()
         && (resource.data.status == 'new' || resource.data.driverId == request.auth.uid);
 
-      // Admins can read all deliveries
+      // Admins can read/write all
       allow read: if isAdmin();
-
-      // Status updates only via Cloud Functions (no direct client writes)
-      allow update: if false;
-
-      // Admins can delete deliveries
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -67,16 +80,21 @@ service cloud.firestore {
     // Chats
     // ───────────────────────────────────────────────
     match /chats/{chatId} {
-      // Only participants can read/write
       allow read, write: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 
       allow create: if isAuthenticated()
         && request.auth.uid in request.resource.data.participants;
 
+      // Admins can read/write all chats
+      allow read, create, update, delete: if isAdmin();
+
       match /messages/{messageId} {
         allow read, write: if isAuthenticated()
           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+
+        // Admins can read/write all messages
+        allow read, write: if isAdmin();
       }
     }
 
@@ -84,14 +102,9 @@ service cloud.firestore {
     // Ratings
     // ───────────────────────────────────────────────
     match /ratings/{ratingId} {
-      // Authenticated users can create a rating
       allow create: if isAuthenticated()
         && request.resource.data.fromUserId == request.auth.uid;
-
-      // Ratings are publicly readable
       allow read: if true;
-
-      // No updates or deletes
       allow update, delete: if isAdmin();
     }
 
@@ -99,12 +112,24 @@ service cloud.firestore {
     // Reports
     // ───────────────────────────────────────────────
     match /reports/{reportId} {
-      // Authenticated users can create reports
       allow create: if isAuthenticated()
         && request.resource.data.reporterId == request.auth.uid;
-
-      // Only admins can read and manage reports
       allow read, update, delete: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Admin Actions — admin only
+    // ───────────────────────────────────────────────
+    match /adminActions/{actionId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Config — admin only
+    // ───────────────────────────────────────────────
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

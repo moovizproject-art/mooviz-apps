@@ -18,10 +18,21 @@
     "deploy:admin": "firebase deploy --only hosting"
   },
   "devDependencies": {
+    "firebase-tools": "^15.9.0",
     "turbo": "^2.0.0"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "18.2.0",
+      "react-native-reanimated": "3.15.5",
+      "react-native-gesture-handler": "2.20.2",
+      "react-native-maps": "1.18.2",
+      "react-native-screens": "3.35.0",
+      "react-native-safe-area-context": "4.12.0"
+    }
   }
 }

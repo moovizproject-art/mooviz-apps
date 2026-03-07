@@ -10,28 +10,36 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
+import { useRoute } from '@react-navigation/native';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useChat, ChatMessage } from '../../hooks/useChat';
 import { formatTime } from '../../utils/formatters';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { EmptyState } from '../../components/EmptyState';
+import { TabHeader } from '../../components/TabHeader';
+import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
+type ChatRoomParams = RootStackParamList['ChatRoom'];
 
 /**
  * ChatScreen — מסך צ׳אט
  * 1:1 real-time chat with image upload support.
  * צ׳אט בזמן אמת עם אפשרות העלאת תמונות
  */
-export function ChatScreen({ route }: Props): React.JSX.Element {
-  const { chatId, recipientName } = route.params ?? { chatId: '', recipientName: '' };
+export function ChatScreen(): React.JSX.Element {
+  const route = useRoute();
+  const params = (route.params as ChatRoomParams) ?? { chatId: '', recipientName: '' };
+  const { chatId, recipientName } = params;
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const { currentUser } = useAuth();
-  const { messages, sendMessage, sendImage, isLoading } = useChat(chatId);
+  const { messages, sendMessage, sendImage } = useChat(chatId);
+  const drawer = useSettingsDrawer();
 
   const [inputText, setInputText] = useState<string>('');
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
@@ -50,16 +58,16 @@ export function ChatScreen({ route }: Props): React.JSX.Element {
   }, [inputText, chatId, currentUser, sendMessage]);
 
   const handleImagePick = useCallback(async (): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
       quality: 0.7,
     });
 
-    if (!result.canceled && result.assets[0]) {
+    if (!result.didCancel && result.assets?.[0]) {
       await sendImage({
         chatId,
         senderId: currentUser!.uid,
-        imageUri: result.assets[0].uri,
+        imageUri: result.assets[0].uri!,
       });
     }
   }, [chatId, currentUser, sendImage]);
@@ -73,46 +81,52 @@ export function ChatScreen({ route }: Props): React.JSX.Element {
           {!isOwn && (
             <AvatarCircle name={recipientName} size={28} />
           )}
-          <View style={[styles.bubbleContent, isOwn ? styles.ownContent : styles.otherContent]}>
+          <View style={[
+            styles.bubbleContent,
+            isOwn
+              ? [styles.ownContent, { backgroundColor: colors.primary }]
+              : [styles.otherContent, { backgroundColor: colors.surface, borderColor: colors.border }],
+          ]}>
             {item.type === 'image' && item.imageUrl ? (
               <Image source={{ uri: item.imageUrl }} style={styles.chatImage} />
             ) : (
-              <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
+              <Text style={[styles.messageText, { color: colors.textPrimary }, isOwn && styles.ownMessageText]}>
                 {item.text}
               </Text>
             )}
-            <Text style={[styles.timestamp, isOwn && styles.ownTimestamp]}>
+            <Text style={[styles.timestamp, { color: colors.textSecondary }, isOwn && styles.ownTimestamp]}>
               {formatTime(item.createdAt)}
             </Text>
           </View>
         </View>
       );
     },
-    [currentUser, recipientName],
+    [currentUser, recipientName, colors],
   );
 
   // Chat list is rendered bottom-up — show empty state when no messages
   if (!chatId) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <TabHeader title={t('tabs.chat')} onSettingsPress={drawer.open} />
         <EmptyState
           icon="message"
-          message="בחר שיחה"
-          submessage="לחץ על כפתור הצ׳אט ממסך המשלוח"
-          /* Select a chat / Tap chat button from delivery screen */
+          message={t('chat.selectChat')}
+          submessage={t('chat.selectChatHint')}
         />
+        <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={90}
     >
+      <TabHeader title={t('tabs.chat')} onSettingsPress={drawer.open} />
       {/* Messages list */}
-      {/* רשימת הודעות */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -122,39 +136,37 @@ export function ChatScreen({ route }: Props): React.JSX.Element {
         contentContainerStyle={styles.messagesList}
         ListEmptyComponent={
           <View style={styles.emptyChat}>
-            <Text style={styles.emptyChatText}>
-              התחל שיחה עם {recipientName}
+            <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
+              {t('chat.startConversation')} {recipientName}
             </Text>
-            {/* Start a conversation with [name] */}
           </View>
         }
       />
 
       {/* Input bar */}
-      {/* שורת הקלט */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
         <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
           <Text style={styles.imageButtonIcon}>📷</Text>
         </TouchableOpacity>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder="כתוב הודעה..."
-          placeholderTextColor={COLORS.textSecondary}
+          placeholder={t('chat.messagePlaceholder')}
+          placeholderTextColor={colors.inputPlaceholder}
           textAlign="right"
           multiline
           maxLength={1000}
         />
         <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+          style={[styles.sendButton, { backgroundColor: colors.primary }, !inputText.trim() && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim()}
         >
-          <Text style={styles.sendButtonText}>שלח</Text>
-          {/* Send */}
+          <Text style={styles.sendButtonText}>{t('chat.send')}</Text>
         </TouchableOpacity>
       </View>
+      <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
     </KeyboardAvoidingView>
   );
 }
@@ -162,7 +174,6 @@ export function ChatScreen({ route }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   messagesList: {
     paddingHorizontal: 16,
@@ -187,20 +198,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   ownContent: {
-    backgroundColor: COLORS.primary,
     borderBottomLeftRadius: 4,
   },
   otherContent: {
-    backgroundColor: COLORS.surface,
     borderBottomRightRadius: 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   messageText: {
     fontSize: 15,
-    color: COLORS.text,
     lineHeight: 20,
-    textAlign: 'right',
   },
   ownMessageText: {
     color: '#FFFFFF',
@@ -212,7 +218,6 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 11,
-    color: COLORS.textSecondary,
     marginTop: 4,
     textAlign: 'left',
   },
@@ -228,7 +233,6 @@ const styles = StyleSheet.create({
   },
   emptyChatText: {
     fontSize: 15,
-    color: COLORS.textSecondary,
   },
   inputBar: {
     flexDirection: 'row',
@@ -236,8 +240,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface,
     gap: 8,
   },
   imageButton: {
@@ -254,16 +256,12 @@ const styles = StyleSheet.create({
     minHeight: 40,
     maxHeight: 100,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
     fontSize: 15,
-    color: COLORS.text,
-    backgroundColor: COLORS.background,
   },
   sendButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,76 +7,77 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
-import { sendOTP } from '../../services/auth';
+import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
+
+const logo = require('../../assets/logo.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
-type UserRole = 'sender' | 'driver' | 'both';
-
 interface RegisterForm {
   fullName: string;
-  phone: string;
   email: string;
-  city: string;
-  role: UserRole;
-  profilePhotoUri: string | null;
-  kycDocumentUri: string | null;
+  password: string;
+  confirmPassword: string;
+  phone: string;
 }
 
+type FormField = keyof RegisterForm;
+
 /**
- * RegisterScreen — מסך הרשמה
- * Collects name, phone, email, city, role, profile photo, and KYC document.
- * אוסף שם, טלפון, אימייל, עיר, תפקיד, תמונת פרופיל ומסמך KYC
+ * RegisterScreen -- email+password registration with profile data
  */
 export function RegisterScreen({ navigation }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const carAlert = useCarAlert();
   const [form, setForm] = useState<RegisterForm>({
     fullName: '',
-    phone: '',
     email: '',
-    city: '',
-    role: 'sender',
-    profilePhotoUri: null,
-    kycDocumentUri: null,
+    password: '',
+    confirmPassword: '',
+    phone: '',
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof RegisterForm, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
+  const [focusedField, setFocusedField] = useState<FormField | null>(null);
 
-  const updateField = <K extends keyof RegisterForm>(key: K, value: RegisterForm[K]): void => {
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+
+  const updateField = (key: FormField, value: string): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  const pickImage = async (field: 'profilePhotoUri' | 'kycDocumentUri'): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: field === 'profilePhotoUri',
-      aspect: field === 'profilePhotoUri' ? [1, 1] : undefined,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      updateField(field, result.assets[0].uri);
-    }
-  };
-
   const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof RegisterForm, string>> = {};
-    if (!validateRequired(form.fullName)) newErrors.fullName = 'שם מלא נדרש'; // Full name required
-    if (!validatePhone(form.phone)) newErrors.phone = 'מספר טלפון לא תקין'; // Invalid phone
-    if (!validateEmail(form.email)) newErrors.email = 'אימייל לא תקין'; // Invalid email
-    if (!validateRequired(form.city)) newErrors.city = 'עיר נדרשת'; // City required
+    const newErrors: Partial<Record<FormField, string>> = {};
 
-    // KYC document required for drivers
-    if ((form.role === 'driver' || form.role === 'both') && !form.kycDocumentUri) {
-      newErrors.kycDocumentUri = 'מסמך זיהוי נדרש לנהגים'; // KYC required for drivers
+    if (!validateRequired(form.fullName)) {
+      newErrors.fullName = t('auth.fullNameRequired');
+    }
+    if (!validateEmail(form.email)) {
+      newErrors.email = t('auth.invalidEmail');
+    }
+    if (!form.password || form.password.length < 8) {
+      newErrors.password = t('auth.passwordTooShort');
+    }
+    if (form.password !== form.confirmPassword) {
+      newErrors.confirmPassword = t('auth.passwordMismatch');
+    }
+    if (!validatePhone(form.phone)) {
+      newErrors.phone = t('auth.invalidPhone');
     }
 
     setErrors(newErrors);
@@ -88,291 +89,248 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
-      const verificationId = await sendOTP(form.phone);
+
+      const credential = await registerWithEmail(form.email, form.password);
+
+      await createUserDocument(credential.user.uid, {
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+      });
+
       navigation.navigate('OTPVerification', {
         phoneNumber: form.phone,
-        verificationId,
+        verificationId: '',
+        mode: 'register',
       });
-    } catch (err) {
-      Alert.alert('שגיאה', 'לא ניתן להשלים את ההרשמה. נסה שוב.');
-      // Error: Unable to complete registration
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code) {
+        carAlert.show('error', t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
+      } else {
+        carAlert.show('error', t('auth.registerError'), t('auth.registerError'));
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const roleOptions: { value: UserRole; label: string }[] = [
-    { value: 'sender', label: 'שולח' /* Sender */ },
-    { value: 'driver', label: 'נהג' /* Driver */ },
-    { value: 'both', label: 'שניהם' /* Both */ },
-  ];
+  const renderInput = (
+    field: FormField,
+    placeholder: string,
+    options?: {
+      secureTextEntry?: boolean;
+      keyboardType?: 'email-address' | 'phone-pad' | 'default';
+      autoComplete?: string;
+      autoCapitalize?: 'none' | 'sentences';
+      ref?: React.RefObject<TextInput>;
+      nextRef?: React.RefObject<TextInput>;
+      returnKeyType?: 'next' | 'done';
+      onSubmitEditing?: () => void;
+    },
+  ) => (
+    <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.inputBg }, focusedField === field && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
+      <TextInput
+        ref={options?.ref}
+        style={[styles.input, { color: colors.textPrimary }]}
+        value={form[field]}
+        onChangeText={(v) => updateField(field, v)}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        secureTextEntry={options?.secureTextEntry}
+        keyboardType={options?.keyboardType || 'default'}
+        autoCapitalize={options?.autoCapitalize || 'sentences'}
+        textAlign="right"
+        editable={!isLoading}
+        onFocus={() => {
+          setFocusedField(field);
+        }}
+        onBlur={() => setFocusedField(null)}
+        returnKeyType={options?.returnKeyType || 'next'}
+        onSubmitEditing={options?.onSubmitEditing || (() => options?.nextRef?.current?.focus())}
+      />
+    </View>
+  );
+
+  const scrollRef = useRef<ScrollView>(null);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
-      {/* כותרת */}
-      <Text style={styles.title}>הרשמה ל-MOOVIZ</Text>
-      <Text style={styles.subtitle}>הצטרף לקהילת המשלוחים</Text>
-      {/* Join the delivery community */}
-
-      {/* Full name */}
-      {/* שם מלא */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>שם מלא</Text>
-        <TextInput
-          style={styles.input}
-          value={form.fullName}
-          onChangeText={(v) => updateField('fullName', v)}
-          placeholder="ישראל ישראלי"
-          textAlign="right"
-        />
-        {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
+      <View style={styles.headerSection}>
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.registerSubtitle')}</Text>
       </View>
 
-      {/* Phone */}
-      {/* טלפון */}
+      {/* Full name */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>מספר טלפון</Text>
-        <TextInput
-          style={styles.input}
-          value={form.phone}
-          onChangeText={(v) => updateField('phone', v)}
-          placeholder="+972501234567"
-          keyboardType="phone-pad"
-          textAlign="right"
-        />
-        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.fullName')}</Text>
+        {renderInput('fullName', 'ישראל ישראלי', {
+          nextRef: emailRef,
+        })}
+        {errors.fullName && <Text style={[styles.errorText, { color: colors.error }]}>{errors.fullName}</Text>}
       </View>
 
       {/* Email */}
-      {/* אימייל */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>אימייל</Text>
-        <TextInput
-          style={styles.input}
-          value={form.email}
-          onChangeText={(v) => updateField('email', v)}
-          placeholder="email@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          textAlign="right"
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.email')}</Text>
+        {renderInput('email', 'email@example.com', {
+          keyboardType: 'email-address',
+          autoCapitalize: 'none',
+          ref: emailRef,
+          nextRef: passwordRef,
+        })}
+        {errors.email && <Text style={[styles.errorText, { color: colors.error }]}>{errors.email}</Text>}
       </View>
 
-      {/* City */}
-      {/* עיר */}
+      {/* Password */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>עיר</Text>
-        <TextInput
-          style={styles.input}
-          value={form.city}
-          onChangeText={(v) => updateField('city', v)}
-          placeholder="תל אביב"
-          textAlign="right"
-        />
-        {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.password')}</Text>
+        {renderInput('password', t('auth.password'), {
+          secureTextEntry: true,
+          ref: passwordRef,
+          nextRef: confirmRef,
+        })}
+        {errors.password && <Text style={[styles.errorText, { color: colors.error }]}>{errors.password}</Text>}
       </View>
 
-      {/* Role selection */}
-      {/* בחירת תפקיד */}
+      {/* Confirm password */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תפקיד</Text>
-        <View style={styles.roleRow}>
-          {roleOptions.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.roleChip, form.role === opt.value && styles.roleChipActive]}
-              onPress={() => updateField('role', opt.value)}
-            >
-              <Text
-                style={[
-                  styles.roleChipText,
-                  form.role === opt.value && styles.roleChipTextActive,
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.confirmPassword')}</Text>
+        {renderInput('confirmPassword', t('auth.confirmPassword'), {
+          secureTextEntry: true,
+          ref: confirmRef,
+          nextRef: phoneRef,
+        })}
+        {errors.confirmPassword && <Text style={[styles.errorText, { color: colors.error }]}>{errors.confirmPassword}</Text>}
       </View>
 
-      {/* Profile photo */}
-      {/* תמונת פרופיל */}
+      {/* Phone */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>תמונת פרופיל</Text>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('profilePhotoUri')}>
-          {form.profilePhotoUri ? (
-            <Image source={{ uri: form.profilePhotoUri }} style={styles.photoPreview} />
-          ) : (
-            <Text style={styles.uploadButtonText}>בחר תמונה</Text>
-          )}
-        </TouchableOpacity>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.phone')}</Text>
+        {renderInput('phone', '050-1234567', {
+          keyboardType: 'phone-pad',
+          ref: phoneRef,
+          returnKeyType: 'done',
+          onSubmitEditing: handleRegister,
+        })}
+        {errors.phone && <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>}
       </View>
-
-      {/* KYC document — required for drivers */}
-      {/* מסמך זיהוי — נדרש לנהגים */}
-      {(form.role === 'driver' || form.role === 'both') && (
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>מסמך זיהוי (תעודת זהות / רישיון נהיגה)</Text>
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={() => pickImage('kycDocumentUri')}
-          >
-            {form.kycDocumentUri ? (
-              <Text style={styles.uploadButtonTextDone}>מסמך הועלה בהצלחה ✓</Text>
-            ) : (
-              <Text style={styles.uploadButtonText}>העלה מסמך</Text>
-            )}
-          </TouchableOpacity>
-          {errors.kycDocumentUri && <Text style={styles.errorText}>{errors.kycDocumentUri}</Text>}
-        </View>
-      )}
 
       {/* Submit */}
       <TouchableOpacity
-        style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+        style={[styles.submitButton, { backgroundColor: colors.primary, shadowColor: colors.primary }, isLoading && styles.submitButtonDisabled]}
         onPress={handleRegister}
         disabled={isLoading}
+        activeOpacity={0.85}
       >
         <Text style={styles.submitButtonText}>
-          {isLoading ? 'נרשם...' : 'הירשם'}
-          {/* Registering... / Register */}
+          {isLoading ? t('auth.registering') : t('auth.register')}
         </Text>
       </TouchableOpacity>
 
       {/* Back to login */}
-      {/* חזרה להתחברות */}
       <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
-        <Text style={styles.backLinkText}>כבר רשום? התחבר</Text>
-        {/* Already registered? Log in */}
+        <Text style={[styles.backLinkText, { color: colors.textSecondary }]}>
+          {t('auth.alreadyRegistered')} <Text style={[styles.backLinkBold, { color: colors.primary }]}>{t('auth.loginNow')}</Text>
+        </Text>
       </TouchableOpacity>
+
+      <View style={styles.keyboardSpacer} />
     </ScrollView>
+    <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   contentContainer: {
-    padding: 24,
+    paddingHorizontal: 28,
     paddingBottom: 48,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.text,
-    textAlign: 'center',
-    marginTop: 48,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
+  headerSection: {
+    alignItems: 'center',
+    paddingTop: 50,
     marginBottom: 32,
   },
+  logo: {
+    width: 200,
+    height: 70,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+  },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 6,
-    textAlign: 'right',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    borderWidth: 1,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 16,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
+    writingDirection: 'rtl',
   },
   errorText: {
-    color: COLORS.error,
     fontSize: 13,
     marginTop: 4,
-    textAlign: 'right',
-  },
-  roleRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  roleChip: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  roleChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  roleChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  roleChipTextActive: {
-    color: '#FFFFFF',
-  },
-  uploadButton: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    borderStyle: 'dashed',
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  uploadButtonText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  uploadButtonTextDone: {
-    fontSize: 14,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  photoPreview: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
   },
   submitButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   backLink: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 20,
   },
   backLinkText: {
     fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
+  },
+  backLinkBold: {
+    fontWeight: '700',
+  },
+  keyboardSpacer: {
+    height: 120,
   },
 });

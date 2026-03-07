@@ -9,7 +9,7 @@ export const STATUS_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
   new: ["pending", "cancelled"],
   pending: ["waiting", "new", "cancelled"],
   waiting: ["picked_up", "cancelled"],
-  picked_up: ["delivered", "cancelled"],
+  picked_up: ["delivered"],
   delivered: ["completed_paid"],
   cancelled: [],
   completed_paid: [],
@@ -28,7 +28,6 @@ export const TRANSITION_ACTORS: Record<string, Array<UserRole | "system">> = {
   "waiting -> picked_up": ["driver"],
   "waiting -> cancelled": ["sender", "driver"],
   "picked_up -> delivered": ["driver"],
-  "picked_up -> cancelled": ["sender", "driver"],
   "delivered -> completed_paid": ["sender", "driver", "system"],
 };
 

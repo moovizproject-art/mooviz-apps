@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subDays, startOfDay, format } from 'date-fns';
+import { getRecentDeliveries, type Delivery } from '../services/deliveries';
+import { getRecentUsers, getMigratedUsersCount, type AppUser } from '../services/users';
 
 export interface DashboardStats {
   totalDeliveries: number;
@@ -32,13 +34,15 @@ export interface StatusDistribution {
   count: number;
 }
 
-async function fetchCount(collectionName: string, ...constraints: Parameters<typeof where>[]): Promise<number> {
-  const ref = collection(db, collectionName);
-  const q = constraints.length > 0
-    ? query(ref, ...constraints.map((c) => where(...c)))
-    : query(ref);
-  const snapshot = await getCountFromServer(q);
-  return snapshot.data().count;
+export interface MigrationStats {
+  totalMigrated: number;
+  pendingPassword: number;
+  missingPhone: number;
+}
+
+export interface RecentActivity {
+  recentDeliveries: Delivery[];
+  recentUsers: AppUser[];
 }
 
 export function useStats() {
@@ -59,10 +63,12 @@ export function useStats() {
       ] = await Promise.all([
         getCountFromServer(query(deliveriesRef)),
         getCountFromServer(
-          query(deliveriesRef, where('status', 'in', ['new', 'accepted', 'picked_up', 'in_transit'])),
+          query(deliveriesRef, where('status', 'in', ['new', 'pending', 'waiting', 'picked_up'])),
         ),
         getCountFromServer(query(usersRef)),
-        getCountFromServer(query(usersRef, where('role', 'in', ['driver', 'both']), where('status', '==', 'active'))),
+        getCountFromServer(
+          query(usersRef, where('role', 'in', ['driver', 'both']), where('status', '==', 'active')),
+        ),
         getCountFromServer(query(usersRef, where('kycStatus', '==', 'pending'))),
         getCountFromServer(query(reportsRef, where('status', '==', 'open'))),
       ]);
@@ -70,11 +76,11 @@ export function useStats() {
       // Estimate revenue from completed deliveries
       const completedQuery = query(
         deliveriesRef,
-        where('status', 'in', ['delivered', 'confirmed']),
+        where('status', 'in', ['delivered', 'completed_paid']),
       );
       const completedSnap = await getDocs(completedQuery);
       const totalRevenue = completedSnap.docs.reduce(
-        (sum, doc) => sum + (doc.data().price ?? 0),
+        (sum, docSnap) => sum + (docSnap.data().price ?? 0),
         0,
       );
 
@@ -110,8 +116,8 @@ export function useDeliveryChart(days: number = 14) {
         countsByDate.set(date, 0);
       }
 
-      snapshot.docs.forEach((doc) => {
-        const createdAt = doc.data().createdAt as Timestamp;
+      snapshot.docs.forEach((docSnap) => {
+        const createdAt = docSnap.data().createdAt as Timestamp;
         const dateKey = format(createdAt.toDate(), 'MMM dd');
         countsByDate.set(dateKey, (countsByDate.get(dateKey) ?? 0) + 1);
       });
@@ -126,7 +132,7 @@ export function useStatusDistribution() {
   return useQuery<StatusDistribution[]>({
     queryKey: ['status-distribution'],
     queryFn: async () => {
-      const statuses = ['new', 'accepted', 'picked_up', 'in_transit', 'delivered', 'confirmed', 'cancelled', 'disputed'];
+      const statuses = ['new', 'pending', 'waiting', 'picked_up', 'delivered', 'completed_paid', 'cancelled'];
       const deliveriesRef = collection(db, 'deliveries');
 
       const counts = await Promise.all(
@@ -140,6 +146,28 @@ export function useStatusDistribution() {
 
       return counts.filter((c) => c.count > 0);
     },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRecentActivity() {
+  return useQuery<RecentActivity>({
+    queryKey: ['recent-activity'],
+    queryFn: async () => {
+      const [recentDeliveries, recentUsers] = await Promise.all([
+        getRecentDeliveries(10),
+        getRecentUsers(10),
+      ]);
+      return { recentDeliveries, recentUsers };
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useMigrationStats() {
+  return useQuery<MigrationStats>({
+    queryKey: ['migration-stats'],
+    queryFn: getMigratedUsersCount,
     staleTime: 5 * 60 * 1000,
   });
 }

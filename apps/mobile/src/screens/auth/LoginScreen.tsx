@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,49 +7,116 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ScrollView,
+  Animated,
+  Easing,
+  useWindowDimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
-import { validatePhone, validateEmail } from '../../utils/validators';
-import { sendOTP } from '../../services/auth';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
+import firestore from '@react-native-firebase/firestore';
+import { useAuth } from '../../hooks/useAuth';
+import { validateEmail } from '../../utils/validators';
+import { signInWithEmail, mapFirebaseAuthError } from '../../services/auth';
+
+const logo = require('../../assets/logo.png');
+const carImage = require('../../assets/car.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 /**
- * LoginScreen — מסך התחברות
- * Phone number or email input with OTP trigger.
- * שדה מספר טלפון / אימייל ושליחת קוד אימות
+ * LoginScreen -- email+password login
  */
 export function LoginScreen({ navigation }: Props): React.JSX.Element {
-  const [phoneOrEmail, setPhoneOrEmail] = useState<string>('');
+  const { colors } = useTheme();
+  const { t, locale, setLocale } = useI18n();
+  const { setForceOtp } = useAuth();
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  // Under RTL, absolute pos defaults to right edge. translateX: 0 = right edge, negative = leftward.
+  const truckX = useRef(new Animated.Value(45)).current; // start just off visible right edge
+  const truckBounce = useRef(new Animated.Value(0)).current;
 
-  const handleSendOTP = async (): Promise<void> => {
+  useEffect(() => {
+    const offRight = 45;                     // just past visible right
+    const offLeft = -(screenWidth + 45);     // just past visible left
+    truckX.setValue(offRight);
+    const drive = Animated.loop(
+      Animated.sequence([
+        Animated.timing(truckX, {
+          toValue: offLeft,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: false,
+        }),
+        Animated.timing(truckX, {
+          toValue: offRight,
+          duration: 0,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    const bounce = Animated.loop(
+      Animated.sequence([
+        Animated.timing(truckBounce, {
+          toValue: -3,
+          duration: 120,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(truckBounce, {
+          toValue: 0,
+          duration: 120,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    drive.start();
+    bounce.start();
+    return () => { drive.stop(); bounce.stop(); };
+  }, [truckX, truckBounce, screenWidth]);
+
+  const handleLogin = async (): Promise<void> => {
     setError(null);
 
-    // Validate input — phone (E.164) or email
-    const isPhone = phoneOrEmail.startsWith('+') || /^\d/.test(phoneOrEmail);
-    if (isPhone && !validatePhone(phoneOrEmail)) {
-      setError('מספר טלפון לא תקין'); // Invalid phone number
+    if (!validateEmail(email)) {
+      setError(t('auth.invalidEmail'));
       return;
     }
-    if (!isPhone && !validateEmail(phoneOrEmail)) {
-      setError('כתובת אימייל לא תקינה'); // Invalid email
+
+    if (!password || password.length < 8) {
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
     try {
       setIsLoading(true);
-      const verificationId = await sendOTP(phoneOrEmail);
-      navigation.navigate('OTPVerification', {
-        phoneNumber: phoneOrEmail,
-        verificationId,
-      });
-    } catch (err) {
-      setError('שגיאה בשליחת קוד אימות. נסה שוב.'); // Error sending OTP
+      // Set flag BEFORE signIn so RootNavigator knows OTP is required
+      setForceOtp(true);
+      const cred = await signInWithEmail(email, password);
+      // Stamp login time + clear OTP timestamp
+      await firestore().collection('users').doc(cred.user.uid).update({
+        lastLoginAt: firestore.FieldValue.serverTimestamp(),
+        lastOtpAt: firestore.FieldValue.delete(),
+      }).catch(() => {});
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code) {
+        setError(mapFirebaseAuthError(firebaseError.code));
+      } else {
+        setError(t('auth.loginError'));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -57,62 +124,133 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Logo / Brand section */}
-        {/* סקשן לוגו / מותג */}
         <View style={styles.brandSection}>
-          <Text style={styles.brandTitle}>MOOVIZ</Text>
-          <Text style={styles.brandSubtitle}>
-            משלוחים קהילתיים — פשוט, מהיר, אמין
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
+          <Text style={[styles.brandSubtitle, { color: colors.textSecondary }]}>
+            {t('auth.brandSubtitle')}
           </Text>
-          {/* Community deliveries — simple, fast, reliable */}
         </View>
 
-        {/* Input section */}
-        {/* סקשן קלט */}
-        <View style={styles.inputSection}>
-          <Text style={styles.label}>טלפון או אימייל</Text>
-          {/* Phone or Email */}
-          <TextInput
-            style={styles.input}
-            value={phoneOrEmail}
-            onChangeText={setPhoneOrEmail}
-            placeholder="050-1234567 או email@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textAlign="right"
-            editable={!isLoading}
-          />
+        <View style={styles.spacer} />
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+        {/* Animated truck — translateX is NOT flipped by RTL, unlike 'left' */}
+        <View style={styles.truckTrack}>
+          <Animated.View
+            style={[
+              styles.truckWrap,
+              { transform: [{ translateX: truckX }, { translateY: truckBounce }] },
+            ]}
+          >
+            <Image
+              source={carImage}
+              style={styles.truckImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        </View>
+
+        <View style={styles.spacer} />
+
+        {/* Input section */}
+        <View style={styles.inputSection}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.email')}</Text>
+          <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.surface }, emailFocused && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary }]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="email@example.com"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textAlign="right"
+              editable={!isLoading}
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
+          </View>
+
+          <Text style={[styles.label, styles.labelSpacing, { color: colors.textPrimary }]}>{t('auth.password')}</Text>
+          <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.surface }, passwordFocused && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
+            <TextInput
+              ref={passwordRef}
+              style={[styles.input, { color: colors.textPrimary }]}
+              value={password}
+              onChangeText={setPassword}
+              placeholder={t('auth.password')}
+              placeholderTextColor={colors.textTertiary}
+              secureTextEntry
+              autoComplete="password"
+              textAlign="right"
+              editable={!isLoading}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+            />
+          </View>
+
+          {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
 
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleSendOTP}
-            disabled={isLoading || !phoneOrEmail.trim()}
+            style={[styles.button, { backgroundColor: colors.primary, shadowColor: colors.primary }, isLoading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading || !email.trim() || !password}
+            activeOpacity={0.85}
           >
             <Text style={styles.buttonText}>
-              {isLoading ? 'שולח...' : 'שלח קוד אימות'}
-              {/* Sending... / Send verification code */}
+              {isLoading ? t('auth.loggingIn') : t('auth.login')}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Forgot password */}
+          <TouchableOpacity
+            style={styles.forgotLink}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={[styles.forgotLinkText, { color: colors.primary }]}>{t('auth.forgotPassword')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Language toggle — Hebrew first so it appears on the right under RTL */}
+        <View style={styles.langRow}>
+          <TouchableOpacity onPress={() => setLocale('he')}>
+            <Text style={[styles.langText, { color: colors.textTertiary }, locale === 'he' && { color: colors.primary, fontWeight: '700' }]}>
+              עב
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.langDivider, { color: colors.textTertiary }]}>|</Text>
+          <TouchableOpacity onPress={() => setLocale('en')}>
+            <Text style={[styles.langText, { color: colors.textTertiary }, locale === 'en' && { color: colors.primary, fontWeight: '700' }]}>
+              EN
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Register link */}
-        {/* קישור להרשמה */}
         <TouchableOpacity
           style={styles.registerLink}
           onPress={() => navigation.navigate('Register')}
         >
-          <Text style={styles.registerText}>
-            עדיין לא רשום? <Text style={styles.registerTextBold}>הירשם עכשיו</Text>
+          <Text style={[styles.registerText, { color: colors.textSecondary }]}>
+            {t('auth.noAccount')} <Text style={[styles.registerTextBold, { color: colors.primary }]}>{t('auth.registerNow')}</Text>
           </Text>
-          {/* Not registered? Register now */}
         </TouchableOpacity>
-      </View>
+
+        <View style={styles.spacer} />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -120,80 +258,120 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   brandSection: {
     alignItems: 'center',
-    marginBottom: 48,
   },
-  brandTitle: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: 2,
+  truckTrack: {
+    height: 50,
+    overflow: 'hidden',
+    marginVertical: 8,
+    marginHorizontal: -28,
+  },
+  truckWrap: {
+    position: 'absolute',
+  },
+  truckImage: {
+    width: 45,
+    height: 45,
+    transform: [{ scaleX: -1 }],
+  },
+  spacer: {
+    flex: 1,
+  },
+  logo: {
+    width: 280,
+    height: 140,
+    marginBottom: 8,
   },
   brandSubtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginTop: 8,
+    fontSize: 15,
+    marginTop: 6,
     textAlign: 'center',
   },
   inputSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
     marginBottom: 8,
-    textAlign: 'right',
+  },
+  labelSpacing: {
+    marginTop: 16,
+  },
+  inputWrapper: {
+    borderWidth: 1,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
+    writingDirection: 'rtl',
   },
   errorText: {
-    color: COLORS.error,
     fontSize: 13,
     marginTop: 8,
-    textAlign: 'right',
   },
   button: {
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
-  registerLink: {
+  forgotLink: {
     alignItems: 'center',
     marginTop: 16,
   },
+  forgotLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  langRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 12,
+  },
+  langText: {
+    fontSize: 15,
+  },
+  langDivider: {
+    fontSize: 15,
+  },
+  registerLink: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
   registerText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
   },
   registerTextBold: {
-    color: COLORS.primary,
     fontWeight: '700',
   },
 });

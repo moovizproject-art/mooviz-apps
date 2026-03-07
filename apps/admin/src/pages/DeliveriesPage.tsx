@@ -4,10 +4,12 @@ import { format } from 'date-fns';
 import DataTable, { type Column } from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import { useDeliveries } from '../hooks/useFirestore';
+import { useI18n } from '../i18n/I18nContext';
 import type { Delivery, DeliveryStatus } from '../services/deliveries';
 
 export default function DeliveriesPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | ''>('');
   const [cityFilter, setCityFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -22,61 +24,77 @@ export default function DeliveriesPage() {
 
   const columns: Column<Delivery>[] = [
     {
-      key: 'title',
-      label: 'Delivery',
+      key: 'id',
+      label: t('deliveries.id'),
       render: (d) => (
-        <div>
-          <p className="font-medium text-gray-900">{d.title}</p>
-          <p className="text-xs text-gray-500">{d.id.slice(0, 8)}...</p>
-        </div>
+        <span className="font-mono text-xs text-gray-500">{d.id.slice(0, 8)}...</span>
       ),
     },
     {
       key: 'senderName',
-      label: 'Sender',
+      label: t('deliveries.senderCol'),
       sortable: true,
+      render: (d) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/users/${d.senderId}`);
+          }}
+          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          {d.senderName || t('deliveries.unknown')}
+        </button>
+      ),
     },
     {
       key: 'driverName',
-      label: 'Driver',
-      render: (d) => (
-        <span className={d.driverName ? 'text-gray-900' : 'text-gray-400'}>
-          {d.driverName ?? 'Unassigned'}
-        </span>
+      label: t('deliveries.driverCol'),
+      render: (d) => d.driverId ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/users/${d.driverId}`);
+          }}
+          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          {d.driverName || t('deliveries.unknown')}
+        </button>
+      ) : (
+        <span className="text-gray-400">{t('deliveries.unassigned')}</span>
       ),
     },
     {
       key: 'pickup.city',
-      label: 'Route',
+      label: t('deliveries.route'),
       render: (d) => (
         <span className="text-sm">
-          {d.pickup.city} &rarr; {d.destination.city}
+          {d.pickup.city || '-'} &rarr; {d.destination.city || '-'}
         </span>
       ),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('deliveries.status'),
       render: (d) => <StatusBadge status={d.status} />,
     },
     {
       key: 'price',
-      label: 'Price',
+      label: t('deliveries.price'),
       sortable: true,
       render: (d) => (
         <span className="font-medium">
-          {d.currency} {d.price.toFixed(2)}
+          {d.price.toFixed(0)} {d.currency}
         </span>
       ),
       className: 'text-right',
     },
     {
       key: 'createdAt',
-      label: 'Date',
+      label: t('deliveries.created'),
       sortable: true,
       render: (d) => (
         <span className="text-sm text-gray-500">
-          {format(d.createdAt.toDate(), 'MMM d, yyyy')}
+          {d.createdAt ? format(d.createdAt.toDate(), 'MMM d, yyyy') : '-'}
         </span>
       ),
     },
@@ -85,36 +103,35 @@ export default function DeliveriesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Deliveries</h2>
-        <p className="mt-1 text-sm text-gray-500">View and manage all platform deliveries</p>
+        <h2 className="text-2xl font-bold text-gray-900">{t('deliveries.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('deliveries.subtitle')}</p>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-500">Status</label>
+          <label className="block text-xs font-medium text-gray-500">{t('deliveries.status')}</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as DeliveryStatus | '')}
             className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           >
-            <option value="">All</option>
-            <option value="new">New</option>
-            <option value="accepted">Accepted</option>
-            <option value="picked_up">Picked Up</option>
-            <option value="in_transit">In Transit</option>
-            <option value="delivered">Delivered</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="disputed">Disputed</option>
+            <option value="">{t('deliveries.all')}</option>
+            <option value="new">{t('deliveries.new')}</option>
+            <option value="pending">{t('deliveries.pending')}</option>
+            <option value="waiting">{t('deliveries.waiting')}</option>
+            <option value="picked_up">{t('deliveries.pickedUp')}</option>
+            <option value="delivered">{t('deliveries.delivered')}</option>
+            <option value="completed_paid">{t('deliveries.completed')}</option>
+            <option value="cancelled">{t('deliveries.cancelled')}</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500">City</label>
+          <label className="block text-xs font-medium text-gray-500">{t('deliveries.city')}</label>
           <input
             type="text"
-            placeholder="Filter by city"
+            placeholder={t('deliveries.cityPlaceholder')}
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
@@ -122,7 +139,7 @@ export default function DeliveriesPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500">From</label>
+          <label className="block text-xs font-medium text-gray-500">{t('deliveries.from')}</label>
           <input
             type="date"
             value={dateFrom}
@@ -132,7 +149,7 @@ export default function DeliveriesPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500">To</label>
+          <label className="block text-xs font-medium text-gray-500">{t('deliveries.to')}</label>
           <input
             type="date"
             value={dateTo}
@@ -151,7 +168,7 @@ export default function DeliveriesPage() {
             }}
             className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
           >
-            Clear filters
+            {t('deliveries.clearFilters')}
           </button>
         )}
       </div>
@@ -164,7 +181,7 @@ export default function DeliveriesPage() {
         searchable
         searchFields={['title', 'senderName', 'driverName']}
         loading={isLoading}
-        emptyMessage="No deliveries found"
+        emptyMessage={t('deliveries.noDeliveries')}
       />
     </div>
   );

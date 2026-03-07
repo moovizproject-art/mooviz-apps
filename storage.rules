@@ -23,11 +23,38 @@ service firebase.storage {
     }
 
     // ───────────────────────────────────────────────
-    // Profile Photos
-    // Owner can write, public read
+    // Profile Photos — Encrypted at rest
+    // Owner uploads raw to temp path, Cloud Function encrypts.
+    // Encrypted file (profile.enc) readable only by admin SDK.
     // ───────────────────────────────────────────────
+    match /users/{userId}/profile-temp.jpg {
+      // Owner can upload the temp file (Cloud Function picks it up)
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+      // No direct read — Cloud Function handles via admin SDK
+      allow read: if false;
+    }
+
+    // Profile photo — direct upload (before encryption Cloud Functions are deployed)
+    match /users/{userId}/profile.jpg {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
+    match /users/{userId}/profile.enc {
+      // Encrypted files: no client read/write
+      // Only Cloud Functions (admin SDK) access these
+      allow read, write: if false;
+    }
+
+    // Legacy: old unencrypted profile photos (migration)
     match /profiles/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && request.auth.uid == userId
         && isImage()
@@ -35,21 +62,46 @@ service firebase.storage {
     }
 
     // ───────────────────────────────────────────────
+    // Delivery Item Photos
+    // Sender uploads item photo when creating delivery
+    // ───────────────────────────────────────────────
+    match /deliveries/{senderId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && request.auth.uid == senderId
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
+    // ───────────────────────────────────────────────
     // Delivery Proof Photos
-    // Participants (sender/driver) can write, admin can read
+    // Participants (sender/driver) can write, read requires auth
     // ───────────────────────────────────────────────
     match /deliveries/{deliveryId}/proof/{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && isImage()
         && request.resource.size < maxSize();
-      allow read: if isAdmin();
     }
 
     // ───────────────────────────────────────────────
-    // KYC Documents
-    // Owner can write, admin can read
+    // KYC Documents — Encrypted at rest
+    // Owner uploads temp, Cloud Function encrypts.
     // ───────────────────────────────────────────────
+    match /kyc/{userId}/temp/{allPaths=**} {
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isImage()
+        && request.resource.size < maxSize();
+      allow read: if false;
+    }
+
+    match /kyc/{userId}/encrypted/{allPaths=**} {
+      // Only Cloud Functions (admin SDK)
+      allow read, write: if false;
+    }
+
+    // Legacy KYC path
     match /kyc/{userId}/{allPaths=**} {
       allow write: if isAuthenticated()
         && request.auth.uid == userId

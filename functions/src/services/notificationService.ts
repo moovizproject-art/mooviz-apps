@@ -17,6 +17,7 @@ export async function sendPushNotification(
   body: string,
   data?: Record<string, string>
 ): Promise<boolean> {
+  let fcmToken: string | undefined;
   try {
     const userDoc = await db.collection("users").doc(userId).get();
     if (!userDoc.exists) {
@@ -25,7 +26,8 @@ export async function sendPushNotification(
     }
 
     const userData = userDoc.data();
-    const fcmToken = userData?.fcmToken;
+    const tokens = userData?.fcmTokens;
+    fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
 
     if (!fcmToken || typeof fcmToken !== "string") {
       console.warn(`sendPushNotification: no FCM token for user ${userId}`);
@@ -67,7 +69,7 @@ export async function sendPushNotification(
       err.code === "messaging/registration-token-not-registered"
     ) {
       console.warn(`Invalid FCM token for user ${userId}, clearing token`);
-      await db.collection("users").doc(userId).update({ fcmToken: "" });
+      await db.collection("users").doc(userId).update({ fcmTokens: admin.firestore.FieldValue.arrayRemove(fcmToken) });
     } else {
       console.error(`Failed to send push notification to user ${userId}:`, error);
     }

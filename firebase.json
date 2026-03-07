@@ -12,7 +12,12 @@
   "functions": {
     "source": "functions",
     "codebase": "default",
-    "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
+    "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"],
+    "predeploy": [
+      "cd shared && npx tsc",
+      "rm -rf functions/shared-bundle && cp -r shared functions/shared-bundle",
+      "cd functions && npm run build"
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",

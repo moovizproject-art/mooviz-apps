@@ -1,8 +1,12 @@
-import React, { useRef, useState } from 'react';
+/**
+ * ProofCamera — Camera component for pickup/delivery proof photos.
+ * Uses react-native-image-picker (no vision-camera dependency).
+ */
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
-import { CameraView, useCameraPermissions, CameraCapturedPicture } from 'expo-camera';
-
-import { COLORS } from '../constants/colors';
+import { launchCamera } from 'react-native-image-picker';
+import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 
 interface ProofCameraProps {
   visible: boolean;
@@ -11,114 +15,100 @@ interface ProofCameraProps {
   label?: string;
 }
 
-/**
- * ProofCamera — מצלמת הוכחה
- * Camera component for pickup/delivery proof photos.
- * רכיב מצלמה לצילום הוכחת איסוף/מסירה
- */
 export function ProofCamera({
   visible,
   onCapture,
   onClose,
   label,
 }: ProofCameraProps): React.JSX.Element {
-  const cameraRef = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
 
-  const handleCapture = async (): Promise<void> => {
-    if (!cameraRef.current) return;
-
-    const photo = await cameraRef.current.takePictureAsync({
+  const handleLaunchCamera = useCallback(async (): Promise<void> => {
+    const result = await launchCamera({
+      mediaType: 'photo',
       quality: 0.8,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      saveToPhotos: false,
     });
 
-    if (photo?.uri) {
-      setCapturedUri(photo.uri);
+    if (result.didCancel || !result.assets?.[0]?.uri) {
+      if (!capturedUri) onClose();
+      return;
     }
-  };
+    setCapturedUri(result.assets[0].uri);
+  }, [capturedUri, onClose]);
 
-  const handleConfirm = (): void => {
+  const handleConfirm = useCallback((): void => {
     if (capturedUri) {
       onCapture(capturedUri);
       setCapturedUri(null);
     }
-  };
+  }, [capturedUri, onCapture]);
 
-  const handleRetake = (): void => {
+  const handleRetake = useCallback((): void => {
     setCapturedUri(null);
-  };
+    handleLaunchCamera();
+  }, [handleLaunchCamera]);
+
+  // Auto-launch camera when modal opens
+  React.useEffect(() => {
+    if (visible && !capturedUri) {
+      handleLaunchCamera();
+    }
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!visible) return <></>;
 
-  // Permission not granted
-  if (!permission?.granted) {
-    return (
-      <Modal animationType="slide" visible={visible}>
-        <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>נדרשת הרשאת מצלמה</Text>
-          {/* Camera permission required */}
-          <Text style={styles.permissionMessage}>
-            יש לאשר גישה למצלמה לצורך צילום הוכחה
-          </Text>
-          {/* Camera access needed for proof photo */}
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <Text style={styles.permissionButtonText}>אשר גישה</Text>
-            {/* Grant access */}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>ביטול</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    );
-  }
-
   return (
-    <Modal animationType="slide" visible={visible}>
-      <View style={styles.container}>
-        {/* Label overlay */}
+    <Modal animationType="slide" visible={visible} onRequestClose={onClose}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {label && (
           <View style={styles.labelOverlay}>
-            <Text style={styles.labelText}>{label}</Text>
+            <Text style={[styles.labelText, { color: colors.textPrimary }]}>{label}</Text>
           </View>
         )}
 
         {capturedUri ? (
-          // Preview captured photo
-          // תצוגה מקדימה של התמונה שצולמה
           <View style={styles.previewContainer}>
             <Image source={{ uri: capturedUri }} style={styles.preview} />
-            <View style={styles.previewActions}>
-              <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
-                <Text style={styles.retakeButtonText}>צלם שוב</Text>
-                {/* Retake */}
+            <View style={[styles.previewActions, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.surface }]}
+                onPress={handleRetake}
+              >
+                <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>
+                  {t('common.retake')}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-                <Text style={styles.confirmButtonText}>אשר</Text>
-                {/* Confirm */}
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={handleConfirm}
+              >
+                <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                  {t('common.confirm')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          // Camera viewfinder
-          // מצלמה
-          <>
-            <CameraView
-              ref={cameraRef}
-              style={styles.camera}
-              facing="back"
-            />
-            <View style={styles.cameraActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>ביטול</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
-                <View style={styles.captureButtonInner} />
-              </TouchableOpacity>
-              <View style={styles.spacer} />
-            </View>
-          </>
+          <View style={styles.emptyState}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={handleLaunchCamera}
+            >
+              <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                {t('common.takePhoto')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelLink} onPress={onClose}>
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+                {t('common.cancel')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </Modal>
@@ -126,137 +116,26 @@ export function ProofCamera({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  camera: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   labelOverlay: {
-    position: 'absolute',
-    top: 60,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    alignItems: 'center',
+    paddingTop: 60, paddingBottom: 16, alignItems: 'center',
   },
   labelText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    fontSize: 16, fontWeight: '700',
   },
-  cameraActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  captureButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureButtonInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#FFFFFF',
-  },
-  cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  spacer: {
-    width: 60,
-  },
-  previewContainer: {
-    flex: 1,
-  },
-  preview: {
-    flex: 1,
-    resizeMode: 'contain',
-  },
+  previewContainer: { flex: 1 },
+  preview: { flex: 1, resizeMode: 'contain' },
   previewActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
+    flexDirection: 'row', justifyContent: 'center', gap: 16,
     paddingVertical: 24,
-    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  retakeButton: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+  actionButton: {
+    borderRadius: 12, paddingVertical: 14, paddingHorizontal: 24,
   },
-  retakeButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
+  actionButtonText: { fontSize: 16, fontWeight: '700' },
+  emptyState: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16,
   },
-  confirmButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 32,
-  },
-  permissionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  permissionMessage: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  permissionButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginBottom: 12,
-  },
-  permissionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  closeButton: {
-    paddingVertical: 12,
-  },
-  closeButtonText: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-  },
+  cancelLink: { paddingVertical: 12 },
+  cancelText: { fontSize: 15 },
 });

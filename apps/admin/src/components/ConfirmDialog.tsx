@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'info';
   loading?: boolean;
+  children?: React.ReactNode;
 }
 
 const variantClasses = {
@@ -29,6 +30,7 @@ export default function ConfirmDialog({
   cancelLabel = 'Cancel',
   variant = 'danger',
   loading = false,
+  children,
 }: ConfirmDialogProps) {
   return (
     <Transition appear show={open} as={Fragment}>
@@ -63,6 +65,8 @@ export default function ConfirmDialog({
                 <Dialog.Description className="mt-2 text-sm text-gray-600">
                   {message}
                 </Dialog.Description>
+
+                {children}
 
                 <div className="mt-6 flex justify-end gap-3">
                   <button

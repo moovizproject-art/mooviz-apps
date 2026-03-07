@@ -15,8 +15,12 @@ export interface AdminUser {
 }
 
 export async function signIn(email: string, password: string): Promise<AdminUser> {
+  console.log('[Admin Auth] Attempting sign in for:', email);
   const credential = await signInWithEmailAndPassword(auth, email, password);
+  console.log('[Admin Auth] Firebase Auth success, uid:', credential.user.uid);
+
   const userDoc = await getDoc(doc(db, 'users', credential.user.uid));
+  console.log('[Admin Auth] Firestore doc exists:', userDoc.exists());
 
   if (!userDoc.exists()) {
     await firebaseSignOut(auth);
@@ -24,7 +28,10 @@ export async function signIn(email: string, password: string): Promise<AdminUser
   }
 
   const userData = userDoc.data();
+  console.log('[Admin Auth] User data role:', userData.role, 'all fields:', JSON.stringify(userData));
+
   if (userData.role !== 'admin' && userData.role !== 'moderator') {
+    console.log('[Admin Auth] REJECTED — role is:', userData.role);
     await firebaseSignOut(auth);
     throw new Error('Insufficient permissions. Admin access required.');
   }

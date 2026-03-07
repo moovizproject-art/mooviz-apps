@@ -1,26 +1,39 @@
 /**
- * Types — טיפוסים
+ * Types -- tipusim
  * Re-exports shared types from @mooviz/shared package.
- * ייצוא מחדש של טיפוסים משותפים מחבילת @mooviz/shared
  */
 
 // Re-export shared types when package is available
 // export * from '@mooviz/shared';
 
 // Local type definitions used across the mobile app
-// הגדרות טיפוסים מקומיות בשימוש באפליקציה
 
-export type UserRole = 'sender' | 'driver' | 'both';
+export type UserRole = 'sender' | 'driver';
+export type ActiveMode = 'client' | 'driver';
+export type KycStatus = 'pending' | 'approved' | 'rejected';
+export type UserStatus = 'active' | 'suspended' | 'blocked';
 
 export type DeliveryStatus =
+  | 'new'
   | 'pending'
-  | 'matched'
+  | 'waiting'
   | 'picked_up'
-  | 'in_transit'
   | 'delivered'
-  | 'cancelled';
+  | 'cancelled'
+  | 'completed_paid';
 
 export type ItemSize = 'small' | 'medium' | 'large';
+
+export interface UserRating {
+  average: number;
+  count: number;
+}
+
+export interface UserLocation {
+  lat: number;
+  lng: number;
+  geohash: string;
+}
 
 export interface GeoPoint {
   latitude: number;
@@ -31,17 +44,27 @@ export interface GeoPoint {
 
 export interface User {
   uid: string;
-  displayName: string | null;
+  fullName: string;
   email: string | null;
   phone: string | null;
-  photoUrl: string | null;
+  profilePhotoURL: string | null;
+  profilePhotoPath?: string | null;
   role: UserRole;
+  activeMode: ActiveMode;
+  driverAvailable: boolean;
+  driverUnlocked: boolean;
   city: string | null;
-  rating: number | null;
-  totalDeliveries: number;
-  totalRatings: number;
-  kycVerified: boolean;
-  fcmTokens?: string[];
+  kycStatus: KycStatus;
+  kycDocumentURL: string | null;
+  kycIdURL: string | null;
+  ratingAsDriver: UserRating;
+  ratingAsSender: UserRating;
+  completedDeliveries: number;
+  status: UserStatus;
+  fcmTokens: string[];
+  location: UserLocation;
+  migratedFrom?: string;
+  lastOtpAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 }

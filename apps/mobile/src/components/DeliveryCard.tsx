@@ -1,8 +1,18 @@
+/**
+ * DeliveryCard - כרטיס משלוח
+ * Glass morphism delivery card for feeds and lists.
+ * Shows item, route, status, and price with press animation.
+ * כרטיס משלוח בעיצוב זכוכית לפידים ורשימות
+ */
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-
-import { COLORS } from '../constants/colors';
-import { StatusBadge } from './StatusBadge';
+import { View, Text, Image, Pressable, StyleSheet, I18nManager } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { BRAND, BORDER_RADIUS, SPACING, SHADOWS, TYPOGRAPHY } from '../constants/design';
+import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatRelativeDate } from '../utils/formatters';
 
 interface DeliveryData {
@@ -11,6 +21,7 @@ interface DeliveryData {
   pickup?: { address: string };
   destination?: { address: string };
   itemDescription?: string;
+  photoUrl?: string;
   suggestedPrice?: number;
   createdAt?: Date | string;
   distance?: number;
@@ -22,126 +33,191 @@ interface DeliveryCardProps {
   showDistance?: boolean;
 }
 
-/**
- * DeliveryCard — כרטיס משלוח
- * Card showing delivery summary, used in feeds and lists.
- * כרטיס סיכום משלוח לשימוש בפידים ורשימות
- */
-export function DeliveryCard({ delivery, onPress, showDistance = false }: DeliveryCardProps): React.JSX.Element {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export function DeliveryCard({
+  delivery,
+  onPress,
+  showDistance = false,
+}: DeliveryCardProps): React.JSX.Element {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = (): void => {
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+  };
+
+  const handlePressOut = (): void => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      {/* Top row: status + price */}
-      <View style={styles.topRow}>
-        <StatusBadge status={delivery.status} />
-        {delivery.suggestedPrice != null && (
-          <Text style={styles.price}>{formatCurrency(delivery.suggestedPrice)}</Text>
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.card, animatedStyle]}
+    >
+      <View style={styles.content}>
+        {/* Thumbnail */}
+        {/* תמונה ממוזערת */}
+        {delivery.photoUrl ? (
+          <Image source={{ uri: delivery.photoUrl }} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbPlaceholder]}>
+            <Text style={styles.thumbIcon}>{'\u{1F4E6}'}</Text>
+          </View>
         )}
-      </View>
 
-      {/* Route info */}
-      {/* מידע על המסלול */}
-      <View style={styles.routeSection}>
-        <View style={styles.routeRow}>
-          <View style={[styles.dot, { backgroundColor: COLORS.success }]} />
-          <Text style={styles.addressText} numberOfLines={1}>
-            {delivery.pickup?.address || 'כתובת לא זמינה'}
-            {/* Address unavailable */}
-          </Text>
+        {/* Details */}
+        {/* פרטים */}
+        <View style={styles.details}>
+          {/* Top row: status + price */}
+          <View style={styles.topRow}>
+            <StatusIndicator status={delivery.status} size="sm" />
+            {delivery.suggestedPrice != null && (
+              <Text style={styles.price}>
+                {formatCurrency(delivery.suggestedPrice)}
+              </Text>
+            )}
+          </View>
+
+          {/* Route */}
+          {/* מסלול */}
+          <View style={styles.routeSection}>
+            <View style={styles.routeRow}>
+              <View style={[styles.dot, { backgroundColor: BRAND.success }]} />
+              <Text style={styles.addressText} numberOfLines={1}>
+                {delivery.pickup?.address || '\u05DB\u05EA\u05D5\u05D1\u05EA \u05DC\u05D0 \u05D6\u05DE\u05D9\u05E0\u05D4'}
+                {/* כתובת לא זמינה */}
+              </Text>
+            </View>
+            <View style={styles.routeLine} />
+            <View style={styles.routeRow}>
+              <View style={[styles.dot, { backgroundColor: BRAND.error }]} />
+              <Text style={styles.addressText} numberOfLines={1}>
+                {delivery.destination?.address || '\u05DB\u05EA\u05D5\u05D1\u05EA \u05DC\u05D0 \u05D6\u05DE\u05D9\u05E0\u05D4'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Item description */}
+          {delivery.itemDescription ? (
+            <Text style={styles.itemText} numberOfLines={1}>
+              {delivery.itemDescription}
+            </Text>
+          ) : null}
+
+          {/* Bottom: date + distance */}
+          <View style={styles.bottomRow}>
+            {delivery.createdAt ? (
+              <Text style={styles.metaText}>
+                {formatRelativeDate(delivery.createdAt)}
+              </Text>
+            ) : null}
+            {showDistance && delivery.distance != null ? (
+              <Text style={styles.distanceText}>
+                {delivery.distance.toFixed(1)} {'\u05E7\u05F4\u05DE'}
+                {/* ק״מ */}
+              </Text>
+            ) : null}
+          </View>
         </View>
-        <View style={styles.routeRow}>
-          <View style={[styles.dot, { backgroundColor: COLORS.error }]} />
-          <Text style={styles.addressText} numberOfLines={1}>
-            {delivery.destination?.address || 'כתובת לא זמינה'}
-          </Text>
-        </View>
       </View>
-
-      {/* Item description */}
-      {delivery.itemDescription && (
-        <Text style={styles.itemText} numberOfLines={1}>
-          {delivery.itemDescription}
-        </Text>
-      )}
-
-      {/* Bottom row: date + distance */}
-      <View style={styles.bottomRow}>
-        {delivery.createdAt && (
-          <Text style={styles.dateText}>{formatRelativeDate(delivery.createdAt)}</Text>
-        )}
-        {showDistance && delivery.distance != null && (
-          <Text style={styles.distanceText}>
-            {delivery.distance.toFixed(1)} ק״מ
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: BRAND.surfaceGlass,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    borderColor: BRAND.borderLight,
+    ...SHADOWS.md,
+  },
+  content: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    gap: SPACING.md,
+  },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  thumbPlaceholder: {
+    backgroundColor: BRAND.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbIcon: {
+    fontSize: 24,
+  },
+  details: {
+    flex: 1,
   },
   topRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.sm,
   },
   price: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.success,
+    color: BRAND.success,
   },
   routeSection: {
-    marginBottom: 8,
-    gap: 6,
+    marginBottom: SPACING.xs,
+    gap: 2,
   },
   routeRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
+  },
+  routeLine: {
+    width: 1,
+    height: 8,
+    backgroundColor: BRAND.border,
+    marginLeft: I18nManager.isRTL ? 0 : 3,
+    marginRight: I18nManager.isRTL ? 3 : 0,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   addressText: {
-    fontSize: 14,
-    color: COLORS.text,
+    ...TYPOGRAPHY.caption,
     flex: 1,
-    textAlign: 'right',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+    color: BRAND.textPrimary,
   },
   itemText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    marginBottom: 8,
+    ...TYPOGRAPHY.small,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+    color: BRAND.textSecondary,
+    marginBottom: SPACING.xs,
   },
   bottomRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
-  dateText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
+  metaText: {
+    ...TYPOGRAPHY.small,
+    color: BRAND.textSecondary,
   },
   distanceText: {
-    fontSize: 12,
+    ...TYPOGRAPHY.small,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: BRAND.primary,
   },
 });

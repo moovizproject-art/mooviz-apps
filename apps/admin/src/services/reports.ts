@@ -43,6 +43,26 @@ export interface ReportsQueryParams {
 
 const reportsRef = collection(db, 'reports');
 
+function normalizeReport(docSnap: DocumentSnapshot): Report {
+  const data = docSnap.data() ?? {};
+  return {
+    id: docSnap.id,
+    reporterId: data.reporterId ?? '',
+    reporterName: data.reporterName ?? '',
+    reportedUserId: data.reportedUserId ?? '',
+    reportedUserName: data.reportedUserName ?? '',
+    deliveryId: data.deliveryId ?? null,
+    category: data.category ?? 'other',
+    description: data.description ?? '',
+    status: data.status ?? 'open',
+    moderationAction: data.moderationAction ?? null,
+    moderatorNote: data.moderatorNote ?? null,
+    resolvedBy: data.resolvedBy ?? null,
+    createdAt: data.createdAt ?? Timestamp.now(),
+    resolvedAt: data.resolvedAt ?? null,
+  };
+}
+
 export async function getReports(params: ReportsQueryParams = {}): Promise<{
   reports: Report[];
   lastDoc: DocumentSnapshot | null;
@@ -57,7 +77,7 @@ export async function getReports(params: ReportsQueryParams = {}): Promise<{
   }
 
   constraints.push(orderBy('createdAt', 'desc'));
-  constraints.push(limit(params.pageSize ?? 20));
+  constraints.push(limit(params.pageSize ?? 50));
 
   if (params.lastDoc) {
     constraints.push(startAfter(params.lastDoc));
@@ -66,14 +86,20 @@ export async function getReports(params: ReportsQueryParams = {}): Promise<{
   const q = query(reportsRef, ...constraints);
   const snapshot = await getDocs(q);
 
-  const reports = snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data(),
-  })) as Report[];
+  const reports = snapshot.docs.map(normalizeReport);
+  const lastDocSnap = snapshot.docs[snapshot.docs.length - 1] ?? null;
 
-  const lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+  return { reports, lastDoc: lastDocSnap };
+}
 
-  return { reports, lastDoc };
+export async function updateReportStatus(
+  reportId: string,
+  status: ReportStatus,
+): Promise<void> {
+  await updateDoc(doc(db, 'reports', reportId), {
+    status,
+    updatedAt: Timestamp.now(),
+  });
 }
 
 export async function resolveReport(
@@ -108,5 +134,6 @@ export async function dismissReport(
 export async function setReportInvestigating(reportId: string): Promise<void> {
   await updateDoc(doc(db, 'reports', reportId), {
     status: 'investigating',
+    updatedAt: Timestamp.now(),
   });
 }

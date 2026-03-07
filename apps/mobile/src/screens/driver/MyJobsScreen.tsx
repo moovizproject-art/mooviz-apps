@@ -7,23 +7,19 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { RootStackParamList } from '../../navigation/RootNavigator';
-import { COLORS } from '../../constants/colors';
+import { DriverTabScreenProps } from '../../navigation/types';
+import { useTheme } from '../../theme/ThemeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { EmptyState } from '../../components/EmptyState';
+import { TabHeader } from '../../components/TabHeader';
+import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'DriverTabs'>;
+type Props = DriverTabScreenProps<'MyJobs'>;
 
 type TabKey = 'active' | 'completed';
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'active', label: 'פעילים' /* Active */ },
-  { key: 'completed', label: 'הושלמו' /* Completed */ },
-];
 
 const STATUS_MAP: Record<TabKey, string[]> = {
   active: ['matched', 'picked_up', 'in_transit'],
@@ -37,12 +33,20 @@ const STATUS_MAP: Record<TabKey, string[]> = {
  */
 export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('active');
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const { currentUser } = useAuth();
+  const drawer = useSettingsDrawer();
   const { deliveries, isLoading, refresh } = useDelivery({
     userId: currentUser?.uid,
     role: 'driver',
     statusFilter: STATUS_MAP[activeTab],
   });
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'active', label: t('delivery.active') },
+    { key: 'completed', label: t('delivery.completed') },
+  ];
 
   const handleDeliveryPress = useCallback(
     (deliveryId: string) => {
@@ -53,34 +57,36 @@ export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
 
   const emptyMessages: Record<TabKey, { message: string; submessage: string }> = {
     active: {
-      message: 'אין עבודות פעילות',
-      submessage: 'חפש משלוחים זמינים בפיד',
-      /* No active jobs / Search available deliveries in feed */
+      message: t('driver.noActiveJobs'),
+      submessage: t('driver.searchFeedHint'),
     },
     completed: {
-      message: 'אין עבודות שהושלמו',
-      submessage: 'עבודות שהושלמו יופיעו כאן',
-      /* No completed jobs / Completed jobs will appear here */
+      message: t('driver.noCompletedJobs'),
+      submessage: t('driver.completedJobsHint'),
     },
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>העבודות שלי</Text>
-        {/* My Jobs */}
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TabHeader title={t('driver.myJobs')} onSettingsPress={drawer.open} />
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            style={[
+              styles.tab,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              activeTab === tab.key && { backgroundColor: colors.primary, borderColor: colors.primary },
+            ]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+            <Text style={[
+              styles.tabText,
+              { color: colors.textSecondary },
+              activeTab === tab.key && styles.tabTextActive,
+            ]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -101,13 +107,16 @@ export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
             submessage={emptyMessages[activeTab].submessage}
           />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={colors.primary} />
+        }
         contentContainerStyle={[
           styles.listContent,
           deliveries.length === 0 && styles.emptyList,
         ]}
         showsVerticalScrollIndicator={false}
       />
+      <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
     </View>
   );
 }
@@ -115,7 +124,6 @@ export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   header: {
     paddingHorizontal: 24,
@@ -125,12 +133,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: COLORS.text,
-    textAlign: 'right',
   },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 24,
+    marginTop: 30,
     marginBottom: 16,
     gap: 8,
   },
@@ -139,18 +146,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   tabTextActive: {
     color: '#FFFFFF',

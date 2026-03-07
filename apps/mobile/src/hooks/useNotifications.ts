@@ -1,9 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * useNotifications — הוק התראות
+ * FCM token registration, foreground notification display, and tap handlers.
+ * Uses @react-native-firebase/messaging + @notifee for bare RN compatibility.
+ * רישום טוקן FCM וטיפול בהתראות
+ */
+import { useState, useEffect, useCallback } from 'react';
+import { Platform, PermissionsAndroid } from 'react-native';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import * as Notifications from 'expo-notifications';
+import notifee, { AndroidImportance } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
 
 import { useAuth } from './useAuth';
+import { playSound } from '../services/sound';
 
 // ──────────────────────────────────────────────
 // Types
@@ -15,31 +23,35 @@ interface UseNotificationsResult {
   requestPermission: () => Promise<boolean>;
 }
 
-// Configure notification handling behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+/** Create Android notification channel (required for Android 8+) */
+async function ensureAndroidChannel(): Promise<string> {
+  return notifee.createChannel({
+    id: 'mooviz-default',
+    name: 'MOOVIZ Notifications',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+  });
+}
 
-/**
- * useNotifications — הוק התראות
- * FCM token registration and notification handlers.
- * רישום טוקן FCM וטיפול בהתראות
- */
 export function useNotifications(): UseNotificationsResult {
   const { currentUser } = useAuth();
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean>(false);
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
 
-  // Request notification permissions
-  // בקשת הרשאות התראות
+  /** Request notification permissions — Android 13+ needs explicit runtime permission */
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
+      // Android 13+ (API 33) requires POST_NOTIFICATIONS runtime permission
+      if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+          setHasPermission(false);
+          return false;
+        }
+      }
+
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -53,8 +65,7 @@ export function useNotifications(): UseNotificationsResult {
     }
   }, []);
 
-  // Register FCM token
-  // רישום טוקן FCM
+  // Register FCM token and save to Firestore
   useEffect(() => {
     const registerToken = async (): Promise<void> => {
       try {
@@ -64,7 +75,6 @@ export function useNotifications(): UseNotificationsResult {
         const token = await messaging().getToken();
         setFcmToken(token);
 
-        // Save token to Firestore user doc
         if (currentUser?.uid && token) {
           await firestore().collection('users').doc(currentUser.uid).update({
             fcmTokens: firestore.FieldValue.arrayUnion(token),
@@ -88,28 +98,30 @@ export function useNotifications(): UseNotificationsResult {
       }
     });
 
-    return () => {
-      unsubscribeTokenRefresh();
-    };
+    return () => unsubscribeTokenRefresh();
   }, [currentUser?.uid, requestPermission]);
 
-  // Handle foreground notifications
-  // טיפול בהתראות בזמן שהאפליקציה פעילה
+  // Handle foreground notifications via notifee
   useEffect(() => {
-    // Foreground message handler
     const unsubscribeForeground = messaging().onMessage(
       async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
         console.log('[Notifications] Foreground message:', remoteMessage);
 
-        // Show local notification
         if (remoteMessage.notification) {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: remoteMessage.notification.title || 'MOOVIZ',
-              body: remoteMessage.notification.body || '',
-              data: remoteMessage.data as Record<string, string>,
-            },
-            trigger: null, // Show immediately
+          // Play sound based on notification type
+          const notifType = remoteMessage.data?.type as string | undefined;
+          if (notifType === 'new_listing_nearby') playSound('new_delivery');
+          else if (notifType === 'driver_interested') playSound('driver_interested');
+          else if (notifType === 'payment_confirmed') playSound('payment');
+          else playSound('success');
+
+          const channelId = await ensureAndroidChannel();
+
+          await notifee.displayNotification({
+            title: remoteMessage.notification.title || 'MOOVIZ',
+            body: remoteMessage.notification.body || '',
+            data: remoteMessage.data as Record<string, string>,
+            android: { channelId, smallIcon: 'ic_launcher', pressAction: { id: 'default' } },
           });
         }
       },
@@ -118,42 +130,20 @@ export function useNotifications(): UseNotificationsResult {
     // Background/quit notification tap handler
     messaging().onNotificationOpenedApp((remoteMessage) => {
       console.log('[Notifications] Opened from background:', remoteMessage);
-      handleNotificationNavigation(remoteMessage.data);
+      handleNotificationNavigation(remoteMessage.data as Record<string, string> | undefined);
     });
 
-    // Check if app was opened by a notification from quit state
+    // Check if app was opened by notification from quit state
     messaging()
       .getInitialNotification()
       .then((remoteMessage) => {
         if (remoteMessage) {
           console.log('[Notifications] Opened from quit state:', remoteMessage);
-          handleNotificationNavigation(remoteMessage.data);
+          handleNotificationNavigation(remoteMessage.data as Record<string, string> | undefined);
         }
       });
 
-    // Local notification listeners
-    notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
-        console.log('[Notifications] Local received:', notification);
-      },
-    );
-
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        console.log('[Notifications] User tapped:', response);
-        handleNotificationNavigation(response.notification.request.content.data);
-      },
-    );
-
-    return () => {
-      unsubscribeForeground();
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
-    };
+    return () => unsubscribeForeground();
   }, []);
 
   return { fcmToken, hasPermission, requestPermission };
@@ -166,21 +156,16 @@ export function useNotifications(): UseNotificationsResult {
 function handleNotificationNavigation(data?: Record<string, string>): void {
   if (!data) return;
 
-  // TODO: Implement deep navigation based on notification type
-  // TODO: ניווט עמוק לפי סוג ההתראה
   const { type, deliveryId, chatId } = data;
 
   switch (type) {
     case 'delivery_update':
-      // Navigate to delivery detail
       console.log('[Nav] Navigate to delivery:', deliveryId);
       break;
     case 'new_message':
-      // Navigate to chat
       console.log('[Nav] Navigate to chat:', chatId);
       break;
     case 'new_interest':
-      // Navigate to delivery detail to see interested drivers
       console.log('[Nav] Navigate to delivery interests:', deliveryId);
       break;
     default:

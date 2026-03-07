@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import firestore from '@react-native-firebase/firestore';
 
 import { useFirestore } from './useFirestore';
@@ -115,13 +115,27 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     return clauses.length > 0 ? clauses : undefined;
   }, [options?.userId, options?.role, options?.statusFilter, options?.nearLocation, options?.radiusKm]);
 
-  const { data, isLoading, refresh } = useFirestore<Delivery>({
+  // Skip server-side orderBy when using compound where clauses (driver feed)
+  // to avoid requiring composite indexes — sort client-side instead
+  const needsCompoundQuery = (whereClauses?.length ?? 0) > 1;
+
+  const { data: rawData, isLoading, refresh } = useFirestore<Delivery>({
     collection: 'deliveries',
     where: whereClauses,
-    orderBy: ['createdAt', 'desc'],
+    orderBy: needsCompoundQuery ? undefined : ['createdAt', 'desc'],
     limit: 50,
     enabled: true,
   });
+
+  // Client-side sort when we skipped server orderBy
+  const data = useMemo(() => {
+    if (!needsCompoundQuery) return rawData;
+    return [...rawData].sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [rawData, needsCompoundQuery]);
 
   const getDeliveryById = useCallback(
     (id: string): Delivery | undefined => {
@@ -138,9 +152,23 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         GEOHASH_PRECISION,
       );
 
+      // Upload photo to Storage if provided
+      let photoUrl: string | null = null;
+      if (input.photoUri) {
+        try {
+          const { uploadImage } = require('../services/storage');
+          const path = `deliveries/${input.senderId}/${Date.now()}.jpg`;
+          photoUrl = await uploadImage(input.photoUri, path);
+        } catch (err) {
+          console.warn('[useDelivery] Photo upload failed, continuing without photo:', err);
+        }
+      }
+
+      const now = firestore.FieldValue.serverTimestamp();
       const deliveryData = {
         senderId: input.senderId,
-        status: 'pending',
+        driverId: null,
+        status: 'new',
         pickup: {
           ...input.pickup,
           geohash: pickupGeohash,
@@ -148,12 +176,16 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         destination: input.destination,
         itemDescription: input.itemDescription,
         itemSize: input.itemSize,
-        photoUri: input.photoUri,
+        photoUrl,
         suggestedPrice: input.suggestedPrice,
         scheduledDate: input.scheduledDate,
         notes: input.notes,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        payment: { senderConfirmed: false, driverConfirmed: false },
+        proof: {},
+        statusHistory: [{ status: 'new', timestamp: new Date().toISOString() }],
+        interestedDrivers: [],
+        createdAt: now,
+        updatedAt: now,
       };
 
       const docRef = await firestore().collection('deliveries').add(deliveryData);
