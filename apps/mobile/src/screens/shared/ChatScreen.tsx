@@ -10,6 +10,7 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  I18nManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -80,6 +81,19 @@ export function ChatScreen(): React.JSX.Element {
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
+      // System messages — centered, gray, no avatar
+      if (item.type === 'system') {
+        return (
+          <View style={styles.systemMessageRow}>
+            <View style={[styles.systemMessageBubble, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.systemMessageText, { color: colors.textSecondary }]}>
+                {item.text}
+              </Text>
+            </View>
+          </View>
+        );
+      }
+
       const isOwn = item.senderId === currentUser?.uid;
 
       return (
@@ -261,10 +275,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ownBubble: {
-    justifyContent: 'flex-end',
+    justifyContent: I18nManager.isRTL ? 'flex-start' : 'flex-end',
   },
   otherBubble: {
-    justifyContent: 'flex-start',
+    justifyContent: I18nManager.isRTL ? 'flex-end' : 'flex-start',
   },
   bubbleContent: {
     maxWidth: '75%',
@@ -273,10 +287,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   ownContent: {
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: I18nManager.isRTL ? undefined : 4,
+    borderBottomRightRadius: I18nManager.isRTL ? 4 : undefined,
   },
   otherContent: {
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: I18nManager.isRTL ? undefined : 4,
+    borderBottomLeftRadius: I18nManager.isRTL ? 4 : undefined,
     borderWidth: 1,
   },
   messageText: {
@@ -348,5 +364,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  systemMessageRow: {
+    alignItems: 'center',
+    marginVertical: 8,
+    paddingHorizontal: 24,
+  },
+  systemMessageBubble: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    maxWidth: '80%',
+  },
+  systemMessageText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

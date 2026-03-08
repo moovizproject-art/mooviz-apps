@@ -5,7 +5,7 @@
  * כרטיס משלוח בעיצוב זכוכית לפידים ורשימות
  */
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, I18nManager } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,6 +22,7 @@ interface DeliveryData {
   destination?: { address: string };
   itemDescription?: string;
   photoUrl?: string;
+  mediaURLs?: string[];
   suggestedPrice?: number;
   createdAt?: Date | string;
   distance?: number;
@@ -64,13 +65,24 @@ export function DeliveryCard({
       <View style={styles.content}>
         {/* Thumbnail */}
         {/* תמונה ממוזערת */}
-        {delivery.photoUrl ? (
-          <Image source={{ uri: delivery.photoUrl }} style={styles.thumb} />
-        ) : (
-          <View style={[styles.thumb, styles.thumbPlaceholder]}>
-            <Text style={styles.thumbIcon}>{'\u{1F4E6}'}</Text>
-          </View>
-        )}
+        {(() => {
+          const thumbnailUrl = delivery.mediaURLs?.[0] || delivery.photoUrl;
+          const mediaCount = delivery.mediaURLs?.length || (delivery.photoUrl ? 1 : 0);
+          return thumbnailUrl ? (
+            <View>
+              <Image source={{ uri: thumbnailUrl }} style={styles.thumb} />
+              {mediaCount > 1 && (
+                <View style={styles.mediaCountBadge}>
+                  <Text style={styles.mediaCountText}>{mediaCount}</Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={[styles.thumb, styles.thumbPlaceholder]}>
+              <Text style={styles.thumbIcon}>{'\u{1F4E6}'}</Text>
+            </View>
+          );
+        })()}
 
         {/* Details */}
         {/* פרטים */}
@@ -142,7 +154,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   content: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     gap: SPACING.md,
   },
   thumb: {
@@ -158,11 +170,28 @@ const styles = StyleSheet.create({
   thumbIcon: {
     fontSize: 24,
   },
+  mediaCountBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  mediaCountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   details: {
     flex: 1,
   },
   topRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
@@ -177,7 +206,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   routeRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     alignItems: 'center',
     gap: SPACING.sm,
   },
@@ -185,7 +214,8 @@ const styles = StyleSheet.create({
     width: 1,
     height: 8,
     backgroundColor: BRAND.border,
-    marginEnd: 3,
+    marginLeft: I18nManager.isRTL ? 0 : 3,
+    marginRight: I18nManager.isRTL ? 3 : 0,
   },
   dot: {
     width: 7,
@@ -195,17 +225,17 @@ const styles = StyleSheet.create({
   addressText: {
     ...TYPOGRAPHY.caption,
     flex: 1,
-    textAlign: 'right',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
     color: BRAND.textPrimary,
   },
   itemText: {
     ...TYPOGRAPHY.small,
-    textAlign: 'right',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
     color: BRAND.textSecondary,
     marginBottom: SPACING.xs,
   },
   bottomRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: SPACING.xs,

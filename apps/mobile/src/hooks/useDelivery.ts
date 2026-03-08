@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 
 import { useFirestore } from './useFirestore';
 import { encodeGeohash, getGeohashRange } from '../services/geohash';
@@ -34,12 +35,17 @@ export interface Delivery {
   itemDescription: string;
   itemSize?: string;
   photoUrl?: string;
+  mediaURLs?: string[];
   suggestedPrice: number;
   scheduledDate?: string | null;
   notes?: string;
   chatId?: string;
   rated?: boolean;
   distance?: number;
+  payment?: {
+    senderConfirmed: boolean;
+    driverConfirmed: boolean;
+  };
   createdAt?: Date | string;
 }
 
@@ -57,7 +63,8 @@ interface CreateDeliveryInput {
   destination: { latitude: number; longitude: number; address: string };
   itemDescription: string;
   itemSize: string;
-  photoUri: string | null;
+  photoUri?: string | null;
+  mediaUris?: string[];
   suggestedPrice: number;
   scheduledDate: string | null;
   notes: string;
@@ -79,6 +86,7 @@ interface UseDeliveryResult {
   updateDeliveryStatus: (deliveryId: string, status: string) => Promise<void>;
   expressInterest: (deliveryId: string, driverId: string) => Promise<void>;
   submitRating: (input: RatingInput) => Promise<void>;
+  confirmPayment: (deliveryId: string, paymentPhotoURL?: string) => Promise<void>;
 }
 
 /**
@@ -124,8 +132,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     where: whereClauses,
     orderBy: needsCompoundQuery ? undefined : ['createdAt', 'desc'],
     limit: 50,
-    // Disable query until userId is available for user-scoped queries (not proximity feed)
-    enabled: options?.nearLocation ? true : !!(options?.userId),
+    enabled: true,
   });
 
   // Client-side sort when we skipped server orderBy
@@ -153,13 +160,26 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         GEOHASH_PRECISION,
       );
 
-      // Upload photo to Storage if provided
+      // Upload media files to Storage if provided
       let photoUrl: string | null = null;
-      if (input.photoUri) {
+      let mediaURLs: string[] = [];
+
+      if (input.mediaUris && input.mediaUris.length > 0) {
+        try {
+          const { uploadDeliveryMedia } = require('../services/storage');
+          mediaURLs = await uploadDeliveryMedia(input.senderId, input.mediaUris);
+          // Backward compat: first image URL as photoUrl
+          photoUrl = mediaURLs[0] || null;
+        } catch (err) {
+          console.warn('[useDelivery] Media upload failed, continuing without media:', err);
+        }
+      } else if (input.photoUri) {
+        // Legacy single photo support
         try {
           const { uploadImage } = require('../services/storage');
           const path = `deliveries/${input.senderId}/${Date.now()}.jpg`;
           photoUrl = await uploadImage(input.photoUri, path);
+          mediaURLs = photoUrl ? [photoUrl] : [];
         } catch (err) {
           console.warn('[useDelivery] Photo upload failed, continuing without photo:', err);
         }
@@ -178,6 +198,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         itemDescription: input.itemDescription,
         itemSize: input.itemSize,
         photoUrl,
+        mediaURLs,
         suggestedPrice: input.suggestedPrice,
         scheduledDate: input.scheduledDate,
         notes: input.notes,
@@ -241,6 +262,15 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     [],
   );
 
+  const confirmPayment = useCallback(async (deliveryId: string, paymentPhotoURL?: string) => {
+    try {
+      const fn = functions().httpsCallable('confirmPayment');
+      await fn({ deliveryId, paymentPhotoURL });
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to confirm payment');
+    }
+  }, []);
+
   return {
     deliveries: data,
     isLoading,
@@ -250,6 +280,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     updateDeliveryStatus,
     expressInterest,
     submitRating,
+    confirmPayment,
   };
 }
 

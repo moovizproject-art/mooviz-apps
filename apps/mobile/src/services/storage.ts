@@ -53,6 +53,36 @@ export async function uploadImage(
 export { uploadEncryptedProfilePhoto as uploadProfilePhoto } from './encryption';
 
 /**
+ * Upload multiple delivery media files (images + video).
+ * העלאת מדיה מרובה למשלוח (תמונות + וידאו)
+ *
+ * @param deliveryId - Delivery or sender ID for storage path
+ * @param localUris - Array of local file URIs
+ * @returns Array of download URLs
+ */
+export async function uploadDeliveryMedia(
+  deliveryId: string,
+  localUris: string[],
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (let i = 0; i < localUris.length; i++) {
+    const uri = localUris[i];
+    const lower = uri.toLowerCase();
+    const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.includes('video');
+    const ext = isVideo ? 'mp4' : 'jpg';
+    const contentType = isVideo ? 'video/mp4' : 'image/jpeg';
+    const path = `deliveries/${deliveryId}/media_${Date.now()}_${i}.${ext}`;
+    const ref = storage().ref(path);
+    await ref.putFile(uri, {
+      contentType,
+      customMetadata: { uploadedAt: new Date().toISOString() },
+    });
+    urls.push(await ref.getDownloadURL());
+  }
+  return urls;
+}
+
+/**
  * Upload a delivery item photo.
  * העלאת תמונת פריט למשלוח
  */

@@ -6,14 +6,17 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
+import { LiveMapView } from '../../components/LiveMapView';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
-import { Delivery } from '../../hooks/useDelivery';
+import { useDelivery } from '../../hooks/useDelivery';
+import { useAuth } from '../../hooks/useAuth';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -29,28 +32,20 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { deliveryId } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
-  const [delivery, setDelivery] = useState<Delivery | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const { getDeliveryById, isLoading, confirmPayment } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
+  const delivery = getDeliveryById(deliveryId);
 
-  // Listen to single delivery document — avoids composite index issues
+  // Fetch driver profile for live map (phone, name)
+  const [driverProfile, setDriverProfile] = useState<any>(null);
+
   useEffect(() => {
-    const unsub = firestore()
-      .collection('deliveries')
-      .doc(deliveryId)
-      .onSnapshot(
-        (doc) => {
-          if (doc.exists) {
-            setDelivery({ id: doc.id, ...doc.data() } as Delivery);
-          }
-          setIsLoading(false);
-        },
-        (err) => {
-          console.error('[DeliveryDetail] Snapshot error:', err);
-          setIsLoading(false);
-        },
-      );
+    if (!delivery?.driverId) return;
+    const unsub = firestore().doc(`users/${delivery.driverId}`).onSnapshot(snap => {
+      if (snap.exists) setDriverProfile({ id: snap.id, ...snap.data() });
+    });
     return unsub;
-  }, [deliveryId]);
+  }, [delivery?.driverId]);
 
   // Build status timeline steps
   const timelineSteps = useMemo(() => {
@@ -143,10 +138,47 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         )}
       </View>
 
-      {/* Map placeholder */}
-      <View style={[styles.mapPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={[styles.mapPlaceholderText, { color: colors.textSecondary }]}>{t('delivery.mapPlaceholder')}</Text>
-      </View>
+      {/* Live map or placeholder */}
+      {['waiting', 'picked_up', 'delivered'].includes(delivery.status) && delivery.driverId ? (
+        <LiveMapView
+          pickup={{
+            latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
+            longitude: delivery.pickup?.longitude || delivery.pickup?.lng || 34.7818,
+            address: delivery.pickup?.address,
+          }}
+          destination={{
+            latitude: delivery.destination?.latitude || delivery.destination?.lat || 32.0853,
+            longitude: delivery.destination?.longitude || delivery.destination?.lng || 34.7818,
+            address: delivery.destination?.address,
+          }}
+          driverId={delivery.driverId}
+          driverPhone={driverProfile?.phone}
+          chatId={delivery.chatId}
+          recipientName={driverProfile?.fullName || t('home.driver')}
+          onExpand={() =>
+            navigation.navigate('FullScreenMap', {
+              pickup: {
+                latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
+                longitude: delivery.pickup?.longitude || delivery.pickup?.lng || 34.7818,
+                address: delivery.pickup?.address,
+              },
+              destination: {
+                latitude: delivery.destination?.latitude || delivery.destination?.lat || 32.0853,
+                longitude: delivery.destination?.longitude || delivery.destination?.lng || 34.7818,
+                address: delivery.destination?.address,
+              },
+              driverId: delivery.driverId,
+              driverPhone: driverProfile?.phone,
+              chatId: delivery.chatId,
+              recipientName: driverProfile?.fullName || t('home.driver'),
+            })
+          }
+        />
+      ) : (
+        <View style={[styles.mapPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.mapPlaceholderText, { color: colors.textSecondary }]}>{t('delivery.mapPlaceholder')}</Text>
+        </View>
+      )}
 
       {/* Driver info (when matched) */}
       {delivery.driverId && (
@@ -176,6 +208,40 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               <Text style={styles.chatButtonText}>{t('tabs.chat')}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      )}
+
+      {/* Payment confirmation */}
+      {delivery.status === 'delivered' && (
+        <View style={[styles.paymentSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>{t('payment.confirmTitle')}</Text>
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>{t('payment.senderStatus')}</Text>
+            <Text style={{ color: delivery.payment?.senderConfirmed ? colors.success : colors.textSecondary }}>
+              {delivery.payment?.senderConfirmed ? t('payment.confirmed') : t('payment.pending')}
+            </Text>
+          </View>
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>{t('payment.driverStatus')}</Text>
+            <Text style={{ color: delivery.payment?.driverConfirmed ? colors.success : colors.textSecondary }}>
+              {delivery.payment?.driverConfirmed ? t('payment.confirmed') : t('payment.pending')}
+            </Text>
+          </View>
+          {!delivery.payment?.senderConfirmed && (
+            <TouchableOpacity
+              style={[styles.confirmPaymentButton, { backgroundColor: colors.primary }]}
+              onPress={async () => {
+                try {
+                  await confirmPayment(delivery.id);
+                  Alert.alert(t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                } catch (e: any) {
+                  Alert.alert(t('common.error'), e.message);
+                }
+              }}
+            >
+              <Text style={styles.confirmPaymentButtonText}>{t('payment.confirmButton')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -313,6 +379,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  paymentSection: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
+  paymentTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  confirmRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  confirmLabel: { fontSize: 14 },
+  confirmPaymentButton: { marginTop: 12, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  confirmPaymentButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   rateButton: {
     borderRadius: 12,
     paddingVertical: 16,

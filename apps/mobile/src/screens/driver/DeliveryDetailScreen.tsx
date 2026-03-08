@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -32,7 +33,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { t } = useI18n();
   const carAlert = useCarAlert();
   const { currentUser } = useAuth();
-  const { getDeliveryById, expressInterest, updateDeliveryStatus, isLoading } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
+  const { getDeliveryById, expressInterest, updateDeliveryStatus, confirmPayment, isLoading } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const delivery = getDeliveryById(deliveryId);
 
   const handleExpressInterest = async (): Promise<void> => {
@@ -132,6 +133,43 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('driver.notes')}</Text>
           <Text style={[styles.notesText, { color: colors.textSecondary }]}>{delivery.notes}</Text>
+        </View>
+      )}
+
+      {/* Payment confirmation */}
+      {delivery.status === 'delivered' && (
+        <View style={[styles.paymentSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>{t('payment.confirmTitle')}</Text>
+
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>{t('payment.senderStatus')}</Text>
+            <Text style={{ color: delivery.payment?.senderConfirmed ? colors.success : colors.textSecondary }}>
+              {delivery.payment?.senderConfirmed ? t('payment.confirmed') : t('payment.pending')}
+            </Text>
+          </View>
+
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>{t('payment.driverStatus')}</Text>
+            <Text style={{ color: delivery.payment?.driverConfirmed ? colors.success : colors.textSecondary }}>
+              {delivery.payment?.driverConfirmed ? t('payment.confirmed') : t('payment.pending')}
+            </Text>
+          </View>
+
+          {!delivery.payment?.driverConfirmed && (
+            <TouchableOpacity
+              style={[styles.confirmPaymentButton, { backgroundColor: colors.primary }]}
+              onPress={async () => {
+                try {
+                  await confirmPayment(delivery.id);
+                  Alert.alert(t('payment.successTitle'), t('payment.driverConfirmedMsg'));
+                } catch (e: any) {
+                  Alert.alert(t('common.error'), e.message);
+                }
+              }}
+            >
+              <Text style={styles.confirmPaymentButtonText}>{t('payment.confirmButton')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -341,5 +379,36 @@ const styles = StyleSheet.create({
   chatButtonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  paymentSection: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  paymentTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  confirmLabel: {
+    fontSize: 14,
+  },
+  confirmPaymentButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmPaymentButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

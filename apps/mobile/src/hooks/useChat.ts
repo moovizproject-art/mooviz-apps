@@ -12,7 +12,7 @@ export interface ChatMessage {
   chatId: string;
   senderId: string;
   text: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'system';
   imageUrl?: string;
   createdAt: Date;
   read: boolean;

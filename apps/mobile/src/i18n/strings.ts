@@ -89,7 +89,13 @@ export const strings = {
     itemPhoto: { he: 'תמונת הפריט', en: 'Item photo' } as LocaleStrings,
     chooseImage: { he: 'בחר תמונה...', en: 'Choose an image...' } as LocaleStrings,
     addPhoto: { he: 'הוסף תמונה', en: 'Add photo' } as LocaleStrings,
+    addVideo: { he: 'הוסף סרטון', en: 'Add video' } as LocaleStrings,
+    media: { he: 'תמונות וסרטונים', en: 'Photos & videos' } as LocaleStrings,
+    mediaHint: { he: '{imageCount}/5 תמונות{videoSuffix}', en: '{imageCount}/5 photos{videoSuffix}' } as LocaleStrings,
+    mediaHintVideo: { he: ' • 1 סרטון', en: ' • 1 video' } as LocaleStrings,
     pickupDate: { he: 'תאריך איסוף', en: 'Pickup date' } as LocaleStrings,
+    asap: { he: 'בהקדם האפשרי', en: 'ASAP' } as LocaleStrings,
+    selectDate: { he: 'בחר תאריך', en: 'Select date' } as LocaleStrings,
     datePlaceholder: { he: 'dd/mm/yyyy --:--', en: 'dd/mm/yyyy --:--' } as LocaleStrings,
     suggestedPrice: { he: 'תשלום עבור איסוף המשלוח', en: 'Payment for pickup' } as LocaleStrings,
     notes: { he: 'הערות נוספות', en: 'Additional notes' } as LocaleStrings,
@@ -402,6 +408,27 @@ export const strings = {
     getStartedSubtitle: { he: 'הצטרפו לקהילת MOOVIZ עוד היום', en: 'Join the MOOVIZ community today' } as LocaleStrings,
     next: { he: 'הבא', en: 'Next' } as LocaleStrings,
     skip: { he: 'דלג', en: 'Skip' } as LocaleStrings,
+  },
+
+  // ── Payment ──
+  payment: {
+    confirmTitle: { he: 'אישור תשלום', en: 'Payment confirmation' } as LocaleStrings,
+    senderStatus: { he: 'שולח', en: 'Sender' } as LocaleStrings,
+    driverStatus: { he: 'נהג', en: 'Driver' } as LocaleStrings,
+    confirmed: { he: 'אושר ✅', en: 'Confirmed ✅' } as LocaleStrings,
+    pending: { he: 'ממתין...', en: 'Pending...' } as LocaleStrings,
+    confirmButton: { he: 'אשר תשלום', en: 'Confirm payment' } as LocaleStrings,
+    successTitle: { he: 'תשלום אושר', en: 'Payment confirmed' } as LocaleStrings,
+    senderConfirmedMsg: { he: 'אישרת את התשלום. ממתין לאישור הנהג.', en: 'You confirmed payment. Waiting for driver confirmation.' } as LocaleStrings,
+    driverConfirmedMsg: { he: 'אישרת את התשלום. ממתין לאישור השולח.', en: 'You confirmed payment. Waiting for sender confirmation.' } as LocaleStrings,
+  },
+
+  // ── Map ──
+  map: {
+    pickup: { he: 'נקודת איסוף', en: 'Pickup' } as LocaleStrings,
+    destination: { he: 'יעד', en: 'Destination' } as LocaleStrings,
+    driver: { he: 'נהג', en: 'Driver' } as LocaleStrings,
+    fullScreen: { he: 'מסך מלא', en: 'Full screen' } as LocaleStrings,
   },
 
   // ── Error Boundary ──

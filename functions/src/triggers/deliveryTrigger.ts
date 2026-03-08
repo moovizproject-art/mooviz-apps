@@ -207,6 +207,46 @@ async function handleStatusChange(
       );
     }
   }
+
+  // Create system message in chat
+  const chatId = after.chatId;
+  if (chatId) {
+    const systemMessages: Record<string, string> = {
+      "pending": "\u{1F697} \u05E0\u05D4\u05D2 \u05D4\u05D1\u05D9\u05E2 \u05E2\u05E0\u05D9\u05D9\u05DF \u05D1\u05DE\u05E9\u05DC\u05D5\u05D7",
+      "waiting": "\u2705 \u05D4\u05E0\u05D4\u05D2 \u05D0\u05D5\u05E9\u05E8 \u05DC\u05DE\u05E9\u05DC\u05D5\u05D7",
+      "picked_up": "\u{1F4E6} \u05D4\u05E0\u05D4\u05D2 \u05D0\u05E1\u05E3 \u05D0\u05EA \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7",
+      "delivered": "\u{1F3E0} \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7 \u05D4\u05D2\u05D9\u05E2 \u05DC\u05D9\u05E2\u05D3",
+      "completed_paid": "\u{1F4B0} \u05D4\u05EA\u05E9\u05DC\u05D5\u05DD \u05D0\u05D5\u05E9\u05E8 \u05E2\u05DC \u05D9\u05D3\u05D9 \u05E9\u05E0\u05D9 \u05D4\u05E6\u05D3\u05D3\u05D9\u05DD",
+      "cancelled": "\u274C \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7 \u05D1\u05D5\u05D8\u05DC",
+    };
+    const systemMsg = systemMessages[newStatus];
+    if (systemMsg) {
+      try {
+        await admin.firestore()
+          .collection("chats").doc(chatId)
+          .collection("messages").add({
+            type: "system",
+            text: systemMsg,
+            senderId: "system",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            read: true,
+          });
+        // Update chat metadata
+        await admin.firestore()
+          .collection("chats").doc(chatId)
+          .update({
+            lastMessage: systemMsg,
+            lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+            lastSenderId: "system",
+          });
+      } catch (error) {
+        console.error(
+          `Failed to create system message for delivery ${deliveryId}:`,
+          error
+        );
+      }
+    }
+  }
 }
 
 /**

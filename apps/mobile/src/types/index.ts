@@ -79,6 +79,7 @@ export interface Delivery {
   itemDescription: string;
   itemSize: ItemSize;
   photoUrl?: string;
+  mediaURLs?: string[];
   suggestedPrice: number;
   scheduledDate?: string;
   notes?: string;
@@ -95,7 +96,7 @@ export interface ChatMessage {
   chatId: string;
   senderId: string;
   text: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'system';
   imageUrl?: string;
   read: boolean;
   createdAt: Date;

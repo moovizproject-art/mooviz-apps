@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
-import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -36,6 +36,7 @@ import { DriverKYCScreen } from '../screens/driver/DriverKYCScreen';
 import { ChatScreen } from '../screens/shared/ChatScreen';
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { RatingScreen } from '../screens/shared/RatingScreen';
+import { FullScreenMapScreen } from '../screens/shared/FullScreenMapScreen';
 
 // Verification screens
 import { EmailVerificationScreen } from '../screens/auth/EmailVerificationScreen';
@@ -79,6 +80,14 @@ export type RootStackParamList = {
   DriverDeliveryDetail: { deliveryId: string };
   ChatRoom: { chatId: string; recipientName: string };
   Rating: { deliveryId: string; targetUserId: string };
+  FullScreenMap: {
+    pickup: { latitude: number; longitude: number; address?: string };
+    destination: { latitude: number; longitude: number; address?: string };
+    driverId: string;
+    driverPhone?: string;
+    chatId?: string;
+    recipientName?: string;
+  };
 };
 
 /** Composite props for sender tab screens that navigate to root stack */
@@ -274,16 +283,12 @@ export function RootNavigator(): React.JSX.Element {
   // forceOtp is set by LoginScreen before signIn — immune to Firestore race conditions.
   const needsPhoneOtp = (() => {
     if (!firebaseUser) return false;
-    // DEV: Skip OTP on iOS simulator (APNs unavailable)
-    if (__DEV__ && Platform.OS === 'ios') return false;
     // Fresh login → always require OTP
     if (forceOtp) return true;
     // Phone not linked at all → need to link + verify
     if (!firebaseUser.phoneNumber) return true;
-    // Returning session with phone linked — only re-verify if lastOtpAt is stale (>30 days).
-    // Missing lastOtpAt on a returning session (forceOtp=false) means the user completed
-    // OTP previously but the field was cleared; don't force another OTP loop.
-    if (!currentUser?.lastOtpAt) return false;
+    // Phone linked but no recent OTP → need re-verification
+    if (!currentUser?.lastOtpAt) return true;
     const daysSinceOtp = (Date.now() - currentUser.lastOtpAt.getTime()) / (1000 * 60 * 60 * 24);
     return daysSinceOtp > 30;
   })();
@@ -317,7 +322,7 @@ export function RootNavigator(): React.JSX.Element {
 
   return (
     <ErrorBoundary fallbackColors={{ background: colors.background, textPrimary: colors.textPrimary, textSecondary: colors.textSecondary, primary: colors.primary, border: colors.border, error: colors.error }}>
-    <Stack.Navigator screenOptions={{ headerShown: false, headerBackTitle: t('common.back') }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!firebaseUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : needsEmailVerification ? (
@@ -340,18 +345,17 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{
-              headerShown: true,
-              title: t('tabs.chat'),
-              headerStyle: { backgroundColor: colors.headerBg },
-              headerTintColor: '#FFFFFF',
-              headerTitleStyle: { color: '#FFFFFF' },
-            }}
+            options={{ headerShown: true, title: t('tabs.chat') }}
           />
           <Stack.Screen
             name="Rating"
             component={RatingScreen}
             options={{ headerShown: true, title: t('profile.rating') }}
+          />
+          <Stack.Screen
+            name="FullScreenMap"
+            component={FullScreenMapScreen}
+            options={{ headerShown: false, animation: 'fade' }}
           />
         </>
       ) : (
@@ -375,18 +379,17 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{
-              headerShown: true,
-              title: t('tabs.chat'),
-              headerStyle: { backgroundColor: colors.headerBg },
-              headerTintColor: '#FFFFFF',
-              headerTitleStyle: { color: '#FFFFFF' },
-            }}
+            options={{ headerShown: true, title: t('tabs.chat') }}
           />
           <Stack.Screen
             name="Rating"
             component={RatingScreen}
             options={{ headerShown: true, title: t('profile.rating') }}
+          />
+          <Stack.Screen
+            name="FullScreenMap"
+            component={FullScreenMapScreen}
+            options={{ headerShown: false, animation: 'fade' }}
           />
         </>
       )}
