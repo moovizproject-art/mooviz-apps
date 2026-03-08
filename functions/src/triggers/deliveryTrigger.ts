@@ -209,7 +209,7 @@ async function handleStatusChange(
   }
 
   // Create system message in chat
-  const chatId = after.chatId;
+  const chatId = (after as any).chatId as string | undefined;
   if (chatId) {
     const systemMessages: Record<string, string> = {
       "pending": "\u{1F697} \u05E0\u05D4\u05D2 \u05D4\u05D1\u05D9\u05E2 \u05E2\u05E0\u05D9\u05D9\u05DF \u05D1\u05DE\u05E9\u05DC\u05D5\u05D7",
