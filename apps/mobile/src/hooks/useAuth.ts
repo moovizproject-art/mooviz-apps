@@ -5,6 +5,18 @@ import { User } from '../types';
 
 const SESSION_MAX_DAYS = 30;
 
+/** Safely convert a Firestore Timestamp (or Date) to a JS Date. Returns undefined on failure. */
+function safeToDate(val: unknown): Date | undefined {
+  try {
+    if (!val) return undefined;
+    if (val instanceof Date) return val;
+    if (typeof (val as any).toDate === 'function') return (val as any).toDate();
+  } catch {
+    // Malformed timestamp — swallow rather than crash Hermes
+  }
+  return undefined;
+}
+
 // ──────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────
@@ -70,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
             const data = doc.data();
 
             // Check 30-day session expiry
-            const lastLogin = data?.lastLoginAt?.toDate();
+            const lastLogin = safeToDate(data?.lastLoginAt);
             if (lastLogin) {
               const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
               if (daysSinceLogin > SESSION_MAX_DAYS) {
@@ -104,9 +116,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               fcmTokens: data?.fcmTokens || [],
               location: data?.location || { lat: 0, lng: 0, geohash: '' },
               migratedFrom: data?.migratedFrom,
-              lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
-              createdAt: data?.createdAt?.toDate() || new Date(),
-              updatedAt: data?.updatedAt?.toDate(),
+              lastOtpAt: safeToDate(data?.lastOtpAt),
+              createdAt: safeToDate(data?.createdAt) || new Date(),
+              updatedAt: safeToDate(data?.updatedAt),
             });
           } else {
             // User exists in Auth but not in Firestore yet (mid-registration)
@@ -204,12 +216,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           rating: data?.rating || { average: 0, count: 0 },
           completedDeliveries: data?.completedDeliveries || 0,
           status: data?.status || 'active',
-          createdAt: data?.createdAt?.toDate() || new Date(),
+          createdAt: safeToDate(data?.createdAt) || new Date(),
         };
         return {
           ...base,
-          lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
-          updatedAt: data?.updatedAt?.toDate(),
+          lastOtpAt: safeToDate(data?.lastOtpAt),
+          updatedAt: safeToDate(data?.updatedAt),
         };
       });
     }

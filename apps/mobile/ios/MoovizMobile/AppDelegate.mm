@@ -2,14 +2,16 @@
 
 #import <React/RCTBundleURLProvider.h>
 #import <GoogleMaps/GoogleMaps.h>
+#import <FirebaseCore/FirebaseCore.h>
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  // Firebase must be configured before any other Firebase SDK usage
+  [FIRApp configure];
+
   // Google Maps SDK initialization
-  // The API key is loaded from .env via react-native-config at build time.
-  // For development, set GOOGLE_MAPS_API_KEY in .env.dev
   NSString *mapsKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"GOOGLE_MAPS_API_KEY"];
   if (mapsKey) {
     [GMSServices provideAPIKey:mapsKey];

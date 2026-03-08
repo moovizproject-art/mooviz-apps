@@ -1,11 +1,11 @@
 ---
 name: crm-task
-description: Create, update, list, and manage MOOVIZ project tasks in KAL CRM via the REST API. Use for creating/updating tasks, batch creation, comments, file uploads, managing milestones and sprints, logging time, and exporting project data.
+description: Create, update, list, and manage MOOVIZ project tasks, sprints, milestones, subtasks, and notifications in KAL CRM via the REST API.
 ---
 
 # CRM Task Management Skill — MOOVIZ Project
 
-You interact with the KAL Solutions CRM Projects Extended REST API to manage tasks, milestones, sprints, and timesheets for the MOOVIZ project.
+You interact with the KAL Solutions CRM Projects Extended REST API to manage tasks, sprints, milestones, subtasks, assignees, and notifications for the MOOVIZ project.
 
 ## Connection
 
@@ -17,230 +17,223 @@ You interact with the KAL Solutions CRM Projects Extended REST API to manage tas
 
 Load credentials before making requests:
 ```bash
-source .env.crm-api
-```
-
-If `.env.crm-api` doesn't exist, ask the user for credentials and create it:
-```bash
-cat > .env.crm-api << 'EOF'
-CRM_API_URL=https://crm-app.kal-trade.com/projects_extended/projects_api
-CRM_API_KEY=<ask user>
-CRM_API_SECRET=<ask user>
-CRM_PROJECT_ID=1
-EOF
+if [ -f .env.crm-api ]; then
+  source .env.crm-api
+else
+  CRM_API_URL="https://crm-app.kal-trade.com/projects_extended/projects_api"
+  CRM_API_KEY="20ecc8d1c487e0b7666da0fd7ea975a210875572160b980b9e99b10ea0ce2332"
+  CRM_API_SECRET="38659ec8afbe13eb043ea3fb2df9ba221bccba3b4914aebd717f77d65ef9828f"
+  CRM_PROJECT_ID=1
+fi
 ```
 
 **IMPORTANT**: `.env.crm-api` is gitignored. Never commit it.
 
-## All Endpoints
+## Quick Reference — All Endpoints
 
-### 1. List Tasks (GET)
-```bash
-curl -s "$CRM_API_URL/tasks?project_id=1&page=1&per_page=50" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" | jq .
-```
-Response: `{ "data": [...], "page": 1, "per_page": 50, "total": 120, "pages": 3 }`
+### Projects & Lookup
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/projects` | List all accessible projects |
+| GET | `/project/{id}` | Project details with stats, milestones, members |
+| POST | `/projects` | Create a new project |
+| POST | `/clients` | Create client company + primary contact |
+| POST | `/project_members` | Add members to a project |
+| GET | `/staff?project_id=X` | List project staff |
+| GET | `/statuses?project_id=X` | Standard + custom statuses |
 
-### 2. Create Task (POST)
+### Tasks
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/tasks?project_id=X&page=1&per_page=50` | List tasks (paginated, filters: `sprint_id`, `status`) |
+| GET | `/task/{id}` | Task detail with assignees, counts |
+| POST | `/tasks` | Create task |
+| POST | `/tasks_batch` | Batch create (max 50) |
+| PATCH | `/task/{id}` | Update task fields |
+| PATCH | `/task_status/{id}` | Quick status update |
+| DELETE | `/task_delete/{id}` | Delete task |
+
+### Subtasks
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/subtasks?task_id=X` | List subtasks |
+| POST | `/subtasks` | Create subtask (`parent_task_id`, `name`) |
+
+### Sprints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/sprints?project_id=X` | List sprints |
+| POST | `/sprints` | Create sprint |
+| GET | `/sprint/{id}` | Sprint details + stats |
+| PATCH | `/sprint/{id}` | Update sprint fields |
+| DELETE | `/sprint/{id}` | Delete sprint |
+| POST | `/sprint_start/{id}` | Start sprint (planning → active) |
+| POST | `/sprint_close/{id}` | Close sprint (→ completed) |
+| POST | `/sprint_assign` | Assign tasks (`sprint_id`, `task_ids[]`) |
+| GET | `/sprint_tasks/{id}` | Sprint tasks + stats (use `id=0&project_id=X` for backlog) |
+
+### Milestones
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/milestones?project_id=X` | List with task counts |
+| POST | `/milestones` | Create milestone |
+| GET | `/milestone/{id}` | Detail with task counts |
+| PATCH | `/milestone/{id}` | Update milestone |
+| DELETE | `/milestone/{id}` | Delete (unlinks tasks) |
+
+### Assignees & Followers
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/task_assignees?task_id=X` | List assignees |
+| POST | `/task_assignees` | Assign staff (`task_id`, `staff_id`) |
+| DELETE | `/task_assignee/{task_id}/{staff_id}` | Remove assignee |
+| POST | `/task_followers` | Add watcher (`task_id`, `staff_id`) |
+
+### Comments & Files
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/task_comments?task_id=X` | List comments |
+| POST | `/task_comments` | Add comment (`task_id`, `content`) |
+| POST | `/task_attachments` | Upload file to task (multipart `file`) |
+| POST | `/project_files` | Upload file to project (multipart `file`) |
+
+### Notifications
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/notify` | Send notification to staff |
+| POST | `/notify_task` | Task notification with direct link |
+
+### Other
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/timesheets` | Log time (`task_id`, `hours`, `note`) |
+| GET | `/export/{project_id}` | Full JSON export |
+
+---
+
+## Key Examples
+
+### Create Task
 ```bash
 curl -s -X POST "$CRM_API_URL/tasks" \
   -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{
-    "project_id": 1,
-    "name": "Implement Firebase OTP",
-    "description": "Set up phone OTP via Firebase Auth",
-    "priority": 3,
-    "status": 1,
-    "startdate": "2026-03-10",
-    "duedate": "2026-03-15",
-    "milestone": 12,
-    "sprint_id": 18,
-    "task_type": "feature",
-    "story_points": 5,
-    "estimated_hours": 8,
-    "parent_task_id": 0
-  }'
-```
-Response: `{ "success": true, "task_id": 150 }`
-
-### 3. Update Task Status (PATCH)
-```bash
-curl -s -X PATCH "$CRM_API_URL/task_status/42" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"status": 5}'
-```
-Response: `{ "success": true, "task_id": 42, "status": 5 }`
-
-### 4. Create Milestone (POST)
-```bash
-curl -s -X POST "$CRM_API_URL/milestones" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"project_id": 1, "name": "M1 — Backend + Auth", "due_date": "2026-04-15"}'
-```
-Response: `{ "success": true, "milestone_id": 15 }`
-
-### 5. List Sprints (GET)
-```bash
-curl -s "$CRM_API_URL/sprints?project_id=1" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" | jq .
+  -d '{"project_id": 1, "name": "Implement Firebase OTP", "priority": 3, "task_type": "feature", "milestone": 12}'
 ```
 
-### 6. Create Sprint (POST)
-```bash
-curl -s -X POST "$CRM_API_URL/sprints" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "project_id": 1,
-    "name": "Sprint 1",
-    "start_date": "2026-03-10",
-    "end_date": "2026-03-23",
-    "sprint_type": "biweekly",
-    "auto_create_next": 1
-  }'
-```
-
-### 7. Get Sprint with Tasks & Stats (GET)
-```bash
-curl -s "$CRM_API_URL/sprint_tasks/18" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" | jq .
-```
-Response: `{ "sprint": {...}, "tasks": [...], "stats": {...} }`
-
-### 8. Log Time (POST)
-```bash
-curl -s -X POST "$CRM_API_URL/timesheets" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"task_id": 42, "hours": 2.5, "note": "Implemented auth flow"}'
-```
-
-### 9. Export Project (GET)
-```bash
-curl -s "$CRM_API_URL/export/1" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" | jq .
-```
-Response: `{ "project_id": 1, "exported_at": "...", "total_tasks": 120, "tasks": [...] }`
-
-### 10. Get Task Detail (GET)
-```bash
-curl -s "$CRM_API_URL/task/42" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" | jq .
-```
-Response: `{ "id": 42, "name": "...", "status": 4, "assignees": [1], "comments_count": 3, "attachments_count": 1, ... }`
-
-### 11. Update Task Fields (PATCH)
-```bash
-curl -s -X PATCH "$CRM_API_URL/task/42" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"status": 5, "priority": 3, "duedate": "2026-04-01", "story_points": 8}'
-```
-Response: `{ "success": true, "task_id": 42, "updated_fields": ["status", "priority", "duedate", "story_points"] }`
-
-Updatable fields: name, description, priority, status, startdate, duedate, milestone, sprint_id, task_type, story_points, estimated_hours, parent_task_id, kanban_order.
-
-### 12. Add Task Comment (POST)
+### Add Comment to Task
 ```bash
 curl -s -X POST "$CRM_API_URL/task_comments" \
   -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"task_id": 42, "content": "Completed the auth flow implementation"}'
+  -d '{"task_id": 100, "content": "Feature implemented — ready for QA."}'
 ```
-Response: `{ "success": true, "comment_id": 15, "task_id": 42 }`
 
-### 13. List Task Comments (GET)
-```bash
-curl -s "$CRM_API_URL/task_comments?task_id=42" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" | jq .
-```
-Response: `{ "task_id": 42, "total": 3, "comments": [...] }`
-
-### 14. Upload Task Attachment (POST)
+### Upload File to Task
 ```bash
 curl -s -X POST "$CRM_API_URL/task_attachments" \
   -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -F "task_id=42" -F "file=@/path/to/document.pdf"
+  -F "task_id=100" -F "file=@/path/to/screenshot.png"
 ```
-Response: `{ "success": true, "task_id": 42, "files": ["document.pdf"] }`
 
-### 15. Upload Project File (POST)
+### Create Project
 ```bash
-curl -s -X POST "$CRM_API_URL/project_files" \
-  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
-  -F "project_id=1" -F "file=@/path/to/spec.pdf"
-```
-Response: `{ "success": true, "file_id": 8, "file_name": "spec.pdf" }`
-
-### 16. Batch Create Tasks (POST)
-```bash
-curl -s -X POST "$CRM_API_URL/tasks_batch" \
+curl -s -X POST "$CRM_API_URL/projects" \
   -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{
-    "tasks": [
-      {"project_id": 1, "name": "Task A", "priority": 2, "sprint_id": 18},
-      {"project_id": 1, "name": "Task B", "priority": 3, "milestone": 12}
-    ]
-  }'
+  -d '{"name": "New Project", "clientid": 1, "start_date": "2026-03-08", "status": 2, "members": [1]}'
 ```
-Response: `{ "success": true, "created": [{"index": 0, "task_id": 151}, {"index": 1, "task_id": 152}], "errors": [], "total_created": 2 }`
 
-Max 50 tasks per batch. All tasks must belong to the same project.
+### Add Project Members
+```bash
+curl -s -X POST "$CRM_API_URL/project_members" \
+  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"project_id": 1, "staff_ids": [1, 5]}'
+```
+
+### Add Task Follower
+```bash
+curl -s -X POST "$CRM_API_URL/task_followers" \
+  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 100, "staff_id": 5}'
+```
+
+### Sprint Lifecycle
+```bash
+# Create → Start → Close
+curl -s -X POST "$CRM_API_URL/sprints" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"project_id": 1, "name": "Sprint 19", "start_date": "2026-03-10", "end_date": "2026-03-24", "sprint_type": "biweekly"}'
+
+curl -s -X POST "$CRM_API_URL/sprint_start/19" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET"
+
+curl -s -X POST "$CRM_API_URL/sprint_assign" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" -d '{"sprint_id": 19, "task_ids": [101, 102, 103]}'
+
+curl -s -X POST "$CRM_API_URL/sprint_close/19" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" -d '{"carry_over_sprint_id": 20}'
+```
+
+### Send Notification
+```bash
+curl -s -X POST "$CRM_API_URL/notify" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"project_id": 1, "subject": "Sprint Done", "message": "Sprint 19 completed", "channels": ["system", "email", "telegram"]}'
+
+curl -s -X POST "$CRM_API_URL/notify_task" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 42, "message": "Need design approval", "type": "question", "channels": ["system", "email"]}'
+```
 
 ## Field Reference
 
-### Task Fields (POST /tasks)
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
+### Task Fields
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
 | `project_id` | int | Yes | Always `1` for MOOVIZ |
 | `name` | string | Yes | Task title |
 | `description` | text | No | HTML allowed |
-| `priority` | int | No | 1=Low, 2=Medium, 3=High, 4=Urgent (default: 2) |
-| `status` | int | No | See status values (default: 1) |
-| `startdate` | date | No | YYYY-MM-DD (default: today) |
-| `duedate` | date | No | YYYY-MM-DD |
+| `priority` | int | No | 1=Low, 2=Medium, 3=High, 4=Urgent |
+| `status` | int | No | 1-5 standard, 100+ custom |
 | `milestone` | int | No | Milestone ID |
-| `sprint_id` | int | No | Sprint ID (0 = backlog) |
-| `task_type` | string | No | task, feature, bug, story, epic, design |
-| `story_points` | int | No | Estimation points |
-| `estimated_hours` | decimal | No | Hour estimate |
-| `parent_task_id` | int | No | Parent task (for subtasks) |
+| `sprint_id` | int | No | 0 = backlog |
+| `task_type` | string | No | task/feature/bug/story/epic/design |
+| `story_points` | int | No | Estimation |
+| `parent_task_id` | int | No | For subtasks |
 
-### Status Values
-1 = Not Started, 2 = Awaiting Feedback, 3 = Testing, 4 = In Progress, 5 = Complete
+### Notification Types
+`question` | `update` | `done` | `blocked`
 
-### Sprint Types
-`manual`, `weekly` (7d), `biweekly` (14d), `monthly` (30d)
-
-## Workflow
-
-1. Load creds: `source .env.crm-api`
-2. Check current tasks: `GET /tasks?project_id=1&per_page=100`
-3. Check sprints: `GET /sprints?project_id=1`
-4. Create tasks: `POST /tasks` (single) or `POST /tasks_batch` (up to 50)
-5. Update task fields: `PATCH /task/{id}` (status, priority, dates, etc.)
-6. Update status only: `PATCH /task_status/{id}`
-7. Add comments: `POST /task_comments`
-8. Upload files: `POST /task_attachments` or `POST /project_files`
-9. Log time: `POST /timesheets`
+### Channels
+`system` (in-app) | `email` | `telegram`
 
 ## Error Codes
-
 | HTTP | Meaning |
 |------|---------|
-| 401 | Bad API key/secret |
-| 403 | Wrong project scope or missing permission |
-| 429 | Rate limited (60 req/min) — wait 60s |
-| 503 | API disabled in CRM settings |
+| 401 | Bad credentials |
+| 403 | Wrong scope/permission |
+| 404 | Not found |
+| 409 | Conflict (already assigned) |
+| 429 | Rate limited — wait 60s |
+| 503 | API disabled |
+
+## SOW → Project Setup Workflow
+
+When turning a SOW or project plan into CRM tasks:
+
+1. **Create client** (if needed): `POST /clients`
+2. **Create project**: `POST /projects` with client ID and members
+3. **Create milestones**: `POST /milestones` for each deliverable phase
+4. **Create sprint**: `POST /sprints` for current iteration
+5. **Batch create tasks**: `POST /tasks_batch`
+6. **Assign sprint**: `POST /sprint_assign`
+7. **Start sprint**: `POST /sprint_start/{id}`
+8. **Notify team**: `POST /notify`
 
 ## MOOVIZ Context
-
 - **Project**: G.M. Mooviz — real-time community delivery platform
 - **Stack**: React Native + Firebase/GCP
 - **CRM Project ID**: 1
-- **Staff ID 1**: Tamir Konortov (CTO)
 - **Milestones**: M0 (Setup), M1 (Backend+Auth), M2 (Delivery+GPS+Chat), M3 (Stabilization), M4 (Store Submission)

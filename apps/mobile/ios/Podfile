@@ -5,36 +5,91 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+platform :ios, '13.4'
 prepare_react_native_project!
-
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
 
 target 'MoovizMobile' do
   config = use_native_modules!
 
+  # Firebase Swift pods need modular headers on their ObjC dependencies
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
+  pod 'FirebaseCoreInternal', :modular_headers => true
+  pod 'FirebaseFirestoreInternal', :modular_headers => true
+  pod 'FirebaseAppCheckInterop', :modular_headers => true
+  pod 'FirebaseAuthInterop', :modular_headers => true
+  pod 'FirebaseMessagingInterop', :modular_headers => true
+  pod 'GTMSessionFetcher', :modular_headers => true
+  pod 'RecaptchaInterop', :modular_headers => true
+
+  # Google Maps SDK for react-native-maps
+  pod 'GoogleMaps'
+
   use_react_native!(
     :path => config[:reactNativePath],
-    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
   target 'MoovizMobileTests' do
     inherit! :complete
-    # Pods for testing
   end
 
   post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
     )
+
+    # Patch Firebase.h: replace #import <X/X-Swift.h> with @import X;
+    # The -Swift.h files don't exist as static headers (generated at compile time).
+    # @import works in ObjC .m files (all RNFirebase modules are .m).
+    # AppDelegate.mm imports FirebaseCore directly, not the umbrella.
+    firebase_h = File.join(installer.sandbox.root, 'Firebase/CoreOnly/Sources/Firebase.h')
+    if File.exist?(firebase_h)
+      File.chmod(0644, firebase_h)
+      content = File.read(firebase_h)
+      content.gsub!(%r{^\s*#import\s+<(\w+)/\1-Swift\.h>}) { "    @import #{$1};" }
+      File.write(firebase_h, content)
+    end
+
+    installer.pods_project.targets.each do |target|
+      # Fix BoringSSL-GRPC on Xcode 16+
+      if target.name == 'BoringSSL-GRPC'
+        target.source_build_phase.files.each do |file|
+          if file.settings && file.settings['COMPILER_FLAGS']
+            flags = file.settings['COMPILER_FLAGS'].split
+            flags.reject! { |flag| flag == '-GCC_WARN_INHIBIT_ALL_WARNINGS' }
+            file.settings['COMPILER_FLAGS'] = flags.join(' ')
+          end
+        end
+      end
+
+      # Enable Clang modules for RNFirebase pods so @import works
+      if target.name.start_with?('RNFB')
+        target.build_configurations.each do |bc|
+          bc.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+        end
+      end
+
+      target.build_configurations.each do |bc|
+        if bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.4
+          bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.4'
+        end
+
+      end
+    end
+
+    # Strip -weak_framework FirebaseFirestoreInternal from xcconfig files
+    # (modular_headers causes CocoaPods to link it as a framework, but it's a static lib)
+    Dir.glob(File.join(installer.sandbox.target_support_files_root, '**/*.xcconfig')).each do |path|
+      content = File.read(path)
+      if content.include?('FirebaseFirestoreInternal')
+        content.gsub!(/-weak_framework\s+"?FirebaseFirestoreInternal"?/, '')
+        File.write(path, content)
+      end
+    end
+
   end
 end

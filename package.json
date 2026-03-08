@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "dev:mobile": "turbo run dev --filter=@mooviz/mobile",
+    "start:mobile": "cd apps/mobile && pnpm run start",
+    "start:mobile:8090": "cd apps/mobile && pnpm run start:8090",
     "dev:admin": "turbo run dev --filter=@mooviz/admin",
     "dev:functions": "turbo run dev --filter=@mooviz/functions",
     "build": "turbo run build",

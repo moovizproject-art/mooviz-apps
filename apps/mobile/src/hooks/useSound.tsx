@@ -17,7 +17,7 @@ interface SoundContextValue {
 const SoundContext = createContext<SoundContextValue | undefined>(undefined);
 
 export function SoundProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [soundEnabled, setSoundEnabledState] = useState(true);
+  const [soundEnabled, setSoundEnabledState] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(SOUND_ENABLED_KEY).then((val) => {
