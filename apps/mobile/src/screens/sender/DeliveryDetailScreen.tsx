@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   Alert,
+  I18nManager,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   },
   timelineSection: {
     marginBottom: 24,
-    paddingRight: 16,
+    paddingEnd: 16,
   },
   timelineItem: {
     flexDirection: 'row',
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    marginLeft: 12,
+    marginStart: 12,
   },
   timelineDotCurrent: {
     borderWidth: 3,
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
   },
   timelineLine: {
     position: 'absolute',
-    right: 22,
+    ...(I18nManager.isRTL ? { right: 22 } : { left: 22 }),
     top: 20,
     width: 2,
     height: 24,

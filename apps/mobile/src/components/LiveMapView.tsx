@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Linking, Dimensions } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Linking, Dimensions, I18nManager } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import firestore from '@react-native-firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -150,7 +150,7 @@ export function LiveMapView({
         {/* Call button */}
         {driverPhone && (
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: '#4CAF50' }]}
+            style={[styles.fab, { backgroundColor: colors.success || '#4CAF50' }]}
             onPress={handleCall}
           >
             <Text style={styles.fabIcon}>{'\uD83D\uDCDE'}</Text>
@@ -173,11 +173,11 @@ const styles = StyleSheet.create({
   },
   fabContainerInline: {
     bottom: 12,
-    right: 12,
+    ...(I18nManager.isRTL ? { left: 12 } : { right: 12 }),
   },
   fabContainerFullScreen: {
     top: 60,
-    right: 16,
+    ...(I18nManager.isRTL ? { left: 16 } : { right: 16 }),
   },
   fab: {
     width: 48,

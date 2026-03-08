@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginLeft: 12,
+    marginStart: 12,
   },
   routeInfo: {
     flex: 1,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   routeLine: {
     width: 2,
     height: 20,
-    marginRight: 5,
+    marginEnd: 5,
     marginVertical: 4,
   },
   section: {

@@ -211,7 +211,7 @@ export function ChatScreen(): React.JSX.Element {
           onChangeText={setInputText}
           placeholder={t('chat.messagePlaceholder')}
           placeholderTextColor={colors.inputPlaceholder}
-          textAlign="right"
+          textAlign={I18nManager.isRTL ? 'right' : 'left'}
           multiline
           maxLength={1000}
         />
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     marginTop: 4,
-    textAlign: 'left',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   ownTimestamp: {
     color: 'rgba(255,255,255,0.7)',

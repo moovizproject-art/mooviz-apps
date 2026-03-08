@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   mediaCountBadge: {
     position: 'absolute',
     bottom: 2,
-    right: 2,
+    ...(I18nManager.isRTL ? { left: 2 } : { right: 2 }),
     backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: 8,
     minWidth: 18,

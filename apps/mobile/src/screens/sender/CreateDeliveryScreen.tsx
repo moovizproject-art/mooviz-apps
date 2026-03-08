@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   mediaThumbnailContainer: {
     width: 80,
     height: 80,
-    marginRight: 8,
+    marginEnd: 8,
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginEnd: 8,
   },
   addMediaIconText: {
     fontSize: 24,
