@@ -72,6 +72,10 @@ export function useNotifications(): UseNotificationsResult {
         const granted = await requestPermission();
         if (!granted) return;
 
+        // iOS requires explicit registration for remote messages before getToken
+        if (Platform.OS === 'ios') {
+          await messaging().registerDeviceForRemoteMessages();
+        }
         const token = await messaging().getToken();
         setFcmToken(token);
 

@@ -9,8 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -18,6 +21,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useChat, ChatMessage } from '../../hooks/useChat';
+import { useChatList, ChatThread } from '../../hooks/useChatList';
 import { formatTime } from '../../utils/formatters';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { EmptyState } from '../../components/EmptyState';
@@ -28,21 +32,23 @@ type ChatRoomParams = RootStackParamList['ChatRoom'];
 
 /**
  * ChatScreen — מסך צ׳אט
- * 1:1 real-time chat with image upload support.
- * צ׳אט בזמן אמת עם אפשרות העלאת תמונות
+ * Shows chat list (tab) or 1:1 chat room (stack screen).
  */
 export function ChatScreen(): React.JSX.Element {
   const route = useRoute();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const params = (route.params as ChatRoomParams) ?? { chatId: '', recipientName: '' };
   const { chatId, recipientName } = params;
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
   const { messages, sendMessage, sendImage } = useChat(chatId);
+  const { threads, isLoading: threadsLoading } = useChatList(chatId ? undefined : currentUser?.uid);
   const drawer = useSettingsDrawer();
 
   const [inputText, setInputText] = useState<string>('');
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+  const insets = useSafeAreaInsets();
 
   const handleSend = useCallback(async (): Promise<void> => {
     const text = inputText.trim();
@@ -104,28 +110,65 @@ export function ChatScreen(): React.JSX.Element {
     [currentUser, recipientName, colors],
   );
 
-  // Chat list is rendered bottom-up — show empty state when no messages
+  // ─── Chat List (Tab view — no chatId) ───
   if (!chatId) {
+    const renderThread = ({ item }: { item: ChatThread }) => {
+      const isOwnLastMessage = item.lastSenderId === currentUser?.uid;
+      return (
+        <TouchableOpacity
+          style={[styles.threadRow, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('ChatRoom', { chatId: item.id, recipientName: item.recipientName })}
+          activeOpacity={0.7}
+        >
+          <AvatarCircle name={item.recipientName} size={48} />
+          <View style={styles.threadContent}>
+            <Text style={[styles.threadName, { color: colors.textPrimary }]} numberOfLines={1}>
+              {item.recipientName}
+            </Text>
+            <Text style={[styles.threadLastMessage, { color: colors.textSecondary }]} numberOfLines={1}>
+              {isOwnLastMessage ? `${t('chat.you')}: ` : ''}{item.lastMessage || t('chat.noMessages')}
+            </Text>
+          </View>
+          <Text style={[styles.threadTime, { color: colors.textSecondary }]}>
+            {formatTime(item.lastMessageAt)}
+          </Text>
+        </TouchableOpacity>
+      );
+    };
+
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <TabHeader title={t('tabs.chat')} onSettingsPress={drawer.open} />
-        <EmptyState
-          icon="message"
-          message={t('chat.selectChat')}
-          submessage={t('chat.selectChatHint')}
-        />
+        {threadsLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : threads.length === 0 ? (
+          <EmptyState
+            icon="message"
+            message={t('chat.noChats')}
+            submessage={t('chat.noChatsHint')}
+          />
+        ) : (
+          <FlatList
+            data={threads}
+            keyExtractor={(item) => item.id}
+            renderItem={renderThread}
+            contentContainerStyle={styles.threadList}
+          />
+        )}
         <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
       </View>
     );
   }
 
+  // ─── Chat Room (Stack screen — has chatId) ───
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={90}
     >
-      <TabHeader title={t('tabs.chat')} onSettingsPress={drawer.open} />
       {/* Messages list */}
       <FlatList
         ref={flatListRef}
@@ -144,7 +187,7 @@ export function ChatScreen(): React.JSX.Element {
       />
 
       {/* Input bar */}
-      <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+      <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
           <Text style={styles.imageButtonIcon}>📷</Text>
         </TouchableOpacity>
@@ -175,6 +218,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // ─── Thread list styles ───
+  threadList: {
+    paddingTop: 4,
+  },
+  threadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  threadContent: {
+    flex: 1,
+    gap: 4,
+  },
+  threadName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  threadLastMessage: {
+    fontSize: 14,
+  },
+  threadTime: {
+    fontSize: 12,
+  },
+  // ─── Message styles ───
   messagesList: {
     paddingHorizontal: 16,
     paddingVertical: 8,

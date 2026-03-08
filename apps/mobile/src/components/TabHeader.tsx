@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
 
@@ -12,9 +13,10 @@ interface TabHeaderProps {
 
 export function TabHeader({ title, onSettingsPress }: TabHeaderProps): React.JSX.Element {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+    <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.sm }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
       <View style={styles.headerTopRow}>
@@ -25,8 +27,9 @@ export function TabHeader({ title, onSettingsPress }: TabHeaderProps): React.JSX
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={onSettingsPress}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.settingsIcon}>⚙</Text>
+            <Text style={styles.settingsIcon}>{'\u2699'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -41,7 +44,6 @@ export function TabHeader({ title, onSettingsPress }: TabHeaderProps): React.JSX
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SPACING.xxl,
-    paddingTop: SPACING.sm,
     paddingBottom: SPACING.xl,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
@@ -68,11 +70,11 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    right: 0,
+    left: 0,
     top: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',

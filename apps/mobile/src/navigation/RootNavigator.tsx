@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -274,12 +274,16 @@ export function RootNavigator(): React.JSX.Element {
   // forceOtp is set by LoginScreen before signIn — immune to Firestore race conditions.
   const needsPhoneOtp = (() => {
     if (!firebaseUser) return false;
+    // DEV: Skip OTP on iOS simulator (APNs unavailable)
+    if (__DEV__ && Platform.OS === 'ios') return false;
     // Fresh login → always require OTP
     if (forceOtp) return true;
     // Phone not linked at all → need to link + verify
     if (!firebaseUser.phoneNumber) return true;
-    // Phone linked but no recent OTP → need re-verification
-    if (!currentUser?.lastOtpAt) return true;
+    // Returning session with phone linked — only re-verify if lastOtpAt is stale (>30 days).
+    // Missing lastOtpAt on a returning session (forceOtp=false) means the user completed
+    // OTP previously but the field was cleared; don't force another OTP loop.
+    if (!currentUser?.lastOtpAt) return false;
     const daysSinceOtp = (Date.now() - currentUser.lastOtpAt.getTime()) / (1000 * 60 * 60 * 24);
     return daysSinceOtp > 30;
   })();
@@ -313,7 +317,7 @@ export function RootNavigator(): React.JSX.Element {
 
   return (
     <ErrorBoundary fallbackColors={{ background: colors.background, textPrimary: colors.textPrimary, textSecondary: colors.textSecondary, primary: colors.primary, border: colors.border, error: colors.error }}>
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerBackTitle: t('common.back') }}>
       {!firebaseUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : needsEmailVerification ? (
@@ -336,7 +340,13 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: t('tabs.chat') }}
+            options={{
+              headerShown: true,
+              title: t('tabs.chat'),
+              headerStyle: { backgroundColor: colors.headerBg },
+              headerTintColor: '#FFFFFF',
+              headerTitleStyle: { color: '#FFFFFF' },
+            }}
           />
           <Stack.Screen
             name="Rating"
@@ -365,7 +375,13 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: t('tabs.chat') }}
+            options={{
+              headerShown: true,
+              title: t('tabs.chat'),
+              headerStyle: { backgroundColor: colors.headerBg },
+              headerTintColor: '#FFFFFF',
+              headerTitleStyle: { color: '#FFFFFF' },
+            }}
           />
           <Stack.Screen
             name="Rating"

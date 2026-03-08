@@ -2,8 +2,10 @@
  * Auth Service -- email+password registration with phone OTP linking
  */
 
+import { Platform } from 'react-native';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import messaging from '@react-native-firebase/messaging';
 
 // ──────────────────────────────────────────────
 // Error sanitizer — prevent Hermes crash on native errors
@@ -111,6 +113,11 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
   try {
+    // iOS requires APNs registration before phone verification (silent push for OTP).
+    // Without this, verifyPhoneNumber crashes on iOS.
+    if (Platform.OS === 'ios') {
+      await messaging().registerDeviceForRemoteMessages();
+    }
     const result = await auth().verifyPhoneNumber(normalized);
     console.log('[sendPhoneOTP] Result type:', typeof result, result);
     if (typeof result === 'string') {

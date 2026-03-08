@@ -377,6 +377,10 @@ export const strings = {
     startConversation: { he: 'התחל שיחה עם {name}', en: 'Start a conversation with {name}' } as LocaleStrings,
     messagePlaceholder: { he: 'כתוב הודעה...', en: 'Write a message...' } as LocaleStrings,
     send: { he: 'שלח', en: 'Send' } as LocaleStrings,
+    you: { he: 'אתה', en: 'You' } as LocaleStrings,
+    noMessages: { he: 'אין הודעות עדיין', en: 'No messages yet' } as LocaleStrings,
+    noChats: { he: 'אין שיחות', en: 'No chats yet' } as LocaleStrings,
+    noChatsHint: { he: 'שיחות יופיעו כאן כשתתחיל לדבר עם נהג או שולח', en: 'Chats will appear here when you start talking with a driver or sender' } as LocaleStrings,
   },
 
   // ── Onboarding ──

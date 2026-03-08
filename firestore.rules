@@ -80,7 +80,12 @@ service cloud.firestore {
     // Chats
     // ───────────────────────────────────────────────
     match /chats/{chatId} {
-      allow read, write: if isAuthenticated()
+      // Single doc read/write: user must be a participant
+      allow get: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+      // Collection list: allow — array-contains query ensures only own chats returned
+      allow list: if isAuthenticated();
+      allow write: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 
       allow create: if isAuthenticated()

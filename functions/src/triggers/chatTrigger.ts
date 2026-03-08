@@ -10,7 +10,7 @@ const db = admin.firestore();
  * Sends a push notification to the other party in the chat.
  */
 export const onMessageCreate = onDocumentCreated(
-  "chatRooms/{chatRoomId}/messages/{messageId}",
+  "chats/{chatId}/messages/{messageId}",
   async (event) => {
     const snapshot = event.data;
     if (!snapshot) {
@@ -18,7 +18,7 @@ export const onMessageCreate = onDocumentCreated(
       return;
     }
 
-    const chatRoomId = event.params.chatRoomId;
+    const chatId = event.params.chatId;
     const message = snapshot.data() as ChatMessage;
 
     // System messages don't trigger notifications
@@ -29,9 +29,9 @@ export const onMessageCreate = onDocumentCreated(
     const senderId = message.senderId;
 
     // Get the chat room to find participants
-    const chatRoomDoc = await db.collection("chatRooms").doc(chatRoomId).get();
+    const chatRoomDoc = await db.collection("chats").doc(chatId).get();
     if (!chatRoomDoc.exists) {
-      console.error(`Chat room ${chatRoomId} not found`);
+      console.error(`Chat room ${chatId} not found`);
       return;
     }
 
@@ -73,7 +73,7 @@ export const onMessageCreate = onDocumentCreated(
           messagePreview,
           {
             event: "new_chat_message",
-            chatRoomId,
+            chatId,
             deliveryId: chatRoom?.deliveryId ?? "",
             senderId,
             senderName,
@@ -83,7 +83,7 @@ export const onMessageCreate = onDocumentCreated(
     );
 
     console.log(
-      `Chat notification sent for room ${chatRoomId} from ${senderId} to ${recipientIds.length} recipients`
+      `Chat notification sent for room ${chatId} from ${senderId} to ${recipientIds.length} recipients`
     );
   }
 );

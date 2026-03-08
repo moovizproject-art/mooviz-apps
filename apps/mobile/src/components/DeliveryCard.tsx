@@ -5,7 +5,7 @@
  * כרטיס משלוח בעיצוב זכוכית לפידים ורשימות
  */
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet, I18nManager } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   content: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     gap: SPACING.md,
   },
   thumb: {
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topRow: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   routeRow: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
   },
@@ -185,8 +185,7 @@ const styles = StyleSheet.create({
     width: 1,
     height: 8,
     backgroundColor: BRAND.border,
-    marginLeft: I18nManager.isRTL ? 0 : 3,
-    marginRight: I18nManager.isRTL ? 3 : 0,
+    marginEnd: 3,
   },
   dot: {
     width: 7,
@@ -196,17 +195,17 @@ const styles = StyleSheet.create({
   addressText: {
     ...TYPOGRAPHY.caption,
     flex: 1,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
+    textAlign: 'right',
     color: BRAND.textPrimary,
   },
   itemText: {
     ...TYPOGRAPHY.small,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
+    textAlign: 'right',
     color: BRAND.textSecondary,
     marginBottom: SPACING.xs,
   },
   bottomRow: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: SPACING.xs,

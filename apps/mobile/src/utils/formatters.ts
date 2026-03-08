@@ -8,12 +8,21 @@
 // Date formatters
 // ──────────────────────────────────────────────
 
+/** Coerce Firestore Timestamps, strings, or Dates into a JS Date. */
+function toDate(value: unknown): Date {
+  if (!value) return new Date(NaN);
+  if (value instanceof Date) return value;
+  if (typeof (value as any).toDate === 'function') return (value as any).toDate();
+  if (typeof value === 'string') return new Date(value);
+  return new Date(NaN);
+}
+
 /**
  * Format a date for display (DD/MM/YYYY).
  * עיצוב תאריך לתצוגה
  */
 export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = toDate(date);
   if (isNaN(d.getTime())) return '—';
 
   const day = d.getDate().toString().padStart(2, '0');
@@ -28,7 +37,7 @@ export function formatDate(date: Date | string): string {
  * עיצוב תאריך עם שעה
  */
 export function formatDateTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = toDate(date);
   if (isNaN(d.getTime())) return '—';
 
   const dateStr = formatDate(d);
@@ -43,7 +52,7 @@ export function formatDateTime(date: Date | string): string {
  * עיצוב שעה בלבד
  */
 export function formatTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = toDate(date);
   if (isNaN(d.getTime())) return '—';
 
   const hours = d.getHours().toString().padStart(2, '0');
@@ -57,7 +66,7 @@ export function formatTime(date: Date | string): string {
  * עיצוב תאריך יחסי
  */
 export function formatRelativeDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = toDate(date);
   if (isNaN(d.getTime())) return '—';
 
   const now = new Date();

@@ -14,7 +14,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { DriverTabScreenProps } from '../../navigation/types';
@@ -78,6 +78,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { t } = useI18n();
   const { currentUser } = useAuth();
   const drawer = useSettingsDrawer();
+  const insets = useSafeAreaInsets();
 
   const fullName = currentUser?.fullName || '';
   const firstName = fullName.split(' ')[0] || fullName;
@@ -223,7 +224,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const renderHeader = (): React.JSX.Element => (
     <View>
       {/* ── Blue Header (same as Home) ── */}
-      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.sm }]}>
         <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
         <View style={styles.headerTopRow}>
           <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
@@ -421,7 +422,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -455,7 +456,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         )}
       </ScrollView>
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -494,11 +495,11 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    right: 0,
-    top: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    left: 0,
+    top: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',

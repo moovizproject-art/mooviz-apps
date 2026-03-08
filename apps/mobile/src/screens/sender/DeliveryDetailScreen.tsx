@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,12 @@ import {
   Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import firestore from '@react-native-firebase/firestore';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
-import { useDelivery } from '../../hooks/useDelivery';
-import { useAuth } from '../../hooks/useAuth';
+import { Delivery } from '../../hooks/useDelivery';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -29,9 +29,28 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { deliveryId } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { currentUser } = useAuth();
-  const { getDeliveryById, isLoading } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
-  const delivery = getDeliveryById(deliveryId);
+  const [delivery, setDelivery] = useState<Delivery | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Listen to single delivery document — avoids composite index issues
+  useEffect(() => {
+    const unsub = firestore()
+      .collection('deliveries')
+      .doc(deliveryId)
+      .onSnapshot(
+        (doc) => {
+          if (doc.exists) {
+            setDelivery({ id: doc.id, ...doc.data() } as Delivery);
+          }
+          setIsLoading(false);
+        },
+        (err) => {
+          console.error('[DeliveryDetail] Snapshot error:', err);
+          setIsLoading(false);
+        },
+      );
+    return unsub;
+  }, [deliveryId]);
 
   // Build status timeline steps
   const timelineSteps = useMemo(() => {

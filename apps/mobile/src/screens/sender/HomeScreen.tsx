@@ -9,7 +9,7 @@ import {
   StatusBar,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClientTabScreenProps } from '../../navigation/types';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
@@ -32,6 +32,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const { currentUser } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const drawer = useSettingsDrawer();
 
   // Request permissions on first launch
@@ -68,7 +69,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const renderHeader = (): React.JSX.Element => (
     <View>
       {/* ── Blue Header ── */}
-      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.sm }]}>
         <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
         {/* Top row: logo centered, gear absolute on end */}
@@ -143,7 +144,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={isLoading ? [] : recentDeliveries}
         keyExtractor={(item) => item.id}
@@ -181,7 +182,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
       />
 
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -207,11 +208,11 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    right: 0,
-    top: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    left: 0,
+    top: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
