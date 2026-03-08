@@ -105,10 +105,15 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     try {
       const result = await launchImageLibrary({ mediaType: 'video' });
       if (!result.didCancel && result.assets?.[0]?.uri) {
-        // Compress video
-        const { Video } = require('react-native-compressor');
-        const compressed = await Video.compress(result.assets[0].uri, { compressionMethod: 'auto' });
-        updateField('mediaUris', [...form.mediaUris, compressed]);
+        let videoUri = result.assets[0].uri;
+        // Compress video if compressor available (requires native rebuild)
+        try {
+          const { Video } = require('react-native-compressor');
+          videoUri = await Video.compress(videoUri, { compressionMethod: 'auto' });
+        } catch {
+          console.warn('[CreateDelivery] react-native-compressor not available, using raw video');
+        }
+        updateField('mediaUris', [...form.mediaUris, videoUri]);
       }
     } catch (e) {
       console.warn('Video pick error:', e);
