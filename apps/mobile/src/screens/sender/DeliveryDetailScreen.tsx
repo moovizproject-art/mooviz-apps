@@ -31,10 +31,10 @@ import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 
 const TIMELINE_STEPS = [
-  { key: 'pending', label: 'ממתין לנהג' },
-  { key: 'matched', label: 'נהג נמצא' },
+  { key: 'new', label: 'ממתין לנהג' },
+  { key: 'pending', label: 'נהג מעוניין' },
+  { key: 'waiting', label: 'אושר' },
   { key: 'picked_up', label: 'נאסף' },
-  { key: 'in_transit', label: 'בדרך' },
   { key: 'delivered', label: 'נמסר' },
 ] as const;
 
