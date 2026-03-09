@@ -113,11 +113,8 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
   try {
-    // iOS requires APNs registration before phone verification (silent push for OTP).
-    // Without this, verifyPhoneNumber crashes on iOS.
-    if (Platform.OS === 'ios') {
-      await messaging().registerDeviceForRemoteMessages();
-    }
+    // iOS auto-registers for remote messages via firebase.json config.
+    // Manual registerDeviceForRemoteMessages() is NOT needed and causes warnings.
     const result = await auth().verifyPhoneNumber(normalized);
     console.log('[sendPhoneOTP] Result type:', typeof result, result);
     if (typeof result === 'string') {
