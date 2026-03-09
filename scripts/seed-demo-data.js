@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * seed-demo-data.js — Create demo deliveries, chats & ratings
+ * seed-demo-data.js — Clean & re-seed demo deliveries, chats & ratings
  * between tamir.konor@gmail.com (sender) and info@kal.solutions (driver)
  *
  * Usage:
@@ -21,9 +21,12 @@ const {
   doc,
   setDoc,
   addDoc,
+  getDocs,
+  deleteDoc,
   collection,
+  query,
+  where,
   Timestamp,
-  writeBatch,
 } = require('firebase/firestore');
 
 const firebaseConfig = {
@@ -73,9 +76,60 @@ async function signInUser(email, password) {
   }
 }
 
+// ── Clean Collections (only docs belonging to tamirUid / kalUid) ──
+async function cleanCollections(tamirUid, kalUid) {
+  console.log('\n── Cleaning data for Tamir & KAL only ──');
+  const userIds = [tamirUid, kalUid];
+
+  // Delete deliveries where senderId is one of our users
+  let delCount = 0;
+  for (const uid of userIds) {
+    const snap = await getDocs(query(collection(db, 'deliveries'), where('senderId', '==', uid)));
+    for (const d of snap.docs) {
+      await deleteDoc(d.ref);
+      delCount++;
+    }
+  }
+  console.log(`  [✓] Deleted ${delCount} deliveries`);
+
+  // Delete chats where participants array contains one of our users
+  const seenChats = new Set();
+  let chatCount = 0;
+  for (const uid of userIds) {
+    const snap = await getDocs(query(collection(db, 'chats'), where('participants', 'array-contains', uid)));
+    for (const chatDoc of snap.docs) {
+      if (seenChats.has(chatDoc.id)) continue; // avoid double-delete
+      seenChats.add(chatDoc.id);
+      // Delete messages subcollection first
+      const msgsSnap = await getDocs(collection(db, 'chats', chatDoc.id, 'messages'));
+      for (const msgDoc of msgsSnap.docs) {
+        await deleteDoc(msgDoc.ref);
+      }
+      if (msgsSnap.size > 0) {
+        console.log(`    [·] Deleted ${msgsSnap.size} messages from ${chatDoc.id}`);
+      }
+      await deleteDoc(chatDoc.ref);
+      chatCount++;
+    }
+  }
+  console.log(`  [✓] Deleted ${chatCount} chats`);
+
+  // Delete ratings where fromUserId is one of our users
+  let ratCount = 0;
+  for (const uid of userIds) {
+    const snap = await getDocs(query(collection(db, 'ratings'), where('fromUserId', '==', uid)));
+    for (const r of snap.docs) {
+      await deleteDoc(r.ref);
+      ratCount++;
+    }
+  }
+  console.log(`  [✓] Deleted ${ratCount} ratings`);
+}
+
+// ── Seed All Data ──
 async function seedAll(tamirUid, kalUid) {
-  // ── User Profiles ──
-  console.log('\n── Profiles ──');
+  // ── User Profiles (merge — keep existing) ──
+  console.log('\n── Profiles (merge update) ──');
   await setDoc(doc(db, 'users', tamirUid), {
     uid: tamirUid, email: TAMIR_EMAIL, fullName: 'Tamir Konortov',
     phone: '+972501234567', city: 'תל אביב', role: 'sender', activeMode: 'client',
@@ -99,177 +153,193 @@ async function seedAll(tamirUid, kalUid) {
   console.log('  [✓] KAL Solutions');
 
   // ── Deliveries ──
-  console.log('\n── Deliveries ──');
-  const deliveries = [
-    { id:'demo-del-001', senderId:tamirUid, senderName:'Tamir Konortov', status:'pending',
-      pickup:{latitude:32.0773,longitude:34.7748,address:'דיזנגוף 50, תל אביב',geohash:'sv8wrg'},
-      destination:{latitude:32.7940,longitude:34.9896,address:'שדרות הנשיא 12, חיפה'},
-      itemDescription:'מחשב נייד Dell עם מטען', itemSize:'small', suggestedPrice:65,
-      notes:'קומה 4, דלת שחורה. להתקשר לפני הגעה' },
-    { id:'demo-del-002', senderId:tamirUid, senderName:'Tamir Konortov',
-      driverId:kalUid, driverName:'KAL Solutions', driverRating:4.9,
-      status:'matched', chatId:'demo-chat-002',
-      pickup:{latitude:32.0636,longitude:34.7722,address:'רוטשילד 22, תל אביב',geohash:'sv8wr5'},
-      destination:{latitude:31.7850,longitude:35.2272,address:'יפו 100, ירושלים'},
-      itemDescription:'שלוש קופסאות ספרים לתרומה', itemSize:'large', suggestedPrice:90,
-      notes:'הקופסאות כבדות, צריך עגלה' },
-    { id:'demo-del-003', senderId:tamirUid, senderName:'Tamir Konortov',
-      driverId:kalUid, driverName:'KAL Solutions', driverRating:4.9,
-      status:'picked_up', chatId:'demo-chat-003',
-      pickup:{latitude:32.0853,longitude:34.7818,address:'אבן גבירול 30, תל אביב',geohash:'sv8wrg'},
-      destination:{latitude:32.3215,longitude:34.8532,address:'הרצל 5, נתניה'},
-      itemDescription:'ציוד צילום — מצלמה + חצובה', itemSize:'medium', suggestedPrice:55,
-      notes:'פריט שביר! נא לטפל בזהירות' },
-    { id:'demo-del-004', senderId:tamirUid, senderName:'Tamir Konortov',
-      driverId:kalUid, driverName:'KAL Solutions', driverRating:4.9,
-      status:'in_transit', chatId:'demo-chat-004',
-      pickup:{latitude:32.1094,longitude:34.8555,address:'סוקולוב 40, רמת השרון',geohash:'sv8xq2'},
-      destination:{latitude:32.0167,longitude:34.7500,address:'שד\' ירושלים 15, יפו'},
-      itemDescription:'ארגז כלי עבודה + חלקי חילוף', itemSize:'large', suggestedPrice:70, notes:'' },
-    { id:'demo-del-005', senderId:tamirUid, senderName:'Tamir Konortov',
-      driverId:kalUid, driverName:'KAL Solutions', driverRating:4.9,
-      status:'delivered', chatId:'demo-chat-005', rated:false,
-      pickup:{latitude:32.0797,longitude:34.7704,address:'בן יהודה 15, תל אביב',geohash:'sv8wrh'},
-      destination:{latitude:31.2530,longitude:34.7915,address:'רגר 10, באר שבע'},
-      itemDescription:'מתנת יום הולדת — ארגז עץ', itemSize:'medium', suggestedPrice:120,
-      notes:'הפתעה! לא לספר למקבל' },
-    { id:'demo-del-006', senderId:tamirUid, senderName:'Tamir Konortov',
-      driverId:kalUid, driverName:'KAL Solutions', driverRating:4.9,
-      status:'delivered', chatId:'demo-chat-006', rated:true,
-      pickup:{latitude:32.0636,longitude:34.7722,address:'לילינבלום 4, תל אביב',geohash:'sv8wr5'},
-      destination:{latitude:32.4340,longitude:34.9196,address:'פארק הרצליה, הרצליה פיתוח'},
-      itemDescription:'שני מסכים 27 אינץ\' Samsung', itemSize:'large', suggestedPrice:150,
-      notes:'משלוח דחוף — מסכים חדשים למשרד' },
-    { id:'demo-del-007', senderId:tamirUid, senderName:'Tamir Konortov',
-      status:'cancelled', cancelledBy:tamirUid,
-      pickup:{latitude:32.0853,longitude:34.7818,address:'קפלן 2, תל אביב',geohash:'sv8wrg'},
-      destination:{latitude:32.0944,longitude:34.7747,address:'ויצמן 18, תל אביב'},
-      itemDescription:'חבילת בגדים', itemSize:'small', suggestedPrice:25,
-      notes:'בוטל — מצאתי פתרון אחר' },
-    // KAL sends, Tamir drives
-    { id:'demo-del-008', senderId:kalUid, senderName:'KAL Solutions',
-      status:'pending', interestedDrivers:[tamirUid],
-      pickup:{latitude:32.1620,longitude:34.8027,address:'הרצליה פיתוח, בניין אמות',geohash:'sv8yq4'},
-      destination:{latitude:32.0853,longitude:34.7818,address:'רוטשילד 1, תל אביב'},
-      itemDescription:'Server rack equipment — 2U chassis', itemSize:'large', suggestedPrice:200,
-      notes:'Heavy — needs two people. Loading dock at back entrance' },
-    { id:'demo-del-009', senderId:kalUid, senderName:'KAL Solutions',
-      driverId:tamirUid, driverName:'Tamir Konortov', driverRating:4.7,
-      status:'matched', chatId:'demo-chat-009',
-      pickup:{latitude:32.1620,longitude:34.8027,address:'Maskit 25, Herzliya Pituach',geohash:'sv8yq4'},
-      destination:{latitude:32.0636,longitude:34.7722,address:'Rothschild 45, Tel Aviv'},
-      itemDescription:'Marketing materials — banners & flyers', itemSize:'medium', suggestedPrice:45,
-      notes:'For the tech conference tomorrow morning' },
-    { id:'demo-del-010', senderId:kalUid, senderName:'KAL Solutions',
-      driverId:tamirUid, driverName:'Tamir Konortov', driverRating:4.7,
-      status:'picked_up', chatId:'demo-chat-010',
-      pickup:{latitude:32.1620,longitude:34.8027,address:'אבא אבן 8, הרצליה פיתוח',geohash:'sv8yq4'},
-      destination:{latitude:31.7683,longitude:35.2137,address:'גבעת רם, ירושלים'},
-      itemDescription:'קופסת דגימות מוצר — 50 יחידות', itemSize:'medium', suggestedPrice:85,
-      notes:'לכנס בירושלים, חייב להגיע עד 14:00' },
-  ];
+  console.log('\n── Deliveries (6) ──');
 
-  const statusOrder = ['pending','matched','picked_up','in_transit','delivered'];
-  for (const d of deliveries) {
-    const { id, ...data } = d;
-    const statusHistory = {};
-    const idx = statusOrder.indexOf(data.status);
-    if (data.status === 'cancelled') {
-      statusHistory.pending = daysAgo(3); statusHistory.cancelled = daysAgo(2);
-    } else {
-      for (let i = 0; i <= Math.max(0, idx); i++) statusHistory[statusOrder[i]] = daysAgo(Math.max(0, idx - i));
-    }
-    await setDoc(doc(db, 'deliveries', id), {
-      ...data, photoUrl:'', payment:{senderConfirmed:false,driverConfirmed:false},
-      proof:{}, statusHistory, rated:data.rated||false,
-      interestedDrivers:data.interestedDrivers||[], scheduledDate:null,
-      cancelledBy:data.cancelledBy||null,
-      createdAt:daysAgo(idx>=0?idx+1:3), updatedAt:Timestamp.now(),
-    });
-    console.log(`  [✓] ${id} | ${data.status.padEnd(10)} | ${data.itemDescription.substring(0,40)}`);
-  }
+  // #1 — pending, NO driver, brand new listing
+  await setDoc(doc(db, 'deliveries', 'demo-del-001'), {
+    senderId: tamirUid, senderName: 'Tamir Konortov',
+    status: 'pending',
+    pickup: { latitude: 32.0773, longitude: 34.7748, address: 'דיזנגוף 50, תל אביב', geohash: 'sv8wrg' },
+    destination: { latitude: 32.0636, longitude: 34.7722, address: 'רוטשילד 22, תל אביב', geohash: 'sv8wr5' },
+    itemDescription: 'מחשב נייד Dell עם מטען', itemSize: 'small', suggestedPrice: 65,
+    notes: 'קומה 4, להתקשר לפני',
+    photoUrl: '', interestedDrivers: [], scheduledDate: null,
+    payment: { senderConfirmed: false, driverConfirmed: false },
+    proof: {}, rated: false, cancelledBy: null,
+    statusHistory: {
+      pending: daysAgo(1),
+    },
+    createdAt: daysAgo(1), updatedAt: Timestamp.now(),
+  });
+  console.log('  [✓] demo-del-001 | pending    | מחשב נייד Dell עם מטען');
 
-  // ── Chats ──
-  console.log('\n── Chats ──');
+  // #2 — matched, sender=tamir, driver=kal
+  await setDoc(doc(db, 'deliveries', 'demo-del-002'), {
+    senderId: tamirUid, senderName: 'Tamir Konortov',
+    driverId: kalUid, driverName: 'KAL Solutions', driverRating: 4.9,
+    status: 'matched', chatId: 'demo-chat-002',
+    pickup: { latitude: 32.0853, longitude: 34.7818, address: 'אבן גבירול 30, תל אביב', geohash: 'sv8wrg' },
+    destination: { latitude: 32.0655, longitude: 34.7694, address: 'אלנבי 15, תל אביב', geohash: 'sv8wr4' },
+    itemDescription: 'קופסת ספרים ישנים', itemSize: 'medium', suggestedPrice: 40,
+    notes: '',
+    photoUrl: '', interestedDrivers: [kalUid], scheduledDate: null,
+    payment: { senderConfirmed: false, driverConfirmed: false },
+    proof: {}, rated: false, cancelledBy: null,
+    statusHistory: {
+      pending: daysAgo(2),
+      matched: daysAgo(1),
+    },
+    createdAt: daysAgo(2), updatedAt: Timestamp.now(),
+  });
+  console.log('  [✓] demo-del-002 | matched    | קופסת ספרים ישנים');
+
+  // #3 — matched, sender=kal, driver=tamir (EN)
+  await setDoc(doc(db, 'deliveries', 'demo-del-003'), {
+    senderId: kalUid, senderName: 'KAL Solutions',
+    driverId: tamirUid, driverName: 'Tamir Konortov', driverRating: 4.7,
+    status: 'matched', chatId: 'demo-chat-003',
+    pickup: { latitude: 32.1620, longitude: 34.8027, address: 'Maskit 25, Herzliya', geohash: 'sv8yq4' },
+    destination: { latitude: 32.0630, longitude: 34.7710, address: 'Rothschild 45, Tel Aviv', geohash: 'sv8wr5' },
+    itemDescription: 'Marketing banners & flyers', itemSize: 'medium', suggestedPrice: 45,
+    notes: 'For the tech conference tomorrow morning',
+    photoUrl: '', interestedDrivers: [tamirUid], scheduledDate: null,
+    payment: { senderConfirmed: false, driverConfirmed: false },
+    proof: {}, rated: false, cancelledBy: null,
+    statusHistory: {
+      pending: daysAgo(3),
+      matched: daysAgo(2),
+    },
+    createdAt: daysAgo(3), updatedAt: Timestamp.now(),
+  });
+  console.log('  [✓] demo-del-003 | matched    | Marketing banners & flyers');
+
+  // #4 — picked_up, sender=tamir, driver=kal
+  await setDoc(doc(db, 'deliveries', 'demo-del-004'), {
+    senderId: tamirUid, senderName: 'Tamir Konortov',
+    driverId: kalUid, driverName: 'KAL Solutions', driverRating: 4.9,
+    status: 'picked_up', chatId: 'demo-chat-004',
+    pickup: { latitude: 32.1094, longitude: 34.8555, address: 'הברזל 10, תל אביב', geohash: 'sv8xq2' },
+    destination: { latitude: 32.0797, longitude: 34.7704, address: 'בן יהודה 80, תל אביב', geohash: 'sv8wrh' },
+    itemDescription: 'ציוד משרד — כיסא ארגונומי', itemSize: 'large', suggestedPrice: 95,
+    notes: 'כבד — צריך עזרה בפריקה',
+    photoUrl: '', interestedDrivers: [kalUid], scheduledDate: null,
+    payment: { senderConfirmed: false, driverConfirmed: false },
+    proof: { pickupURL: 'https://placehold.co/400x300?text=Pickup+Proof' },
+    rated: false, cancelledBy: null,
+    statusHistory: {
+      pending: daysAgo(4),
+      matched: daysAgo(3),
+      picked_up: hoursAgo(6),
+    },
+    createdAt: daysAgo(4), updatedAt: Timestamp.now(),
+  });
+  console.log('  [✓] demo-del-004 | picked_up  | ציוד משרד — כיסא ארגונומי');
+
+  // #5 — delivered, sender=kal, driver=tamir (EN)
+  await setDoc(doc(db, 'deliveries', 'demo-del-005'), {
+    senderId: kalUid, senderName: 'KAL Solutions',
+    driverId: tamirUid, driverName: 'Tamir Konortov', driverRating: 4.7,
+    status: 'delivered', chatId: 'demo-chat-005',
+    pickup: { latitude: 32.1620, longitude: 34.8027, address: 'Aba Even 12, Herzliya', geohash: 'sv8yq4' },
+    destination: { latitude: 32.0636, longitude: 34.7722, address: 'Nachlat Binyamin 30, Tel Aviv', geohash: 'sv8wr5' },
+    itemDescription: '3 monitors for office', itemSize: 'large', suggestedPrice: 110,
+    notes: 'Handle with care — fragile screens',
+    photoUrl: '', interestedDrivers: [tamirUid], scheduledDate: null,
+    payment: { senderConfirmed: false, driverConfirmed: false },
+    proof: {
+      pickupURL: 'https://placehold.co/400x300?text=Pickup+Proof',
+      deliveryURL: 'https://placehold.co/400x300?text=Delivery+Proof',
+    },
+    rated: false, cancelledBy: null,
+    statusHistory: {
+      pending: daysAgo(5),
+      matched: daysAgo(4),
+      picked_up: daysAgo(3),
+      delivered: daysAgo(2),
+    },
+    createdAt: daysAgo(5), updatedAt: Timestamp.now(),
+  });
+  console.log('  [✓] demo-del-005 | delivered  | 3 monitors for office');
+
+  // #6 — completed_paid, sender=tamir, driver=kal
+  await setDoc(doc(db, 'deliveries', 'demo-del-006'), {
+    senderId: tamirUid, senderName: 'Tamir Konortov',
+    driverId: kalUid, driverName: 'KAL Solutions', driverRating: 4.9,
+    status: 'completed_paid', chatId: 'demo-chat-006',
+    pickup: { latitude: 32.0730, longitude: 34.7860, address: 'קפלן 7, תל אביב', geohash: 'sv8wrg' },
+    destination: { latitude: 32.0780, longitude: 34.7720, address: 'בוגרשוב 40, תל אביב', geohash: 'sv8wrh' },
+    itemDescription: 'חבילת בגדים — מתנה', itemSize: 'small', suggestedPrice: 30,
+    notes: 'מתנה — לעטוף יפה',
+    photoUrl: '', interestedDrivers: [kalUid], scheduledDate: null,
+    payment: { senderConfirmed: true, driverConfirmed: true },
+    proof: {
+      pickupURL: 'https://placehold.co/400x300?text=Pickup+Proof',
+      deliveryURL: 'https://placehold.co/400x300?text=Delivery+Proof',
+      paymentURL: 'https://placehold.co/400x300?text=Payment+Proof',
+    },
+    rated: true, cancelledBy: null,
+    statusHistory: {
+      pending: daysAgo(7),
+      matched: daysAgo(6),
+      picked_up: daysAgo(5),
+      delivered: daysAgo(4),
+      completed_paid: daysAgo(3),
+    },
+    createdAt: daysAgo(7), updatedAt: Timestamp.now(),
+  });
+  console.log('  [✓] demo-del-006 | completed  | חבילת בגדים — מתנה');
+
+  // ── Chats (4 chats for deliveries #2-#5) ──
+  console.log('\n── Chats (4) ──');
   const chats = [
-    { chatId:'demo-chat-002', deliveryId:'demo-del-002', msgs:[
-      {s:kalUid,t:'היי, ראיתי את המשלוח שלך. אני יכול לאסוף היום',h:5},
-      {s:tamirUid,t:'מעולה! הקופסאות מוכנות בכניסה לבניין',h:4.5},
-      {s:kalUid,t:'יש מעלית בבניין? 3 קופסאות זה הרבה לסחוב',h:4},
-      {s:tamirUid,t:'כן, מעלית משא. קומה 2',h:3.5},
-      {s:kalUid,t:'סבבה, אני בדרך. אגיע בעוד כ-20 דקות',h:3},
+    { chatId: 'demo-chat-002', deliveryId: 'demo-del-002', msgs: [
+      { s: kalUid, t: 'היי, ראיתי את המשלוח שלך. אני יכול לאסוף היום אחרי 16:00', h: 8 },
+      { s: tamirUid, t: 'מעולה! הספרים ארוזים בקופסה ליד הדלת', h: 7 },
+      { s: kalUid, t: 'כמה שוקלת הקופסה בערך?', h: 6.5 },
+      { s: tamirUid, t: 'כ-8 קילו. לא כבד מדי', h: 6 },
+      { s: kalUid, t: 'סבבה, אגיע ב-16:30. אשלח הודעה כשאני בדרך', h: 5 },
     ]},
-    { chatId:'demo-chat-003', deliveryId:'demo-del-003', msgs:[
-      {s:kalUid,t:'אספתי את ציוד הצילום. הכל ארוז יפה',h:2},
-      {s:tamirUid,t:'תודה! תזהר עם החצובה, היא שבירה',h:1.8},
-      {s:kalUid,t:'בטח, עטפתי הכל בשמיכה. בדרך לנתניה',h:1.5},
-      {s:tamirUid,t:'אלוף! כמה זמן לדעתך?',h:1},
-      {s:kalUid,t:'לפי ווייז כ-40 דקות. יש קצת פקקים',h:0.5},
+    { chatId: 'demo-chat-003', deliveryId: 'demo-del-003', msgs: [
+      { s: tamirUid, t: 'Hi, I can pick up the banners this afternoon', h: 10 },
+      { s: kalUid, t: 'Great! They\'re at the front desk. Ask for Shira', h: 9 },
+      { s: tamirUid, t: 'Will be there around 15:00. Is parking available?', h: 8 },
+      { s: kalUid, t: 'Yes, underground parking. Take a ticket and I\'ll validate it', h: 7.5 },
     ]},
-    { chatId:'demo-chat-004', deliveryId:'demo-del-004', msgs:[
-      {s:kalUid,t:'Hey Tamir, picked up the toolbox. On my way to Jaffa',h:1},
-      {s:tamirUid,t:'Great! The recipient is waiting at the entrance',h:0.8},
-      {s:kalUid,t:'ETA about 15 minutes. Traffic is light',h:0.3},
+    { chatId: 'demo-chat-004', deliveryId: 'demo-del-004', msgs: [
+      { s: kalUid, t: 'אספתי את הכיסא. הוא ממש כבד!', h: 5 },
+      { s: tamirUid, t: 'כן, זה ארגונומי של הרמן מילר. תיזהר איתו', h: 4.5 },
+      { s: kalUid, t: 'עטפתי הכל בניילון בועות. יוצא עכשיו', h: 4 },
+      { s: tamirUid, t: 'תודה! המקבל ממתין בכניסה לבניין, קומת קרקע', h: 3.5 },
+      { s: kalUid, t: 'אני בדרך, ETA כ-25 דקות לפי ווייז', h: 3 },
     ]},
-    { chatId:'demo-chat-005', deliveryId:'demo-del-005', msgs:[
-      {s:tamirUid,t:'שלום, המשלוח לבאר שבע — אפשר להגיע היום?',h:48},
-      {s:kalUid,t:'כן, ממילא יש לי נסיעה לדרום. מתאים מצוין',h:47},
-      {s:tamirUid,t:'מושלם! זו מתנת יום הולדת, אל תגיד למקבל מה בפנים',h:46},
-      {s:kalUid,t:'הבנתי, שפתיים חתומות',h:45},
-      {s:kalUid,t:'נמסר! הוא נראה מאוד שמח',h:40},
-      {s:tamirUid,t:'תודה רבה!! שירות מעולה',h:39},
-    ]},
-    { chatId:'demo-chat-006', deliveryId:'demo-del-006', msgs:[
-      {s:tamirUid,t:'Hi, the monitors are fragile. Please use padding',h:72},
-      {s:kalUid,t:'No worries, I have foam padding in the van',h:71},
-      {s:tamirUid,t:'Perfect. Herzliya Park, Building 7, 3rd floor',h:70},
-      {s:kalUid,t:'Got it. Will be there by 11am. Should I call?',h:69},
-      {s:tamirUid,t:'Yes please, ask for Yael at reception',h:68},
-      {s:kalUid,t:'Delivered safely! Yael confirmed all good',h:66},
-      {s:tamirUid,t:'Amazing service as always. Thank you!',h:65},
-    ]},
-    { chatId:'demo-chat-009', deliveryId:'demo-del-009', msgs:[
-      {s:tamirUid,t:'I can pick up the marketing materials this afternoon',h:3},
-      {s:kalUid,t:'Great! Office closes at 18:00. Can you make it?',h:2.5},
-      {s:tamirUid,t:'I\'ll be there at 16:30. Parking nearby?',h:2},
-      {s:kalUid,t:'Underground parking. Take ticket, I\'ll validate',h:1.5},
-    ]},
-    { chatId:'demo-chat-010', deliveryId:'demo-del-010', msgs:[
-      {s:kalUid,t:'הדגימות מוכנות. 50 יחידות בארגז אחד',h:6},
-      {s:tamirUid,t:'מצוין, מגיע בעוד חצי שעה',h:5.5},
-      {s:tamirUid,t:'אספתי הכל. יוצא לירושלים עכשיו',h:4},
-      {s:kalUid,t:'תודה! הכנס בגבעת רם, אולם 3',h:3.5},
-      {s:tamirUid,t:'אני על כביש 1, צפי הגעה עוד שעה',h:2},
+    { chatId: 'demo-chat-005', deliveryId: 'demo-del-005', msgs: [
+      { s: kalUid, t: 'The 3 monitors are packed and ready for pickup', h: 30 },
+      { s: tamirUid, t: 'On my way. Do I need a dolly?', h: 29 },
+      { s: kalUid, t: 'Yes recommended. They\'re 27-inch screens, quite heavy', h: 28 },
+      { s: tamirUid, t: 'Got them all loaded. Heading to Nachlat Binyamin now', h: 26 },
+      { s: tamirUid, t: 'Delivered! Recipient confirmed all 3 monitors intact', h: 24 },
     ]},
   ];
 
   for (const chat of chats) {
-    const last = chat.msgs[chat.msgs.length-1];
-    await setDoc(doc(db,'chats',chat.chatId), {
-      deliveryId:chat.deliveryId, participants:[tamirUid,kalUid],
-      lastMessage:last.t, lastMessageAt:hoursAgo(last.h), lastSenderId:last.s,
-      createdAt:hoursAgo(chat.msgs[0].h),
+    const last = chat.msgs[chat.msgs.length - 1];
+    await setDoc(doc(db, 'chats', chat.chatId), {
+      deliveryId: chat.deliveryId, participants: [tamirUid, kalUid],
+      lastMessage: last.t, lastMessageAt: hoursAgo(last.h), lastSenderId: last.s,
+      createdAt: hoursAgo(chat.msgs[0].h),
     });
     for (const m of chat.msgs) {
-      await addDoc(collection(db,'chats',chat.chatId,'messages'), {
-        chatId:chat.chatId, senderId:m.s, text:m.t, type:'text', read:true,
-        createdAt:hoursAgo(m.h),
+      await addDoc(collection(db, 'chats', chat.chatId, 'messages'), {
+        chatId: chat.chatId, senderId: m.s, text: m.t, type: 'text', read: true,
+        createdAt: hoursAgo(m.h),
       });
     }
     console.log(`  [✓] ${chat.chatId} (${chat.msgs.length} msgs)`);
   }
 
-  // ── Ratings ──
+  // No ratings seeded (clean slate)
   console.log('\n── Ratings ──');
-  await setDoc(doc(db,'ratings','demo-rating-001'), {
-    deliveryId:'demo-del-006', fromUserId:tamirUid, toUserId:kalUid,
-    rating:5, comment:'Excellent service! Monitors arrived safely.', createdAt:daysAgo(3),
-  });
-  await setDoc(doc(db,'ratings','demo-rating-002'), {
-    deliveryId:'demo-del-006', fromUserId:kalUid, toUserId:tamirUid,
-    rating:5, comment:'חבילה מוכנה ומסודרת. שולח אמין ומקצועי.', createdAt:daysAgo(3),
-  });
-  console.log('  [✓] 2 mutual ratings (5 stars)');
+  console.log('  [·] None seeded (clean slate)');
 }
 
 async function main() {
@@ -291,8 +361,11 @@ async function main() {
   const kalUid = await signInUser(KAL_EMAIL, kalPw);
   console.log(`\n  Tamir: ${tamirUid}\n  KAL:   ${kalUid}\n`);
 
+  // Clean existing data for these users only (signed in as KAL)
+  await cleanCollections(tamirUid, kalUid);
+
   // Write KAL's own profile first (signed in as KAL)
-  console.log('── Writing KAL profile (as KAL) ──');
+  console.log('\n── Writing KAL profile (as KAL) ──');
   await setDoc(doc(db, 'users', kalUid), {
     uid: kalUid, email: KAL_EMAIL, fullName: 'KAL Solutions',
     phone: '+972521112233', city: 'הרצליה', role: 'driver', activeMode: 'driver',
@@ -311,9 +384,9 @@ async function main() {
   await seedAll(tamirUid, kalUid);
 
   console.log('\n=== Done! ===');
-  console.log('  10 deliveries (7 Tamir→KAL, 3 KAL→Tamir)');
-  console.log('  7 chats (Hebrew + English)');
-  console.log('  2 ratings\n');
+  console.log('  6 deliveries (pending, matched x2, picked_up, delivered, completed_paid)');
+  console.log('  4 chats with realistic messages');
+  console.log('  0 ratings (clean slate)\n');
   process.exit(0);
 }
 

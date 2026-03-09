@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidAction, EventType } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
 
 import { useAuth } from './useAuth';
@@ -51,6 +51,52 @@ async function ensureAndroidChannels(): Promise<string> {
   return 'mooviz_deliveries';
 }
 
+/** Set up iOS notification categories with action buttons */
+async function setupNotificationCategories(): Promise<void> {
+  await notifee.setNotificationCategories([
+    {
+      id: 'chat',
+      actions: [{ id: 'reply', title: 'פתח צ׳אט' }],
+    },
+    {
+      id: 'delivery',
+      actions: [{ id: 'view', title: 'צפה במשלוח' }],
+    },
+    {
+      id: 'tracking',
+      actions: [{ id: 'track', title: 'מעקב' }],
+    },
+  ]);
+}
+
+/** Get Android actions and iOS categoryId based on notification event */
+function getNotificationActions(notifEvent?: string): {
+  androidActions?: AndroidAction[];
+  iosCategoryId?: string;
+} {
+  switch (notifEvent) {
+    case 'new_chat_message':
+      return {
+        androidActions: [{ title: 'פתח צ׳אט', pressAction: { id: 'open_chat' } }],
+        iosCategoryId: 'chat',
+      };
+    case 'driver_interested':
+    case 'sender_approved':
+      return {
+        androidActions: [{ title: 'צפה במשלוח', pressAction: { id: 'view_delivery' } }],
+        iosCategoryId: 'delivery',
+      };
+    case 'delivery_picked_up':
+    case 'delivery_delivered':
+      return {
+        androidActions: [{ title: 'מעקב', pressAction: { id: 'track' } }],
+        iosCategoryId: 'tracking',
+      };
+    default:
+      return {};
+  }
+}
+
 export function useNotifications(): UseNotificationsResult {
   const { currentUser } = useAuth();
   const [fcmToken, setFcmToken] = useState<string | null>(null);
@@ -83,11 +129,12 @@ export function useNotifications(): UseNotificationsResult {
     }
   }, []);
 
-  // Create notification channels on mount (Android)
+  // Create notification channels (Android) and categories (iOS) on mount
   useEffect(() => {
     if (Platform.OS === 'android') {
       ensureAndroidChannels().catch(() => {});
     }
+    setupNotificationCategories().catch(() => {});
   }, []);
 
   // Register FCM token and save to Firestore
@@ -169,6 +216,7 @@ export function useNotifications(): UseNotificationsResult {
 
         const channelId = await ensureAndroidChannels();
         const isChatNotif = notifEvent === 'new_chat_message';
+        const { androidActions, iosCategoryId } = getNotificationActions(notifEvent);
 
         await notifee.displayNotification({
           title: remoteMessage.notification.title || 'MOOVIZ',
@@ -179,14 +227,16 @@ export function useNotifications(): UseNotificationsResult {
             smallIcon: 'ic_launcher',
             pressAction: { id: 'default' },
             importance: AndroidImportance.HIGH,
+            ...(androidActions && { actions: androidActions }),
           },
+          ...(iosCategoryId && { ios: { categoryId: iosCategoryId } }),
         });
       },
     );
 
     // Notifee foreground event — handle notification tap while app is open
     const unsubscribeNotifee = notifee.onForegroundEvent(({ type, detail }) => {
-      if (type === EventType.PRESS && detail.notification?.data) {
+      if ((type === EventType.PRESS || type === EventType.ACTION_PRESS) && detail.notification?.data) {
         handleNotificationNavigation(detail.notification.data as Record<string, string>);
       }
     });

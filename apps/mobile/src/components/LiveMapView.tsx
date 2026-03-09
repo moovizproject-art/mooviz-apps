@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Linking, Dimensions, I18nManager } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { View, TouchableOpacity, Text, StyleSheet, Linking, Dimensions, I18nManager, Platform } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
+
+const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
 import firestore from '@react-native-firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +18,7 @@ interface LiveMapViewProps {
   chatId?: string;
   recipientName?: string;
   isFullScreen?: boolean;
+  hideFabs?: boolean;
   onExpand?: () => void;
   onCollapse?: () => void;
 }
@@ -27,7 +30,7 @@ interface DriverLocation {
 
 export function LiveMapView({
   pickup, destination, driverId, driverPhone, chatId, recipientName,
-  isFullScreen = false, onExpand, onCollapse,
+  isFullScreen = false, hideFabs = false, onExpand, onCollapse,
 }: LiveMapViewProps): React.JSX.Element {
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
   const mapRef = useRef<MapView>(null);
@@ -86,7 +89,7 @@ export function LiveMapView({
     <View style={[styles.container, { height: mapHeight }]}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
+        provider={MAP_PROVIDER}
         style={StyleSheet.absoluteFillObject}
         showsUserLocation={false}
         showsMyLocationButton={false}
@@ -118,45 +121,47 @@ export function LiveMapView({
       </MapView>
 
       {/* Floating Action Buttons */}
-      <View style={[styles.fabContainer, isFullScreen ? styles.fabContainerFullScreen : styles.fabContainerInline]}>
-        {/* Expand / Collapse */}
-        {!isFullScreen && onExpand && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.primary }]}
-            onPress={onExpand}
-          >
-            <Text style={styles.fabIcon}>{'\u2197'}</Text>
-          </TouchableOpacity>
-        )}
-        {isFullScreen && onCollapse && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.surface }]}
-            onPress={onCollapse}
-          >
-            <Text style={[styles.fabIcon, { color: colors.textPrimary }]}>{'\u2715'}</Text>
-          </TouchableOpacity>
-        )}
+      {!hideFabs && (
+        <View style={[styles.fabContainer, isFullScreen ? styles.fabContainerFullScreen : styles.fabContainerInline]}>
+          {/* Expand / Collapse */}
+          {!isFullScreen && onExpand && (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: colors.primary }]}
+              onPress={onExpand}
+            >
+              <Text style={styles.fabIcon}>{'\u2197'}</Text>
+            </TouchableOpacity>
+          )}
+          {isFullScreen && onCollapse && (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: colors.surface }]}
+              onPress={onCollapse}
+            >
+              <Text style={[styles.fabIcon, { color: colors.textPrimary }]}>{'\u2715'}</Text>
+            </TouchableOpacity>
+          )}
 
-        {/* Message button */}
-        {chatId && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.primary }]}
-            onPress={handleMessage}
-          >
-            <Text style={styles.fabIcon}>{'\uD83D\uDCAC'}</Text>
-          </TouchableOpacity>
-        )}
+          {/* Message button */}
+          {chatId && (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: colors.primary }]}
+              onPress={handleMessage}
+            >
+              <Text style={styles.fabIcon}>{'\uD83D\uDCAC'}</Text>
+            </TouchableOpacity>
+          )}
 
-        {/* Call button */}
-        {driverPhone && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.success || '#4CAF50' }]}
-            onPress={handleCall}
-          >
-            <Text style={styles.fabIcon}>{'\uD83D\uDCDE'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          {/* Call button */}
+          {driverPhone && (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: colors.success || '#4CAF50' }]}
+              onPress={handleCall}
+            >
+              <Text style={styles.fabIcon}>{'\uD83D\uDCDE'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }
