@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,18 @@ import {
   Image,
   StatusBar,
   TouchableOpacity,
+  Pressable,
+  ScrollView,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClientTabScreenProps } from '../../navigation/types';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
-import { GlassCard } from '../../components/GlassCard';
 import { AnimatedButton } from '../../components/AnimatedButton';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { SkeletonCard } from '../../components/SkeletonLoader';
@@ -23,6 +27,20 @@ import { EmptyState } from '../../components/EmptyState';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
+import { useSenderExpenses } from '../../hooks/useSenderExpenses';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const EXPENSES_TABS = [
+  { key: 'thisWeek', label: 'השבוע' },
+  { key: 'lastWeek', label: 'שבוע שעבר' },
+  { key: 'thisMonth', label: 'החודש' },
+  { key: 'lastMonth', label: 'חודש שעבר' },
+  { key: 'thisYear', label: 'השנה' },
+] as const;
 
 const logo = require('../../assets/logo.png');
 
@@ -32,6 +50,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const { currentUser } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const drawer = useSettingsDrawer();
 
   // Request permissions on first launch
@@ -48,11 +67,16 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
     statusFilter: ['pending', 'matched', 'picked_up', 'in_transit'],
   });
 
+  const { expenses } = useSenderExpenses(currentUser?.uid);
+  const [expensesOpen, setExpensesOpen] = useState(false);
+  const [expensesTab, setExpensesTab] = useState<string>('thisWeek');
+
   const recentDeliveries = deliveries.slice(0, 5);
   const fullName = currentUser?.fullName || '';
   const firstName = fullName.split(' ')[0] || fullName;
   const rating = currentUser?.ratingAsSender?.average;
   const deliveryCount = currentUser?.completedDeliveries ?? 0;
+  const currentExpenses = expenses[expensesTab as keyof typeof expenses] || expenses.thisWeek;
 
   const handleCreateDelivery = useCallback(() => {
     navigation.navigate('CreateDelivery');
@@ -68,7 +92,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const renderHeader = (): React.JSX.Element => (
     <View>
       {/* ── Blue Header ── */}
-      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.sm }]}>
         <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
         {/* Top row: logo centered, gear absolute on end */}
@@ -125,33 +149,106 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
 
   const renderFooter = (): React.JSX.Element => (
     <View>
+      {/* ── Expenses Dashboard (collapsible) ── */}
+      <View style={[styles.sectionCard, styles.expensesCard, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: '#E53935', borderStartWidth: 4 }]}>
+        <Pressable onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setExpensesOpen((prev) => !prev);
+        }} style={styles.expensesHeader}>
+          <Text style={[styles.expensesTitle, { color: colors.textPrimary }]}>
+            💸 הוצאות
+          </Text>
+          <View style={styles.expensesEndRow}>
+            <Text style={[styles.expensesQuickTotal, { color: '#E53935' }]}>
+              ₪{currentExpenses.total.toLocaleString()}
+            </Text>
+            <Text style={[styles.expensesArrow, { color: colors.textTertiary }]}>
+              {expensesOpen ? '▼' : '◀'}
+            </Text>
+          </View>
+        </Pressable>
+
+        {expensesOpen && (
+          <View style={{ marginTop: SPACING.sm }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.sm }}>
+              <View style={styles.expensesTabsRow}>
+                {EXPENSES_TABS.map((tab) => (
+                  <Pressable
+                    key={tab.key}
+                    onPress={() => setExpensesTab(tab.key)}
+                    style={[
+                      styles.expensesTab,
+                      {
+                        backgroundColor: expensesTab === tab.key ? colors.primary : colors.surface,
+                        borderColor: expensesTab === tab.key ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.expensesTabText,
+                      { color: expensesTab === tab.key ? colors.textInverse : colors.textPrimary },
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.expensesStatsRow}>
+              <View style={styles.expensesStat}>
+                <Text style={[styles.expensesStatValue, { color: '#E53935' }]}>
+                  ₪{currentExpenses.total.toLocaleString()}
+                </Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>סה״כ</Text>
+              </View>
+              <View style={[styles.expensesDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.expensesStat}>
+                <Text style={[styles.expensesStatValue, { color: colors.primary }]}>
+                  {currentExpenses.count}
+                </Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+              </View>
+              <View style={[styles.expensesDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.expensesStat}>
+                <Text style={[styles.expensesStatValue, { color: colors.textPrimary }]}>
+                  {currentExpenses.totalDistanceKm} ק"מ
+                </Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>מרחק</Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+
       {/* Stats Row */}
       <View style={styles.statsRow}>
-        <GlassCard style={{ ...styles.statCard, backgroundColor: colors.surface }} padding="md">
+        <View style={[styles.sectionCard, styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 3 }]}>
           <Text style={styles.statEmoji}>📦</Text>
           <Text style={[styles.statValue, { color: colors.primary }]}>{deliveryCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home.deliveries')}</Text>
-        </GlassCard>
-        <GlassCard style={{ ...styles.statCard, backgroundColor: colors.surface }} padding="md">
+        </View>
+        <View style={[styles.sectionCard, styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.success, borderStartWidth: 3 }]}>
           <Text style={styles.statEmoji}>⭐</Text>
           <Text style={[styles.statValue, { color: colors.primary }]}>{rating ? rating.toFixed(1) : '—'}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home.rating')}</Text>
-        </GlassCard>
+        </View>
       </View>
       <View style={styles.footerSpacer} />
     </View>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={isLoading ? [] : recentDeliveries}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <DeliveryCard
-            delivery={item}
-            onPress={() => handleDeliveryPress(item.id)}
-          />
+          <View style={styles.cardWrapper}>
+            <DeliveryCard
+              delivery={item}
+              onPress={() => handleDeliveryPress(item.id)}
+            />
+          </View>
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
@@ -181,7 +278,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
       />
 
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -207,11 +304,11 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    right: 0,
-    top: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    left: 0,
+    top: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -281,6 +378,87 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 0,
   },
+  // ── 3D Card ──
+  sectionCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  // ── Expenses Dashboard ──
+  expensesCard: {
+    marginHorizontal: SPACING.xxl,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    padding: SPACING.md,
+  },
+  expensesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  expensesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  expensesEndRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  expensesQuickTotal: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  expensesArrow: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  expensesTabsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  expensesTab: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+  },
+  expensesTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  expensesStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: SPACING.sm,
+  },
+  expensesStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  expensesStatValue: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  expensesStatLabel: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  expensesDivider: {
+    width: 1,
+    height: 32,
+  },
   // ── Stats ──
   statsRow: {
     flexDirection: 'row',
@@ -291,8 +469,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: 'center',
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
+    padding: SPACING.md,
   },
   statEmoji: {
     fontSize: 28,
@@ -313,6 +490,9 @@ const styles = StyleSheet.create({
   // ── List ──
   listContent: {
     paddingBottom: SPACING.xxl,
+  },
+  cardWrapper: {
+    paddingHorizontal: 16,
   },
   skeletonContainer: {
     paddingHorizontal: SPACING.xxl,

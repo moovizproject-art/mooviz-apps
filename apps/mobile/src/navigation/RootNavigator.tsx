@@ -4,11 +4,41 @@ import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigatio
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import firestore from '@react-native-firebase/firestore';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
+
+/** Hook to count unread chat threads (where lastSenderId != current user) */
+function useUnreadChatCount(userId: string | undefined): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    const unsubscribe = firestore()
+      .collection('chats')
+      .where('participants', 'array-contains', userId)
+      .onSnapshot(
+        (snapshot) => {
+          let unread = 0;
+          snapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            // Count threads where last message is from someone else
+            if (data.lastSenderId && data.lastSenderId !== userId && data.lastMessage) {
+              unread++;
+            }
+          });
+          setCount(unread);
+        },
+        () => setCount(0),
+      );
+    return unsubscribe;
+  }, [userId]);
+
+  return count;
+}
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { HomeIcon, PackageIcon, ChatIcon, ProfileIcon, TruckIcon, ClipboardIcon } from '../components/TabIcons';
@@ -36,6 +66,7 @@ import { DriverKYCScreen } from '../screens/driver/DriverKYCScreen';
 import { ChatScreen } from '../screens/shared/ChatScreen';
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { RatingScreen } from '../screens/shared/RatingScreen';
+import { FullScreenMapScreen } from '../screens/shared/FullScreenMapScreen';
 
 // Verification screens
 import { EmailVerificationScreen } from '../screens/auth/EmailVerificationScreen';
@@ -79,6 +110,14 @@ export type RootStackParamList = {
   DriverDeliveryDetail: { deliveryId: string };
   ChatRoom: { chatId: string; recipientName: string };
   Rating: { deliveryId: string; targetUserId: string };
+  FullScreenMap: {
+    pickup: { latitude: number; longitude: number; address?: string };
+    destination: { latitude: number; longitude: number; address?: string };
+    driverId: string;
+    driverPhone?: string;
+    chatId?: string;
+    recipientName?: string;
+  };
 };
 
 /** Composite props for sender tab screens that navigate to root stack */
@@ -126,6 +165,8 @@ function AuthStack(): React.JSX.Element {
 function SenderTabs(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { currentUser } = useAuth();
+  const unreadChats = useUnreadChatCount(currentUser?.uid);
   return (
     <SenderTab.Navigator
       screenOptions={{
@@ -157,6 +198,7 @@ function SenderTabs(): React.JSX.Element {
         options={{
           tabBarLabel: t('tabs.chat'),
           tabBarIcon: ({ color }) => <ChatIcon color={color} />,
+          tabBarBadge: unreadChats > 0 ? unreadChats : undefined,
         }}
       />
       <SenderTab.Screen
@@ -175,6 +217,8 @@ function SenderTabs(): React.JSX.Element {
 function DriverTabs(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { currentUser } = useAuth();
+  const unreadChats = useUnreadChatCount(currentUser?.uid);
   return (
     <DriverTab.Navigator
       screenOptions={{
@@ -206,6 +250,7 @@ function DriverTabs(): React.JSX.Element {
         options={{
           tabBarLabel: t('tabs.chat'),
           tabBarIcon: ({ color }) => <ChatIcon color={color} />,
+          tabBarBadge: unreadChats > 0 ? unreadChats : undefined,
         }}
       />
       <DriverTab.Screen
@@ -313,7 +358,7 @@ export function RootNavigator(): React.JSX.Element {
 
   return (
     <ErrorBoundary fallbackColors={{ background: colors.background, textPrimary: colors.textPrimary, textSecondary: colors.textSecondary, primary: colors.primary, border: colors.border, error: colors.error }}>
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerBackTitle: t('common.back') }}>
       {!firebaseUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : needsEmailVerification ? (
@@ -327,7 +372,7 @@ export function RootNavigator(): React.JSX.Element {
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : currentUser.activeMode === 'driver' ? (
         <>
-          <Stack.Screen name="DriverTabs" component={DriverTabs} />
+          <Stack.Screen name="DriverTabs" component={DriverTabs} options={{ title: t('common.back') }} />
           <Stack.Screen
             name="DriverDeliveryDetail"
             component={DriverDeliveryDetail}
@@ -336,17 +381,26 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: t('tabs.chat') }}
+            options={{
+              headerShown: true,
+              title: '',
+              headerStyle: { backgroundColor: colors.surface },
+            }}
           />
           <Stack.Screen
             name="Rating"
             component={RatingScreen}
             options={{ headerShown: true, title: t('profile.rating') }}
           />
+          <Stack.Screen
+            name="FullScreenMap"
+            component={FullScreenMapScreen}
+            options={{ headerShown: false, animation: 'fade' }}
+          />
         </>
       ) : (
         <>
-          <Stack.Screen name="SenderTabs" component={SenderTabs} />
+          <Stack.Screen name="SenderTabs" component={SenderTabs} options={{ title: t('common.back') }} />
           <Stack.Screen
             name="DriverKYC"
             component={DriverKYCScreen}
@@ -365,12 +419,21 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: t('tabs.chat') }}
+            options={{
+              headerShown: true,
+              title: '',
+              headerStyle: { backgroundColor: colors.surface },
+            }}
           />
           <Stack.Screen
             name="Rating"
             component={RatingScreen}
             options={{ headerShown: true, title: t('profile.rating') }}
+          />
+          <Stack.Screen
+            name="FullScreenMap"
+            component={FullScreenMapScreen}
+            options={{ headerShown: false, animation: 'fade' }}
           />
         </>
       )}

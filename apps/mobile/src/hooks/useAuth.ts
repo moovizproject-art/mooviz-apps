@@ -5,6 +5,18 @@ import { User } from '../types';
 
 const SESSION_MAX_DAYS = 30;
 
+/** Safely convert a Firestore Timestamp (or Date) to a JS Date. Returns undefined on failure. */
+function safeToDate(val: unknown): Date | undefined {
+  try {
+    if (!val) return undefined;
+    if (val instanceof Date) return val;
+    if (typeof (val as any).toDate === 'function') return (val as any).toDate();
+  } catch {
+    // Malformed timestamp — swallow rather than crash Hermes
+  }
+  return undefined;
+}
+
 // ──────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────
@@ -45,13 +57,22 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const [forceOtp, setForceOtp] = useState<boolean>(false);
 
   // Listen to Firebase auth state changes
+  // Race-condition guard: on Android, onAuthStateChanged can fire with null
+  // before the native SDK finishes restoring the persisted session. We delay
+  // committing to "no user" for up to 2s to let the real user arrive.
   useEffect(() => {
     console.log('[useAuth] Setting up onAuthStateChanged listener');
+    let nullTimer: ReturnType<typeof setTimeout> | null = null;
+    let gotUser = false;
+
     const unsubscribe = auth().onAuthStateChanged(async (fbUser: FirebaseAuthTypes.User | null) => {
       console.log('[useAuth] onAuthStateChanged fired, user:', fbUser?.uid || 'null');
-      setFirebaseUser(fbUser);
 
       if (fbUser) {
+        gotUser = true;
+        if (nullTimer) { clearTimeout(nullTimer); nullTimer = null; }
+        setFirebaseUser(fbUser);
+
         try {
           // Fetch user profile from Firestore (retry once on permission-denied — can happen during auth token refresh)
           let doc;
@@ -70,7 +91,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
             const data = doc.data();
 
             // Check 30-day session expiry
-            const lastLogin = data?.lastLoginAt?.toDate();
+            const lastLogin = safeToDate(data?.lastLoginAt);
             if (lastLogin) {
               const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
               if (daysSinceLogin > SESSION_MAX_DAYS) {
@@ -104,9 +125,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               fcmTokens: data?.fcmTokens || [],
               location: data?.location || { lat: 0, lng: 0, geohash: '' },
               migratedFrom: data?.migratedFrom,
-              lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
-              createdAt: data?.createdAt?.toDate() || new Date(),
-              updatedAt: data?.updatedAt?.toDate(),
+              lastOtpAt: safeToDate(data?.lastOtpAt),
+              createdAt: safeToDate(data?.createdAt) || new Date(),
+              updatedAt: safeToDate(data?.updatedAt),
             });
           } else {
             // User exists in Auth but not in Firestore yet (mid-registration)
@@ -116,14 +137,34 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           console.error('[useAuth] Error fetching user profile:', error);
           setCurrentUser(null);
         }
+        console.log('[useAuth] Setting isLoading=false (user found)');
+        setIsLoading(false);
       } else {
+        // Null user — but might be a race condition on Android.
+        // If we already had a user, this is a real sign-out.
+        // If this is the first callback, wait briefly for the real user.
+        setFirebaseUser(null);
         setCurrentUser(null);
+        if (gotUser) {
+          // Real sign-out after having a user
+          console.log('[useAuth] User signed out');
+          setIsLoading(false);
+        } else if (!nullTimer) {
+          // First null callback — wait for native SDK to restore session
+          console.log('[useAuth] First null callback — waiting for session restore...');
+          nullTimer = setTimeout(() => {
+            console.log('[useAuth] Session restore timeout — no user, showing login');
+            setIsLoading(false);
+            nullTimer = null;
+          }, 2000);
+        }
       }
-      console.log('[useAuth] Setting isLoading=false');
-      setIsLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (nullTimer) clearTimeout(nullTimer);
+    };
   }, []);
 
   const login = useCallback(async (user: User): Promise<void> => {
@@ -204,12 +245,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           rating: data?.rating || { average: 0, count: 0 },
           completedDeliveries: data?.completedDeliveries || 0,
           status: data?.status || 'active',
-          createdAt: data?.createdAt?.toDate() || new Date(),
+          createdAt: safeToDate(data?.createdAt) || new Date(),
         };
         return {
           ...base,
-          lastOtpAt: data?.lastOtpAt?.toDate() || undefined,
-          updatedAt: data?.updatedAt?.toDate(),
+          lastOtpAt: safeToDate(data?.lastOtpAt),
+          updatedAt: safeToDate(data?.updatedAt),
         };
       });
     }

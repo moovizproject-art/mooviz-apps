@@ -12,6 +12,7 @@ export { onMessageCreate } from "./triggers/chatTrigger";
 export {
   expressInterest,
   approveDriver,
+  declineDriver,
   confirmPickup,
   confirmDelivery,
   confirmPayment,

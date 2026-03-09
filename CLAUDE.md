@@ -207,6 +207,41 @@ All via FCM Cloud Messaging, triggered by Cloud Functions on Firestore writes.
 | Workflow | `superpowers:systematic-debugging` | Bug investigation |
 | Workflow | `superpowers:writing-plans` | Sprint/feature planning |
 
+## Workflow Guidelines
+
+### Plan First
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately — don't keep pushing
+- Write detailed specs upfront to reduce ambiguity
+
+### Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- One task per subagent for focused execution
+
+### Self-Improvement
+- After ANY correction from the user: update memory files with the pattern
+- Write rules that prevent the same mistake repeating
+
+### Verification Before Done
+- Never mark a task complete without proving it works
+- Ask: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- Skip this for simple, obvious fixes — don't over-engineer
+
+### Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests — then resolve them
+- Zero context switching required from the user
+
+### Core Principles
+- **Simplicity First**: Make every change as simple as possible. Minimal code impact
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs
+
 ## Security Requirements
 - Firebase Auth required for all API calls
 - Firestore Security Rules: users read own profile, drivers read available deliveries, write restricted to role

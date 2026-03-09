@@ -259,7 +259,7 @@ export function CarAlert({ visible, type, title, message, buttons, onDismiss, so
           </View>
 
           {/* Buttons */}
-          <View style={styles.buttonRow}>
+          <View style={[styles.buttonRow, defaultButtons.length > 2 && styles.buttonColumn]}>
             {defaultButtons.map((btn, i) => {
               const isDestructive = btn.style === 'destructive';
               const isCancel = btn.style === 'cancel';
@@ -271,7 +271,7 @@ export function CarAlert({ visible, type, title, message, buttons, onDismiss, so
                     isCancel
                       ? { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }
                       : { backgroundColor: isDestructive ? colors.error : accentColor },
-                    defaultButtons.length === 1 && { flex: 1 },
+                    defaultButtons.length <= 2 && { flex: 1 },
                   ]}
                   onPress={() => {
                     btn.onPress?.();
@@ -443,10 +443,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
-    gap: 12,
+    gap: 10,
+  },
+  buttonColumn: {
+    flexDirection: 'column',
   },
   button: {
-    flex: 1,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

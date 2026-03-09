@@ -10,6 +10,7 @@
     "validate": "ts-node validate-migration.ts"
   },
   "dependencies": {
+    "firebase": "^12.10.0",
     "firebase-admin": "^12.0.0"
   },
   "devDependencies": {

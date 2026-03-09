@@ -13,6 +13,13 @@ service firebase.storage {
       return request.resource.contentType.matches('image/.*');
     }
 
+    // Images + video (for multi-media delivery uploads)
+    function isMedia() {
+      return request.resource.contentType.matches('image/.*')
+          || request.resource.contentType.matches('video/mp4')
+          || request.resource.contentType.matches('video/quicktime');
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -62,6 +69,17 @@ service firebase.storage {
     }
 
     // ───────────────────────────────────────────────
+    // Chat Images
+    // Participants can upload images to chat
+    // ───────────────────────────────────────────────
+    match /chats/{chatId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
+    // ───────────────────────────────────────────────
     // Delivery Item Photos
     // Sender uploads item photo when creating delivery
     // ───────────────────────────────────────────────
@@ -69,7 +87,7 @@ service firebase.storage {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && request.auth.uid == senderId
-        && isImage()
+        && isMedia()
         && request.resource.size < maxSize();
     }
 

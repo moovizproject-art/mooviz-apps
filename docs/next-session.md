@@ -1,12 +1,24 @@
 # MOOVIZ — Session Continuation Guide
-> Last updated: 2026-03-07 | Sprint 2 IN PROGRESS
+> Last updated: 2026-03-08 | Sprint 2 IN PROGRESS
 
 ## Current State
 
-### Branch: `feature/ui-ux-redesign` (merged to main via PR #3)
-Next work goes on new branch: `feature/improvements-epic`
+### Branch: `feature/improvements-epic`
 
-### What Was Done This Session (March 6-7)
+### What Was Done (March 8)
+
+#### iOS Build & Crash Fix
+1. **iOS build working** — Firebase pods with selective modular_headers, AppDelegate patch, PrivacyInfo.xcprivacy, GoogleService-Info.plist
+2. **Hermes login crash fixed** — `EXC_BREAKPOINT/SIGTRAP` caused by native Firebase error objects crashing Hermes stack trace construction. Fixed with `sanitizeFirebaseError()` in auth.ts, `safeToDate()` in useAuth.ts, global ErrorUtils handler in index.js
+3. **Sounds off by default** — `useSound.tsx` initial state set to false
+4. **RNFirebase v21.14.0** — Upgraded Firebase native modules
+
+#### Key Commit
+```
+91b724f feat(mobile): iOS build support, fix Hermes login crash, sounds off by default
+```
+
+### What Was Done Previously (March 6-7)
 
 #### Bug Fixes
 1. **Sound crash on device** — Made sound service crash-proof with global kill switch, skip iOS-only `setCategory` on Android, wrap all native calls in try-catch
@@ -40,18 +52,10 @@ cb17358 fix(mobile): crash-proof sound service, onboarding RTL verified on devic
 
 ## Next Session Tasks (feature/improvements-epic)
 
-### Priority 1: iOS Build
-- [ ] Attempt iOS build — never done before, expect CocoaPods and linking issues
-- [ ] Verify all native deps have iOS podspecs
-- [ ] Check `apps/mobile/ios/` for Podfile, GoogleService-Info.plist
-- [ ] Run `pod install` and fix any version conflicts
-- [ ] Test on iOS Simulator
+### ~~Priority 1: iOS Build~~ DONE
+### ~~Priority 2: Sounds Off by Default~~ DONE
 
-### Priority 2: Sounds Off by Default
-- [ ] Change `useSound.tsx` initial state: `useState(true)` → `useState(false)`
-- [ ] Or change AsyncStorage default: treat missing key as `false` instead of `true`
-
-### Priority 3: Delivery Save & Multi-Media Upload
+### Priority 1: Delivery Save & Multi-Media Upload
 - [ ] Fix delivery not saving (investigate CreateDeliveryScreen submit flow)
 - [ ] Allow 5 images + 1 video (up to 5MB each) per delivery
 - [ ] Add video compression before upload
@@ -59,14 +63,14 @@ cb17358 fix(mobile): crash-proof sound service, onboarding RTL verified on devic
 - [ ] Update CreateDeliveryScreen UI with multi-image picker + video picker
 - [ ] Update Cloud Storage rules for video content types
 
-### Priority 4: Glide Migration Image Fetcher
+### Priority 2: Glide Migration Image Fetcher
 - [ ] Modify `scripts/migrate-glide-data.ts`
 - [ ] For users with image URLs in Glide data: fetch images in background
 - [ ] Upload fetched images to Firebase Storage under `users/{uid}/profile/`
 - [ ] Update Firestore user docs with new Storage URLs
 - [ ] Handle rate limiting and retries for bulk fetch
 
-### Priority 5: Continue CRM Sprint 2 Tasks
+### Priority 3: Continue CRM Sprint 2 Tasks
 Open tasks (status=1):
 - 140: Live map tracking view
 - 141: Navigation deep links
@@ -86,21 +90,21 @@ Open tasks (status=1):
 
 ## Environment Quick Start
 ```bash
-# Start emulator
-~/Library/Android/sdk/emulator/emulator -avd Pixel_9_Pro_API_35 &
-
 # Start Metro (from apps/mobile/)
 cd apps/mobile && node ../../node_modules/react-native/cli.js start --reset-cache
 
-# Start admin panel
-cd apps/admin && npm run dev -- --port 5002
-
-# Build release APK
+# Android
+~/Library/Android/sdk/emulator/emulator -avd Pixel_9_Pro_API_35 &
 cd apps/mobile/android && ./gradlew assembleRelease
-
-# Deploy to device (replace PORT)
 adb connect 10.0.0.18:PORT
 adb -s 10.0.0.18:PORT install -r app/build/outputs/apk/release/app-release.apk
+
+# iOS
+cd apps/mobile/ios && pod install
+npx react-native run-ios  # or open .xcworkspace in Xcode
+
+# Admin panel
+cd apps/admin && npm run dev -- --port 5002
 
 # Deploy functions
 cd functions && FIREBASE_TOKEN=<token> npx firebase deploy --only functions

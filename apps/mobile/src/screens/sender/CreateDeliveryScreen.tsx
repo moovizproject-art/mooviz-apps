@@ -20,6 +20,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import { MapPicker } from '../../components/MapPicker';
 import { ThemedInput } from '../../components/ThemedInput';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { DatePickerInput } from '../../components/DatePickerInput';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
@@ -36,11 +37,17 @@ interface DeliveryForm {
   destination: GeoPoint | null;
   itemDescription: string;
   itemSize: 'small' | 'medium' | 'large';
-  photoUri: string | null;
+  mediaUris: string[];
   suggestedPrice: string;
-  scheduledDate: string;
+  scheduledDate: Date | null;
+  isAsap: boolean;
   notes: string;
 }
+
+const isVideoUri = (uri: string): boolean => {
+  const lower = uri.toLowerCase();
+  return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.includes('video');
+};
 
 export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const { currentUser } = useAuth();
@@ -57,28 +64,65 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     destination: null,
     itemDescription: '',
     itemSize: 'small',
-    photoUri: null,
+    mediaUris: [],
     suggestedPrice: '',
-    scheduledDate: '',
+    scheduledDate: null,
+    isAsap: true,
     notes: '',
   });
   const [showPickupMap, setShowPickupMap] = useState(false);
   const [showDestinationMap, setShowDestinationMap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSizeInfo, setShowSizeInfo] = useState(false);
 
   const updateField = <K extends keyof DeliveryForm>(key: K, value: DeliveryForm[K]): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const pickPhoto = async (): Promise<void> => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.8,
-    });
-    if (!result.didCancel && result.assets?.[0]) {
-      updateField('photoUri', result.assets[0].uri!);
+  const imageCount = form.mediaUris.filter(u => !isVideoUri(u)).length;
+  const hasVideo = form.mediaUris.some(u => isVideoUri(u));
+
+  const handleAddPhotos = async (): Promise<void> => {
+    const maxNew = 5 - imageCount;
+    if (maxNew <= 0) return;
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.7,
+        selectionLimit: maxNew,
+      });
+      if (!result.didCancel && result.assets) {
+        const newUris = result.assets.map(a => a.uri!).filter(Boolean);
+        updateField('mediaUris', [...form.mediaUris, ...newUris]);
+      }
+    } catch (e) {
+      console.warn('Image pick error:', e);
     }
+  };
+
+  const handleAddVideo = async (): Promise<void> => {
+    if (hasVideo) return;
+    try {
+      const result = await launchImageLibrary({ mediaType: 'video' });
+      if (!result.didCancel && result.assets?.[0]?.uri) {
+        let videoUri = result.assets[0].uri;
+        // Compress video if compressor available (requires native rebuild)
+        try {
+          const { Video } = require('react-native-compressor');
+          videoUri = await Video.compress(videoUri, { compressionMethod: 'auto' });
+        } catch {
+          console.warn('[CreateDelivery] react-native-compressor not available, using raw video');
+        }
+        updateField('mediaUris', [...form.mediaUris, videoUri]);
+      }
+    } catch (e) {
+      console.warn('Video pick error:', e);
+    }
+  };
+
+  const handleRemoveMedia = (index: number): void => {
+    updateField('mediaUris', form.mediaUris.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -103,9 +147,9 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         destination: form.destination,
         itemDescription: form.itemDescription,
         itemSize: form.itemSize,
-        photoUri: form.photoUri,
+        mediaUris: form.mediaUris,
         suggestedPrice: parseFloat(form.suggestedPrice) || 0,
-        scheduledDate: form.scheduledDate || null,
+        scheduledDate: form.isAsap ? 'asap' : (form.scheduledDate ? form.scheduledDate.toISOString() : null),
         notes: form.notes,
       });
       carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
@@ -118,10 +162,10 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     }
   };
 
-  const sizeOptions: { value: DeliveryForm['itemSize']; label: string }[] = [
-    { value: 'small', label: t('form.sizeSmall') },
-    { value: 'medium', label: t('form.sizeMedium') },
-    { value: 'large', label: t('form.sizeLarge') },
+  const sizeOptions: { value: DeliveryForm['itemSize']; label: string; icon: string; hint: string }[] = [
+    { value: 'small', label: 'מעטפה', icon: '✉️', hint: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות' },
+    { value: 'medium', label: 'חבילה', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
+    { value: 'large', label: 'קופסה', icon: '📦📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
   ];
 
   const infoButton = (
@@ -200,9 +244,14 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
 
         {/* Item size */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.textPrimary }]}>
-            {t('form.itemSize')}
-          </Text>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>
+              {t('form.itemSize')}
+            </Text>
+            <TouchableOpacity onPress={() => setShowSizeInfo(true)}>
+              <Text style={[styles.sizeInfoBtn, { color: colors.primary }]}>ℹ️ מידות</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.sizeRow}>
             {sizeOptions.map((opt) => (
               <TouchableOpacity
@@ -214,6 +263,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
                 ]}
                 onPress={() => updateField('itemSize', opt.value)}
               >
+                <Text style={styles.sizeChipIcon}>{opt.icon}</Text>
                 <Text
                   style={[
                     styles.sizeChipText,
@@ -228,41 +278,54 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </View>
 
-        {/* Photo */}
-        <View style={styles.fieldGroup}>
+        {/* Media — photos + video */}
+        <View style={styles.mediaSection}>
           <View style={styles.labelRow}>
             <Text style={[styles.label, { color: colors.textPrimary }]}>
-              {t('form.itemPhoto')}
+              {t('form.media')}
             </Text>
             <Text style={[styles.optionalText, { color: colors.textTertiary }]}>
               {t('form.optional')}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.photoButton, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
-            onPress={pickPhoto}
-          >
-            {form.photoUri ? (
-              <Image source={{ uri: form.photoUri }} style={styles.photoPreview} />
-            ) : (
-              <>
-                <Text style={styles.photoIcon}>📷</Text>
-                <Text style={[styles.photoButtonText, { color: colors.primary }]}>
-                  {t('form.chooseImage')}
-                </Text>
-              </>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaStrip}>
+            {form.mediaUris.map((uri, index) => (
+              <View key={index} style={styles.mediaThumbnailContainer}>
+                <Image source={{ uri }} style={styles.mediaThumbnail} />
+                {isVideoUri(uri) && (
+                  <View style={styles.videoOverlay}>
+                    <Text style={styles.videoIcon}>{'\u25B6'}</Text>
+                  </View>
+                )}
+                <TouchableOpacity style={styles.removeMediaButton} onPress={() => handleRemoveMedia(index)}>
+                  <Text style={styles.removeMediaIcon}>{'\u2715'}</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {imageCount < 5 && (
+              <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddPhotos}>
+                <Text style={styles.addMediaIconText}>{'\uD83D\uDCF7'}</Text>
+                <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addPhoto')}</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+            {!hasVideo && (
+              <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddVideo}>
+                <Text style={styles.addMediaIconText}>{'\uD83C\uDFAC'}</Text>
+                <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addVideo')}</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+          <Text style={[styles.mediaHint, { color: colors.textSecondary }]}>
+            {t('form.mediaHint', { imageCount: String(imageCount), videoSuffix: hasVideo ? t('form.mediaHintVideo') : '' })}
+          </Text>
         </View>
 
         {/* Pickup date */}
-        <ThemedInput
-          label={t('form.pickupDate')}
-          required
-          icon="📅"
-          placeholder={t('form.datePlaceholder')}
+        <DatePickerInput
           value={form.scheduledDate}
-          onChangeText={(v) => updateField('scheduledDate', v)}
+          isAsap={form.isAsap}
+          onDateChange={(date) => updateField('scheduledDate', date)}
+          onAsapToggle={(val) => updateField('isAsap', val)}
         />
 
         {/* Price */}
@@ -311,6 +374,34 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Size info modal */}
+      <Modal visible={showSizeInfo} transparent animationType="fade" onRequestClose={() => setShowSizeInfo(false)}>
+        <View style={styles.helpOverlay}>
+          <View style={[styles.helpCard, { backgroundColor: colors.background }]}>
+            <View style={[styles.helpHeader, { backgroundColor: colors.primary }]}>
+              <Text style={styles.helpHeaderTitle}>📏 מידות משלוח</Text>
+            </View>
+            <View style={styles.helpScrollContent}>
+              {sizeOptions.map((opt) => (
+                <View key={opt.value} style={[styles.sizeInfoRow, { borderBottomColor: colors.border }]}>
+                  <Text style={styles.sizeInfoIcon}>{opt.icon}</Text>
+                  <View style={styles.sizeInfoContent}>
+                    <Text style={[styles.sizeInfoTitle, { color: colors.textPrimary }]}>{opt.label}</Text>
+                    <Text style={[styles.sizeInfoHint, { color: colors.textSecondary }]}>{opt.hint}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.helpButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowSizeInfo(false)}
+            >
+              <Text style={styles.helpButtonText}>{t('form.gotIt')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Help modal */}
       <Modal visible={showHelp} transparent animationType="fade" onRequestClose={() => setShowHelp(false)}>
@@ -381,33 +472,107 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     alignItems: 'center',
+    gap: 4,
     ...SHADOWS.sm,
+  },
+  sizeChipIcon: {
+    fontSize: 20,
   },
   sizeChipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
-  photoButton: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.lg,
-    borderStyle: 'dashed',
-    paddingVertical: SPACING.xxxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.sm,
+  sizeInfoBtn: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  photoIcon: {
+  sizeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  sizeInfoIcon: {
     fontSize: 28,
-    marginBottom: SPACING.sm,
+    width: 40,
+    textAlign: 'center',
   },
-  photoButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  sizeInfoContent: {
+    flex: 1,
   },
-  photoPreview: {
-    width: 120,
-    height: 120,
-    borderRadius: BORDER_RADIUS.lg,
+  sizeInfoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sizeInfoHint: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  mediaSection: {
+    marginBottom: SPACING.lg,
+  },
+  mediaStrip: {
+    flexDirection: 'row',
+  },
+  mediaThumbnailContainer: {
+    width: 80,
+    height: 80,
+    marginEnd: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  mediaThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoIcon: {
+    color: '#fff',
+    fontSize: 24,
+  },
+  removeMediaButton: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeMediaIcon: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  addMediaButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginEnd: 8,
+  },
+  addMediaIconText: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  addMediaText: {
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  mediaHint: {
+    fontSize: 11,
+    marginTop: 4,
   },
   buttonRow: {
     flexDirection: 'row',

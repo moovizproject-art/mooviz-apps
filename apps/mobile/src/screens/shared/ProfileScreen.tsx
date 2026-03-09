@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
+import firestore from '@react-native-firebase/firestore';
 import { requestMediaLibraryPermission } from '../../utils/permissions';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
@@ -31,6 +32,7 @@ export function ProfileScreen(): React.JSX.Element {
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
+  const [editNickname, setEditNickname] = useState<string>((currentUser as any)?.nickname || '');
   const [editCity, setEditCity] = useState<string>(currentUser?.city || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [ownPhotoUri, setOwnPhotoUri] = useState<string | null>(null);
@@ -50,6 +52,12 @@ export function ProfileScreen(): React.JSX.Element {
         fullName: editName,
         city: editCity,
       });
+      // Save nickname to Firestore
+      if (currentUser?.uid) {
+        await firestore().collection('users').doc(currentUser.uid).update({
+          nickname: editNickname,
+        });
+      }
       setIsEditing(false);
       carAlert.show('success', t('common.success'), t('profile.profileUpdated'));
     } catch (err) {
@@ -77,6 +85,10 @@ export function ProfileScreen(): React.JSX.Element {
       const ref = storage().ref(`users/${currentUser.uid}/profile.jpg`);
       await ref.putFile(uri, { contentType: 'image/jpeg' });
       const downloadUrl = await ref.getDownloadURL();
+      // Sync to Firestore so other users see the updated photo
+      await firestore().collection('users').doc(currentUser.uid).update({
+        profilePhotoURL: downloadUrl,
+      });
       setOwnPhotoUri(downloadUrl);
       carAlert.show('success', t('common.success'), t('profile.photoUpdated'));
     } catch (err) {
@@ -174,6 +186,16 @@ export function ProfileScreen(): React.JSX.Element {
                   style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
                   value={editName}
                   onChangeText={setEditName}
+                />
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>כינוי (נראה לנהגים/שולחים)</Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
+                  value={editNickname}
+                  onChangeText={setEditNickname}
+                  placeholder="הכינוי שלך"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
               <View style={styles.fieldGroup}>

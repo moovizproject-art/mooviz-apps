@@ -12,7 +12,7 @@ export interface ChatMessage {
   chatId: string;
   senderId: string;
   text: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'system';
   imageUrl?: string;
   createdAt: Date;
   read: boolean;
@@ -82,7 +82,8 @@ export function useChat(chatId: string): UseChatResult {
           setIsLoading(false);
         },
         (error) => {
-          console.error('[useChat] Listener error:', error);
+          console.warn('[useChat] Listener error:', error.message || error);
+          setMessages([]);
           setIsLoading(false);
         },
       );

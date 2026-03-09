@@ -1,17 +1,16 @@
 /**
  * DeliveryCard - כרטיס משלוח
- * Glass morphism delivery card for feeds and lists.
- * Shows item, route, status, and price with press animation.
- * כרטיס משלוח בעיצוב זכוכית לפידים ורשימות
+ * Compact delivery card for feeds and lists.
+ * Shows item, route, status, driver, and price.
  */
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet, I18nManager } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { BRAND, BORDER_RADIUS, SPACING, SHADOWS, TYPOGRAPHY } from '../constants/design';
+import { BRAND, BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../constants/design';
 import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatRelativeDate } from '../utils/formatters';
 
@@ -22,9 +21,11 @@ interface DeliveryData {
   destination?: { address: string };
   itemDescription?: string;
   photoUrl?: string;
+  mediaURLs?: string[];
   suggestedPrice?: number;
   createdAt?: Date | string;
   distance?: number;
+  driverName?: string;
 }
 
 interface DeliveryCardProps {
@@ -63,36 +64,45 @@ export function DeliveryCard({
     >
       <View style={styles.content}>
         {/* Thumbnail */}
-        {/* תמונה ממוזערת */}
-        {delivery.photoUrl ? (
-          <Image source={{ uri: delivery.photoUrl }} style={styles.thumb} />
-        ) : (
-          <View style={[styles.thumb, styles.thumbPlaceholder]}>
-            <Text style={styles.thumbIcon}>{'\u{1F4E6}'}</Text>
-          </View>
-        )}
+        {(() => {
+          const thumbnailUrl = delivery.mediaURLs?.[0] || delivery.photoUrl;
+          const mediaCount = delivery.mediaURLs?.length || (delivery.photoUrl ? 1 : 0);
+          return thumbnailUrl ? (
+            <View>
+              <Image source={{ uri: thumbnailUrl }} style={styles.thumb} />
+              {mediaCount > 1 && (
+                <View style={styles.mediaCountBadge}>
+                  <Text style={styles.mediaCountText}>{mediaCount}</Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={[styles.thumb, styles.thumbPlaceholder]}>
+              <Text style={styles.thumbIcon}>{'\u{1F4E6}'}</Text>
+            </View>
+          );
+        })()}
 
         {/* Details */}
-        {/* פרטים */}
         <View style={styles.details}>
-          {/* Top row: status + price */}
+          {/* Top row: status on end side */}
           <View style={styles.topRow}>
-            <StatusIndicator status={delivery.status} size="sm" />
-            {delivery.suggestedPrice != null && (
-              <Text style={styles.price}>
-                {formatCurrency(delivery.suggestedPrice)}
+            {delivery.itemDescription ? (
+              <Text style={styles.itemText} numberOfLines={1}>
+                {delivery.itemDescription}
               </Text>
+            ) : (
+              <Text style={styles.itemText} numberOfLines={1}>משלוח</Text>
             )}
+            <StatusIndicator status={delivery.status} size="sm" />
           </View>
 
           {/* Route */}
-          {/* מסלול */}
           <View style={styles.routeSection}>
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.success }]} />
               <Text style={styles.addressText} numberOfLines={1}>
                 {delivery.pickup?.address || '\u05DB\u05EA\u05D5\u05D1\u05EA \u05DC\u05D0 \u05D6\u05DE\u05D9\u05E0\u05D4'}
-                {/* כתובת לא זמינה */}
               </Text>
             </View>
             <View style={styles.routeLine} />
@@ -104,26 +114,32 @@ export function DeliveryCard({
             </View>
           </View>
 
-          {/* Item description */}
-          {delivery.itemDescription ? (
-            <Text style={styles.itemText} numberOfLines={1}>
-              {delivery.itemDescription}
+          {/* Driver name (if assigned) */}
+          {delivery.driverName ? (
+            <Text style={styles.driverText} numberOfLines={1}>
+              🚛 {delivery.driverName}
             </Text>
           ) : null}
 
-          {/* Bottom: date + distance */}
+          {/* Bottom: date + price + distance */}
           <View style={styles.bottomRow}>
             {delivery.createdAt ? (
               <Text style={styles.metaText}>
                 {formatRelativeDate(delivery.createdAt)}
               </Text>
             ) : null}
-            {showDistance && delivery.distance != null ? (
-              <Text style={styles.distanceText}>
-                {delivery.distance.toFixed(1)} {'\u05E7\u05F4\u05DE'}
-                {/* ק״מ */}
-              </Text>
-            ) : null}
+            <View style={styles.bottomEnd}>
+              {showDistance && delivery.distance != null ? (
+                <Text style={styles.distanceText}>
+                  {delivery.distance.toFixed(1)} {'\u05E7\u05F4\u05DE'}
+                </Text>
+              ) : null}
+              {delivery.suggestedPrice != null && (
+                <Text style={styles.price}>
+                  {formatCurrency(delivery.suggestedPrice)}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -133,22 +149,30 @@ export function DeliveryCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: BRAND.surfaceGlass,
+    backgroundColor: '#FFFFFF',
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: BRAND.borderLight,
-    ...SHADOWS.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+    }),
   },
   content: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    gap: SPACING.md,
+    flexDirection: 'row',
+    gap: SPACING.sm,
   },
   thumb: {
-    width: 56,
-    height: 56,
-    borderRadius: BORDER_RADIUS.md,
+    width: 52,
+    height: 52,
+    borderRadius: BORDER_RADIUS.sm,
   },
   thumbPlaceholder: {
     backgroundColor: BRAND.borderLight,
@@ -156,67 +180,94 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   thumbIcon: {
-    fontSize: 24,
+    fontSize: 22,
+  },
+  mediaCountBadge: {
+    position: 'absolute',
+    bottom: 2,
+    end: 2,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  mediaCountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   details: {
     flex: 1,
   },
   topRow: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: 4,
   },
-  price: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: BRAND.success,
+  itemText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: BRAND.textPrimary,
+    flex: 1,
+    marginEnd: 8,
   },
   routeSection: {
-    marginBottom: SPACING.xs,
-    gap: 2,
+    marginBottom: 2,
+    gap: 1,
   },
   routeRow: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 6,
   },
   routeLine: {
     width: 1,
-    height: 8,
+    height: 6,
     backgroundColor: BRAND.border,
-    marginLeft: I18nManager.isRTL ? 0 : 3,
-    marginRight: I18nManager.isRTL ? 3 : 0,
+    marginStart: 3,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   addressText: {
-    ...TYPOGRAPHY.caption,
-    flex: 1,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
+    fontSize: 12,
     color: BRAND.textPrimary,
+    flex: 1,
   },
-  itemText: {
-    ...TYPOGRAPHY.small,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  driverText: {
+    fontSize: 12,
     color: BRAND.textSecondary,
-    marginBottom: SPACING.xs,
+    marginTop: 2,
+    marginBottom: 2,
   },
   bottomRow: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: SPACING.xs,
+    marginTop: 4,
+  },
+  bottomEnd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   metaText: {
-    ...TYPOGRAPHY.small,
+    fontSize: 11,
     color: BRAND.textSecondary,
   },
+  price: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: BRAND.success,
+  },
   distanceText: {
-    ...TYPOGRAPHY.small,
+    fontSize: 12,
     fontWeight: '600',
     color: BRAND.primary,
   },

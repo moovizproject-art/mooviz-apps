@@ -4,9 +4,10 @@
  */
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
-import { launchCamera } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
+import { requestCameraPermission } from '../utils/permissions';
 
 interface ProofCameraProps {
   visible: boolean;
@@ -25,13 +26,40 @@ export function ProofCamera({
   const { t } = useI18n();
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
 
+  const [showChooser, setShowChooser] = useState(true);
+
   const handleLaunchCamera = useCallback(async (): Promise<void> => {
+    // Request camera permission lazily (Android runtime, iOS via Info.plist)
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      onClose();
+      return;
+    }
+
+    setShowChooser(false);
     const result = await launchCamera({
       mediaType: 'photo',
       quality: 0.8,
       maxWidth: 1024,
       maxHeight: 1024,
       saveToPhotos: false,
+    });
+
+    if (result.didCancel || !result.assets?.[0]?.uri) {
+      if (!capturedUri) onClose();
+      return;
+    }
+    setCapturedUri(result.assets[0].uri);
+  }, [capturedUri, onClose]);
+
+  const handleLaunchGallery = useCallback(async (): Promise<void> => {
+    setShowChooser(false);
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.8,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      selectionLimit: 1,
     });
 
     if (result.didCancel || !result.assets?.[0]?.uri) {
@@ -53,12 +81,13 @@ export function ProofCamera({
     handleLaunchCamera();
   }, [handleLaunchCamera]);
 
-  // Auto-launch camera when modal opens
+  // Reset chooser when modal opens
   React.useEffect(() => {
-    if (visible && !capturedUri) {
-      handleLaunchCamera();
+    if (visible) {
+      setShowChooser(true);
+      setCapturedUri(null);
     }
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   if (!visible) return <></>;
 
@@ -92,6 +121,30 @@ export function ProofCamera({
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        ) : showChooser ? (
+          <View style={styles.emptyState}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={handleLaunchCamera}
+            >
+              <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                📸 {t('common.takePhoto')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+              onPress={handleLaunchGallery}
+            >
+              <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>
+                🖼️ {t('common.chooseFromGallery')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelLink} onPress={onClose}>
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+                {t('common.cancel')}
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.emptyState}>

@@ -7,6 +7,7 @@ import {
   StatusBar,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import auth from '@react-native-firebase/auth';
 
 import { useTheme } from '../../theme/ThemeContext';
@@ -24,6 +25,7 @@ const RESEND_COOLDOWN = 60;
 export function EmailVerificationScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const { refreshFirebaseUser } = useAuth();
   const [resendTimer, setResendTimer] = useState(0);
   const [checking, setChecking] = useState(false);
@@ -79,7 +81,7 @@ export function EmailVerificationScreen(): React.JSX.Element {
       <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
       {/* Blue header */}
-      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + 16 }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleLogout}>
           <View style={styles.backChevron} />
         </TouchableOpacity>

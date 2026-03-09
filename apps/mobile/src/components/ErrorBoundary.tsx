@@ -137,17 +137,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         </View>
 
         <Text style={[styles.title, { color: c.textPrimary }]}>
-          {'Oops! Something went wrong'}
+          {'אופס! משהו השתבש'}
         </Text>
         <Text style={[styles.message, { color: c.textSecondary }]}>
-          {'The car got stuck... Try again'}
+          {'הרכב נתקע... נסה שוב'}
         </Text>
 
         <TouchableOpacity
           style={[styles.retryButton, { backgroundColor: c.primary }]}
           onPress={this.handleRetry}
         >
-          <Text style={styles.retryButtonText}>{'Try again'}</Text>
+          <Text style={styles.retryButtonText}>{'נסה שוב'}</Text>
         </TouchableOpacity>
       </Animated.View>
     );

@@ -111,11 +111,20 @@ export async function sendDeliveryNotification(
     ...extraData,
   };
 
-  // If we need driver name, look it up
-  if (driverId && !values.driverName) {
+  // If we need driver info, look it up
+  if (driverId) {
     const driverDoc = await db.collection("users").doc(driverId).get();
     if (driverDoc.exists) {
-      values.driverName = driverDoc.data()?.fullName ?? "Driver";
+      const driverData = driverDoc.data()!;
+      if (!values.driverName) {
+        values.driverName = driverData.nickname || driverData.fullName?.split(' ')[0] || "Driver";
+      }
+      // Enrich driver_interested notifications
+      if (event === "driver_interested") {
+        values.driverRating = String(driverData.ratingAsDriver?.average?.toFixed(1) ?? "0");
+        values.driverDeliveries = String(driverData.completedDeliveries ?? 0);
+        values.driverPhoto = driverData.profilePhotoURL ?? "";
+      }
     }
   }
 

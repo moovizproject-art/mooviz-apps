@@ -9,8 +9,11 @@ import {
   Keyboard,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Region, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
+
+const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/tokens';
@@ -222,7 +225,7 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
           <View style={styles.mapContainer}>
             <MapView
               ref={mapRef}
-              provider={PROVIDER_GOOGLE}
+              provider={MAP_PROVIDER}
               style={styles.map}
               initialRegion={mapRegion}
               onPress={handleMapPress}

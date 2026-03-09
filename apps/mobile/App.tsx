@@ -11,6 +11,7 @@ import { SoundProvider } from './src/hooks/useSound';
 import { RootNavigator, RootStackParamList } from './src/navigation/RootNavigator';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { OfflineBanner } from './src/components/OfflineBanner';
+import { navigationRef } from './src/services/navigation';
 
 // Force RTL layout for Hebrew-first UI
 // כפיית כיוון ימין-לשמאל עבור ממשק עברית
@@ -23,6 +24,9 @@ if (!I18nManager.isRTL) {
 LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
   'Setting a timer for a long period',
+  'This method is deprecated',  // RN Firebase namespaced API warnings (v22 migration)
+  '[useFirestore]',  // Missing index warnings — deploying indexes fixes this
+  '[useNotifications]',  // Expected on iOS Simulator (no APNs)
 ]);
 
 const linking: LinkingOptions<RootStackParamList> = {
@@ -75,7 +79,7 @@ export default function App(): React.JSX.Element {
             <OfflineBanner />
             <SoundProvider>
               <AuthProvider>
-                <NavigationContainer linking={linking}>
+                <NavigationContainer ref={navigationRef} linking={linking}>
                   <StatusBar barStyle="light-content" />
                   <RootNavigator />
                 </NavigationContainer>

@@ -90,7 +90,7 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
-              textAlign={I18nManager.isRTL ? 'right' : 'left'}
+              textAlign="right"
               editable={!isLoading}
             />
 

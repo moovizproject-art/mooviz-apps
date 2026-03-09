@@ -2,8 +2,43 @@
  * Auth Service -- email+password registration with phone OTP linking
  */
 
+import { Platform, NativeModules } from 'react-native';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import messaging from '@react-native-firebase/messaging';
+
+/** Detect iOS Simulator — verifyPhoneNumber crashes without APNs */
+const isIOSSimulator = Platform.OS === 'ios' && (
+  NativeModules.PlatformConstants?.interfaceIdiom === 'simulator' ||
+  __DEV__ && !NativeModules.RNFBMessagingModule?.isDeviceRegisteredForRemoteMessages
+);
+
+/** Detect Android Emulator — SMS OTP can't be received */
+const isAndroidEmulator = Platform.OS === 'android' && __DEV__ && (
+  NativeModules.PlatformConstants?.Brand === 'google' ||
+  NativeModules.PlatformConstants?.Fingerprint?.includes('generic') ||
+  NativeModules.PlatformConstants?.Model?.includes('sdk') ||
+  NativeModules.PlatformConstants?.Model?.includes('Emulator')
+);
+
+// ──────────────────────────────────────────────
+// Error sanitizer — prevent Hermes crash on native errors
+// ──────────────────────────────────────────────
+
+/**
+ * Convert a native Firebase error into a plain JS Error.
+ * Hermes (iOS) can crash with EXC_BREAKPOINT when constructing
+ * stack traces for native error objects. Re-throwing as a plain
+ * Error avoids the crash while preserving code + message.
+ */
+function sanitizeFirebaseError(err: unknown): Error {
+  if (err instanceof Error) return err;
+  const raw = err as { code?: string; message?: string; userInfo?: Record<string, unknown> };
+  const msg = raw?.message || raw?.userInfo?.message || 'Unknown Firebase error';
+  const sanitized = new Error(String(msg)) as any;
+  sanitized.code = raw?.code || raw?.userInfo?.code;
+  return sanitized;
+}
 
 // ──────────────────────────────────────────────
 // Phone normalizer
@@ -40,9 +75,13 @@ export async function registerWithEmail(
   email: string,
   password: string,
 ): Promise<FirebaseAuthTypes.UserCredential> {
-  const credential = await auth().createUserWithEmailAndPassword(email, password);
-  await credential.user.sendEmailVerification();
-  return credential;
+  try {
+    const credential = await auth().createUserWithEmailAndPassword(email, password);
+    await credential.user.sendEmailVerification();
+    return credential;
+  } catch (err: unknown) {
+    throw sanitizeFirebaseError(err);
+  }
 }
 
 /**
@@ -52,7 +91,11 @@ export async function signInWithEmail(
   email: string,
   password: string,
 ): Promise<FirebaseAuthTypes.UserCredential> {
-  return auth().signInWithEmailAndPassword(email, password);
+  try {
+    return await auth().signInWithEmailAndPassword(email, password);
+  } catch (err: unknown) {
+    throw sanitizeFirebaseError(err);
+  }
 }
 
 /**
@@ -84,6 +127,13 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
   try {
+    // Emulator bypass: iOS crashes without APNs, Android can't receive SMS.
+    // Return test verificationId so user can navigate to OTP screen and enter 123456.
+    if (isIOSSimulator || isAndroidEmulator) {
+      console.warn(`[sendPhoneOTP] Emulator detected (${Platform.OS}) — returning test verificationId. Enter 123456 on OTP screen.`);
+      return 'simulator-test-verification-id';
+    }
+
     const result = await auth().verifyPhoneNumber(normalized);
     console.log('[sendPhoneOTP] Result type:', typeof result, result);
     if (typeof result === 'string') {
@@ -92,16 +142,17 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
     // On Android, result may be an object with verificationId
     return (result as any).verificationId || String(result);
   } catch (err: unknown) {
-    const error = err as { code?: string; message?: string; userInfo?: { code?: string; message?: string } };
+    // Sanitize native error → plain JS Error to prevent Hermes EXC_BREAKPOINT crash
+    const error = sanitizeFirebaseError(err) as any;
     console.log('[sendPhoneOTP] Error:', error.code, error.message);
     // Map known error codes
-    const msg = error.message || error.userInfo?.message || '';
+    const msg = error.message || '';
     if (error.code?.includes('17006') || msg.includes('17006') || msg.includes('region')) {
       const regionError = new Error('SMS region not enabled in Firebase Console') as any;
       regionError.code = 'auth/sms-region-not-enabled';
       throw regionError;
     }
-    throw err;
+    throw error;
   }
 }
 
@@ -112,23 +163,34 @@ export async function verifyAndLinkPhone(
   verificationId: string,
   code: string,
 ): Promise<void> {
-  const credential = auth.PhoneAuthProvider.credential(verificationId, code);
-  const currentUser = auth().currentUser;
-  if (!currentUser) throw new Error('No authenticated user');
+  try {
+    // iOS Simulator bypass: skip Firebase phone auth (no APNs), just accept any code.
+    // Real device will always have a real verificationId from verifyPhoneNumber().
+    if (verificationId === 'simulator-test-verification-id') {
+      console.warn('[verifyAndLinkPhone] Simulator mode — skipping Firebase phone credential check');
+      return;
+    }
 
-  // Check if phone is already linked
-  const hasPhone = currentUser.providerData.some(
-    (p) => p.providerId === 'phone',
-  );
+    const credential = auth.PhoneAuthProvider.credential(verificationId, code);
+    const currentUser = auth().currentUser;
+    if (!currentUser) throw new Error('No authenticated user');
 
-  if (hasPhone) {
-    // Phone already linked (2FA re-verification).
-    // signInWithCredential with the phone credential returns the same user
-    // since the phone is linked to this account. This validates the OTP code.
-    await auth().signInWithCredential(credential);
-  } else {
-    // First time — link phone to the email account
-    await currentUser.linkWithCredential(credential);
+    // Check if phone is already linked
+    const hasPhone = currentUser.providerData.some(
+      (p) => p.providerId === 'phone',
+    );
+
+    if (hasPhone) {
+      // Phone already linked (2FA re-verification).
+      // signInWithCredential with the phone credential returns the same user
+      // since the phone is linked to this account. This validates the OTP code.
+      await auth().signInWithCredential(credential);
+    } else {
+      // First time — link phone to the email account
+      await currentUser.linkWithCredential(credential);
+    }
+  } catch (err: unknown) {
+    throw sanitizeFirebaseError(err);
   }
 }
 

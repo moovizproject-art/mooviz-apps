@@ -1,0 +1,35 @@
+import { firestore } from "firebase-admin";
+
+export type ReportReason =
+  | "inappropriate_behavior"
+  | "fraud"
+  | "damaged_item"
+  | "no_show"
+  | "harassment"
+  | "other";
+
+export type ReportStatus = "open" | "investigating" | "resolved" | "dismissed";
+
+export interface Report {
+  id?: string;
+  deliveryId: string;
+  reporterId: string;
+  reportedUserId: string;
+  reason: ReportReason;
+  description: string;
+  evidenceURLs: string[];
+  status: ReportStatus;
+  adminNotes?: string;
+  resolvedBy?: string;
+  resolvedAt?: firestore.Timestamp;
+  createdAt: firestore.Timestamp;
+  updatedAt: firestore.Timestamp;
+}
+
+export interface ReportCreateData {
+  deliveryId: string;
+  reportedUserId: string;
+  reason: ReportReason;
+  description: string;
+  evidenceURLs?: string[];
+}

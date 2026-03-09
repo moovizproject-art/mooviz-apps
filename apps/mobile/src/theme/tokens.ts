@@ -84,7 +84,7 @@ export const lightColors: ThemeColors = {
   accentDark: '#E55A2B',
 
   // Surfaces
-  background: '#F8F9FA',
+  background: '#EEF1F5',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
   surfaceGlass: 'rgba(255, 255, 255, 0.85)',
