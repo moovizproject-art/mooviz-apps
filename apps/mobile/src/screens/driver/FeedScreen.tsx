@@ -54,7 +54,8 @@ const VEHICLE_TYPES = ['bicycle', 'bike', 'car', 'truck'] as const;
 const VEHICLE_ICONS = { bicycle: '\u{1F6B2}', bike: '\u{1F3CD}', car: '\u{1F697}', truck: '\u{1F69A}' };
 const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: 'אופניים', bike: 'קטנוע', car: 'רכב', truck: 'משאית' };
 const SIZE_OPTIONS = ['small', 'medium', 'large'] as const;
-const SIZE_LABELS_HE: Record<string, string> = { small: 'קטן', medium: 'בינוני', large: 'גדול' };
+const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦📦' };
+const SIZE_LABELS_HE: Record<string, string> = { small: 'מעטפה', medium: 'קופסה', large: 'גדול' };
 
 const PREFS_KEY = '@driver_preferences';
 
@@ -123,6 +124,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const [prefs, setPrefs] = useState<DriverPreferences>(DEFAULT_PREFS);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [earningsOpen, setEarningsOpen] = useState(false);
   const [nicknameDirty, setNicknameDirty] = useState(false);
   const [earningsTab, setEarningsTab] = useState<string>('thisWeek');
 
@@ -270,8 +272,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         </Text>
       </View>
 
-      {/* ── Availability Toggle (above radar) ── */}
-      <GlassCard style={styles.section} padding="md">
+      {/* ── Availability Toggle + Range (grouped) ── */}
+      <GlassCard style={[styles.section, { marginTop: SPACING.lg }]} padding="md">
         <View style={styles.sectionRow}>
           <View style={styles.toggleLabelRow}>
             <View style={[styles.statusDot, { backgroundColor: prefs.isAvailable ? colors.success : colors.textTertiary }]} />
@@ -286,6 +288,31 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             thumbColor={colors.surface}
           />
         </View>
+
+        {/* Range slider — only visible when available */}
+        {prefs.isAvailable && (
+          <View style={{ marginTop: SPACING.sm }}>
+            <View style={styles.sectionRow}>
+              <Text style={[styles.rangeLabel, { color: colors.textSecondary }]}>📏 טווח התראות</Text>
+              <Text style={[styles.sectionValue, { color: colors.primary }]}>{prefs.radiusKm} {t('driver.km')}</Text>
+            </View>
+            <View style={styles.sliderContainer}>
+              <Text style={[styles.sliderEdgeLabel, { color: colors.textTertiary }]}>5</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={5}
+                maximumValue={50}
+                step={1}
+                value={prefs.radiusKm}
+                onValueChange={(val) => updatePref('radiusKm', val)}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.border}
+                thumbTintColor={colors.primary}
+              />
+              <Text style={[styles.sliderEdgeLabel, { color: colors.textTertiary }]}>50</Text>
+            </View>
+          </View>
+        )}
       </GlassCard>
 
       {/* ── Radar (25% smaller) ── */}
@@ -360,116 +387,73 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         </TouchableOpacity>
       )}
 
-      {/* ── Earnings Dashboard ── */}
+      {/* ── Earnings Dashboard (collapsible) ── */}
       <GlassCard style={styles.section} padding="lg">
-        <Text style={[styles.sectionLabel, { color: colors.textPrimary, marginBottom: SPACING.sm }]}>
-          💰 הכנסות
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.earningsTabsScroll}>
-          <View style={styles.earningsTabs}>
-            {EARNINGS_TABS.map((tab) => (
-              <Pressable
-                key={tab.key}
-                onPress={() => setEarningsTab(tab.key)}
-                style={[
-                  styles.earningsTab,
-                  {
-                    backgroundColor: earningsTab === tab.key ? colors.primary : colors.surface,
-                    borderColor: earningsTab === tab.key ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text style={[
-                  styles.earningsTabText,
-                  { color: earningsTab === tab.key ? colors.textInverse : colors.textPrimary },
-                ]}>
-                  {tab.label}
+        <Pressable onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setEarningsOpen((prev) => !prev);
+        }} style={styles.sectionRow}>
+          <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+            {earningsOpen ? '▼' : '▶'} 💰 הכנסות
+          </Text>
+          <Text style={[styles.earningsQuickTotal, { color: colors.success }]}>
+            ₪{currentEarnings.total.toLocaleString()}
+          </Text>
+        </Pressable>
+
+        {earningsOpen && (
+          <View style={{ marginTop: SPACING.sm }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.earningsTabsScroll}>
+              <View style={styles.earningsTabs}>
+                {EARNINGS_TABS.map((tab) => (
+                  <Pressable
+                    key={tab.key}
+                    onPress={() => setEarningsTab(tab.key)}
+                    style={[
+                      styles.earningsTab,
+                      {
+                        backgroundColor: earningsTab === tab.key ? colors.primary : colors.surface,
+                        borderColor: earningsTab === tab.key ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.earningsTabText,
+                      { color: earningsTab === tab.key ? colors.textInverse : colors.textPrimary },
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.earningsContent}>
+              <View style={styles.earningsItem}>
+                <Text style={[styles.earningsValue, { color: colors.success }]}>
+                  ₪{currentEarnings.total.toLocaleString()}
                 </Text>
-              </Pressable>
-            ))}
-          </View>
-        </ScrollView>
-        <View style={styles.earningsContent}>
-          <View style={styles.earningsItem}>
-            <Text style={[styles.earningsValue, { color: colors.success }]}>
-              ₪{currentEarnings.total.toLocaleString()}
-            </Text>
-            <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>סה״כ</Text>
-          </View>
-          <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.earningsItem}>
-            <Text style={[styles.earningsValue, { color: colors.primary }]}>
-              {currentEarnings.count}
-            </Text>
-            <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>משלוחים</Text>
-          </View>
-          <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.earningsItem}>
-            <Text style={[styles.earningsValue, { color: colors.textPrimary }]}>
-              ₪{currentEarnings.avgPerDelivery}
-            </Text>
-            <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>ממוצע</Text>
-          </View>
-        </View>
-      </GlassCard>
-
-      {/* ── Vehicle Type (square buttons) ── */}
-      <GlassCard style={styles.section} padding="lg">
-        <Text style={[styles.sectionLabel, { color: colors.textPrimary, marginBottom: SPACING.sm }]}>
-          🚛 סוג רכב
-        </Text>
-        <View style={styles.squareButtonRow}>
-          {VEHICLE_TYPES.map((type) => {
-            const active = prefs.vehicleType === type;
-            return (
-              <Pressable
-                key={type}
-                onPress={() => updatePref('vehicleType', type)}
-                style={[
-                  styles.squareButton,
-                  {
-                    backgroundColor: active ? colors.primary : colors.surface,
-                    borderColor: active ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text style={styles.squareButtonIcon}>{VEHICLE_ICONS[type]}</Text>
-                <Text style={[
-                  styles.squareButtonLabel,
-                  { color: active ? colors.textInverse : colors.textPrimary },
-                ]}>
-                  {VEHICLE_LABELS_HE[type] || t(`driver.${type}`)}
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>סה״כ</Text>
+              </View>
+              <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.earningsItem}>
+                <Text style={[styles.earningsValue, { color: colors.primary }]}>
+                  {currentEarnings.count}
                 </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+              </View>
+              <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.earningsItem}>
+                <Text style={[styles.earningsValue, { color: colors.textPrimary }]}>
+                  ₪{currentEarnings.avgPerDelivery}
+                </Text>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>ממוצע</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </GlassCard>
 
-      {/* ── Notification Range (Facebook-style slider) ── */}
-      <GlassCard style={styles.section} padding="lg">
-        <View style={styles.sectionRow}>
-          <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>📏 טווח התראות</Text>
-          <Text style={[styles.sectionValue, { color: colors.primary }]}>{prefs.radiusKm} {t('driver.km')}</Text>
-        </View>
-        <View style={styles.sliderContainer}>
-          <Text style={[styles.sliderEdgeLabel, { color: colors.textTertiary }]}>5</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={5}
-            maximumValue={50}
-            step={1}
-            value={prefs.radiusKm}
-            onValueChange={(val) => updatePref('radiusKm', val)}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.primary}
-          />
-          <Text style={[styles.sliderEdgeLabel, { color: colors.textTertiary }]}>50</Text>
-        </View>
-      </GlassCard>
-
-      {/* ── Delivery Sizes (square boxes) ── */}
+      {/* ── Delivery Sizes (distinct icons) ── */}
       <GlassCard style={styles.section} padding="lg">
         <Text style={[styles.sectionLabel, { color: colors.textPrimary, marginBottom: SPACING.sm }]}>
           📦 גודל משלוחים
@@ -494,7 +478,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                   },
                 ]}
               >
-                <Text style={styles.squareButtonIcon}>📦</Text>
+                <Text style={[styles.squareButtonIcon, size === 'large' ? { fontSize: 16 } : undefined]}>{SIZE_ICONS[size]}</Text>
                 <Text style={[
                   styles.squareButtonLabel,
                   { color: active ? colors.textInverse : colors.textPrimary },
@@ -517,8 +501,39 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
         {advancedOpen && (
           <View style={styles.advancedContent}>
-            {/* Weekly availability schedule */}
+            {/* Vehicle Type */}
             <Text style={[styles.advancedSubLabel, { color: colors.textPrimary }]}>
+              🚛 סוג רכב
+            </Text>
+            <View style={styles.squareButtonRow}>
+              {VEHICLE_TYPES.map((type) => {
+                const active = prefs.vehicleType === type;
+                return (
+                  <Pressable
+                    key={type}
+                    onPress={() => updatePref('vehicleType', type)}
+                    style={[
+                      styles.squareButton,
+                      {
+                        backgroundColor: active ? colors.primary : colors.surface,
+                        borderColor: active ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.squareButtonIcon}>{VEHICLE_ICONS[type]}</Text>
+                    <Text style={[
+                      styles.squareButtonLabel,
+                      { color: active ? colors.textInverse : colors.textPrimary },
+                    ]}>
+                      {VEHICLE_LABELS_HE[type] || t(`driver.${type}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Weekly availability schedule */}
+            <Text style={[styles.advancedSubLabel, { color: colors.textPrimary, marginTop: SPACING.md }]}>
               {t('driver.availability')}
             </Text>
             <View style={styles.scheduleGrid}>
@@ -783,6 +798,14 @@ const styles = StyleSheet.create({
   sectionValue: {
     ...TYPOGRAPHY.bodyBold,
   },
+  rangeLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  earningsQuickTotal: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
   toggleLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -944,6 +967,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
+    height: 42,
+    justifyContent: 'center',
     marginTop: SPACING.sm,
   },
   nicknameSaveBtnText: {
@@ -970,19 +995,18 @@ const styles = StyleSheet.create({
   // ── Schedule ──
   scheduleGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
+    justifyContent: 'space-between',
+    gap: 4,
   },
   dayChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.full,
+    flex: 1,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    minWidth: 42,
     alignItems: 'center',
   },
   dayText: {
-    ...TYPOGRAPHY.small,
+    fontSize: 11,
     fontWeight: '600',
   },
 

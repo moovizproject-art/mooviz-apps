@@ -74,6 +74,9 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
   const displayName = driver.nickname || driver.fullName || 'נהג';
   const rating = driver.ratingAsDriver?.average;
   const deliveries = driver.completedDeliveries;
+  const vehicleIcons: Record<string, string> = { bicycle: '🚲', bike: '🏍', car: '🚗', truck: '🚚' };
+  const vehicleLabels: Record<string, string> = { bicycle: 'אופניים', bike: 'קטנוע', car: 'רכב', truck: 'משאית' };
+  const vehicleType = driver.vehicleType || driver.preferences?.vehicleType;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -98,6 +101,11 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
             {deliveries != null && (
               <View style={[styles.badge, { backgroundColor: '#E3F2FD' }]}>
                 <Text style={styles.badgeText}>📦 {deliveries}</Text>
+              </View>
+            )}
+            {vehicleType && vehicleIcons[vehicleType] && (
+              <View style={[styles.badge, { backgroundColor: '#F3E5F5' }]}>
+                <Text style={styles.badgeText}>{vehicleIcons[vehicleType]} {vehicleLabels[vehicleType] || vehicleType}</Text>
               </View>
             )}
           </View>
@@ -168,7 +176,8 @@ const styles = StyleSheet.create({
   },
   badges: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   badge: {
     paddingHorizontal: 10,
