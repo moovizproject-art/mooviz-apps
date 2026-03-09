@@ -70,6 +70,18 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && (resource.data.status == 'new' || resource.data.driverId == request.auth.uid);
 
+      // Sender can update their own deliveries (approve driver, confirm payment, cancel)
+      allow update: if isAuthenticated()
+        && resource.data.senderId == request.auth.uid;
+
+      // Driver can update assigned deliveries (pickup, deliver, confirm payment)
+      allow update: if isAuthenticated()
+        && resource.data.driverId == request.auth.uid;
+
+      // Any authenticated user can express interest (adds to interestedDrivers)
+      allow update: if isAuthenticated()
+        && resource.data.status == 'new';
+
       // Admins can read/write all
       allow read: if isAdmin();
       allow create, update: if isAdmin();

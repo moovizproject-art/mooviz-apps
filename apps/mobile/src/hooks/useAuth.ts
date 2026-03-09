@@ -57,13 +57,22 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const [forceOtp, setForceOtp] = useState<boolean>(false);
 
   // Listen to Firebase auth state changes
+  // Race-condition guard: on Android, onAuthStateChanged can fire with null
+  // before the native SDK finishes restoring the persisted session. We delay
+  // committing to "no user" for up to 2s to let the real user arrive.
   useEffect(() => {
     console.log('[useAuth] Setting up onAuthStateChanged listener');
+    let nullTimer: ReturnType<typeof setTimeout> | null = null;
+    let gotUser = false;
+
     const unsubscribe = auth().onAuthStateChanged(async (fbUser: FirebaseAuthTypes.User | null) => {
       console.log('[useAuth] onAuthStateChanged fired, user:', fbUser?.uid || 'null');
-      setFirebaseUser(fbUser);
 
       if (fbUser) {
+        gotUser = true;
+        if (nullTimer) { clearTimeout(nullTimer); nullTimer = null; }
+        setFirebaseUser(fbUser);
+
         try {
           // Fetch user profile from Firestore (retry once on permission-denied — can happen during auth token refresh)
           let doc;
@@ -128,14 +137,34 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           console.error('[useAuth] Error fetching user profile:', error);
           setCurrentUser(null);
         }
+        console.log('[useAuth] Setting isLoading=false (user found)');
+        setIsLoading(false);
       } else {
+        // Null user — but might be a race condition on Android.
+        // If we already had a user, this is a real sign-out.
+        // If this is the first callback, wait briefly for the real user.
+        setFirebaseUser(null);
         setCurrentUser(null);
+        if (gotUser) {
+          // Real sign-out after having a user
+          console.log('[useAuth] User signed out');
+          setIsLoading(false);
+        } else if (!nullTimer) {
+          // First null callback — wait for native SDK to restore session
+          console.log('[useAuth] First null callback — waiting for session restore...');
+          nullTimer = setTimeout(() => {
+            console.log('[useAuth] Session restore timeout — no user, showing login');
+            setIsLoading(false);
+            nullTimer = null;
+          }, 2000);
+        }
       }
-      console.log('[useAuth] Setting isLoading=false');
-      setIsLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (nullTimer) clearTimeout(nullTimer);
+    };
   }, []);
 
   const login = useCallback(async (user: User): Promise<void> => {
