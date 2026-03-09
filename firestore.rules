@@ -126,7 +126,8 @@ service cloud.firestore {
         && request.auth.uid in resource.data.participants;
 
       // Collection list: only when queried with array-contains for own UID
-      allow list: if isAuthenticated();
+      allow list: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
 
       allow write: if isAuthenticated()
         && request.auth.uid in resource.data.participants;

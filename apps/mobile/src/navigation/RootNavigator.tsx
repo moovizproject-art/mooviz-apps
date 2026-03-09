@@ -331,12 +331,12 @@ export function RootNavigator(): React.JSX.Element {
   // Keep old name for navigator conditions
   const needsPhoneVerification = needsPhoneOtp;
 
-  // Debug logging for verification gates
+  // Debug logging for verification gates (PII redacted)
   if (firebaseUser) {
     console.log('[RootNavigator] Gate check — emailVerified:', firebaseUser.emailVerified,
-      'phoneNumber:', firebaseUser.phoneNumber,
+      'hasPhone:', !!firebaseUser.phoneNumber,
       'currentUser:', !!currentUser,
-      'lastOtpAt:', currentUser?.lastOtpAt,
+      'hasOtpAt:', !!currentUser?.lastOtpAt,
       'needsEmail:', !!needsEmailVerification,
       'needsPhone:', !!needsPhoneVerification);
   }

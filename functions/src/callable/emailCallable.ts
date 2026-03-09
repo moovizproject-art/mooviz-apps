@@ -2,6 +2,7 @@ import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
 import { defineSecret } from "firebase-functions/params";
+import { checkRateLimit } from "../middleware/rateLimit";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -70,6 +71,9 @@ export const sendBulkEmail = functions.onCall(
         "Only admins can send bulk emails"
       );
     }
+
+    // Rate limit: max 3 bulk email sends per hour
+    await checkRateLimit(request.auth.uid, "email");
 
     const { to, subject, htmlBody, sendPush } =
       request.data as SendBulkEmailData;
