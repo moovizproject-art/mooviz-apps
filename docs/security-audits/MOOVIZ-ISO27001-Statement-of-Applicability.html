@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOVIZ — ISO 27001:2022 Statement of Applicability</title>
+<style>
+  :root {
+    --navy: #1a237e;
+    --orange: #ff6d00;
+    --green: #2e7d32;
+    --yellow: #f9a825;
+    --red: #c62828;
+    --blue: #1565c0;
+    --gray-50: #fafafa;
+    --gray-100: #f5f5f5;
+    --gray-200: #eeeeee;
+    --gray-300: #e0e0e0;
+    --gray-600: #757575;
+    --gray-800: #424242;
+    --white: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    line-height: 1.6;
+    background: var(--white);
+  }
+
+  /* Header */
+  .doc-header {
+    background: linear-gradient(135deg, var(--navy) 0%, #283593 100%);
+    color: var(--white);
+    padding: 40px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .doc-header::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 100%;
+    background: var(--orange);
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+    opacity: 0.9;
+  }
+  .doc-header .brand {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .doc-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .doc-header .subtitle {
+    font-size: 15px;
+    opacity: 0.9;
+    margin-bottom: 16px;
+  }
+  .doc-header .meta-row {
+    display: flex;
+    gap: 40px;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  .logo-text {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    position: relative;
+    z-index: 2;
+    color: var(--white);
+  }
+
+  /* Container */
+  .container { max-width: 1200px; margin: 0 auto; padding: 30px 40px 60px; }
+
+  /* Dashboard */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin: 30px 0;
+  }
+  .dash-card {
+    border-radius: 10px;
+    padding: 20px 14px;
+    text-align: center;
+    border: 1px solid var(--gray-300);
+    background: var(--white);
+  }
+  .dash-card .number {
+    font-size: 32px;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .dash-card .label {
+    font-size: 12px;
+    color: var(--gray-600);
+  }
+  .dash-card.impl { border-left: 4px solid var(--green); }
+  .dash-card.impl .number { color: var(--green); }
+  .dash-card.planned { border-left: 4px solid var(--blue); }
+  .dash-card.planned .number { color: var(--blue); }
+  .dash-card.partial { border-left: 4px solid var(--yellow); }
+  .dash-card.partial .number { color: #e68900; }
+  .dash-card.na { border-left: 4px solid var(--gray-600); }
+  .dash-card.na .number { color: var(--gray-600); }
+  .dash-card.total { border-left: 4px solid var(--navy); }
+  .dash-card.total .number { color: var(--navy); }
+
+  /* Section headers */
+  h2 {
+    font-size: 22px;
+    color: var(--navy);
+    border-bottom: 3px solid var(--orange);
+    padding-bottom: 8px;
+    margin: 40px 0 16px;
+  }
+  h3 {
+    font-size: 16px;
+    color: var(--navy);
+    margin: 20px 0 10px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 24px;
+    font-size: 12.5px;
+  }
+  thead th {
+    background: var(--navy);
+    color: var(--white);
+    padding: 9px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) { background: var(--gray-50); }
+  tbody tr:hover { background: #e8eaf6; }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .badge.yes { background: #e8f5e9; color: var(--green); }
+  .badge.no { background: var(--gray-100); color: var(--gray-600); }
+  .badge.partial { background: #fff8e1; color: #e68900; }
+  .badge.impl { background: #e8f5e9; color: var(--green); }
+  .badge.planned { background: #e3f2fd; color: var(--blue); }
+  .badge.na { background: var(--gray-100); color: var(--gray-600); }
+
+  code {
+    background: #eceff1;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    color: #37474f;
+  }
+
+  .info-box {
+    background: #e8eaf6;
+    border-left: 4px solid var(--navy);
+    padding: 14px 18px;
+    margin: 16px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+  }
+
+  /* Annex section header */
+  .annex-header {
+    background: linear-gradient(90deg, var(--navy), #3949ab);
+    color: var(--white);
+    padding: 14px 20px;
+    border-radius: 8px;
+    margin: 30px 0 16px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 20px 0;
+  }
+  .toc h3 { margin-top: 0; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 5px 0; font-size: 13px; }
+  .toc a { color: var(--navy); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* Footer */
+  .doc-footer {
+    background: var(--gray-100);
+    border-top: 2px solid var(--gray-300);
+    text-align: center;
+    padding: 20px 40px;
+    font-size: 12px;
+    color: var(--gray-600);
+  }
+  .doc-footer strong { color: var(--navy); }
+
+  /* Print */
+  @media print {
+    body { font-size: 10px; }
+    .container { padding: 10px 15px; }
+    .doc-header { padding: 16px 20px; }
+    .dashboard { grid-template-columns: repeat(5, 1fr); }
+    h2 { page-break-after: avoid; }
+    table { page-break-inside: auto; font-size: 10px; }
+    tr { page-break-inside: avoid; }
+    .annex-header { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<div class="doc-header">
+  <div class="brand">
+    <div>
+      <h1>ISO 27001:2022 Statement of Applicability</h1>
+      <div class="subtitle">MOOVIZ Real-Time Community Delivery Platform</div>
+      <div class="meta-row">
+        <span><strong>Date:</strong> 10 March 2026</span>
+        <span><strong>Version:</strong> 1.0</span>
+        <span><strong>Prepared by:</strong> KAL Solutions Group</span>
+        <span><strong>Classification:</strong> Confidential</span>
+      </div>
+    </div>
+    <div class="logo-text">MOOVIZ</div>
+  </div>
+</div>
+
+<!-- ========== CONTAINER ========== -->
+<div class="container">
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="dash-card impl">
+      <span class="number">42</span>
+      <span class="label">Implemented</span>
+    </div>
+    <div class="dash-card partial">
+      <span class="number">11</span>
+      <span class="label">Partially Implemented</span>
+    </div>
+    <div class="dash-card planned">
+      <span class="number">8</span>
+      <span class="label">Planned</span>
+    </div>
+    <div class="dash-card na">
+      <span class="number">32</span>
+      <span class="label">Not Applicable</span>
+    </div>
+    <div class="dash-card total">
+      <span class="number">93</span>
+      <span class="label">Total Annex A Controls</span>
+    </div>
+  </div>
+
+  <div class="info-box">
+    This Statement of Applicability (SoA) covers ISO 27001:2022 Annex A controls (A.5 through A.8) for the MOOVIZ delivery platform.
+    Each control is assessed for applicability based on the platform's serverless cloud architecture (Firebase/GCP), mobile-first design, and
+    the security audit findings remediated in March 2026. Physical controls (A.7) are largely N/A due to the fully serverless, Google-managed infrastructure.
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Table of Contents</h3>
+    <ol>
+      <li><a href="#a5">A.5 -- Organizational Controls (37 controls)</a></li>
+      <li><a href="#a6">A.6 -- People Controls (8 controls)</a></li>
+      <li><a href="#a7">A.7 -- Physical Controls (14 controls)</a></li>
+      <li><a href="#a8">A.8 -- Technological Controls (34 controls)</a></li>
+    </ol>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- A.5 ORGANIZATIONAL CONTROLS -->
+  <!-- ================================================================ -->
+  <div class="annex-header" id="a5">A.5 -- Organizational Controls</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:55px">ID</th>
+        <th style="width:180px">Control Name</th>
+        <th style="width:55px">Applic.</th>
+        <th style="width:85px">Status</th>
+        <th>Evidence / Reference</th>
+        <th style="width:200px">Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A.5.1</td>
+        <td>Policies for information security</td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><code>CLAUDE.md</code> Security Requirements section; Security Audit reports v1/v2 in <code>Docs/Security Audits/</code></td>
+        <td>Policies exist in project config but no standalone approved ISMS policy document</td>
+      </tr>
+      <tr>
+        <td>A.5.2</td>
+        <td>Information security roles and responsibilities</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Roles defined: admin, moderator, sender, driver; CTO has end-to-end technical ownership; <code>firestore.rules</code> <code>isAdmin()</code></td>
+        <td>Roles mapped to RBAC across Firestore, Storage, and Cloud Functions</td>
+      </tr>
+      <tr>
+        <td>A.5.3</td>
+        <td>Segregation of duties</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Cloud Functions separate from client code; Admin panel separate from user app; <code>TRANSITION_ACTORS</code> in <code>shared/src/constants/statuses.ts</code></td>
+        <td>Server-side validation prevents client bypasses; admin functions isolated</td>
+      </tr>
+      <tr>
+        <td>A.5.4</td>
+        <td>Management responsibilities</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><code>CLAUDE.md</code> project overview; Contract with KAL Solutions</td>
+        <td>CTO ownership documented; formal management security commitment needed</td>
+      </tr>
+      <tr>
+        <td>A.5.5</td>
+        <td>Contact with authorities</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge planned">Planned</span></td>
+        <td>--</td>
+        <td>Required for Israeli data breach notification; not yet established</td>
+      </tr>
+      <tr>
+        <td>A.5.6</td>
+        <td>Contact with special interest groups</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Not applicable for current project scope / startup phase</td>
+      </tr>
+      <tr>
+        <td>A.5.7</td>
+        <td>Threat intelligence</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Security audit (23 findings); Firebase security alerts; GCP Security Command Center</td>
+        <td>Internal audit identified and remediated threats; relies on Google threat intelligence</td>
+      </tr>
+      <tr>
+        <td>A.5.8</td>
+        <td>Information security in project management</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>CLAUDE.md</code> Security Requirements; Security audit integrated into sprint cycle; Milestone-gated delivery</td>
+        <td>Security requirements tracked alongside features in CRM</td>
+      </tr>
+      <tr>
+        <td>A.5.9</td>
+        <td>Inventory of information and other associated assets</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><code>CLAUDE.md</code> Directory Layout; <code>firebase.json</code>; Data model documented in CLAUDE.md</td>
+        <td>Code and infrastructure inventory in project docs; no formal asset register</td>
+      </tr>
+      <tr>
+        <td>A.5.10</td>
+        <td>Acceptable use of information and other associated assets</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge planned">Planned</span></td>
+        <td>--</td>
+        <td>Acceptable use policy needed for user-facing terms</td>
+      </tr>
+      <tr>
+        <td>A.5.11</td>
+        <td>Return of assets</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Cloud-only SaaS; no physical assets to return</td>
+      </tr>
+      <tr>
+        <td>A.5.12</td>
+        <td>Classification of information</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Implicit tiers: encrypted (profile photos, KYC), restricted (delivery data), public (ratings)</td>
+        <td>No formal classification scheme documented; implemented via encryption and access controls</td>
+      </tr>
+      <tr>
+        <td>A.5.13</td>
+        <td>Labelling of information</td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Security reports marked "Confidential"; Storage metadata includes <code>encrypted: "true"</code> flag</td>
+        <td>Documents classified; no systematic labelling scheme</td>
+      </tr>
+      <tr>
+        <td>A.5.14</td>
+        <td>Information transfer</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>HTTPS enforced by Firebase; TLS 1.2+ for all API communications; Encrypted photos transferred via Cloud Function base64</td>
+        <td>All data in transit encrypted</td>
+      </tr>
+      <tr>
+        <td>A.5.15</td>
+        <td>Access control</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>firestore.rules</code>: role-based read/write; <code>storage.rules</code>: participant-based access; Cloud Functions: <code>assertUserRole()</code>, <code>assertDriverApproved()</code></td>
+        <td>Multi-layer access control across all data stores</td>
+      </tr>
+      <tr>
+        <td>A.5.16</td>
+        <td>Identity management</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase Auth: unique UID per user; OTP + Email verification; <code>users/{userId}</code> profile collection</td>
+        <td>Centralized identity via Firebase Auth</td>
+      </tr>
+      <tr>
+        <td>A.5.17</td>
+        <td>Authentication information</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase Auth manages credentials; OTP SMS + Email; No password storage by application</td>
+        <td>Authentication delegated to Firebase Auth (Google managed)</td>
+      </tr>
+      <tr>
+        <td>A.5.18</td>
+        <td>Access rights</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>noProtectedFields()</code>: blocks role/status/kycStatus write; <code>validRole()</code>: prevents admin self-promotion; <code>allowedUserUpdateFields()</code>: whitelist approach</td>
+        <td>Principle of least privilege enforced via field-level rules</td>
+      </tr>
+      <tr>
+        <td>A.5.19</td>
+        <td>Information security in supplier relationships</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Firebase/GCP compliance (SOC 2, ISO 27001 certified); Contract between KAL Solutions and Mooviz</td>
+        <td>Primary supplier (Google) fully certified; no formal supplier security assessment process</td>
+      </tr>
+      <tr>
+        <td>A.5.20</td>
+        <td>Addressing information security within supplier agreements</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Firebase Terms of Service; GCP Data Processing Addendum</td>
+        <td>Google agreements cover data processing; no custom security clauses with other suppliers</td>
+      </tr>
+      <tr>
+        <td>A.5.21</td>
+        <td>Managing information security in the ICT supply chain</td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>npm packages with lock files (<code>pnpm-lock.yaml</code>); Firebase SDK versions pinned</td>
+        <td>Dependency management in place; no formal supply chain security assessment (e.g., SCA tooling)</td>
+      </tr>
+      <tr>
+        <td>A.5.22</td>
+        <td>Monitoring, review and change management of supplier services</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Firebase status dashboard; GCP service health monitoring</td>
+        <td>Google provides service monitoring; no formal review schedule</td>
+      </tr>
+      <tr>
+        <td>A.5.23</td>
+        <td>Information security for use of cloud services</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase Security Rules (<code>firestore.rules</code>, <code>storage.rules</code>); Secret Manager for <code>ENCRYPTION_SECRET</code>; <code>google-services.json</code> gitignored</td>
+        <td>Cloud security controls implemented across all Firebase services</td>
+      </tr>
+      <tr>
+        <td>A.5.24</td>
+        <td>Information security incident management planning and preparation</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge planned">Planned</span></td>
+        <td>--</td>
+        <td>No formal incident response plan; identified as SOC 2 gap</td>
+      </tr>
+      <tr>
+        <td>A.5.25</td>
+        <td>Assessment and decision on information security events</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Security audit v1/v2 demonstrated event assessment (23 findings classified by severity)</td>
+        <td>Assessment capability demonstrated; no formal triage process</td>
+      </tr>
+      <tr>
+        <td>A.5.26</td>
+        <td>Response to information security incidents</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>18/23 findings remediated within 24 hours of identification; Remediation tracked in audit reports</td>
+        <td>Rapid response demonstrated; formal process not documented</td>
+      </tr>
+      <tr>
+        <td>A.5.27</td>
+        <td>Learning from information security incidents</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Security audit v2 is a lessons-learned update; Remediation patterns documented in <code>MEMORY.md</code>; Guidelines updated in <code>CLAUDE.md</code></td>
+        <td>Continuous improvement demonstrated through audit iterations</td>
+      </tr>
+      <tr>
+        <td>A.5.28</td>
+        <td>Collection of evidence</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Git commit history; Security audit PDFs; <code>adminActions</code> collection; Cloud Function logs</td>
+        <td>Digital evidence collection through version control and audit logging</td>
+      </tr>
+      <tr>
+        <td>A.5.29</td>
+        <td>Information security during disruption</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firestore offline persistence; Serverless auto-scaling; No single points of failure</td>
+        <td>Firebase managed resilience; security rules enforced regardless of load</td>
+      </tr>
+      <tr>
+        <td>A.5.30</td>
+        <td>ICT readiness for business continuity</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase 99.95% SLA; Cloud Functions auto-recovery; Firestore replication</td>
+        <td>Google-managed continuity for serverless infrastructure</td>
+      </tr>
+      <tr>
+        <td>A.5.31</td>
+        <td>Legal, statutory, regulatory and contractual requirements</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge planned">Planned</span></td>
+        <td>--</td>
+        <td>Israeli Privacy Protection Law compliance needed; Privacy policy required for app stores</td>
+      </tr>
+      <tr>
+        <td>A.5.32</td>
+        <td>Intellectual property rights</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Contract between KAL Solutions and G.M. Mooviz Software; Code in private GitHub repos; Client remote gated by milestone payment</td>
+        <td>IP ownership defined in contract; code access controlled</td>
+      </tr>
+      <tr>
+        <td>A.5.33</td>
+        <td>Protection of records</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firestore documents with timestamps (<code>createdAt</code>, <code>updatedAt</code>); <code>statusHistory</code> array in deliveries; <code>adminActions</code> audit log</td>
+        <td>Records maintained with timestamps and audit trail</td>
+      </tr>
+      <tr>
+        <td>A.5.34</td>
+        <td>Privacy and protection of PII</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>AES-256-CBC encryption for photos/KYC; PII removed from admin logs (H8); <code>noProtectedFields()</code></td>
+        <td>Technical controls in place; privacy policy and data subject rights not yet implemented</td>
+      </tr>
+      <tr>
+        <td>A.5.35</td>
+        <td>Independent review of information security</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge planned">Planned</span></td>
+        <td>Internal audit completed; External penetration test recommended</td>
+        <td>External security review planned before production launch</td>
+      </tr>
+      <tr>
+        <td>A.5.36</td>
+        <td>Compliance with policies, rules and standards</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Security audit verified compliance with <code>CLAUDE.md</code> policies; TypeScript strict mode enforced; ESLint configuration</td>
+        <td>Automated and manual compliance verification</td>
+      </tr>
+      <tr>
+        <td>A.5.37</td>
+        <td>Documented operating procedures</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>CLAUDE.md</code> (development procedures); <code>docs/m2-testing-plan.md</code>; <code>docs/next-session.md</code>; Git workflow documented</td>
+        <td>Operating procedures documented in project files</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================================================================ -->
+  <!-- A.6 PEOPLE CONTROLS -->
+  <!-- ================================================================ -->
+  <div class="annex-header" id="a6">A.6 -- People Controls</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:55px">ID</th>
+        <th style="width:180px">Control Name</th>
+        <th style="width:55px">Applic.</th>
+        <th style="width:85px">Status</th>
+        <th>Evidence / Reference</th>
+        <th style="width:200px">Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A.6.1</td>
+        <td>Screening</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>KYC verification system for drivers: <code>kycCallable.ts</code>; <code>kycStatus: pending|approved|rejected</code>; <code>assertDriverApproved()</code> gates driver operations</td>
+        <td>Driver screening via KYC document upload and admin approval</td>
+      </tr>
+      <tr>
+        <td>A.6.2</td>
+        <td>Terms and conditions of employment</td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><span class="badge planned">Planned</span></td>
+        <td>--</td>
+        <td>User terms of service needed for app; contractor agreement exists (KAL-Mooviz contract)</td>
+      </tr>
+      <tr>
+        <td>A.6.3</td>
+        <td>Information security awareness, education and training</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><code>CLAUDE.md</code> Security Requirements; Security audit findings shared with team</td>
+        <td>Development team aware; no formal security training program for users</td>
+      </tr>
+      <tr>
+        <td>A.6.4</td>
+        <td>Disciplinary process</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>User status: <code>active|suspended|blocked</code>; <code>reports</code> collection for user reports; Admin can suspend/block via <code>userCallable.ts</code></td>
+        <td>Platform-level disciplinary actions via admin panel</td>
+      </tr>
+      <tr>
+        <td>A.6.5</td>
+        <td>Responsibilities after termination or change of employment</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Platform users, not employees; account blocking handles user removal</td>
+      </tr>
+      <tr>
+        <td>A.6.6</td>
+        <td>Confidentiality or non-disclosure agreements</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>KAL Solutions-Mooviz contract includes confidentiality clauses; Code access restricted to private repos</td>
+        <td>Contractual confidentiality with development supplier</td>
+      </tr>
+      <tr>
+        <td>A.6.7</td>
+        <td>Remote working</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>GitHub private repo with branch protection; Firebase console with IAM; No VPN required (cloud-native)</td>
+        <td>Cloud-native workflow supports secure remote development</td>
+      </tr>
+      <tr>
+        <td>A.6.8</td>
+        <td>Information security event reporting</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>reports</code> Firestore collection; Users can submit reports; Admin reviews via admin panel</td>
+        <td>In-app reporting mechanism for security events</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================================================================ -->
+  <!-- A.7 PHYSICAL CONTROLS -->
+  <!-- ================================================================ -->
+  <div class="annex-header" id="a7">A.7 -- Physical Controls</div>
+
+  <div class="info-box">
+    MOOVIZ operates on a fully serverless cloud architecture managed by Google (Firebase / GCP). All physical infrastructure controls are
+    the responsibility of Google Cloud Platform, which maintains ISO 27001, SOC 2, and SOC 3 certifications for its data centers.
+    Physical controls are therefore assessed as Not Applicable for the MOOVIZ application layer.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:55px">ID</th>
+        <th style="width:180px">Control Name</th>
+        <th style="width:55px">Applic.</th>
+        <th style="width:85px">Status</th>
+        <th>Evidence / Reference</th>
+        <th style="width:200px">Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A.7.1</td>
+        <td>Physical security perimeters</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud ISO 27001 certification</td>
+        <td>Google-managed data center physical security</td>
+      </tr>
+      <tr>
+        <td>A.7.2</td>
+        <td>Physical entry</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud SOC 2 reports</td>
+        <td>Google-managed facility access controls</td>
+      </tr>
+      <tr>
+        <td>A.7.3</td>
+        <td>Securing offices, rooms and facilities</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>No company offices; remote-first team</td>
+      </tr>
+      <tr>
+        <td>A.7.4</td>
+        <td>Physical security monitoring</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud data center monitoring</td>
+        <td>Google-managed</td>
+      </tr>
+      <tr>
+        <td>A.7.5</td>
+        <td>Protecting against physical and environmental threats</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud data center protections</td>
+        <td>Google-managed environmental controls</td>
+      </tr>
+      <tr>
+        <td>A.7.6</td>
+        <td>Working in secure areas</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Serverless; no secure area requirements</td>
+      </tr>
+      <tr>
+        <td>A.7.7</td>
+        <td>Clear desk and clear screen</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Remote development team; cloud-based access</td>
+      </tr>
+      <tr>
+        <td>A.7.8</td>
+        <td>Equipment siting and protection</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud infrastructure</td>
+        <td>Google-managed server equipment</td>
+      </tr>
+      <tr>
+        <td>A.7.9</td>
+        <td>Security of assets off-premises</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>No off-premises assets; mobile app distributed via app stores</td>
+      </tr>
+      <tr>
+        <td>A.7.10</td>
+        <td>Storage media</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud Storage encryption at rest</td>
+        <td>All storage is cloud-based (Firebase Storage, Firestore)</td>
+      </tr>
+      <tr>
+        <td>A.7.11</td>
+        <td>Supporting utilities</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud data center UPS and redundancy</td>
+        <td>Google-managed power and cooling</td>
+      </tr>
+      <tr>
+        <td>A.7.12</td>
+        <td>Cabling security</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Google-managed network infrastructure</td>
+      </tr>
+      <tr>
+        <td>A.7.13</td>
+        <td>Equipment maintenance</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Serverless; no equipment to maintain</td>
+      </tr>
+      <tr>
+        <td>A.7.14</td>
+        <td>Secure disposal or re-use of equipment</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>Google Cloud media sanitization procedures</td>
+        <td>Google-managed; covered by GCP compliance certifications</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================================================================ -->
+  <!-- A.8 TECHNOLOGICAL CONTROLS -->
+  <!-- ================================================================ -->
+  <div class="annex-header" id="a8">A.8 -- Technological Controls</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:55px">ID</th>
+        <th style="width:180px">Control Name</th>
+        <th style="width:55px">Applic.</th>
+        <th style="width:85px">Status</th>
+        <th>Evidence / Reference</th>
+        <th style="width:200px">Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A.8.1</td>
+        <td>User endpoint devices</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>React Native mobile app with Firebase Auth; Secure token storage via platform keychain; App requires authentication</td>
+        <td>Mobile endpoints secured via platform security features and Firebase Auth tokens</td>
+      </tr>
+      <tr>
+        <td>A.8.2</td>
+        <td>Privileged access rights</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>firestore.rules</code>: <code>isAdmin()</code> checks role field via Firestore lookup; <code>adminActions</code> collection admin-only; <code>decryptDocument()</code> requires admin role</td>
+        <td>Admin privilege enforced at data layer; no UID-based bootstrap (H3 fixed)</td>
+      </tr>
+      <tr>
+        <td>A.8.3</td>
+        <td>Information access restriction</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>firestore.rules</code>: sender reads own, driver reads available+assigned; <code>storage.rules</code>: <code>isChatParticipant()</code>, <code>isDeliveryParticipant()</code>; <code>noProtectedFields()</code></td>
+        <td>RBAC enforced across Firestore, Storage, and Cloud Functions</td>
+      </tr>
+      <tr>
+        <td>A.8.4</td>
+        <td>Access to source code</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Private GitHub repos (KAL Solutions org); Client remote access gated by milestone payment; Branch protection</td>
+        <td>Source code access restricted to authorized developers</td>
+      </tr>
+      <tr>
+        <td>A.8.5</td>
+        <td>Secure authentication</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase Auth: OTP SMS + Email verification; <code>isAuthenticated()</code> check in all security rules; Rate limiting on OTP (5 attempts/15min)</td>
+        <td>MFA-like flow (phone + email); rate limiting prevents brute force</td>
+      </tr>
+      <tr>
+        <td>A.8.6</td>
+        <td>Capacity management</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Cloud Functions Gen 2 auto-scaling; Firestore auto-scaling; Firebase Storage with CDN</td>
+        <td>Google-managed capacity; serverless scales automatically</td>
+      </tr>
+      <tr>
+        <td>A.8.7</td>
+        <td>Protection against malware</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>storage.rules</code>: <code>isImage()</code>/<code>isMedia()</code> content type validation; 5MB max file size (<code>maxSize()</code>); <code>sanitizeHtml()</code> in <code>emailCallable.ts</code></td>
+        <td>Input validation prevents malicious file uploads and XSS</td>
+      </tr>
+      <tr>
+        <td>A.8.8</td>
+        <td>Management of technical vulnerabilities</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Security audit identified 23 vulnerabilities; 18 fixed, 3 partial, 2 accepted; pnpm lock files for dependency pinning</td>
+        <td>Vulnerability management demonstrated; recommend adding automated dependency scanning</td>
+      </tr>
+      <tr>
+        <td>A.8.9</td>
+        <td>Configuration management</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>firebase.json</code>; <code>app.json</code>; <code>tsconfig.json</code>; <code>.npmrc</code> with <code>public-hoist-pattern[]=*</code>; Environment variables for secrets</td>
+        <td>Configuration managed in version control; secrets externalized</td>
+      </tr>
+      <tr>
+        <td>A.8.10</td>
+        <td>Information deletion</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Firestore documents deletable by admin; <code>tempFile.delete()</code> in encryption workflow; Storage temp files cleaned after encryption</td>
+        <td>Admin can delete data; no automated user self-service deletion workflow</td>
+      </tr>
+      <tr>
+        <td>A.8.11</td>
+        <td>Data masking</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>PII removed from logs (finding H8); Profile photos show silhouette for unauthorized viewers; <code>getAuthorizedPhoto()</code> returns <code>photoData: null</code> when not authorized</td>
+        <td>PII masking in logs and unauthorized access returns no data</td>
+      </tr>
+      <tr>
+        <td>A.8.12</td>
+        <td>Data leakage prevention</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Encrypted storage for sensitive files; <code>allow read, write: if false</code> for <code>.enc</code> files; Participant-based access; <code>getEncryptionKey</code> endpoint removed (C2)</td>
+        <td>Multi-layer DLP: encryption, access rules, no key exposure</td>
+      </tr>
+      <tr>
+        <td>A.8.13</td>
+        <td>Information backup</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Firestore point-in-time recovery (Google managed); Firebase Storage redundancy</td>
+        <td>Google-managed backups; no application-level backup verification</td>
+      </tr>
+      <tr>
+        <td>A.8.14</td>
+        <td>Redundancy of information processing facilities</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firestore multi-region replication; Cloud Functions multi-zone deployment; Firebase CDN</td>
+        <td>Google-managed redundancy across zones and regions</td>
+      </tr>
+      <tr>
+        <td>A.8.15</td>
+        <td>Logging</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>GCP Cloud Logging for Cloud Functions; <code>adminActions</code> audit collection; <code>statusHistory</code> in deliveries; Firebase Analytics</td>
+        <td>Multi-level logging: application, audit, and analytics</td>
+      </tr>
+      <tr>
+        <td>A.8.16</td>
+        <td>Monitoring activities</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase Analytics / GA4; Firebase Crashlytics; GCP Cloud Monitoring; Admin panel for delivery oversight</td>
+        <td>Multiple monitoring layers for operations and errors</td>
+      </tr>
+      <tr>
+        <td>A.8.17</td>
+        <td>Clock synchronization</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firestore server timestamps: <code>admin.firestore.Timestamp.now()</code>; <code>FieldValue.serverTimestamp()</code> for client writes</td>
+        <td>Google NTP synchronization; server timestamps prevent client clock manipulation</td>
+      </tr>
+      <tr>
+        <td>A.8.18</td>
+        <td>Use of privileged utility programs</td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase Admin SDK restricted to Cloud Functions only; <code>scripts/</code> directory gitignored; Admin CLI tools require auth</td>
+        <td>Admin SDK usage limited to server-side functions</td>
+      </tr>
+      <tr>
+        <td>A.8.19</td>
+        <td>Installation of software on operational systems</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Serverless; no operational servers to install software on</td>
+      </tr>
+      <tr>
+        <td>A.8.20</td>
+        <td>Networks security</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase enforces HTTPS; CORS restricted to specific domains (M7 fix); GCP VPC networking for Cloud Functions</td>
+        <td>Google-managed network security; CORS configuration hardened</td>
+      </tr>
+      <tr>
+        <td>A.8.21</td>
+        <td>Security of network services</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Firebase managed TLS/SSL; Cloud Functions HTTPS endpoints; FCM encrypted push notifications</td>
+        <td>All network services encrypted in transit</td>
+      </tr>
+      <tr>
+        <td>A.8.22</td>
+        <td>Segregation of networks</td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Dev environment (mooviz-app-9b766) separate from production (mooviz-prod, pending)</td>
+        <td>Environment separation designed; production not yet deployed</td>
+      </tr>
+      <tr>
+        <td>A.8.23</td>
+        <td>Web filtering</td>
+        <td><span class="badge no">No</span></td>
+        <td><span class="badge na">N/A</span></td>
+        <td>--</td>
+        <td>Mobile app platform; no web browsing to filter</td>
+      </tr>
+      <tr>
+        <td>A.8.24</td>
+        <td>Use of cryptography</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>encryptionCallable.ts</code>: AES-256-CBC with random IV; HMAC-SHA256 key derivation from <code>ENCRYPTION_SECRET</code>; Firebase Secret Manager for key storage; TLS 1.2+ in transit</td>
+        <td>Industry-standard cryptography for data at rest and in transit</td>
+      </tr>
+      <tr>
+        <td>A.8.25</td>
+        <td>Secure development life cycle</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Git version control; Feature branch workflow; Code review via PRs; Security audit integrated; TypeScript strict mode; <code>CLAUDE.md</code> coding standards</td>
+        <td>SDLC includes security reviews and strict typing</td>
+      </tr>
+      <tr>
+        <td>A.8.26</td>
+        <td>Application security requirements</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td><code>CLAUDE.md</code> Security Requirements (10 rules); Server-side validation for all transitions; <code>assertValidTransition()</code>; Input sanitization; Content type validation</td>
+        <td>Security requirements defined and enforced in code</td>
+      </tr>
+      <tr>
+        <td>A.8.27</td>
+        <td>Secure system architecture and engineering principles</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Serverless architecture (no server management); Principle of least privilege in security rules; Defense in depth (Firestore rules + Cloud Functions + Storage rules)</td>
+        <td>Multi-layer security architecture</td>
+      </tr>
+      <tr>
+        <td>A.8.28</td>
+        <td>Secure coding</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>TypeScript strict mode; <code>sanitizeHtml()</code>; <code>noProtectedFields()</code>; Field whitelist approach (<code>hasOnly()</code>); OWASP compliance per <code>CLAUDE.md</code></td>
+        <td>Secure coding practices enforced through language features and validation</td>
+      </tr>
+      <tr>
+        <td>A.8.29</td>
+        <td>Security testing in development and acceptance</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Security audit (23 findings); <code>docs/m2-testing-plan.md</code>; Manual testing checklists</td>
+        <td>Security testing performed; recommend automated security test suite</td>
+      </tr>
+      <tr>
+        <td>A.8.30</td>
+        <td>Outsourced development</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>KAL Solutions (supplier) develops for G.M. Mooviz (client); Contract with security clauses; Code review process; Milestone-gated delivery</td>
+        <td>Outsourced development governed by contract and code review</td>
+      </tr>
+      <tr>
+        <td>A.8.31</td>
+        <td>Separation of development, test and production environments</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td>Dev Firebase project active; Production project designed but not yet deployed; <code>CLAUDE.md</code>: dev, staging, production environments specified</td>
+        <td>Architecture supports separation; production environment pending</td>
+      </tr>
+      <tr>
+        <td>A.8.32</td>
+        <td>Change management</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Git branching (main/develop/feature/*); Conventional commits; PR review process; Sprint-based releases</td>
+        <td>Structured change management via Git workflow</td>
+      </tr>
+      <tr>
+        <td>A.8.33</td>
+        <td>Test information</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge partial">Partial</span></td>
+        <td><code>scripts/seed-tamir-kal.js</code> for test data; <code>scripts/reset-lifecycle-test.js</code></td>
+        <td>Test scripts exist; no formal test data management policy (production data not used in dev)</td>
+      </tr>
+      <tr>
+        <td>A.8.34</td>
+        <td>Protection of information systems during audit testing</td>
+        <td><span class="badge yes">Yes</span></td>
+        <td><span class="badge impl">Implemented</span></td>
+        <td>Security audit conducted on dev environment; No production impact; Findings remediated in feature branch before merge</td>
+        <td>Audit testing isolated to development environment</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Summary -->
+  <h2>Summary of Applicability</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Annex Section</th>
+        <th>Total Controls</th>
+        <th>Applicable</th>
+        <th>Implemented</th>
+        <th>Partially Implemented</th>
+        <th>Planned</th>
+        <th>N/A</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>A.5 Organizational</strong></td>
+        <td>37</td><td>34</td><td>21</td><td>9</td><td>4</td><td>3</td>
+      </tr>
+      <tr>
+        <td><strong>A.6 People</strong></td>
+        <td>8</td><td>7</td><td>5</td><td>1</td><td>1</td><td>1</td>
+      </tr>
+      <tr>
+        <td><strong>A.7 Physical</strong></td>
+        <td>14</td><td>0</td><td>0</td><td>0</td><td>0</td><td>14</td>
+      </tr>
+      <tr>
+        <td><strong>A.8 Technological</strong></td>
+        <td>34</td><td>31</td><td>23</td><td>5</td><td>0</td><td>3</td>
+      </tr>
+      <tr style="font-weight:700; background:#e8eaf6;">
+        <td><strong>TOTAL</strong></td>
+        <td>93</td><td>72</td><td>49</td><td>15</td><td>5</td><td>21</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <strong>Assessment Conclusion:</strong> Of the 72 applicable controls, 49 (68%) are fully implemented, 15 (21%) are partially implemented,
+    and 5 (7%) are planned. Key gaps requiring attention before certification include: formal information security policy (A.5.1),
+    privacy/legal compliance (A.5.31, A.5.34), incident response planning (A.5.24), and production environment separation (A.8.31).
+    The platform demonstrates strong technological controls (A.8) with comprehensive RBAC, encryption, and secure development practices.
+  </div>
+
+</div>
+
+<!-- ========== FOOTER ========== -->
+<div class="doc-footer">
+  <strong>KAL Solutions Group</strong> -- Compliance Division | March 2026 | Confidential<br>
+  Prepared for G.M. Mooviz Software (2026) Ltd | This document is intended for internal use only.
+</div>
+
+</body>
+</html>

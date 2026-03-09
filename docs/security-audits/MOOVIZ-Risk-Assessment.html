@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOVIZ Risk Assessment Report</title>
+<style>
+  :root {
+    --primary: #1a237e;
+    --primary-light: #283593;
+    --accent: #ff6d00;
+    --accent-light: #ff9100;
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --text: #212121;
+    --text-light: #757575;
+    --border: #e0e0e0;
+    --green: #2e7d32;
+    --green-bg: #e8f5e9;
+    --yellow: #f9a825;
+    --yellow-bg: #fff8e1;
+    --orange: #ef6c00;
+    --orange-bg: #fff3e0;
+    --red: #c62828;
+    --red-bg: #ffebee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 40px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 100%;
+    background: var(--accent);
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+  }
+
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header .subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header .doc-info {
+    margin-top: 16px;
+    font-size: 13px;
+    opacity: 0.8;
+    position: relative;
+    z-index: 1;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 40px;
+  }
+
+  /* Dashboard */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .dash-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-top: 4px solid var(--primary);
+  }
+
+  .dash-card.critical { border-top-color: var(--red); }
+  .dash-card.high { border-top-color: var(--orange); }
+  .dash-card.medium { border-top-color: var(--yellow); }
+  .dash-card.low { border-top-color: var(--green); }
+
+  .dash-card .number {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .dash-card.critical .number { color: var(--red); }
+  .dash-card.high .number { color: var(--orange); }
+  .dash-card.medium .number { color: var(--yellow); }
+  .dash-card.low .number { color: var(--green); }
+
+  .dash-card .label {
+    font-size: 13px;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  .overall-badge {
+    display: inline-block;
+    background: var(--green-bg);
+    color: var(--green);
+    font-weight: 700;
+    padding: 8px 24px;
+    border-radius: 20px;
+    font-size: 14px;
+    margin-top: 16px;
+    border: 1px solid var(--green);
+  }
+
+  /* Sections */
+  .section {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 32px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .section h2 {
+    font-size: 22px;
+    color: var(--primary);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section h2 .num {
+    background: var(--primary);
+    color: white;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .section h3 {
+    font-size: 16px;
+    color: var(--primary-light);
+    margin: 20px 0 10px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--primary);
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:hover { background: #f8f9ff; }
+
+  /* Risk score badges */
+  .score {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+    min-width: 32px;
+  }
+
+  .score-low { background: var(--green-bg); color: var(--green); }
+  .score-medium { background: var(--yellow-bg); color: #e65100; }
+  .score-high { background: var(--orange-bg); color: var(--orange); }
+  .score-critical { background: var(--red-bg); color: var(--red); }
+
+  .residual-low { color: var(--green); font-weight: 600; }
+  .residual-medium { color: var(--orange); font-weight: 600; }
+
+  /* Methodology grid */
+  .matrix-wrapper {
+    overflow-x: auto;
+  }
+
+  .risk-matrix {
+    margin: 20px auto;
+    border-collapse: collapse;
+    min-width: 500px;
+  }
+
+  .risk-matrix th, .risk-matrix td {
+    width: 90px;
+    height: 50px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    border: 2px solid white;
+  }
+
+  .risk-matrix .axis-label {
+    background: var(--primary);
+    color: white;
+    font-size: 11px;
+  }
+
+  .risk-matrix .corner { background: transparent; border: none; }
+
+  .cell-low { background: var(--green-bg); color: var(--green); }
+  .cell-medium { background: var(--yellow-bg); color: #e65100; }
+  .cell-high { background: var(--orange-bg); color: var(--orange); }
+  .cell-critical { background: var(--red-bg); color: var(--red); }
+
+  .risk-dot {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    line-height: 24px;
+    font-size: 9px;
+    font-weight: 700;
+    margin: 1px;
+  }
+
+  /* Heat map */
+  .heatmap-container {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .heatmap-legend {
+    min-width: 200px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .legend-color {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+  }
+
+  /* Treatment cards */
+  .treatment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .treatment-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    border-left: 4px solid var(--primary);
+  }
+
+  .treatment-card h4 {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 6px;
+  }
+
+  .treatment-card p {
+    font-size: 13px;
+    color: var(--text-light);
+  }
+
+  .treatment-card.accept { border-left-color: var(--green); }
+  .treatment-card.mitigate { border-left-color: var(--accent); }
+  .treatment-card.transfer { border-left-color: var(--yellow); }
+  .treatment-card.avoid { border-left-color: var(--text-light); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 30px 40px;
+    color: var(--text-light);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  .footer .brand {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Print */
+  @media print {
+    body { background: white; }
+    .header { padding: 20px 30px; }
+    .container { padding: 10px 20px; }
+    .section { box-shadow: none; border: 1px solid var(--border); page-break-inside: avoid; }
+    .dashboard { grid-template-columns: repeat(4, 1fr); }
+    .dash-card { box-shadow: none; border: 1px solid var(--border); }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .treatment-grid { grid-template-columns: 1fr; }
+    .header { padding: 24px; }
+    .container { padding: 16px; }
+    .section { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>MOOVIZ Risk Assessment Report</h1>
+  <div class="subtitle">Real-Time Community Delivery Platform</div>
+  <div class="doc-info">
+    Version 1.0 &nbsp;|&nbsp; March 2026 &nbsp;|&nbsp; Classification: Confidential &nbsp;|&nbsp; Prepared by: KAL Solutions Group
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="dash-card critical">
+      <div class="number">0</div>
+      <div class="label">Critical Risks</div>
+    </div>
+    <div class="dash-card high">
+      <div class="number">0</div>
+      <div class="label">High Risks</div>
+    </div>
+    <div class="dash-card medium">
+      <div class="number">4</div>
+      <div class="label">Medium Risks</div>
+    </div>
+    <div class="dash-card low">
+      <div class="number">11</div>
+      <div class="label">Low Risks</div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-bottom:30px;">
+    <span class="overall-badge">OVERALL RESIDUAL RISK: LOW</span>
+  </div>
+
+  <!-- Section 1: Methodology -->
+  <div class="section">
+    <h2><span class="num">1</span> Risk Assessment Methodology</h2>
+    <p style="margin-bottom:16px;">This risk assessment follows an industry-standard qualitative approach. Each identified risk is evaluated on two dimensions: <strong>Likelihood</strong> (probability of occurrence) and <strong>Impact</strong> (severity of consequence). The product of these two values determines the overall <strong>Risk Score</strong>.</p>
+
+    <h3>Likelihood Scale</h3>
+    <table style="margin-bottom:20px;">
+      <thead><tr><th>Score</th><th>Rating</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Rare</td><td>May occur only in exceptional circumstances</td></tr>
+        <tr><td>2</td><td>Unlikely</td><td>Could occur at some time but not expected</td></tr>
+        <tr><td>3</td><td>Possible</td><td>Might occur at some time</td></tr>
+        <tr><td>4</td><td>Likely</td><td>Will probably occur in most circumstances</td></tr>
+        <tr><td>5</td><td>Almost Certain</td><td>Expected to occur in most circumstances</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Impact Scale</h3>
+    <table style="margin-bottom:20px;">
+      <thead><tr><th>Score</th><th>Rating</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Negligible</td><td>No material effect on operations or data</td></tr>
+        <tr><td>2</td><td>Minor</td><td>Minimal disruption, easily recoverable</td></tr>
+        <tr><td>3</td><td>Moderate</td><td>Noticeable service degradation or limited data exposure</td></tr>
+        <tr><td>4</td><td>Major</td><td>Significant disruption, potential data breach, reputational damage</td></tr>
+        <tr><td>5</td><td>Critical</td><td>Complete service failure, large-scale data breach, legal liability</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Risk Rating Matrix (Likelihood x Impact)</h3>
+    <div class="matrix-wrapper">
+    <table class="risk-matrix" style="margin-bottom:20px;">
+      <tr>
+        <td class="corner"></td>
+        <td class="axis-label">1<br>Negligible</td>
+        <td class="axis-label">2<br>Minor</td>
+        <td class="axis-label">3<br>Moderate</td>
+        <td class="axis-label">4<br>Major</td>
+        <td class="axis-label">5<br>Critical</td>
+      </tr>
+      <tr>
+        <td class="axis-label">5<br>Almost Certain</td>
+        <td class="cell-medium">5</td>
+        <td class="cell-high">10</td>
+        <td class="cell-high">15</td>
+        <td class="cell-critical">20</td>
+        <td class="cell-critical">25</td>
+      </tr>
+      <tr>
+        <td class="axis-label">4<br>Likely</td>
+        <td class="cell-low">4</td>
+        <td class="cell-medium">8</td>
+        <td class="cell-high">12</td>
+        <td class="cell-critical">16</td>
+        <td class="cell-critical">20</td>
+      </tr>
+      <tr>
+        <td class="axis-label">3<br>Possible</td>
+        <td class="cell-low">3</td>
+        <td class="cell-medium">6</td>
+        <td class="cell-medium">9</td>
+        <td class="cell-high">12</td>
+        <td class="cell-high">15</td>
+      </tr>
+      <tr>
+        <td class="axis-label">2<br>Unlikely</td>
+        <td class="cell-low">2</td>
+        <td class="cell-low">4</td>
+        <td class="cell-medium">6</td>
+        <td class="cell-medium">8</td>
+        <td class="cell-high">10</td>
+      </tr>
+      <tr>
+        <td class="axis-label">1<br>Rare</td>
+        <td class="cell-low">1</td>
+        <td class="cell-low">2</td>
+        <td class="cell-low">3</td>
+        <td class="cell-low">4</td>
+        <td class="cell-medium">5</td>
+      </tr>
+    </table>
+    </div>
+
+    <h3>Risk Rating Thresholds</h3>
+    <table>
+      <thead><tr><th>Score Range</th><th>Rating</th><th>Action Required</th></tr></thead>
+      <tbody>
+        <tr><td><span class="score score-low">1-4</span></td><td>Low</td><td>Accept or monitor; no immediate action required</td></tr>
+        <tr><td><span class="score score-medium">5-9</span></td><td>Medium</td><td>Mitigate with planned controls; regular review</td></tr>
+        <tr><td><span class="score score-high">10-15</span></td><td>High</td><td>Immediate mitigation required; escalate to management</td></tr>
+        <tr><td><span class="score score-critical">16-25</span></td><td>Critical</td><td>Stop and remediate; executive notification</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 2: Risk Register -->
+  <div class="section">
+    <h2><span class="num">2</span> Risk Register</h2>
+    <p style="margin-bottom:16px;">The following table documents all identified risks, their current controls, residual risk ratings, and planned mitigations.</p>
+
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Category</th>
+          <th>Risk Description</th>
+          <th style="text-align:center;">L</th>
+          <th style="text-align:center;">I</th>
+          <th style="text-align:center;">Score</th>
+          <th>Current Controls</th>
+          <th style="text-align:center;">Residual</th>
+          <th>Mitigation Plan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>R1</strong></td>
+          <td>Authentication</td>
+          <td>Unauthorized access via stolen OTP</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;">5</td>
+          <td style="text-align:center;"><span class="score score-high">10</span></td>
+          <td>Firebase Auth OTP, rate limiting (5 attempts/15min)</td>
+          <td style="text-align:center;" class="residual-medium">Medium</td>
+          <td>Add biometric authentication, session timeout</td>
+        </tr>
+        <tr>
+          <td><strong>R2</strong></td>
+          <td>Data Breach</td>
+          <td>Unauthorized access to user PII</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;">5</td>
+          <td style="text-align:center;"><span class="score score-high">10</span></td>
+          <td>Encrypted storage, RBAC, participant-based access</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Regular access reviews, audit logging</td>
+        </tr>
+        <tr>
+          <td><strong>R3</strong></td>
+          <td>Injection</td>
+          <td>XSS via email HTML content</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-low">4</span></td>
+          <td>sanitizeHtml() strips dangerous tags</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Add CSP headers, consider DOMPurify</td>
+        </tr>
+        <tr>
+          <td><strong>R4</strong></td>
+          <td>API Abuse</td>
+          <td>Rate limit bypass on delivery operations</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;">3</td>
+          <td style="text-align:center;"><span class="score score-medium">6</span></td>
+          <td>Rate limiting (10 interest/hr, 3 email/hr)</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Add Firebase App Check</td>
+        </tr>
+        <tr>
+          <td><strong>R5</strong></td>
+          <td>Data Integrity</td>
+          <td>Invalid delivery state transitions</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-low">4</span></td>
+          <td>Server-side state machine validation</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Add E2E transition tests</td>
+        </tr>
+        <tr>
+          <td><strong>R6</strong></td>
+          <td>Availability</td>
+          <td>DDoS on Cloud Functions</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-medium">8</span></td>
+          <td>Firebase auto-scaling, rate limiting</td>
+          <td style="text-align:center;" class="residual-medium">Medium</td>
+          <td>WAF, Firebase App Check</td>
+        </tr>
+        <tr>
+          <td><strong>R7</strong></td>
+          <td>Insider Threat</td>
+          <td>Malicious admin actions</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">5</td>
+          <td style="text-align:center;"><span class="score score-medium">5</span></td>
+          <td>Admin action audit logging, RBAC</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Implement admin action approval workflow</td>
+        </tr>
+        <tr>
+          <td><strong>R8</strong></td>
+          <td>Cryptography</td>
+          <td>Encryption key compromise</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">5</td>
+          <td style="text-align:center;"><span class="score score-medium">5</span></td>
+          <td>Secret Manager, server-only keys, HMAC derivation</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Key rotation policy</td>
+        </tr>
+        <tr>
+          <td><strong>R9</strong></td>
+          <td>Privacy</td>
+          <td>PII exposure in logs</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-low">4</span></td>
+          <td>PII redacted from all logs</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Automated log scanning</td>
+        </tr>
+        <tr>
+          <td><strong>R10</strong></td>
+          <td>Supply Chain</td>
+          <td>Vulnerable npm dependencies</td>
+          <td style="text-align:center;">3</td>
+          <td style="text-align:center;">3</td>
+          <td style="text-align:center;"><span class="score score-medium">9</span></td>
+          <td>Package lock files, version pinning</td>
+          <td style="text-align:center;" class="residual-medium">Medium</td>
+          <td>Automated npm audit in CI/CD</td>
+        </tr>
+        <tr>
+          <td><strong>R11</strong></td>
+          <td>Payment</td>
+          <td>Payment fraud (fake confirmations)</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-medium">8</span></td>
+          <td>Dual confirmation (sender+driver), proof photos</td>
+          <td style="text-align:center;" class="residual-medium">Medium</td>
+          <td>Payment gateway integration</td>
+        </tr>
+        <tr>
+          <td><strong>R12</strong></td>
+          <td>Storage</td>
+          <td>Unauthorized file access</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">3</td>
+          <td style="text-align:center;"><span class="score score-low">3</span></td>
+          <td>Storage rules with participant checks, content type validation</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Regular rule audits</td>
+        </tr>
+        <tr>
+          <td><strong>R13</strong></td>
+          <td>Mobile</td>
+          <td>App reverse engineering</td>
+          <td style="text-align:center;">3</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;"><span class="score score-medium">6</span></td>
+          <td>Server-side validation, no sensitive logic client-side</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Code obfuscation, certificate pinning</td>
+        </tr>
+        <tr>
+          <td><strong>R14</strong></td>
+          <td>Compliance</td>
+          <td>GDPR/Privacy regulation non-compliance</td>
+          <td style="text-align:center;">2</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-medium">8</span></td>
+          <td>Minimal data collection, encryption, access controls</td>
+          <td style="text-align:center;" class="residual-medium">Medium</td>
+          <td>Privacy policy, DPA, data retention policy</td>
+        </tr>
+        <tr>
+          <td><strong>R15</strong></td>
+          <td>Operational</td>
+          <td>Firebase service outage</td>
+          <td style="text-align:center;">1</td>
+          <td style="text-align:center;">4</td>
+          <td style="text-align:center;"><span class="score score-low">4</span></td>
+          <td>Firestore offline persistence, retry logic</td>
+          <td style="text-align:center;" class="residual-low">Low</td>
+          <td>Multi-region deployment consideration</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- Section 3: Risk Heat Map -->
+  <div class="section">
+    <h2><span class="num">3</span> Risk Heat Map</h2>
+    <p style="margin-bottom:20px;">Visual distribution of all 15 identified risks across the likelihood-impact matrix. Each dot represents a risk by its ID.</p>
+
+    <div class="heatmap-container">
+      <div style="flex:1;">
+        <div class="matrix-wrapper">
+        <table class="risk-matrix">
+          <tr>
+            <td class="corner" style="font-size:11px;color:var(--text-light);font-weight:600;">L \ I</td>
+            <td class="axis-label">1<br>Negligible</td>
+            <td class="axis-label">2<br>Minor</td>
+            <td class="axis-label">3<br>Moderate</td>
+            <td class="axis-label">4<br>Major</td>
+            <td class="axis-label">5<br>Critical</td>
+          </tr>
+          <tr>
+            <td class="axis-label">5<br>Almost Certain</td>
+            <td class="cell-medium"></td>
+            <td class="cell-high"></td>
+            <td class="cell-high"></td>
+            <td class="cell-critical"></td>
+            <td class="cell-critical"></td>
+          </tr>
+          <tr>
+            <td class="axis-label">4<br>Likely</td>
+            <td class="cell-low"></td>
+            <td class="cell-medium"></td>
+            <td class="cell-high"></td>
+            <td class="cell-critical"></td>
+            <td class="cell-critical"></td>
+          </tr>
+          <tr>
+            <td class="axis-label">3<br>Possible</td>
+            <td class="cell-low"></td>
+            <td class="cell-medium"><span class="risk-dot">R13</span></td>
+            <td class="cell-medium"><span class="risk-dot">R10</span></td>
+            <td class="cell-high"></td>
+            <td class="cell-high"></td>
+          </tr>
+          <tr>
+            <td class="axis-label">2<br>Unlikely</td>
+            <td class="cell-low"></td>
+            <td class="cell-low"></td>
+            <td class="cell-medium"><span class="risk-dot">R4</span></td>
+            <td class="cell-medium"><span class="risk-dot">R6</span> <span class="risk-dot">R11</span> <span class="risk-dot">R14</span></td>
+            <td class="cell-high"><span class="risk-dot">R1</span> <span class="risk-dot">R2</span></td>
+          </tr>
+          <tr>
+            <td class="axis-label">1<br>Rare</td>
+            <td class="cell-low"></td>
+            <td class="cell-low"></td>
+            <td class="cell-low"><span class="risk-dot">R12</span></td>
+            <td class="cell-low"><span class="risk-dot">R3</span> <span class="risk-dot">R5</span> <span class="risk-dot">R9</span> <span class="risk-dot">R15</span></td>
+            <td class="cell-medium"><span class="risk-dot">R7</span> <span class="risk-dot">R8</span></td>
+          </tr>
+        </table>
+        </div>
+      </div>
+
+      <div class="heatmap-legend">
+        <h3 style="margin-top:0;">Legend</h3>
+        <div class="legend-item">
+          <div class="legend-color" style="background:var(--green-bg);border:1px solid var(--green);"></div>
+          <span>Low (1-4)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:var(--yellow-bg);border:1px solid var(--yellow);"></div>
+          <span>Medium (5-9)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:var(--orange-bg);border:1px solid var(--orange);"></div>
+          <span>High (10-15)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:var(--red-bg);border:1px solid var(--red);"></div>
+          <span>Critical (16-25)</span>
+        </div>
+
+        <h3>Risk Concentration</h3>
+        <p style="font-size:13px;color:var(--text-light);">
+          The majority of risks cluster in the <strong>low-to-medium</strong> zone. Two risks (R1, R2) score as High (10) due to their critical impact on authentication and data security, but both have strong existing controls bringing residual risk down.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Risk Treatment Summary -->
+  <div class="section">
+    <h2><span class="num">4</span> Risk Treatment Summary</h2>
+    <p style="margin-bottom:20px;">Each identified risk is assigned a treatment strategy based on its residual risk rating and the cost-benefit of available controls.</p>
+
+    <div class="treatment-grid">
+      <div class="treatment-card accept">
+        <h4>Accept</h4>
+        <p><strong>R13</strong> (App reverse engineering) &mdash; Server-side validation ensures no sensitive logic is exposed client-side. The residual risk is low and acceptable for an MVP.</p>
+        <p style="margin-top:8px;"><strong>R12</strong> (Unauthorized file access) &mdash; Storage rules with participant checks provide adequate protection. Score of 3 is within tolerance.</p>
+      </div>
+      <div class="treatment-card mitigate">
+        <h4>Mitigate</h4>
+        <p>All remaining risks (R1-R11, R14, R15) have controls implemented and additional mitigations planned. Key mitigations include:</p>
+        <ul style="margin-top:6px;font-size:13px;color:var(--text-light);padding-left:16px;">
+          <li>Firebase App Check (R4, R6)</li>
+          <li>Biometric authentication (R1)</li>
+          <li>Automated npm audit in CI/CD (R10)</li>
+          <li>Privacy policy and DPA (R14)</li>
+          <li>Payment gateway integration (R11)</li>
+        </ul>
+      </div>
+      <div class="treatment-card transfer">
+        <h4>Transfer</h4>
+        <p>No risks currently transferred. <strong>Recommendation:</strong> Consider cyber liability insurance to cover data breach costs (R2) and business interruption from service outages (R15).</p>
+      </div>
+      <div class="treatment-card avoid">
+        <h4>Avoid</h4>
+        <p>No risks avoided. All identified risks are inherent to the platform's core functionality and cannot be eliminated without removing essential features.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Residual Risk Summary -->
+  <div class="section">
+    <h2><span class="num">5</span> Residual Risk Summary</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+      <div>
+        <h3>Risk Distribution After Controls</h3>
+        <table>
+          <thead><tr><th>Rating</th><th>Count</th><th>Risks</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="score score-critical">Critical</span></td>
+              <td style="text-align:center;font-weight:700;">0</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td><span class="score score-high">High</span></td>
+              <td style="text-align:center;font-weight:700;">0</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td><span class="score score-medium">Medium</span></td>
+              <td style="text-align:center;font-weight:700;">4</td>
+              <td>R1, R6, R10, R14</td>
+            </tr>
+            <tr>
+              <td><span class="score score-low">Low</span></td>
+              <td style="text-align:center;font-weight:700;">11</td>
+              <td>R2, R3, R4, R5, R7, R8, R9, R11, R12, R13, R15</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Key Observations</h3>
+        <ul style="font-size:13px;line-height:1.8;padding-left:18px;">
+          <li>No critical or high residual risks remain after applying current controls.</li>
+          <li>Four medium risks require ongoing monitoring and planned mitigations.</li>
+          <li>Authentication (R1) is the highest-priority medium risk; biometric authentication is recommended for the next release.</li>
+          <li>Supply chain risk (R10) is common across all Node.js projects; automated auditing addresses this adequately.</li>
+          <li>Compliance risk (R14) requires legal counsel input for privacy policy and DPA finalization.</li>
+          <li>Payment fraud (R11) residual risk will decrease significantly with payment gateway integration in a future milestone.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Recommendation</h3>
+    <p style="font-size:14px;background:var(--green-bg);padding:16px;border-radius:8px;border-left:4px solid var(--green);">
+      The MOOVIZ platform demonstrates a <strong>mature security posture</strong> for an MVP-stage application. The overall residual risk is assessed as <strong>LOW</strong>. All critical security controls are in place, including server-side state machine validation, Firebase RBAC, encrypted storage, and comprehensive rate limiting. The four medium-residual risks have clear mitigation plans and do not represent blockers for production deployment. Regular reassessment is recommended on a quarterly basis.
+    </p>
+  </div>
+
+</div>
+
+<div class="footer">
+  <span class="brand">KAL Solutions Group</span> &nbsp;|&nbsp; March 2026 &nbsp;|&nbsp; Confidential
+  <br>
+  <span style="font-size:11px;color:#bbb;">MOOVIZ Risk Assessment Report v1.0 &mdash; G.M. Mooviz Software (2026) Ltd</span>
+</div>
+
+</body>
+</html>

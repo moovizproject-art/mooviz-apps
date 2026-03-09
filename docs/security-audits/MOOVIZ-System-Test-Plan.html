@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOVIZ System Test Plan</title>
+<style>
+  :root {
+    --primary: #1a237e;
+    --primary-light: #283593;
+    --accent: #ff6d00;
+    --accent-light: #ff9100;
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --text: #212121;
+    --text-light: #757575;
+    --border: #e0e0e0;
+    --green: #2e7d32;
+    --green-bg: #e8f5e9;
+    --yellow: #f9a825;
+    --yellow-bg: #fff8e1;
+    --orange: #ef6c00;
+    --orange-bg: #fff3e0;
+    --red: #c62828;
+    --red-bg: #ffebee;
+    --blue: #1565c0;
+    --blue-bg: #e3f2fd;
+    --purple: #6a1b9a;
+    --purple-bg: #f3e5f5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 40px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 100%;
+    background: var(--accent);
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+  }
+
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header .subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header .doc-info {
+    margin-top: 16px;
+    font-size: 13px;
+    opacity: 0.8;
+    position: relative;
+    z-index: 1;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 40px;
+  }
+
+  /* Dashboard */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .dash-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-top: 4px solid var(--primary);
+  }
+
+  .dash-card .number {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+    color: var(--primary);
+  }
+
+  .dash-card .label {
+    font-size: 11px;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  .dash-card.accent { border-top-color: var(--accent); }
+  .dash-card.accent .number { color: var(--accent); }
+  .dash-card.green { border-top-color: var(--green); }
+  .dash-card.green .number { color: var(--green); }
+  .dash-card.blue { border-top-color: var(--blue); }
+  .dash-card.blue .number { color: var(--blue); }
+  .dash-card.purple { border-top-color: var(--purple); }
+  .dash-card.purple .number { color: var(--purple); }
+
+  /* Sections */
+  .section {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 32px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .section h2 {
+    font-size: 22px;
+    color: var(--primary);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section h2 .num {
+    background: var(--primary);
+    color: white;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .section h3 {
+    font-size: 17px;
+    color: var(--primary-light);
+    margin: 24px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section h3:first-of-type {
+    margin-top: 0;
+  }
+
+  .category-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .cat-unit { background: var(--blue-bg); color: var(--blue); }
+  .cat-integration { background: var(--purple-bg); color: var(--purple); }
+  .cat-e2e { background: var(--green-bg); color: var(--green); }
+  .cat-security { background: var(--red-bg); color: var(--red); }
+  .cat-load { background: var(--orange-bg); color: var(--orange); }
+  .cat-na { background: #f5f5f5; color: var(--text-light); }
+
+  .priority-high { color: var(--red); font-weight: 700; }
+  .priority-medium { color: var(--orange); font-weight: 700; }
+  .priority-low { color: var(--text-light); font-weight: 700; }
+  .priority-critical { color: var(--red); font-weight: 700; text-transform: uppercase; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--primary);
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:hover { background: #f8f9ff; }
+
+  /* Strategy cards */
+  .strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .strategy-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    border-left: 4px solid var(--primary);
+  }
+
+  .strategy-card h4 {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 6px;
+  }
+
+  .strategy-card p {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.5;
+  }
+
+  .strategy-card.unit { border-left-color: var(--blue); }
+  .strategy-card.unit h4 { color: var(--blue); }
+  .strategy-card.integration { border-left-color: var(--purple); }
+  .strategy-card.integration h4 { color: var(--purple); }
+  .strategy-card.e2e { border-left-color: var(--green); }
+  .strategy-card.e2e h4 { color: var(--green); }
+  .strategy-card.security { border-left-color: var(--red); }
+  .strategy-card.security h4 { color: var(--red); }
+  .strategy-card.perf { border-left-color: var(--orange); }
+  .strategy-card.perf h4 { color: var(--orange); }
+
+  /* Schedule timeline */
+  .timeline {
+    position: relative;
+    padding-left: 40px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -33px;
+    top: 20px;
+    width: 13px;
+    height: 13px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: 3px solid var(--primary);
+  }
+
+  .timeline-item h4 {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 4px;
+  }
+
+  .timeline-item .days {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .timeline-item p {
+    font-size: 13px;
+    color: var(--text-light);
+  }
+
+  /* Environment table */
+  .env-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .env-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .env-card h4 {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .env-card ul {
+    list-style: none;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  .env-card ul li {
+    padding: 3px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .env-card ul li:last-child { border-bottom: none; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 30px 40px;
+    color: var(--text-light);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  .footer .brand {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Print */
+  @media print {
+    body { background: white; }
+    .header { padding: 20px 30px; }
+    .container { padding: 10px 20px; }
+    .section { box-shadow: none; border: 1px solid var(--border); page-break-inside: avoid; }
+    .dashboard { grid-template-columns: repeat(5, 1fr); }
+    .dash-card { box-shadow: none; border: 1px solid var(--border); }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .strategy-grid { grid-template-columns: 1fr; }
+    .env-grid { grid-template-columns: 1fr; }
+    .header { padding: 24px; }
+    .container { padding: 16px; }
+    .section { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>MOOVIZ System Test Plan</h1>
+  <div class="subtitle">Comprehensive Testing Strategy for the Real-Time Community Delivery Platform</div>
+  <div class="doc-info">
+    Version 1.0 &nbsp;|&nbsp; March 2026 &nbsp;|&nbsp; Classification: Confidential &nbsp;|&nbsp; Prepared by: KAL Solutions Group
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="dash-card">
+      <div class="number">62</div>
+      <div class="label">Total Test Cases</div>
+    </div>
+    <div class="dash-card accent">
+      <div class="number">7</div>
+      <div class="label">Test Categories</div>
+    </div>
+    <div class="dash-card green">
+      <div class="number">7</div>
+      <div class="label">Testing Days</div>
+    </div>
+    <div class="dash-card blue">
+      <div class="number">43</div>
+      <div class="label">High Priority</div>
+    </div>
+    <div class="dash-card purple">
+      <div class="number">5</div>
+      <div class="label">Test Types</div>
+    </div>
+  </div>
+
+  <!-- Section 1: Test Strategy -->
+  <div class="section">
+    <h2><span class="num">1</span> Test Strategy</h2>
+    <p style="margin-bottom:20px;">The MOOVIZ test strategy follows a pyramid approach, emphasizing automated tests at lower levels and targeted manual/E2E tests for critical user flows. All tests are designed to validate functionality, security, and performance across the full stack.</p>
+
+    <div class="strategy-grid">
+      <div class="strategy-card unit">
+        <h4>Unit Tests</h4>
+        <p><strong>Tool:</strong> Jest + React Testing Library<br>
+        <strong>Scope:</strong> Pure functions, hooks, utilities, validators, state machine logic<br>
+        <strong>Coverage target:</strong> 80% of business logic</p>
+      </div>
+      <div class="strategy-card integration">
+        <h4>Integration Tests</h4>
+        <p><strong>Tool:</strong> Firebase Emulator Suite<br>
+        <strong>Scope:</strong> Cloud Functions, Firestore triggers, security rules, FCM handlers<br>
+        <strong>Coverage target:</strong> All state transitions + RBAC</p>
+      </div>
+      <div class="strategy-card e2e">
+        <h4>E2E Tests</h4>
+        <p><strong>Tool:</strong> Detox (mobile), Playwright (admin)<br>
+        <strong>Scope:</strong> Full user flows on iOS/Android devices and admin web panel<br>
+        <strong>Coverage target:</strong> All critical paths</p>
+      </div>
+      <div class="strategy-card security">
+        <h4>Security Tests</h4>
+        <p><strong>Tool:</strong> Custom scripts + Firebase rules testing<br>
+        <strong>Scope:</strong> Penetration testing checklist, RBAC bypass attempts, injection vectors<br>
+        <strong>Coverage target:</strong> OWASP Mobile Top 10</p>
+      </div>
+      <div class="strategy-card perf">
+        <h4>Performance Tests</h4>
+        <p><strong>Tool:</strong> Artillery / k6<br>
+        <strong>Scope:</strong> Load testing Cloud Functions, concurrent Firestore operations, geohash queries<br>
+        <strong>Coverage target:</strong> P95 latency thresholds</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Test Cases -->
+  <div class="section">
+    <h2><span class="num">2</span> Test Cases</h2>
+
+    <!-- A. Authentication -->
+    <h3>A. Authentication Tests (8 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AUTH-01</strong></td>
+          <td>Email registration with valid data</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>User created, verification email sent</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-02</strong></td>
+          <td>Email registration with existing email</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Error: email already in use</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-03</strong></td>
+          <td>Phone OTP send</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>OTP sent to valid phone number</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-04</strong></td>
+          <td>Phone OTP verify (correct code)</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Phone linked to account</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-05</strong></td>
+          <td>Phone OTP rate limiting (&gt;5 attempts)</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Error: too many attempts</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-06</strong></td>
+          <td>Login with email/password</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Successful authentication</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-07</strong></td>
+          <td>Password reset flow</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Reset email sent, password changed</td>
+        </tr>
+        <tr>
+          <td><strong>AUTH-08</strong></td>
+          <td>Unauthenticated API call</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Error: unauthenticated</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- B. Delivery Lifecycle -->
+    <h3>B. Delivery Lifecycle Tests (14 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>DEL-01</strong></td>
+          <td>Create delivery with all fields</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Delivery created with status 'new'</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-02</strong></td>
+          <td>Create delivery with media upload</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Media uploaded, URLs saved</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-03</strong></td>
+          <td>Driver express interest</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Status &rarr; pending, driverId set</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-04</strong></td>
+          <td>Sender approve driver</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Status &rarr; waiting</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-05</strong></td>
+          <td>Sender decline driver</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Status &rarr; new, driverId null</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-06</strong></td>
+          <td>Driver confirm pickup with proof</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Status &rarr; picked_up, proof.pickupURL set</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-07</strong></td>
+          <td>Driver confirm delivery with proof</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Status &rarr; delivered, proof.deliveryURL set</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-08</strong></td>
+          <td>Sender confirm payment</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>payment.senderConfirmed = true</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-09</strong></td>
+          <td>Driver confirm payment</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>payment.driverConfirmed = true</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-10</strong></td>
+          <td>Cancel delivery (pre-pickup)</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Status &rarr; cancelled</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-11</strong></td>
+          <td>Cancel delivery (post-pickup)</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Error: invalid transition</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-12</strong></td>
+          <td>Invalid status transition</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Error: assertValidTransition</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-13</strong></td>
+          <td>Express interest rate limiting</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Error after 10 attempts/hour</td>
+        </tr>
+        <tr>
+          <td><strong>DEL-14</strong></td>
+          <td>Driver interest in own delivery</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Error: cannot express interest in own</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- C. Security Tests -->
+    <h3>C. Security Tests (12 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>SEC-01</strong></td>
+          <td>Direct Firestore write to delivery status</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-critical">Critical</td>
+          <td>Blocked by security rules</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-02</strong></td>
+          <td>User reads another user's profile photo</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Blocked unless matched</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-03</strong></td>
+          <td>Non-participant reads chat messages</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Blocked by security rules</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-04</strong></td>
+          <td>Non-participant uploads to chat storage</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Blocked by storage rules</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-05</strong></td>
+          <td>Non-participant accesses delivery proof</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Blocked by storage rules</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-06</strong></td>
+          <td>User sets role to 'admin' on registration</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Blocked by validRole()</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-07</strong></td>
+          <td>User modifies protected fields on delivery</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Blocked by hasOnly()</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-08</strong></td>
+          <td>Non-admin calls sendBulkEmail</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Error: permission denied</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-09</strong></td>
+          <td>XSS payload in email HTML</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Stripped by sanitizeHtml()</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-10</strong></td>
+          <td>Oversized file upload (&gt;5MB)</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Blocked by storage rules</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-11</strong></td>
+          <td>Non-image file upload as profile photo</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Blocked by isImage() check</td>
+        </tr>
+        <tr>
+          <td><strong>SEC-12</strong></td>
+          <td>SQL injection in search queries</td>
+          <td><span class="category-badge cat-na">N/A</span></td>
+          <td class="priority-low">Low</td>
+          <td>Firestore is NoSQL, not applicable</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- D. Chat Tests -->
+    <h3>D. Chat Tests (3 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CHAT-01</strong></td>
+          <td>Send message in delivery chat</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Message appears in real-time</td>
+        </tr>
+        <tr>
+          <td><strong>CHAT-02</strong></td>
+          <td>System message on status change</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Auto-message in chat</td>
+        </tr>
+        <tr>
+          <td><strong>CHAT-03</strong></td>
+          <td>Chat list shows only user's chats</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Only participant chats returned</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- E. Notification Tests -->
+    <h3>E. Notification Tests (8 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>NOTIF-01</strong></td>
+          <td>Push on driver interest</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Sender receives notification</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-02</strong></td>
+          <td>Push on sender approval</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Driver receives notification</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-03</strong></td>
+          <td>Push on pickup confirmation</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Sender notified</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-04</strong></td>
+          <td>Push on delivery confirmation</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Sender notified</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-05</strong></td>
+          <td>Push on payment confirmation</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Both parties notified</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-06</strong></td>
+          <td>Push on cancellation</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-high">High</td>
+          <td>Other party notified</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-07</strong></td>
+          <td>Push on new chat message</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Recipient notified</td>
+        </tr>
+        <tr>
+          <td><strong>NOTIF-08</strong></td>
+          <td>Push on nearby delivery (geohash)</td>
+          <td><span class="category-badge cat-integration">Integration</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Drivers within radius notified</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- F. Admin Panel Tests -->
+    <h3>F. Admin Panel Tests (6 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ADMIN-01</strong></td>
+          <td>Admin login</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Successful authentication, dashboard loads</td>
+        </tr>
+        <tr>
+          <td><strong>ADMIN-02</strong></td>
+          <td>View users list</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>All users displayed with details</td>
+        </tr>
+        <tr>
+          <td><strong>ADMIN-03</strong></td>
+          <td>View deliveries list</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>All deliveries with status</td>
+        </tr>
+        <tr>
+          <td><strong>ADMIN-04</strong></td>
+          <td>Send bulk email</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>Emails sent to recipients</td>
+        </tr>
+        <tr>
+          <td><strong>ADMIN-05</strong></td>
+          <td>KYC review (approve/reject)</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>KYC status updated</td>
+        </tr>
+        <tr>
+          <td><strong>ADMIN-06</strong></td>
+          <td>Non-admin access admin panel</td>
+          <td><span class="category-badge cat-e2e">E2E</span></td>
+          <td class="priority-high">High</td>
+          <td>Access denied</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- G. Performance Tests -->
+    <h3>G. Performance Tests (4 cases)</h3>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Test Case</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>PERF-01</strong></td>
+          <td>100 concurrent delivery creates</td>
+          <td><span class="category-badge cat-load">Load</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>All succeed within 5s</td>
+        </tr>
+        <tr>
+          <td><strong>PERF-02</strong></td>
+          <td>1000 geohash proximity queries</td>
+          <td><span class="category-badge cat-load">Load</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>P95 &lt; 2s</td>
+        </tr>
+        <tr>
+          <td><strong>PERF-03</strong></td>
+          <td>500 concurrent chat messages</td>
+          <td><span class="category-badge cat-load">Load</span></td>
+          <td class="priority-medium">Medium</td>
+          <td>All delivered in order</td>
+        </tr>
+        <tr>
+          <td><strong>PERF-04</strong></td>
+          <td>Bulk email to 1000 users</td>
+          <td><span class="category-badge cat-load">Load</span></td>
+          <td class="priority-low">Low</td>
+          <td>Completes within 5 minutes</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- Summary -->
+    <h3>Test Case Summary</h3>
+    <table style="max-width:500px;">
+      <thead>
+        <tr><th>Category</th><th style="text-align:center;">Count</th><th style="text-align:center;">High/Critical</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A. Authentication</td><td style="text-align:center;">8</td><td style="text-align:center;">7</td></tr>
+        <tr><td>B. Delivery Lifecycle</td><td style="text-align:center;">14</td><td style="text-align:center;">12</td></tr>
+        <tr><td>C. Security</td><td style="text-align:center;">12</td><td style="text-align:center;">9</td></tr>
+        <tr><td>D. Chat</td><td style="text-align:center;">3</td><td style="text-align:center;">2</td></tr>
+        <tr><td>E. Notifications</td><td style="text-align:center;">8</td><td style="text-align:center;">6</td></tr>
+        <tr><td>F. Admin Panel</td><td style="text-align:center;">6</td><td style="text-align:center;">5</td></tr>
+        <tr><td>G. Performance</td><td style="text-align:center;">4</td><td style="text-align:center;">0</td></tr>
+        <tr style="font-weight:700;background:#f8f9ff;">
+          <td>Total</td><td style="text-align:center;">55</td><td style="text-align:center;">41</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 3: Test Environment -->
+  <div class="section">
+    <h2><span class="num">3</span> Test Environment</h2>
+
+    <div class="env-grid">
+      <div class="env-card">
+        <h4>Integration Testing</h4>
+        <ul>
+          <li>Firebase Emulator Suite</li>
+          <li>Auth + Firestore + Functions + Storage</li>
+          <li>Local development machine</li>
+          <li>Node.js 18 runtime</li>
+          <li>Jest test runner</li>
+        </ul>
+      </div>
+      <div class="env-card">
+        <h4>E2E Mobile Testing</h4>
+        <ul>
+          <li>Physical iOS device (iPhone 14+)</li>
+          <li>Physical Android device (API 33+)</li>
+          <li>Detox test framework</li>
+          <li>Staging Firebase project</li>
+          <li>Hebrew locale (RTL)</li>
+        </ul>
+      </div>
+      <div class="env-card">
+        <h4>Performance Testing</h4>
+        <ul>
+          <li>Staging Firebase project</li>
+          <li>Artillery / k6 load generator</li>
+          <li>Cloud Functions Gen 2</li>
+          <li>Isolated test data</li>
+          <li>Monitoring via GCP Console</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Prerequisites</h3>
+    <table style="max-width:700px;">
+      <thead><tr><th>Requirement</th><th>Details</th></tr></thead>
+      <tbody>
+        <tr><td>Firebase Emulator</td><td>Installed and configured with all services (auth, firestore, functions, storage)</td></tr>
+        <tr><td>Test Users</td><td>Seeded accounts: 2 senders, 2 drivers, 1 admin (with Firebase Auth UIDs)</td></tr>
+        <tr><td>Test Data</td><td>Seeded deliveries in each status, chat threads, ratings</td></tr>
+        <tr><td>APNs Certificate</td><td>Required for iOS OTP testing on physical devices</td></tr>
+        <tr><td>Google Maps API Key</td><td>Valid key for geohash and map rendering tests</td></tr>
+        <tr><td>Staging Environment</td><td>Separate Firebase project for load/performance testing</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 4: Test Schedule -->
+  <div class="section">
+    <h2><span class="num">4</span> Test Schedule</h2>
+    <p style="margin-bottom:24px;">Total testing duration: <strong>7 working days</strong>, structured in four phases. Each phase builds on the previous, with blocking issues resolved before advancing.</p>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <h4>Phase 1: Unit + Integration Tests</h4>
+        <div class="days">Days 1-2 (2 days)</div>
+        <p>
+          Execute all unit tests (validators, state machine, utilities) and integration tests against Firebase Emulator.
+          Covers: AUTH-05, AUTH-08, DEL-03 through DEL-14, SEC-01 through SEC-11, CHAT-02, CHAT-03, NOTIF-01 through NOTIF-08.
+        </p>
+      </div>
+      <div class="timeline-item">
+        <h4>Phase 2: E2E on Emulator/Simulator</h4>
+        <div class="days">Days 3-4 (2 days)</div>
+        <p>
+          Run Detox E2E tests on iOS Simulator and Android Emulator. Covers full user flows:
+          AUTH-01 through AUTH-04, AUTH-06, AUTH-07, DEL-01, DEL-02, CHAT-01.
+          Admin panel tests via Playwright: ADMIN-01 through ADMIN-06.
+        </p>
+      </div>
+      <div class="timeline-item">
+        <h4>Phase 3: E2E on Physical Devices</h4>
+        <div class="days">Days 5-6 (2 days)</div>
+        <p>
+          Repeat critical E2E flows on physical iPhone and Android device with Hebrew locale.
+          Focus on RTL layout validation, OTP via real SMS, push notification delivery, camera/gallery for proof photos,
+          GPS location tracking, and offline/online transitions.
+        </p>
+      </div>
+      <div class="timeline-item">
+        <h4>Phase 4: Security + Performance</h4>
+        <div class="days">Day 7 (1 day)</div>
+        <p>
+          Execute security penetration checklist (SEC-01 through SEC-11) against staging environment.
+          Run load tests (PERF-01 through PERF-04) against staging Firebase project.
+          Document findings and create remediation tickets for any issues.
+        </p>
+      </div>
+    </div>
+
+    <h3>Exit Criteria</h3>
+    <table style="max-width:700px;">
+      <thead><tr><th>Criteria</th><th>Threshold</th></tr></thead>
+      <tbody>
+        <tr><td>All Critical priority tests pass</td><td>100%</td></tr>
+        <tr><td>All High priority tests pass</td><td>100%</td></tr>
+        <tr><td>Medium priority tests pass</td><td>&ge; 90%</td></tr>
+        <tr><td>No open Critical or High severity bugs</td><td>0 open</td></tr>
+        <tr><td>Performance P95 within thresholds</td><td>All pass</td></tr>
+        <tr><td>Security penetration tests pass</td><td>No exploitable vulnerabilities</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Defect Management</h3>
+    <p style="font-size:13px;color:var(--text-light);margin-top:8px;">
+      All defects are logged in the CRM system with severity (Critical/High/Medium/Low), assigned to the responsible developer,
+      and tracked through resolution. Critical and High defects block release; Medium defects may be deferred with CTO approval.
+      Regression tests are executed after each fix to confirm resolution without side effects.
+    </p>
+  </div>
+
+</div>
+
+<div class="footer">
+  <span class="brand">KAL Solutions Group</span> &nbsp;|&nbsp; March 2026 &nbsp;|&nbsp; Confidential
+  <br>
+  <span style="font-size:11px;color:#bbb;">MOOVIZ System Test Plan v1.0 &mdash; G.M. Mooviz Software (2026) Ltd</span>
+</div>
+
+</body>
+</html>
