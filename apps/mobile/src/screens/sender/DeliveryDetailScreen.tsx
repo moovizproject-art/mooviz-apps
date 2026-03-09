@@ -9,10 +9,12 @@ import {
   Alert,
   Linking,
   Platform,
-  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { uploadDeliveryMedia } from '../../services/storage';
 
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 
@@ -109,6 +111,62 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const mediaList: string[] = delivery.mediaURLs?.length
     ? delivery.mediaURLs
     : delivery.photoUrl ? [delivery.photoUrl] : [];
+
+  const imageCount = mediaList.filter(u => !u.toLowerCase().includes('video') && !u.toLowerCase().endsWith('.mp4')).length;
+  const hasVideo = mediaList.some(u => u.toLowerCase().includes('video') || u.toLowerCase().endsWith('.mp4'));
+  const canEditMedia = ['new', 'pending'].includes(delivery.status) && delivery.senderId === currentUser?.uid;
+  const canAddImage = canEditMedia && imageCount < 5;
+  const canAddVideo = canEditMedia && !hasVideo;
+
+  const [mediaUploading, setMediaUploading] = useState(false);
+
+  const handleAddMedia = useCallback(async (type: 'photo' | 'video') => {
+    const maxNew = type === 'photo' ? 5 - imageCount : 1;
+    if (maxNew <= 0) return;
+    try {
+      const result = await launchImageLibrary({
+        mediaType: type,
+        quality: 0.7,
+        selectionLimit: type === 'photo' ? maxNew : 1,
+      });
+      if (result.didCancel || !result.assets?.length) return;
+
+      setMediaUploading(true);
+      const uris = result.assets.map(a => a.uri!).filter(Boolean);
+      const newUrls = await uploadDeliveryMedia(delivery.senderId || delivery.id, uris);
+      const updatedMedia = [...mediaList, ...newUrls];
+
+      await firestore().collection('deliveries').doc(delivery.id).update({
+        mediaURLs: updatedMedia,
+        photoUrl: updatedMedia[0] || null,
+      });
+      setMediaUploading(false);
+    } catch (err: any) {
+      setMediaUploading(false);
+      Alert.alert('שגיאה', err.message || 'העלאה נכשלה');
+    }
+  }, [delivery.id, delivery.senderId, mediaList, imageCount]);
+
+  const handleDeleteMedia = useCallback((_url: string, index: number) => {
+    Alert.alert(
+      'מחיקת תמונה',
+      'האם אתה בטוח שברצונך למחוק תמונה זו?',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'מחק',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = mediaList.filter((_, i) => i !== index);
+            await firestore().collection('deliveries').doc(delivery.id).update({
+              mediaURLs: updated,
+              photoUrl: updated[0] || null,
+            });
+          },
+        },
+      ],
+    );
+  }, [delivery.id, mediaList]);
 
   const handleCall = () => {
     if (!driverPhone) return;
@@ -338,22 +396,55 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
       )}
 
-      {/* ── 5. Item Images ── */}
-      {mediaList.length > 0 && (
-        <View style={styles.mediaSection}>
-          <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>תמונות הפריט</Text>
-          <FlatList
-            data={mediaList}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(url, i) => `${i}-${url}`}
-            contentContainerStyle={styles.mediaList}
-            renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={styles.mediaThumb} />
-            )}
-          />
+      {/* ── 5. Item Images (with add/delete) ── */}
+      <View style={styles.mediaSection}>
+        <View style={styles.mediaTitleRow}>
+          <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+            תמונות הפריט ({imageCount}/5{hasVideo ? ' + וידאו' : ''})
+          </Text>
+          {mediaUploading && <ActivityIndicator size="small" color={colors.primary} />}
         </View>
-      )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaList}>
+          {mediaList.map((url, i) => (
+            <View key={`${i}-${url}`} style={styles.mediaThumbWrapper}>
+              <Image source={{ uri: url }} style={styles.mediaThumb} />
+              {canEditMedia && (
+                <TouchableOpacity
+                  style={[styles.mediaDeleteBtn, { backgroundColor: colors.error }]}
+                  onPress={() => handleDeleteMedia(url, i)}
+                >
+                  <Text style={styles.mediaDeleteText}>✕</Text>
+                </TouchableOpacity>
+              )}
+              {(url.toLowerCase().includes('video') || url.toLowerCase().endsWith('.mp4')) && (
+                <View style={styles.videoOverlay}>
+                  <Text style={styles.videoIcon}>▶</Text>
+                </View>
+              )}
+            </View>
+          ))}
+          {/* Add photo button */}
+          {canAddImage && (
+            <TouchableOpacity
+              style={[styles.mediaAddBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
+              onPress={() => handleAddMedia('photo')}
+            >
+              <Text style={[styles.mediaAddIcon, { color: colors.primary }]}>+</Text>
+              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>תמונה</Text>
+            </TouchableOpacity>
+          )}
+          {/* Add video button */}
+          {canAddVideo && (
+            <TouchableOpacity
+              style={[styles.mediaAddBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
+              onPress={() => handleAddMedia('video')}
+            >
+              <Text style={[styles.mediaAddIcon, { color: colors.primary }]}>🎬</Text>
+              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>וידאו</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </View>
 
       {/* ── 6. Payment Section ── */}
       {showPayment && (
@@ -652,6 +743,11 @@ const styles = StyleSheet.create({
   mediaSection: {
     gap: 8,
   },
+  mediaTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionLabel: {
     fontSize: 15,
     fontWeight: '600',
@@ -659,10 +755,71 @@ const styles = StyleSheet.create({
   mediaList: {
     gap: 10,
   },
+  mediaThumbWrapper: {
+    position: 'relative',
+  },
   mediaThumb: {
     width: 100,
     height: 100,
     borderRadius: 10,
+  },
+  mediaDeleteBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  mediaDeleteText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 24,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoIcon: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  mediaAddBtn: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  mediaAddIcon: {
+    fontSize: 28,
+    fontWeight: '300',
+  },
+  mediaAddLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // ── Payment ──
