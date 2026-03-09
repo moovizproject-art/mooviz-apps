@@ -105,7 +105,20 @@ export async function uploadProofPhoto(
   localUri: string,
 ): Promise<string> {
   const timestamp = Date.now();
-  const path = `deliveries/${deliveryId}/proof_${type}_${timestamp}.jpg`;
+  const path = `deliveries/${deliveryId}/proof/${type}_${timestamp}.jpg`;
+  return uploadImage(localUri, path);
+}
+
+/**
+ * Upload a payment proof screenshot.
+ * העלאת צילום מסך הוכחת תשלום
+ */
+export async function uploadPaymentProof(
+  deliveryId: string,
+  localUri: string,
+): Promise<string> {
+  const timestamp = Date.now();
+  const path = `deliveries/${deliveryId}/proof/payment_${timestamp}.jpg`;
   return uploadImage(localUri, path);
 }
 

@@ -96,8 +96,10 @@ export function useLocation(): UseLocationResult {
           },
           {
             enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 10000,
+            timeout: 30000,
+            maximumAge: 60000,
+            forceRequestLocation: true,
+            forceLocationManager: Platform.OS === 'android',
           },
         );
       } catch (nativeErr) {

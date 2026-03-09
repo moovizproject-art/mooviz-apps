@@ -304,7 +304,7 @@ export function ChatScreen(): React.JSX.Element {
         ListEmptyComponent={
           <View style={styles.emptyChat}>
             <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
-              {t('chat.startConversation')} {recipientName}
+              {t('chat.startConversation', { name: recipientName })}
             </Text>
           </View>
         }
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 48,
-    transform: [{ scaleY: -1 }], // Flip because list is inverted
+    transform: [{ scaleY: -1 }, { scaleX: I18nManager.isRTL ? -1 : 1 }], // Counteract inverted FlatList + RTL mirror
   },
   emptyChatText: {
     fontSize: 15,

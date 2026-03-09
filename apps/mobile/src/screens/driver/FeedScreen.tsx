@@ -127,6 +127,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     })();
   }, []);
 
+
   // ── Preferences state ──
   const [prefs, setPrefs] = useState<DriverPreferences>(DEFAULT_PREFS);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
@@ -136,6 +137,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const [nicknameDirty, setNicknameDirty] = useState(false);
   const [earningsTab, setEarningsTab] = useState<string>('thisWeek');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [radarMinimized, setRadarMinimized] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(PREFS_KEY).then((val) => {
@@ -170,18 +172,18 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     () => location ? { latitude: location.latitude, longitude: location.longitude } : undefined,
     [location?.latitude, location?.longitude],
   );
+  // When location unavailable, show all pending deliveries (no geo filter)
   const { deliveries, isLoading, refresh } = useDelivery({
     role: 'driver',
-    statusFilter: ['pending'],
-    nearLocation,
-    radiusKm: prefs.radiusKm,
+    statusFilter: ['new', 'pending'],
+    ...(nearLocation ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
   });
 
   // ── Current active delivery (driver's own) ──
   const { deliveries: activeDeliveries } = useDelivery({
     userId: currentUser?.uid,
     role: 'driver',
-    statusFilter: ['pending', 'waiting', 'picked_up'],
+    statusFilter: ['pending', 'matched', 'waiting', 'picked_up', 'in_transit'],
   });
   const currentDelivery = activeDeliveries[0] || null;
 
@@ -199,10 +201,12 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       .orderBy('createdAt', 'desc')
       .limit(1)
       .onSnapshot((snap) => {
-        if (!snap.empty) {
+        if (snap && !snap.empty) {
           const msg = snap.docs[0].data();
           setLastChatMessage(msg.text || '');
         }
+      }, () => {
+        // Permission denied or query error — ignore silently
       });
     return () => unsub();
   }, [currentDelivery?.chatId]);
@@ -333,36 +337,59 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         {/* ── Radar — inside availability card ── */}
         {prefs.isAvailable && (
           <View style={styles.radarContainer}>
-            <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
-              {RING_SIZES.map((size, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.radarRing,
-                    {
-                      width: size,
-                      height: size,
-                      borderRadius: size / 2,
-                      borderColor: radarColor,
-                      opacity: 0.3 + i * 0.1,
-                    },
-                  ]}
-                />
-              ))}
-              <Animated.View
-                style={[
-                  styles.sweepBeam,
-                  { transform: [{ rotate: sweepRotate }] },
-                ]}
+            {radarMinimized ? (
+              <TouchableOpacity
+                style={[styles.radarMinimizedRow, { borderColor: radarColor }]}
+                onPress={() => setRadarMinimized(false)}
+                activeOpacity={0.7}
               >
-                <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
-                <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
-              </Animated.View>
-              <View style={[styles.radarCenter, { backgroundColor: radarColor }]} />
-            </View>
-            <Text style={[styles.radarLabel, { color: radarColor }]}>
-              {t('driver.scanning')}
-            </Text>
+                <View style={[styles.radarCenterSmall, { backgroundColor: radarColor }]} />
+                <Text style={[styles.radarLabel, { color: radarColor, marginTop: 0 }]}>
+                  {t('driver.scanning')}
+                </Text>
+                <Text style={{ color: colors.textTertiary, fontSize: 12 }}>▼</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
+                  {RING_SIZES.map((size, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.radarRing,
+                        {
+                          width: size,
+                          height: size,
+                          borderRadius: size / 2,
+                          borderColor: radarColor,
+                          opacity: 0.3 + i * 0.1,
+                        },
+                      ]}
+                    />
+                  ))}
+                  <Animated.View
+                    style={[
+                      styles.sweepBeam,
+                      { transform: [{ rotate: sweepRotate }] },
+                    ]}
+                  >
+                    <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
+                    <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
+                  </Animated.View>
+                  <View style={[styles.radarCenter, { backgroundColor: radarColor }]} />
+                </View>
+                <TouchableOpacity
+                  style={styles.radarMinimizeBtn}
+                  onPress={() => setRadarMinimized(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={[styles.radarLabel, { color: radarColor }]}>
+                    {t('driver.scanning')}
+                  </Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 12, marginStart: 6 }}>▲</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -743,7 +770,14 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         {renderHeader()}
 
         {/* Delivery cards */}
-        {(isLoading || locationLoading) && !locationError ? (
+        {/* Location warning banner (non-blocking) */}
+        {locationError && deliveries.length === 0 && (
+          <View style={[styles.locationBanner, { backgroundColor: '#FFF3E0', borderColor: '#FFB74D' }]}>
+            <Text style={{ fontSize: 14, color: '#E65100' }}>📍 {t('driver.locationWarning')}</Text>
+          </View>
+        )}
+
+        {(isLoading || locationLoading) && deliveries.length === 0 ? (
           <View style={styles.skeletonContainer}>
             <SkeletonCard />
             <SkeletonCard />
@@ -762,8 +796,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         ) : (
           <EmptyState
             icon="search"
-            message={locationError ? t('driver.locationWarning') : t('driver.noDeliveriesNearby')}
-            submessage={locationError ? '' : t('driver.increaseRadius')}
+            message={t('driver.noDeliveriesNearby')}
+            submessage={t('driver.increaseRadius')}
           />
         )}
       </ScrollView>
@@ -876,6 +910,26 @@ const styles = StyleSheet.create({
   radarLabel: {
     ...TYPOGRAPHY.bodyBold,
     marginTop: SPACING.sm,
+  },
+  radarMinimizedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 20,
+    borderStyle: 'dashed',
+  },
+  radarCenterSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  radarMinimizeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // ── Sections ──
@@ -1228,5 +1282,13 @@ const styles = StyleSheet.create({
   skeletonContainer: {
     gap: SPACING.md,
     paddingHorizontal: SPACING.xxl,
+  },
+  locationBanner: {
+    marginHorizontal: SPACING.xxl,
+    marginBottom: SPACING.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
   },
 });

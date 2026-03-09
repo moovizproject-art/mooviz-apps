@@ -46,6 +46,11 @@ export interface Delivery {
     senderConfirmed: boolean;
     driverConfirmed: boolean;
   };
+  proof?: {
+    pickupURL?: string;
+    deliveryURL?: string;
+    paymentURL?: string;
+  };
   createdAt?: Date | string;
 }
 
@@ -266,10 +271,29 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     try {
       const fn = functions().httpsCallable('confirmPayment');
       await fn({ deliveryId, paymentPhotoURL });
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to confirm payment');
+    } catch (_fnError: any) {
+      // Fallback: direct Firestore update if Cloud Function unavailable
+      console.warn('[confirmPayment] Function failed, using direct update:', _fnError.message);
+      const uid = options?.userId;
+      if (!uid) throw new Error('User not authenticated');
+      const ref = firestore().collection('deliveries').doc(deliveryId);
+      const snap = await ref.get();
+      if (!snap.exists) throw new Error('Delivery not found');
+      const data = snap.data()!;
+      const isSender = data.senderId === uid;
+      const isDriver = data.driverId === uid;
+      if (!isSender && !isDriver) throw new Error('Not authorized');
+      const field = isSender ? 'payment.senderConfirmed' : 'payment.driverConfirmed';
+      const updateData: Record<string, unknown> = {
+        [field]: true,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
+      if (paymentPhotoURL) {
+        updateData['proof.paymentURL'] = paymentPhotoURL;
+      }
+      await ref.update(updateData);
     }
-  }, []);
+  }, [options?.userId]);
 
   return {
     deliveries: data,

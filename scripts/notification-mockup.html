@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOVIZ Notification</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 16px 20px;
+  }
+
+  .notification {
+    width: 380px;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25), 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(20px);
+  }
+
+  .notif-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px 0;
+    font-size: 12px;
+    color: #8E8E93;
+  }
+
+  .notif-header img {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+  }
+
+  .notif-icon {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #2196F3, #1565C0);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: white;
+    font-weight: bold;
+  }
+
+  .notif-app-name {
+    font-weight: 600;
+    color: #8E8E93;
+    flex: 1;
+  }
+
+  .notif-time {
+    font-size: 12px;
+    color: #8E8E93;
+  }
+
+  .notif-body {
+    padding: 10px 16px 14px;
+  }
+
+  .notif-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1C1C1E;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .notif-message {
+    font-size: 14px;
+    color: #3A3A3C;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .driver-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #F5F7FA;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 4px;
+  }
+
+  .driver-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .driver-info {
+    flex: 1;
+  }
+
+  .driver-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1C1C1E;
+  }
+
+  .driver-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 2px;
+  }
+
+  .driver-stat {
+    font-size: 12px;
+    color: #636366;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .route-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #636366;
+  }
+
+  .route-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .route-dot.pickup { background: #4CAF50; }
+  .route-dot.dest { background: #F44336; }
+
+  .route-line {
+    width: 1px;
+    height: 10px;
+    background: #D1D1D6;
+    margin-right: 3.5px;
+  }
+
+  .price-badge {
+    background: #E8F5E9;
+    color: #2E7D32;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 6px 14px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .notif-actions {
+    display: flex;
+    border-top: 0.5px solid #D1D1D6;
+  }
+
+  .notif-btn {
+    flex: 1;
+    padding: 13px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+  }
+
+  .notif-btn.approve {
+    color: #007AFF;
+    border-left: 0.5px solid #D1D1D6;
+  }
+
+  .notif-btn.reject {
+    color: #FF3B30;
+  }
+
+  .notif-btn:active {
+    background: rgba(0,0,0,0.05);
+  }
+
+  /* Second notification - expanded */
+  .notification + .notification {
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Compact iOS-style notification -->
+<div style="display: flex; flex-direction: column; gap: 14px;">
+
+  <div class="notification">
+    <div class="notif-header">
+      <div class="notif-icon">M</div>
+      <span class="notif-app-name">MOOVIZ</span>
+      <span class="notif-time">עכשיו</span>
+    </div>
+
+    <div class="notif-body">
+      <div class="notif-title">🚛 נהג חדש מעוניין במשלוח שלך!</div>
+      <div class="notif-message">חמודי רוצה לאסוף את המשלוח מרחוב בן יהודה 45, תל אביב</div>
+
+      <div class="driver-card">
+        <div class="driver-avatar">ח</div>
+        <div class="driver-info">
+          <div class="driver-name">חמודי כהן</div>
+          <div class="driver-meta">
+            <span class="driver-stat">⭐ 4.8</span>
+            <span class="driver-stat">📦 127 משלוחים</span>
+            <span class="driver-stat">🚗 רכב</span>
+          </div>
+        </div>
+        <div class="price-badge">₪45</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 10px; margin-right: 4px;">
+        <div class="route-info">
+          <span class="route-dot pickup"></span>
+          <span>בן יהודה 45, תל אביב</span>
+        </div>
+        <div style="margin-right: 3.5px;"><div class="route-line"></div></div>
+        <div class="route-info">
+          <span class="route-dot dest"></span>
+          <span>רוטשילד 22, ראשון לציון</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notif-actions">
+      <button class="notif-btn reject">דחה</button>
+      <button class="notif-btn approve">אשר ✓</button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

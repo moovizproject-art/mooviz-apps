@@ -243,10 +243,12 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
         data={isLoading ? [] : recentDeliveries}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <DeliveryCard
-            delivery={item}
-            onPress={() => handleDeliveryPress(item.id)}
-          />
+          <View style={styles.cardWrapper}>
+            <DeliveryCard
+              delivery={item}
+              onPress={() => handleDeliveryPress(item.id)}
+            />
+          </View>
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
@@ -488,6 +490,9 @@ const styles = StyleSheet.create({
   // ── List ──
   listContent: {
     paddingBottom: SPACING.xxl,
+  },
+  cardWrapper: {
+    paddingHorizontal: 16,
   },
   skeletonContainer: {
     paddingHorizontal: SPACING.xxl,

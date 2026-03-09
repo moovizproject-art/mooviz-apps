@@ -66,9 +66,9 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && resource.data.senderId == request.auth.uid;
 
-      // Driver can read available deliveries (status == 'new') or assigned
+      // Driver can read available deliveries (new/pending) or assigned
       allow read: if isAuthenticated()
-        && (resource.data.status == 'new' || resource.data.driverId == request.auth.uid);
+        && (resource.data.status in ['new', 'pending'] || resource.data.driverId == request.auth.uid);
 
       // Sender can update their own deliveries (approve driver, confirm payment, cancel)
       allow update: if isAuthenticated()

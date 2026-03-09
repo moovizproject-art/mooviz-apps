@@ -20,6 +20,9 @@ export const strings = {
     back: { he: 'חזרה', en: 'Back' } as LocaleStrings,
     tryAgain: { he: 'נסה שוב', en: 'Try again' } as LocaleStrings,
     offline: { he: 'אין חיבור לאינטרנט', en: 'No internet connection' } as LocaleStrings,
+    retake: { he: 'צלם שוב', en: 'Retake' } as LocaleStrings,
+    takePhoto: { he: 'צלם תמונה', en: 'Take photo' } as LocaleStrings,
+    chooseFromGallery: { he: 'בחר מהגלריה', en: 'Choose from gallery' } as LocaleStrings,
   },
 
   // ── Home Screen ──
@@ -341,6 +344,8 @@ export const strings = {
     savePreferences: { he: 'שמור העדפות', en: 'Save preferences' } as LocaleStrings,
     preferencesSaved: { he: 'ההעדפות נשמרו', en: 'Preferences saved' } as LocaleStrings,
     nearbyDeliveries: { he: 'משלוחים קרובים', en: 'Nearby deliveries' } as LocaleStrings,
+    pickupConfirmed: { he: 'האיסוף אושר בהצלחה', en: 'Pickup confirmed successfully' } as LocaleStrings,
+    deliveryConfirmed: { he: 'המסירה אושרה בהצלחה', en: 'Delivery confirmed successfully' } as LocaleStrings,
   },
 
   // ── Status ──

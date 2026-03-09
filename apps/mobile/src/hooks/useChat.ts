@@ -82,7 +82,8 @@ export function useChat(chatId: string): UseChatResult {
           setIsLoading(false);
         },
         (error) => {
-          console.error('[useChat] Listener error:', error);
+          console.warn('[useChat] Listener error:', error.message || error);
+          setMessages([]);
           setIsLoading(false);
         },
       );

@@ -15,6 +15,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadDeliveryMedia } from '../../services/storage';
+import { ImageGalleryModal } from '../../components/ImageGalleryModal';
+import { AppAlert } from '../../components/AppAlert';
+import { CarAlert, useCarAlert } from '../../components/CarAlert';
+import { uploadPaymentProof } from '../../services/storage';
 
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 
@@ -55,6 +59,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [driverProfile, setDriverProfile] = useState<any>(null);
   const staticMapRef = useRef<MapView>(null);
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [galleryVisible, setGalleryVisible] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [cancelAlertVisible, setCancelAlertVisible] = useState(false);
+  const carAlert = useCarAlert();
+  const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
+  const [proofGalleryIndex, setProofGalleryIndex] = useState(0);
+  const [paymentUploading, setPaymentUploading] = useState(false);
 
   const handleZoom = useCallback((factor: number) => {
     if (!mapRegion || !staticMapRef.current) return;
@@ -77,50 +89,22 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   const currentStepIndex = useMemo(() => {
     if (!delivery) return -1;
-    return TIMELINE_STEPS.findIndex((s) => s.key === delivery.status);
+    // Map matched/in_transit to their timeline equivalents
+    const statusMap: Record<string, string> = { matched: 'waiting', in_transit: 'picked_up' };
+    const mappedStatus = statusMap[delivery.status] || delivery.status;
+    return TIMELINE_STEPS.findIndex((s) => s.key === mappedStatus);
   }, [delivery?.status]);
 
-  if (isLoading || !delivery) {
-    return <LoadingScreen />;
-  }
-
-  const pickupCoords = {
-    latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
-    longitude: delivery.pickup?.longitude || delivery.pickup?.lng || 34.7818,
-    address: delivery.pickup?.address,
-  };
-
-  const destCoords = {
-    latitude: delivery.destination?.latitude || delivery.destination?.lat || 32.0853,
-    longitude: delivery.destination?.longitude || delivery.destination?.lng || 34.7818,
-    address: delivery.destination?.address,
-  };
-
-  const showLiveMap = ['matched', 'waiting', 'picked_up', 'in_transit', 'delivered'].includes(delivery.status) && delivery.driverId;
-  const canCancel = ['new', 'pending', 'matched'].includes(delivery.status);
-  const showPayment = delivery.status === 'delivered';
-  const showRate = delivery.status === 'delivered' && !delivery.rated;
-  const hasDriver = !!delivery.driverId;
-  const driverName = driverProfile?.fullName || delivery.driverName || '';
-  const driverPhoto = driverProfile?.profilePhotoURL || delivery.driverPhotoUrl;
-  const driverRating = driverProfile?.ratingAsDriver?.average || delivery.driverRating;
-  const driverPhone = driverProfile?.phone;
-  const completedTrips = driverProfile?.completedDeliveries;
-
-  // Media: combine mediaURLs + single photoUrl
-  const mediaList: string[] = delivery.mediaURLs?.length
+  // Media: combine mediaURLs + single photoUrl (computed before hooks that depend on it)
+  const mediaList: string[] = delivery?.mediaURLs?.length
     ? delivery.mediaURLs
-    : delivery.photoUrl ? [delivery.photoUrl] : [];
+    : delivery?.photoUrl ? [delivery.photoUrl] : [];
 
   const imageCount = mediaList.filter(u => !u.toLowerCase().includes('video') && !u.toLowerCase().endsWith('.mp4')).length;
   const hasVideo = mediaList.some(u => u.toLowerCase().includes('video') || u.toLowerCase().endsWith('.mp4'));
-  const canEditMedia = ['new', 'pending'].includes(delivery.status) && delivery.senderId === currentUser?.uid;
-  const canAddImage = canEditMedia && imageCount < 5;
-  const canAddVideo = canEditMedia && !hasVideo;
-
-  const [mediaUploading, setMediaUploading] = useState(false);
 
   const handleAddMedia = useCallback(async (type: 'photo' | 'video') => {
+    if (!delivery) return;
     const maxNew = type === 'photo' ? 5 - imageCount : 1;
     if (maxNew <= 0) return;
     try {
@@ -145,9 +129,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       setMediaUploading(false);
       Alert.alert('שגיאה', err.message || 'העלאה נכשלה');
     }
-  }, [delivery.id, delivery.senderId, mediaList, imageCount]);
+  }, [delivery?.id, delivery?.senderId, mediaList, imageCount]);
 
   const handleDeleteMedia = useCallback((_url: string, index: number) => {
+    if (!delivery) return;
     Alert.alert(
       'מחיקת תמונה',
       'האם אתה בטוח שברצונך למחוק תמונה זו?',
@@ -166,7 +151,40 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         },
       ],
     );
-  }, [delivery.id, mediaList]);
+  }, [delivery?.id, mediaList]);
+
+  if (isLoading || !delivery) {
+    return <LoadingScreen />;
+  }
+
+  const pickupCoords = {
+    latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
+    longitude: delivery.pickup?.longitude || delivery.pickup?.lng || 34.7818,
+    address: delivery.pickup?.address,
+  };
+
+  const destCoords = {
+    latitude: delivery.destination?.latitude || delivery.destination?.lat || 32.0853,
+    longitude: delivery.destination?.longitude || delivery.destination?.lng || 34.7818,
+    address: delivery.destination?.address,
+  };
+
+  const showLiveMap = ['matched', 'waiting', 'picked_up', 'in_transit', 'delivered'].includes(delivery.status) && delivery.driverId;
+  // Cancel allowed only pre-pickup statuses
+  const canCancel = ['new', 'pending', 'matched', 'waiting'].includes(delivery.status);
+  const isPostPickup = ['picked_up', 'in_transit', 'delivered', 'completed_paid'].includes(delivery.status);
+  const showPayment = delivery.status === 'delivered';
+  const showRate = delivery.status === 'delivered' && !delivery.rated;
+  const hasDriver = !!delivery.driverId;
+  const driverName = driverProfile?.fullName || delivery.driverName || '';
+  const driverPhoto = driverProfile?.profilePhotoURL || delivery.driverPhotoUrl;
+  const driverRating = driverProfile?.ratingAsDriver?.average || delivery.driverRating;
+  const driverPhone = driverProfile?.phone;
+  const completedTrips = driverProfile?.completedDeliveries;
+
+  const canEditMedia = ['new', 'pending'].includes(delivery.status) && delivery.senderId === currentUser?.uid;
+  const canAddImage = canEditMedia && imageCount < 5;
+  const canAddVideo = canEditMedia && !hasVideo;
 
   const handleCall = () => {
     if (!driverPhone) return;
@@ -276,6 +294,137 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         />
       )}
 
+      {/* ── 2c. Delivery Proof Section ── */}
+      {(delivery.proof?.pickupURL || delivery.proof?.deliveryURL) && (() => {
+        const proofImages: string[] = [];
+        if (delivery.proof?.pickupURL) proofImages.push(delivery.proof.pickupURL);
+        if (delivery.proof?.deliveryURL) proofImages.push(delivery.proof.deliveryURL);
+        return (
+          <View style={[styles.proofCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>הוכחות משלוח</Text>
+            <View style={styles.proofRow}>
+              {delivery.proof?.pickupURL && (
+                <TouchableOpacity
+                  style={styles.proofItem}
+                  onPress={() => { setProofGalleryIndex(0); setProofGalleryVisible(true); }}
+                >
+                  <Image source={{ uri: delivery.proof.pickupURL }} style={styles.proofThumb} />
+                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>הוכחת איסוף</Text>
+                </TouchableOpacity>
+              )}
+              {delivery.proof?.deliveryURL && (
+                <TouchableOpacity
+                  style={styles.proofItem}
+                  onPress={() => {
+                    setProofGalleryIndex(delivery.proof?.pickupURL ? 1 : 0);
+                    setProofGalleryVisible(true);
+                  }}
+                >
+                  <Image source={{ uri: delivery.proof.deliveryURL }} style={styles.proofThumb} />
+                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>הוכחת מסירה</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <ImageGalleryModal
+              visible={proofGalleryVisible}
+              images={proofImages}
+              initialIndex={proofGalleryIndex}
+              onClose={() => setProofGalleryVisible(false)}
+            />
+          </View>
+        );
+      })()}
+
+      {/* ── 2d. Payment Section (moved above map) ── */}
+      {showPayment && (
+        <View style={[styles.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>
+            {t('payment.confirmTitle')}
+          </Text>
+
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>
+              {t('payment.senderStatus')}
+            </Text>
+            <Text style={{ color: delivery.payment?.senderConfirmed ? colors.success : colors.textSecondary }}>
+              {delivery.payment?.senderConfirmed ? t('payment.confirmed') : t('payment.pending')}
+            </Text>
+          </View>
+
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>
+              {t('payment.driverStatus')}
+            </Text>
+            <Text style={{ color: delivery.payment?.driverConfirmed ? colors.success : colors.textSecondary }}>
+              {delivery.payment?.driverConfirmed ? t('payment.confirmed') : t('payment.pending')}
+            </Text>
+          </View>
+
+          {delivery.proof?.paymentURL && (
+            <View style={styles.paymentProofRow}>
+              <Image source={{ uri: delivery.proof.paymentURL }} style={styles.proofThumb} />
+              <Text style={[styles.proofLabel, { color: colors.success }]}>צילום תשלום הועלה</Text>
+            </View>
+          )}
+
+          {!delivery.payment?.senderConfirmed && (
+            <TouchableOpacity
+              style={[styles.confirmPaymentButton, { backgroundColor: colors.primary }]}
+              disabled={paymentUploading}
+              onPress={() => {
+                Alert.alert(
+                  'אישור תשלום',
+                  'האם ברצונך לצרף צילום מסך של התשלום?',
+                  [
+                    { text: 'ביטול', style: 'cancel' },
+                    {
+                      text: 'אשר ללא צילום',
+                      onPress: async () => {
+                        try {
+                          await confirmPayment(delivery.id);
+                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                        } catch (e: any) {
+                          carAlert.show('error', t('common.error'), e.message);
+                        }
+                      },
+                    },
+                    {
+                      text: '📸 העלה צילום מסך',
+                      onPress: async () => {
+                        try {
+                          const result = await launchImageLibrary({
+                            mediaType: 'photo',
+                            quality: 0.8,
+                            maxWidth: 1024,
+                            maxHeight: 1024,
+                            selectionLimit: 1,
+                          });
+                          if (result.didCancel || !result.assets?.[0]?.uri) return;
+                          setPaymentUploading(true);
+                          const url = await uploadPaymentProof(delivery.id, result.assets[0].uri!);
+                          await confirmPayment(delivery.id, url);
+                          setPaymentUploading(false);
+                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                        } catch (e: any) {
+                          setPaymentUploading(false);
+                          carAlert.show('error', t('common.error'), e.message);
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+            >
+              {paymentUploading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.confirmPaymentButtonText}>{t('payment.confirmButton')}</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* ── 3. Map (always visible, taller) ── */}
       <View style={styles.mapContainer}>
         {showLiveMap ? (
@@ -353,25 +502,23 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 4. Driver Card (inline, right under map) ── */}
       {hasDriver && (
         <View style={[styles.driverCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {/* Top row: avatar + info */}
+          {/* Top row: avatar + name + badges */}
           <View style={styles.driverTopRow}>
-            <AvatarCircle name={driverName} photoUrl={driverPhoto} size={56} />
-            <View style={styles.driverInfo}>
-              <Text style={[styles.driverName, { color: colors.textPrimary }]} numberOfLines={1}>
-                {driverName}
-              </Text>
-              <View style={styles.driverBadges}>
-                {driverRating ? (
-                  <View style={[styles.badge, { backgroundColor: '#FFF3E0' }]}>
-                    <Text style={styles.badgeText}>⭐ {driverRating.toFixed(1)}</Text>
-                  </View>
-                ) : null}
-                {completedTrips != null ? (
-                  <View style={[styles.badge, { backgroundColor: '#E3F2FD' }]}>
-                    <Text style={styles.badgeText}>📦 {completedTrips}</Text>
-                  </View>
-                ) : null}
-              </View>
+            <AvatarCircle name={driverName} photoUrl={driverPhoto} size={48} />
+            <Text style={[styles.driverName, { color: colors.textPrimary }]} numberOfLines={1}>
+              {driverName}
+            </Text>
+            <View style={styles.driverBadges}>
+              {driverRating ? (
+                <View style={[styles.badge, { backgroundColor: '#FFF3E0' }]}>
+                  <Text style={styles.badgeText}>⭐ {driverRating.toFixed(1)}</Text>
+                </View>
+              ) : null}
+              {completedTrips != null ? (
+                <View style={[styles.badge, { backgroundColor: '#E3F2FD' }]}>
+                  <Text style={styles.badgeText}>📦 {completedTrips}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -406,7 +553,12 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaList}>
           {mediaList.map((url, i) => (
-            <View key={`${i}-${url}`} style={styles.mediaThumbWrapper}>
+            <TouchableOpacity
+              key={`${i}-${url}`}
+              style={styles.mediaThumbWrapper}
+              activeOpacity={0.8}
+              onPress={() => { setGalleryIndex(i); setGalleryVisible(true); }}
+            >
               <Image source={{ uri: url }} style={styles.mediaThumb} />
               {canEditMedia && (
                 <TouchableOpacity
@@ -421,7 +573,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   <Text style={styles.videoIcon}>▶</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           ))}
           {/* Add photo button */}
           {canAddImage && (
@@ -446,67 +598,58 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </ScrollView>
       </View>
 
-      {/* ── 6. Payment Section ── */}
-      {showPayment && (
-        <View style={[styles.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>
-            {t('payment.confirmTitle')}
-          </Text>
+      {/* ── Image Gallery Modal ── */}
+      <ImageGalleryModal
+        visible={galleryVisible}
+        images={mediaList}
+        initialIndex={galleryIndex}
+        onClose={() => setGalleryVisible(false)}
+      />
 
-          <View style={styles.confirmRow}>
-            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>
-              {t('payment.senderStatus')}
-            </Text>
-            <Text style={{ color: delivery.payment?.senderConfirmed ? colors.success : colors.textSecondary }}>
-              {delivery.payment?.senderConfirmed ? t('payment.confirmed') : t('payment.pending')}
-            </Text>
-          </View>
-
-          <View style={styles.confirmRow}>
-            <Text style={[styles.confirmLabel, { color: colors.textSecondary }]}>
-              {t('payment.driverStatus')}
-            </Text>
-            <Text style={{ color: delivery.payment?.driverConfirmed ? colors.success : colors.textSecondary }}>
-              {delivery.payment?.driverConfirmed ? t('payment.confirmed') : t('payment.pending')}
-            </Text>
-          </View>
-
-          {!delivery.payment?.senderConfirmed && (
-            <TouchableOpacity
-              style={[styles.confirmPaymentButton, { backgroundColor: colors.primary }]}
-              onPress={async () => {
-                try {
-                  await confirmPayment(delivery.id);
-                  Alert.alert(t('payment.successTitle'), t('payment.senderConfirmedMsg'));
-                } catch (e: any) {
-                  Alert.alert(t('common.error'), e.message);
-                }
-              }}
-            >
-              <Text style={styles.confirmPaymentButtonText}>{t('payment.confirmButton')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      {/* CarAlert modal */}
+      <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
 
       {/* ── 7. Secondary Actions (Cancel / Rate) ── */}
       <View style={styles.secondaryActions}>
         {canCancel && (
           <TouchableOpacity
             style={[styles.cancelBtn, { borderColor: '#E53935' }]}
-            onPress={() =>
-              Alert.alert(
-                t('common.confirm'),
-                'האם אתה בטוח שברצונך לבטל את המשלוח?',
-                [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  { text: t('common.confirm'), style: 'destructive', onPress: () => {} },
-                ],
-              )
-            }
+            onPress={() => setCancelAlertVisible(true)}
           >
             <Text style={styles.cancelBtnText}>ביטול משלוח</Text>
           </TouchableOpacity>
+        )}
+        <AppAlert
+          visible={cancelAlertVisible}
+          icon="🚛"
+          title="ביטול משלוח"
+          message={'ביטול אפשרי רק לפני איסוף הפריט.\nלאחר איסוף לא ניתן לבטל.\n\nהאם אתה בטוח?'}
+          buttons={[
+            { text: 'חזרה', style: 'cancel' },
+            {
+              text: 'בטל משלוח',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await firestore().collection('deliveries').doc(delivery.id).update({
+                    status: 'cancelled',
+                    cancelledBy: currentUser?.uid,
+                    updatedAt: firestore.Timestamp.now(),
+                  });
+                } catch (e: any) {
+                  Alert.alert('שגיאה', e.message);
+                }
+              },
+            },
+          ]}
+          onDismiss={() => setCancelAlertVisible(false)}
+        />
+        {isPostPickup && (
+          <View style={styles.cancelDisabledNote}>
+            <Text style={[styles.cancelDisabledText, { color: colors.textSecondary }]}>
+              ⚠️ לא ניתן לבטל משלוח לאחר איסוף הפריט
+            </Text>
+          </View>
         )}
 
         {showRate && (
@@ -534,7 +677,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 48,
-    gap: 12,
+    gap: 6,
   },
 
   // ── Summary Card ──
@@ -633,6 +776,44 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
 
+  // ── Proof Section ──
+  proofCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  proofTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  proofRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  proofItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  proofThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+  },
+  proofLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
   // ── Map ──
   mapContainer: {
     height: 290,
@@ -672,6 +853,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
+    marginTop: -40,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -685,20 +867,17 @@ const styles = StyleSheet.create({
   driverTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 14,
-  },
-  driverInfo: {
-    flex: 1,
+    gap: 10,
+    marginBottom: 12,
   },
   driverName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 6,
+    flex: 1,
   },
   driverBadges: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   badge: {
     paddingHorizontal: 10,
@@ -853,6 +1032,12 @@ const styles = StyleSheet.create({
   confirmLabel: {
     fontSize: 14,
   },
+  paymentProofRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
   confirmPaymentButton: {
     marginTop: 12,
     paddingVertical: 14,
@@ -880,6 +1065,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#E53935',
+  },
+  cancelDisabledNote: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  cancelDisabledText: {
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   rateBtn: {
     borderRadius: 12,
