@@ -30,7 +30,6 @@ import { useDelivery } from '../../hooks/useDelivery';
 import { useLocation } from '../../hooks/useLocation';
 import { useDriverEarnings } from '../../hooks/useDriverEarnings';
 import { DeliveryCard } from '../../components/DeliveryCard';
-import { GlassCard } from '../../components/GlassCard';
 import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
@@ -290,7 +289,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       </View>
 
       {/* ── Availability Toggle + Range (grouped) ── */}
-      <GlassCard style={[styles.section, { marginTop: SPACING.lg }]} padding="md">
+      <View style={[styles.sectionCard, styles.section, { marginTop: SPACING.lg, backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: prefs.isAvailable ? colors.success : colors.textTertiary, borderStartWidth: 4 }]}>
         <View style={styles.sectionRow}>
           <View style={styles.toggleLabelRow}>
             <View style={[styles.statusDot, { backgroundColor: prefs.isAvailable ? colors.success : colors.textTertiary }]} />
@@ -330,7 +329,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             </View>
           </View>
         )}
-      </GlassCard>
+      </View>
 
       {/* ── Radar — only shown when available ── */}
       {prefs.isAvailable && (
@@ -374,7 +373,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           onPress={() => handleDeliveryPress(currentDelivery.id)}
           activeOpacity={0.7}
         >
-          <GlassCard style={styles.section} padding="md">
+          <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 4, padding: SPACING.md }]}>
             <View style={styles.currentDeliveryRow}>
               <View style={styles.currentDeliveryIcon}>
                 <Text style={{ fontSize: 22 }}>📦</Text>
@@ -400,12 +399,12 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                 ) : null}
               </View>
             </View>
-          </GlassCard>
+          </View>
         </TouchableOpacity>
       )}
 
       {/* ── Earnings Dashboard (collapsible) ── */}
-      <GlassCard style={styles.section} padding="lg">
+      <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.success, borderStartWidth: 4, padding: SPACING.lg }]}>
         <Pressable onPress={() => {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setEarningsOpen((prev) => !prev);
@@ -473,10 +472,10 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             </View>
           </View>
         )}
-      </GlassCard>
+      </View>
 
       {/* ── Advanced Settings (collapsible) ── */}
-      <GlassCard style={styles.section} padding="lg">
+      <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 4, padding: SPACING.lg }]}>
         <Pressable onPress={toggleAdvanced} style={styles.sectionRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
             ⚙️ הגדרות מתקדמות
@@ -709,7 +708,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             </View>
           </View>
         )}
-      </GlassCard>
+      </View>
 
       {/* Location warning */}
       {!location && !locationLoading && (
@@ -882,6 +881,21 @@ const styles = StyleSheet.create({
   section: {
     marginHorizontal: SPACING.xxl,
     marginBottom: SPACING.md,
+  },
+  sectionCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
   },
   sectionRow: {
     flexDirection: 'row',
