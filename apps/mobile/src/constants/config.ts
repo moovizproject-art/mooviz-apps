@@ -62,10 +62,10 @@ export const DEEP_LINK_SCHEME = 'mooviz://';
 /** Support email */
 export const SUPPORT_EMAIL = 'support@mooviz.app';
 
-/** Google Maps API key — loaded from environment, fallback for dev */
-// In production, set GOOGLE_MAPS_API_KEY in .env.prod
+/** Google Maps API key — MUST be set via environment variable */
+// Set GOOGLE_MAPS_API_KEY in .env / .env.prod
 // Also set in android/app/build.gradle manifestPlaceholders
-export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyASJMulop0DTV45RGzzrREnxSYhMx4qRrU';
+export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 
 /** Default map region — Israel center (Tel Aviv) */
 // אזור מפה ברירת מחדל — מרכז ישראל (תל אביב)

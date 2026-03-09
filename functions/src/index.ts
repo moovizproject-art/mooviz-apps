@@ -31,7 +31,6 @@ export { reviewKYC } from "./callable/kycCallable";
 export {
   uploadProfilePhoto,
   getAuthorizedPhoto,
-  getEncryptionKey,
   decryptDocument,
 } from "./callable/encryptionCallable";
 
