@@ -322,7 +322,7 @@ export function RootNavigator(): React.JSX.Element {
 
   return (
     <ErrorBoundary fallbackColors={{ background: colors.background, textPrimary: colors.textPrimary, textSecondary: colors.textSecondary, primary: colors.primary, border: colors.border, error: colors.error }}>
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerBackTitle: t('common.back') }}>
       {!firebaseUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : needsEmailVerification ? (
@@ -336,7 +336,7 @@ export function RootNavigator(): React.JSX.Element {
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : currentUser.activeMode === 'driver' ? (
         <>
-          <Stack.Screen name="DriverTabs" component={DriverTabs} />
+          <Stack.Screen name="DriverTabs" component={DriverTabs} options={{ title: t('common.back') }} />
           <Stack.Screen
             name="DriverDeliveryDetail"
             component={DriverDeliveryDetail}
@@ -345,7 +345,10 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: t('tabs.chat') }}
+            options={({ route }) => ({
+              headerShown: true,
+              title: (route.params as any)?.recipientName || t('tabs.chat'),
+            })}
           />
           <Stack.Screen
             name="Rating"
@@ -360,7 +363,7 @@ export function RootNavigator(): React.JSX.Element {
         </>
       ) : (
         <>
-          <Stack.Screen name="SenderTabs" component={SenderTabs} />
+          <Stack.Screen name="SenderTabs" component={SenderTabs} options={{ title: t('common.back') }} />
           <Stack.Screen
             name="DriverKYC"
             component={DriverKYCScreen}
@@ -379,7 +382,10 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={{ headerShown: true, title: t('tabs.chat') }}
+            options={({ route }) => ({
+              headerShown: true,
+              title: (route.params as any)?.recipientName || t('tabs.chat'),
+            })}
           />
           <Stack.Screen
             name="Rating"
