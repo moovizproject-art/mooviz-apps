@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   I18nManager,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useTheme } from '../../theme/ThemeContext';
@@ -40,6 +41,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const { phoneNumber, mode } = route.params;
   const { colors } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const { refreshFirebaseUser, refreshUserDoc, setForceOtp } = useAuth();
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
@@ -202,7 +204,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Blue header */}
-        <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+        <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + 16 }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <View style={styles.backChevron} />
           </TouchableOpacity>

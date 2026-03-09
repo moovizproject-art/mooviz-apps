@@ -14,6 +14,7 @@ import {
   Easing,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -35,6 +36,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PhoneVerification'>;
 export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,8 +141,8 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Blue header */}
-        <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
-          <TouchableOpacity style={styles.backButton} onPress={handleLogout}>
+        <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity style={[styles.backButton, { top: insets.top + 4 }]} onPress={handleLogout}>
             <View style={styles.backChevron} />
           </TouchableOpacity>
           <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>

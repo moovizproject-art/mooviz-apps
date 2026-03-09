@@ -120,12 +120,11 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
 
   try {
     // iOS Simulator: verifyPhoneNumber crashes Hermes (no APNs support).
-    // Use Firebase Console test phone numbers instead.
+    // Return a placeholder verificationId so user can still navigate to OTP screen
+    // and enter Firebase Console test phone code (e.g. 123456).
     if (isIOSSimulator) {
-      console.warn('[sendPhoneOTP] iOS Simulator detected — use Firebase test phone numbers');
-      const simError = new Error('אימות SMS לא נתמך בסימולטור. הגדר מספר טלפון לבדיקה בקונסולת Firebase') as any;
-      simError.code = 'auth/simulator-not-supported';
-      throw simError;
+      console.warn('[sendPhoneOTP] iOS Simulator detected — returning test verificationId. Use Firebase Console test phone numbers.');
+      return 'simulator-test-verification-id';
     }
 
     const result = await auth().verifyPhoneNumber(normalized);
