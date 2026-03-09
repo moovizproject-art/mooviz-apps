@@ -32,6 +32,7 @@ export function ProfileScreen(): React.JSX.Element {
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
+  const [editNickname, setEditNickname] = useState<string>((currentUser as any)?.nickname || '');
   const [editCity, setEditCity] = useState<string>(currentUser?.city || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [ownPhotoUri, setOwnPhotoUri] = useState<string | null>(null);
@@ -51,6 +52,12 @@ export function ProfileScreen(): React.JSX.Element {
         fullName: editName,
         city: editCity,
       });
+      // Save nickname to Firestore
+      if (currentUser?.uid) {
+        await firestore().collection('users').doc(currentUser.uid).update({
+          nickname: editNickname,
+        });
+      }
       setIsEditing(false);
       carAlert.show('success', t('common.success'), t('profile.profileUpdated'));
     } catch (err) {
@@ -179,6 +186,16 @@ export function ProfileScreen(): React.JSX.Element {
                   style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
                   value={editName}
                   onChangeText={setEditName}
+                />
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>כינוי (נראה לנהגים/שולחים)</Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
+                  value={editNickname}
+                  onChangeText={setEditNickname}
+                  placeholder="הכינוי שלך"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
               <View style={styles.fieldGroup}>

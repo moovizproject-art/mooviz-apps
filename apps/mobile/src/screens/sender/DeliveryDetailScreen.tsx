@@ -26,6 +26,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 
@@ -208,6 +209,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           ))}
         </View>
       </View>
+
+      {/* ── 2b. Driver Approval Card (pending status) ── */}
+      {delivery.status === 'pending' && delivery.driverId && (
+        <DriverApprovalCard
+          driverId={delivery.driverId}
+          deliveryId={delivery.id}
+        />
+      )}
 
       {/* ── 3. Map (always visible, taller) ── */}
       <View style={styles.mapContainer}>
@@ -588,6 +597,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#333333',
   },
   driverActions: {
     flexDirection: 'row',

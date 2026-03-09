@@ -19,6 +19,7 @@ export interface UserLocation {
 export interface User {
   uid: string;
   fullName: string;
+  nickname?: string;
   phone: string; // E.164
   email?: string;
   city: string;
@@ -51,6 +52,7 @@ export interface UserCreateData {
 
 export interface UserUpdateData {
   fullName?: string;
+  nickname?: string;
   email?: string;
   city?: string;
   activeMode?: ActiveMode;

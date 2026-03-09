@@ -7,12 +7,17 @@
  * - If user is viewing the SAME chat → only play "ding" sound, no notification banner
  * - If user is in a DIFFERENT chat or not in chat → show full notification, tap navigates to chat
  * - Background/quit tap → deep-link to the correct chat thread
+ *
+ * Enhanced driver_interested notifications:
+ * - Includes driver photo as largeIcon (Android) / attachment (iOS)
+ * - Approve/Decline action buttons on notification
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, AndroidAction, EventType } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 
 import { useAuth } from './useAuth';
 import { playSound } from '../services/sound';
@@ -66,6 +71,13 @@ async function setupNotificationCategories(): Promise<void> {
       id: 'tracking',
       actions: [{ id: 'track', title: 'מעקב' }],
     },
+    {
+      id: 'driver_approval',
+      actions: [
+        { id: 'approve_driver', title: '✓ אשר', foreground: true },
+        { id: 'decline_driver', title: '✗ דחה', destructive: true },
+      ],
+    },
   ]);
 }
 
@@ -81,6 +93,13 @@ function getNotificationActions(notifEvent?: string): {
         iosCategoryId: 'chat',
       };
     case 'driver_interested':
+      return {
+        androidActions: [
+          { title: '✓ אשר', pressAction: { id: 'approve_driver' } },
+          { title: '✗ דחה', pressAction: { id: 'decline_driver' } },
+        ],
+        iosCategoryId: 'driver_approval',
+      };
     case 'sender_approved':
       return {
         androidActions: [{ title: 'צפה במשלוח', pressAction: { id: 'view_delivery' } }],
@@ -218,7 +237,8 @@ export function useNotifications(): UseNotificationsResult {
         const isChatNotif = notifEvent === 'new_chat_message';
         const { androidActions, iosCategoryId } = getNotificationActions(notifEvent);
 
-        await notifee.displayNotification({
+        // Build notification config
+        const notificationConfig: any = {
           title: remoteMessage.notification.title || 'MOOVIZ',
           body: remoteMessage.notification.body || '',
           data: data as Record<string, string>,
@@ -230,13 +250,28 @@ export function useNotifications(): UseNotificationsResult {
             ...(androidActions && { actions: androidActions }),
           },
           ...(iosCategoryId && { ios: { categoryId: iosCategoryId } }),
-        });
+        };
+
+        // Add driver photo as largeIcon for driver_interested
+        if (notifEvent === 'driver_interested' && data?.driverPhoto) {
+          notificationConfig.android.largeIcon = data.driverPhoto;
+          if (!notificationConfig.ios) notificationConfig.ios = {};
+          notificationConfig.ios.attachments = [
+            { url: data.driverPhoto, thumbnailHidden: false },
+          ];
+        }
+
+        await notifee.displayNotification(notificationConfig);
       },
     );
 
-    // Notifee foreground event — handle notification tap while app is open
+    // Notifee foreground event — handle notification tap and action buttons
     const unsubscribeNotifee = notifee.onForegroundEvent(({ type, detail }) => {
-      if ((type === EventType.PRESS || type === EventType.ACTION_PRESS) && detail.notification?.data) {
+      if (type === EventType.ACTION_PRESS && detail.notification?.data) {
+        const data = detail.notification.data as Record<string, string>;
+        const actionId = detail.pressAction?.id;
+        handleNotificationAction(actionId, data);
+      } else if (type === EventType.PRESS && detail.notification?.data) {
         handleNotificationNavigation(detail.notification.data as Record<string, string>);
       }
     });
@@ -267,6 +302,44 @@ export function useNotifications(): UseNotificationsResult {
 }
 
 /**
+ * Handle notification action button press (approve/decline driver).
+ */
+async function handleNotificationAction(actionId: string | undefined, data: Record<string, string>): Promise<void> {
+  if (!actionId) return;
+
+  const { deliveryId } = data;
+  if (!deliveryId) return;
+
+  switch (actionId) {
+    case 'approve_driver': {
+      console.log('[NotifAction] Approving driver for delivery:', deliveryId);
+      try {
+        const fn = functions().httpsCallable('approveDriver');
+        await fn({ deliveryId });
+        // Navigate to delivery detail to see updated status
+        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+      } catch (err: any) {
+        console.error('[NotifAction] Approve failed:', err.message);
+      }
+      break;
+    }
+    case 'decline_driver': {
+      console.log('[NotifAction] Declining driver for delivery:', deliveryId);
+      try {
+        const fn = functions().httpsCallable('declineDriver');
+        await fn({ deliveryId });
+      } catch (err: any) {
+        console.error('[NotifAction] Decline failed:', err.message);
+      }
+      break;
+    }
+    default:
+      // For other actions, just navigate
+      handleNotificationNavigation(data);
+  }
+}
+
+/**
  * Handle navigation from notification tap.
  * Uses the navigation service to deep-link to the correct screen.
  */
@@ -286,13 +359,17 @@ function handleNotificationNavigation(data?: Record<string, string>): void {
       }
       break;
     case 'driver_interested':
+      if (deliveryId) {
+        console.log('[Nav] Navigate to sender delivery detail for approval:', deliveryId);
+        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+      }
+      break;
     case 'sender_approved':
     case 'delivery_picked_up':
     case 'delivery_delivered':
     case 'delivery_cancelled':
       if (deliveryId) {
         console.log('[Nav] Navigate to delivery:', deliveryId);
-        // Try sender detail first, driver detail if that fails
         navigateFromNotification('SenderDeliveryDetail', { deliveryId });
       }
       break;

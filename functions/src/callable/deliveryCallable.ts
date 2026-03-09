@@ -11,7 +11,7 @@ import {
   assertIsDriver,
   assertUserRole,
 } from "../validators/statusValidator";
-import { sendDeliveryNotification } from "../services/notificationService";
+import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
 
 const db = admin.firestore();
 
@@ -366,4 +366,51 @@ export const cancelDelivery = onCall(async (request) => {
   });
 
   return { success: true, message: "Delivery cancelled successfully" };
+});
+
+/**
+ * Sender declines an interested driver.
+ * Transitions: pending -> new (resets driver assignment)
+ */
+export const declineDriver = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { deliveryId } = request.data;
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+
+  // Verify caller is the sender
+  assertIsSender(delivery.senderId, uid);
+
+  // Can only decline when status is pending
+  if (delivery.status !== "pending") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Can only decline a driver when delivery status is 'pending'"
+    );
+  }
+
+  const declinedDriverId = delivery.driverId;
+
+  await updateDeliveryStatus(
+    ref,
+    "new",
+    uid,
+    "Sender declined driver",
+    { driverId: null }
+  );
+
+  // Notify the declined driver
+  if (declinedDriverId) {
+    await sendPushNotification(
+      declinedDriverId,
+      "השולח בחר נהג אחר",
+      "השולח בחר נהג אחר למשלוח זה",
+      { event: "driver_declined", deliveryId }
+    );
+  }
+
+  return { success: true, message: "Driver declined successfully" };
 });
