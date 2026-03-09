@@ -15,6 +15,8 @@ export interface ChatThread {
   pickupCity: string;
   destinationCity: string;
   deliveryStatus: string;
+  itemDescription: string;
+  pickupDate: string;
   /** Unread count (messages sent by others since user last read) */
   unreadCount: number;
 }
@@ -77,21 +79,33 @@ export function useChatList(userId: string | undefined) {
           );
 
           // Fetch delivery info (status + cities)
-          const deliveryMap = new Map<string, { status: string; pickupCity: string; destCity: string }>();
+          const deliveryMap = new Map<string, { status: string; pickupCity: string; destCity: string; itemDesc: string; pickupDate: string }>();
+          console.log('[useChatList] Fetching deliveries:', Array.from(deliveryIds));
           await Promise.all(
             Array.from(deliveryIds).map((dId) =>
               firestore().collection('deliveries').doc(dId).get()
                 .then((dDoc) => {
                   if (dDoc.exists) {
                     const d = dDoc.data()!;
+                    let dateStr = 'בהקדם';
+                    if (d.pickupDate && d.pickupDate !== 'asap') {
+                      const date = d.pickupDate?.toDate ? d.pickupDate.toDate() : new Date(d.pickupDate);
+                      dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+                    }
+                    const itemDesc = d.itemDescription || d.item?.description || '';
+                    console.log(`[useChatList] Delivery ${dId}: status=${d.status}, item=${itemDesc}, date=${dateStr}`);
                     deliveryMap.set(dId, {
                       status: d.status || 'pending',
                       pickupCity: d.pickup?.city || d.pickup?.address || '',
                       destCity: d.destination?.city || d.destination?.address || '',
+                      itemDesc,
+                      pickupDate: dateStr,
                     });
+                  } else {
+                    console.warn(`[useChatList] Delivery ${dId} not found`);
                   }
                 })
-                .catch(() => {}),
+                .catch((err) => console.warn(`[useChatList] Delivery ${dId} fetch error:`, err)),
             ),
           );
 
@@ -114,6 +128,8 @@ export function useChatList(userId: string | undefined) {
               pickupCity: delivery?.pickupCity || '',
               destinationCity: delivery?.destCity || '',
               deliveryStatus: delivery?.status || '',
+              itemDescription: delivery?.itemDesc || '',
+              pickupDate: delivery?.pickupDate || '',
               unreadCount: 0, // TODO: compute from unread messages
             };
           });

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
+import firestore from '@react-native-firebase/firestore';
 import { requestMediaLibraryPermission } from '../../utils/permissions';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
@@ -77,6 +78,10 @@ export function ProfileScreen(): React.JSX.Element {
       const ref = storage().ref(`users/${currentUser.uid}/profile.jpg`);
       await ref.putFile(uri, { contentType: 'image/jpeg' });
       const downloadUrl = await ref.getDownloadURL();
+      // Sync to Firestore so other users see the updated photo
+      await firestore().collection('users').doc(currentUser.uid).update({
+        profilePhotoURL: downloadUrl,
+      });
       setOwnPhotoUri(downloadUrl);
       carAlert.show('success', t('common.success'), t('profile.photoUpdated'));
     } catch (err) {

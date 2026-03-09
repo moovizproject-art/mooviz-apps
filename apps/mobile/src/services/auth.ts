@@ -13,6 +13,14 @@ const isIOSSimulator = Platform.OS === 'ios' && (
   __DEV__ && !NativeModules.RNFBMessagingModule?.isDeviceRegisteredForRemoteMessages
 );
 
+/** Detect Android Emulator — SMS OTP can't be received */
+const isAndroidEmulator = Platform.OS === 'android' && __DEV__ && (
+  NativeModules.PlatformConstants?.Brand === 'google' ||
+  NativeModules.PlatformConstants?.Fingerprint?.includes('generic') ||
+  NativeModules.PlatformConstants?.Model?.includes('sdk') ||
+  NativeModules.PlatformConstants?.Model?.includes('Emulator')
+);
+
 // ──────────────────────────────────────────────
 // Error sanitizer — prevent Hermes crash on native errors
 // ──────────────────────────────────────────────
@@ -119,11 +127,10 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
   try {
-    // iOS Simulator: verifyPhoneNumber crashes Hermes (no APNs support).
-    // Return a placeholder verificationId so user can still navigate to OTP screen
-    // and enter Firebase Console test phone code (e.g. 123456).
-    if (isIOSSimulator) {
-      console.warn('[sendPhoneOTP] iOS Simulator detected — returning test verificationId. Use Firebase Console test phone numbers.');
+    // Emulator bypass: iOS crashes without APNs, Android can't receive SMS.
+    // Return test verificationId so user can navigate to OTP screen and enter 123456.
+    if (isIOSSimulator || isAndroidEmulator) {
+      console.warn(`[sendPhoneOTP] Emulator detected (${Platform.OS}) — returning test verificationId. Enter 123456 on OTP screen.`);
       return 'simulator-test-verification-id';
     }
 

@@ -28,14 +28,27 @@ interface UseNotificationsResult {
   requestPermission: () => Promise<boolean>;
 }
 
-/** Create Android notification channel (required for Android 8+) */
-async function ensureAndroidChannel(): Promise<string> {
-  return notifee.createChannel({
-    id: 'mooviz-default',
-    name: 'MOOVIZ Notifications',
+/** Create Android notification channels (required for Android 8+) */
+async function ensureAndroidChannels(): Promise<string> {
+  // Main channel — must match backend channelId in notificationService.ts
+  await notifee.createChannel({
+    id: 'mooviz_deliveries',
+    name: 'משלוחים והתראות',
+    description: 'התראות על משלוחים, צ׳אט ותשלומים',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+    vibration: true,
+  });
+
+  // Chat channel
+  await notifee.createChannel({
+    id: 'mooviz_chat',
+    name: 'הודעות צ׳אט',
     importance: AndroidImportance.HIGH,
     sound: 'default',
   });
+
+  return 'mooviz_deliveries';
 }
 
 export function useNotifications(): UseNotificationsResult {
@@ -70,14 +83,30 @@ export function useNotifications(): UseNotificationsResult {
     }
   }, []);
 
+  // Create notification channels on mount (Android)
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      ensureAndroidChannels().catch(() => {});
+    }
+  }, []);
+
   // Register FCM token and save to Firestore
   useEffect(() => {
     const registerToken = async (): Promise<void> => {
       try {
         const granted = await requestPermission();
-        if (!granted) return;
+        if (!granted) {
+          console.warn('[useNotifications] Permission not granted');
+          return;
+        }
+
+        // Must register for remote messages before getting token
+        if (!messaging().isDeviceRegisteredForRemoteMessages) {
+          await messaging().registerDeviceForRemoteMessages();
+        }
 
         const token = await messaging().getToken();
+        console.log('[useNotifications] FCM token:', token?.substring(0, 20) + '...');
         setFcmToken(token);
 
         if (currentUser?.uid && token) {
@@ -85,10 +114,15 @@ export function useNotifications(): UseNotificationsResult {
             fcmTokens: firestore.FieldValue.arrayUnion(token),
             lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
           });
+          console.log('[useNotifications] Token saved to Firestore');
         }
       } catch (error) {
         // Expected on iOS Simulator (no APNs support)
-        console.warn('[useNotifications] Token registration skipped:', (error as any)?.message || error);
+        if (Platform.OS === 'ios') {
+          console.log('[useNotifications] iOS Simulator — FCM not available (no APNs)');
+        } else {
+          console.warn('[useNotifications] Token registration failed:', (error as any)?.message || error);
+        }
       }
     };
 
@@ -133,13 +167,19 @@ export function useNotifications(): UseNotificationsResult {
         else if (notifEvent === 'payment_confirmed') playSound('payment');
         else playSound('success');
 
-        const channelId = await ensureAndroidChannel();
+        const channelId = await ensureAndroidChannels();
+        const isChatNotif = notifEvent === 'new_chat_message';
 
         await notifee.displayNotification({
           title: remoteMessage.notification.title || 'MOOVIZ',
           body: remoteMessage.notification.body || '',
           data: data as Record<string, string>,
-          android: { channelId, smallIcon: 'ic_launcher', pressAction: { id: 'default' } },
+          android: {
+            channelId: isChatNotif ? 'mooviz_chat' : channelId,
+            smallIcon: 'ic_launcher',
+            pressAction: { id: 'default' },
+            importance: AndroidImportance.HIGH,
+          },
         });
       },
     );

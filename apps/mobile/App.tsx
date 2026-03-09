@@ -25,6 +25,8 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
   'Setting a timer for a long period',
   'This method is deprecated',  // RN Firebase namespaced API warnings (v22 migration)
+  '[useFirestore]',  // Missing index warnings — deploying indexes fixes this
+  '[useNotifications]',  // Expected on iOS Simulator (no APNs)
 ]);
 
 const linking: LinkingOptions<RootStackParamList> = {

@@ -143,9 +143,6 @@ export function ChatScreen(): React.JSX.Element {
 
       return (
         <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
-          {!isOwn && (
-            <AvatarCircle name={recipientName} size={28} />
-          )}
           <View style={[
             styles.bubbleContent,
             isOwn
@@ -153,7 +150,7 @@ export function ChatScreen(): React.JSX.Element {
               : [styles.otherContent, { backgroundColor: colors.surface, borderColor: colors.border }],
           ]}>
             {item.type === 'image' && item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.chatImage} />
+              <Image source={{ uri: item.imageUrl }} style={styles.chatImage} resizeMode="cover" />
             ) : (
               <Text style={[styles.messageText, { color: colors.textPrimary }, isOwn && styles.ownMessageText]}>
                 {item.text}
@@ -163,6 +160,9 @@ export function ChatScreen(): React.JSX.Element {
               {formatTime(item.createdAt)}
             </Text>
           </View>
+          {!isOwn && (
+            <AvatarCircle name={recipientName} size={28} />
+          )}
         </View>
       );
     },
@@ -173,20 +173,21 @@ export function ChatScreen(): React.JSX.Element {
   if (!chatId) {
     const renderThread = ({ item }: { item: ChatThread }) => {
       const isOwnLastMessage = item.lastSenderId === currentUser?.uid;
+      const isUnread = !isOwnLastMessage && !!item.lastMessage;
       const statusCfg = item.deliveryStatus ? getStatusConfig(item.deliveryStatus) : null;
       const hasRoute = item.pickupCity || item.destinationCity;
 
       return (
         <TouchableOpacity
-          style={[styles.threadCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.threadCard, { backgroundColor: colors.surface, borderColor: isUnread ? colors.primary : colors.border }]}
           onPress={() => navigation.navigate('ChatRoom', { chatId: item.id, recipientName: item.recipientName })}
           activeOpacity={0.7}
         >
-          {/* Top row: avatar + name + time */}
+          {/* Top row: avatar + name + time + unread badge */}
           <View style={styles.threadTopRow}>
             <AvatarCircle name={item.recipientName} photoUrl={item.recipientPhotoUrl} size={44} />
             <View style={styles.threadNameBlock}>
-              <Text style={[styles.threadName, { color: colors.textPrimary }]} numberOfLines={1}>
+              <Text style={[styles.threadName, { color: colors.textPrimary }, isUnread && styles.threadNameUnread]} numberOfLines={1}>
                 {item.recipientName}
               </Text>
               {statusCfg && (
@@ -197,29 +198,56 @@ export function ChatScreen(): React.JSX.Element {
                 </View>
               )}
             </View>
-            <Text style={[styles.threadTime, { color: colors.textSecondary }]}>
-              {formatTime(item.lastMessageAt)}
-            </Text>
+            <View style={styles.threadTimeBlock}>
+              <Text style={[styles.threadTime, { color: isUnread ? colors.primary : colors.textSecondary }, isUnread && styles.threadTimeUnread]}>
+                {formatTime(item.lastMessageAt)}
+              </Text>
+              {isUnread && (
+                <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.unreadBadgeText}>1</Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Route snippet */}
-          {hasRoute && (
-            <View style={styles.threadRouteRow}>
-              <View style={[styles.threadRouteDot, { backgroundColor: '#4CAF50' }]} />
-              <Text style={[styles.threadRouteText, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.pickupCity}
-              </Text>
-              <Text style={[styles.threadRouteArrow, { color: colors.textTertiary }]}>→</Text>
-              <View style={[styles.threadRouteDot, { backgroundColor: '#F44336' }]} />
-              <Text style={[styles.threadRouteText, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.destinationCity}
-              </Text>
+          {/* Delivery info row: route + date */}
+          {(hasRoute || item.pickupDate) && (
+            <View style={styles.threadInfoRow}>
+              {hasRoute && (
+                <View style={styles.threadRouteRow}>
+                  <View style={[styles.threadRouteDot, { backgroundColor: '#4CAF50' }]} />
+                  <Text style={[styles.threadRouteText, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.pickupCity}
+                  </Text>
+                  <Text style={[styles.threadRouteArrow, { color: colors.textTertiary }]}>→</Text>
+                  <View style={[styles.threadRouteDot, { backgroundColor: '#F44336' }]} />
+                  <Text style={[styles.threadRouteText, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.destinationCity}
+                  </Text>
+                </View>
+              )}
+              {item.pickupDate ? (
+                <Text style={[styles.threadDate, { color: colors.textTertiary }]}>
+                  📅 {item.pickupDate}
+                </Text>
+              ) : null}
             </View>
           )}
 
+          {/* Item description */}
+          {item.itemDescription ? (
+            <Text style={[styles.threadItemDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+              📦 {item.itemDescription}
+            </Text>
+          ) : null}
+
           {/* Last message */}
-          <Text style={[styles.threadLastMessage, { color: colors.textSecondary }]} numberOfLines={1}>
-            {isOwnLastMessage ? `${t('chat.you')}: ` : ''}{item.lastMessage || t('chat.noMessages')}
+          <Text style={[
+            styles.threadLastMessage,
+            { color: isUnread ? colors.textPrimary : colors.textSecondary },
+            isUnread && styles.threadLastMessageUnread,
+          ]} numberOfLines={1}>
+            {isOwnLastMessage ? `✓ ${t('chat.you')}: ` : ''}{item.lastMessage || t('chat.noMessages')}
           </Text>
         </TouchableOpacity>
       );
@@ -355,11 +383,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
+  threadInfoRow: {
+    gap: 4,
+    paddingStart: 4,
+  },
   threadRouteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingStart: 4,
   },
   threadRouteDot: {
     width: 6,
@@ -373,12 +404,46 @@ const styles = StyleSheet.create({
   threadRouteArrow: {
     fontSize: 12,
   },
+  threadDate: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  threadItemDesc: {
+    fontSize: 12,
+    paddingStart: 4,
+  },
   threadLastMessage: {
     fontSize: 13,
     paddingStart: 4,
   },
+  threadLastMessageUnread: {
+    fontWeight: '600',
+  },
+  threadNameUnread: {
+    fontWeight: '800',
+  },
+  threadTimeBlock: {
+    alignItems: 'center',
+    gap: 4,
+  },
   threadTime: {
     fontSize: 11,
+  },
+  threadTimeUnread: {
+    fontWeight: '700',
+  },
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   // ─── Message styles ───
   messagesList: {

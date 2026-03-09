@@ -69,6 +69,17 @@ service firebase.storage {
     }
 
     // ───────────────────────────────────────────────
+    // Chat Images
+    // Participants can upload images to chat
+    // ───────────────────────────────────────────────
+    match /chats/{chatId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && isImage()
+        && request.resource.size < maxSize();
+    }
+
+    // ───────────────────────────────────────────────
     // Delivery Item Photos
     // Sender uploads item photo when creating delivery
     // ───────────────────────────────────────────────

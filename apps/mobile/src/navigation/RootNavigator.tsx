@@ -4,11 +4,41 @@ import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigatio
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import firestore from '@react-native-firebase/firestore';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
+
+/** Hook to count unread chat threads (where lastSenderId != current user) */
+function useUnreadChatCount(userId: string | undefined): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    const unsubscribe = firestore()
+      .collection('chats')
+      .where('participants', 'array-contains', userId)
+      .onSnapshot(
+        (snapshot) => {
+          let unread = 0;
+          snapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            // Count threads where last message is from someone else
+            if (data.lastSenderId && data.lastSenderId !== userId && data.lastMessage) {
+              unread++;
+            }
+          });
+          setCount(unread);
+        },
+        () => setCount(0),
+      );
+    return unsubscribe;
+  }, [userId]);
+
+  return count;
+}
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { HomeIcon, PackageIcon, ChatIcon, ProfileIcon, TruckIcon, ClipboardIcon } from '../components/TabIcons';
@@ -135,6 +165,8 @@ function AuthStack(): React.JSX.Element {
 function SenderTabs(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { currentUser } = useAuth();
+  const unreadChats = useUnreadChatCount(currentUser?.uid);
   return (
     <SenderTab.Navigator
       screenOptions={{
@@ -166,6 +198,7 @@ function SenderTabs(): React.JSX.Element {
         options={{
           tabBarLabel: t('tabs.chat'),
           tabBarIcon: ({ color }) => <ChatIcon color={color} />,
+          tabBarBadge: unreadChats > 0 ? unreadChats : undefined,
         }}
       />
       <SenderTab.Screen
@@ -184,6 +217,8 @@ function SenderTabs(): React.JSX.Element {
 function DriverTabs(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { currentUser } = useAuth();
+  const unreadChats = useUnreadChatCount(currentUser?.uid);
   return (
     <DriverTab.Navigator
       screenOptions={{
@@ -215,6 +250,7 @@ function DriverTabs(): React.JSX.Element {
         options={{
           tabBarLabel: t('tabs.chat'),
           tabBarIcon: ({ color }) => <ChatIcon color={color} />,
+          tabBarBadge: unreadChats > 0 ? unreadChats : undefined,
         }}
       />
       <DriverTab.Screen

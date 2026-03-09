@@ -42,6 +42,7 @@ export const onMessageCreate = onDocumentCreated(
     await chatRoomDoc.ref.update({
       lastMessage: message.type === "image" ? "[Image]" : (message.text ?? ""),
       lastMessageAt: admin.firestore.Timestamp.now(),
+      lastSenderId: senderId,
     });
 
     // Get sender's name for the notification

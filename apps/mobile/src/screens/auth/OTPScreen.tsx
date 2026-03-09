@@ -32,7 +32,7 @@ const logo = require('../../assets/logo.png');
 type Props = NativeStackScreenProps<any, any>;
 
 const OTP_LENGTH = 6;
-const RESEND_COOLDOWN_SECONDS = 60;
+const RESEND_COOLDOWN_SECONDS = __DEV__ ? 10 : 60;
 
 /**
  * OTPScreen -- 6-digit OTP verification for phone linking
