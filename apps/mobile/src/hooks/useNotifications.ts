@@ -72,10 +72,8 @@ export function useNotifications(): UseNotificationsResult {
         const granted = await requestPermission();
         if (!granted) return;
 
-        // iOS requires explicit registration for remote messages before getToken
-        if (Platform.OS === 'ios') {
-          await messaging().registerDeviceForRemoteMessages();
-        }
+        // iOS auto-registers via firebase.json — no manual call needed.
+        // getToken() may throw on simulator (no APNs) — catch gracefully.
         const token = await messaging().getToken();
         setFcmToken(token);
 
@@ -86,7 +84,8 @@ export function useNotifications(): UseNotificationsResult {
           });
         }
       } catch (error) {
-        console.error('[useNotifications] Token registration error:', error);
+        // Expected on iOS Simulator (no APNs support)
+        console.warn('[useNotifications] Token registration skipped:', (error as any)?.message || error);
       }
     };
 

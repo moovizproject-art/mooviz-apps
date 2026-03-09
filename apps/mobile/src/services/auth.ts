@@ -2,10 +2,16 @@
  * Auth Service -- email+password registration with phone OTP linking
  */
 
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
+
+/** Detect iOS Simulator — verifyPhoneNumber crashes without APNs */
+const isIOSSimulator = Platform.OS === 'ios' && (
+  NativeModules.PlatformConstants?.interfaceIdiom === 'simulator' ||
+  __DEV__ && !NativeModules.RNFBMessagingModule?.isDeviceRegisteredForRemoteMessages
+);
 
 // ──────────────────────────────────────────────
 // Error sanitizer — prevent Hermes crash on native errors
@@ -113,8 +119,15 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
   try {
-    // iOS auto-registers for remote messages via firebase.json config.
-    // Manual registerDeviceForRemoteMessages() is NOT needed and causes warnings.
+    // iOS Simulator: verifyPhoneNumber crashes Hermes (no APNs support).
+    // Use Firebase Console test phone numbers instead.
+    if (isIOSSimulator) {
+      console.warn('[sendPhoneOTP] iOS Simulator detected — use Firebase test phone numbers');
+      const simError = new Error('אימות SMS לא נתמך בסימולטור. הגדר מספר טלפון לבדיקה בקונסולת Firebase') as any;
+      simError.code = 'auth/simulator-not-supported';
+      throw simError;
+    }
+
     const result = await auth().verifyPhoneNumber(normalized);
     console.log('[sendPhoneOTP] Result type:', typeof result, result);
     if (typeof result === 'string') {
