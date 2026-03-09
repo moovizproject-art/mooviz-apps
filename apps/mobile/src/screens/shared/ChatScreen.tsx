@@ -28,6 +28,7 @@ import { useChatList, ChatThread } from '../../hooks/useChatList';
 import { formatTime } from '../../utils/formatters';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { EmptyState } from '../../components/EmptyState';
+import { getStatusConfig } from '../../constants/statusConfig';
 import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 
@@ -172,23 +173,53 @@ export function ChatScreen(): React.JSX.Element {
   if (!chatId) {
     const renderThread = ({ item }: { item: ChatThread }) => {
       const isOwnLastMessage = item.lastSenderId === currentUser?.uid;
+      const statusCfg = item.deliveryStatus ? getStatusConfig(item.deliveryStatus) : null;
+      const hasRoute = item.pickupCity || item.destinationCity;
+
       return (
         <TouchableOpacity
-          style={[styles.threadRow, { borderBottomColor: colors.border }]}
+          style={[styles.threadCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => navigation.navigate('ChatRoom', { chatId: item.id, recipientName: item.recipientName })}
           activeOpacity={0.7}
         >
-          <AvatarCircle name={item.recipientName} size={48} />
-          <View style={styles.threadContent}>
-            <Text style={[styles.threadName, { color: colors.textPrimary }]} numberOfLines={1}>
-              {item.recipientName}
-            </Text>
-            <Text style={[styles.threadLastMessage, { color: colors.textSecondary }]} numberOfLines={1}>
-              {isOwnLastMessage ? `${t('chat.you')}: ` : ''}{item.lastMessage || t('chat.noMessages')}
+          {/* Top row: avatar + name + time */}
+          <View style={styles.threadTopRow}>
+            <AvatarCircle name={item.recipientName} photoUrl={item.recipientPhotoUrl} size={44} />
+            <View style={styles.threadNameBlock}>
+              <Text style={[styles.threadName, { color: colors.textPrimary }]} numberOfLines={1}>
+                {item.recipientName}
+              </Text>
+              {statusCfg && (
+                <View style={[styles.threadStatusBadge, { backgroundColor: statusCfg.bgColor }]}>
+                  <Text style={[styles.threadStatusText, { color: statusCfg.color }]}>
+                    {statusCfg.icon} {statusCfg.label}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.threadTime, { color: colors.textSecondary }]}>
+              {formatTime(item.lastMessageAt)}
             </Text>
           </View>
-          <Text style={[styles.threadTime, { color: colors.textSecondary }]}>
-            {formatTime(item.lastMessageAt)}
+
+          {/* Route snippet */}
+          {hasRoute && (
+            <View style={styles.threadRouteRow}>
+              <View style={[styles.threadRouteDot, { backgroundColor: '#4CAF50' }]} />
+              <Text style={[styles.threadRouteText, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.pickupCity}
+              </Text>
+              <Text style={[styles.threadRouteArrow, { color: colors.textTertiary }]}>→</Text>
+              <View style={[styles.threadRouteDot, { backgroundColor: '#F44336' }]} />
+              <Text style={[styles.threadRouteText, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.destinationCity}
+              </Text>
+            </View>
+          )}
+
+          {/* Last message */}
+          <Text style={[styles.threadLastMessage, { color: colors.textSecondary }]} numberOfLines={1}>
+            {isOwnLastMessage ? `${t('chat.you')}: ` : ''}{item.lastMessage || t('chat.noMessages')}
           </Text>
         </TouchableOpacity>
       );
@@ -290,29 +321,64 @@ const styles = StyleSheet.create({
   },
   // ─── Thread list styles ───
   threadList: {
-    paddingTop: 4,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    gap: 10,
   },
-  threadRow: {
+  threadCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  threadTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 12,
+    gap: 10,
   },
-  threadContent: {
+  threadNameBlock: {
     flex: 1,
     gap: 4,
   },
   threadName: {
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  threadStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  threadStatusText: {
+    fontSize: 10,
     fontWeight: '600',
   },
+  threadRouteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingStart: 4,
+  },
+  threadRouteDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  threadRouteText: {
+    fontSize: 12,
+    flexShrink: 1,
+  },
+  threadRouteArrow: {
+    fontSize: 12,
+  },
   threadLastMessage: {
-    fontSize: 14,
+    fontSize: 13,
+    paddingStart: 4,
   },
   threadTime: {
-    fontSize: 12,
+    fontSize: 11,
   },
   // ─── Message styles ───
   messagesList: {
