@@ -157,6 +157,13 @@ export async function verifyAndLinkPhone(
   code: string,
 ): Promise<void> {
   try {
+    // iOS Simulator bypass: skip Firebase phone auth (no APNs), just accept any code.
+    // Real device will always have a real verificationId from verifyPhoneNumber().
+    if (verificationId === 'simulator-test-verification-id') {
+      console.warn('[verifyAndLinkPhone] Simulator mode — skipping Firebase phone credential check');
+      return;
+    }
+
     const credential = auth.PhoneAuthProvider.credential(verificationId, code);
     const currentUser = auth().currentUser;
     if (!currentUser) throw new Error('No authenticated user');

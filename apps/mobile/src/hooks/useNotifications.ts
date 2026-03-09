@@ -2,16 +2,21 @@
  * useNotifications — הוק התראות
  * FCM token registration, foreground notification display, and tap handlers.
  * Uses @react-native-firebase/messaging + @notifee for bare RN compatibility.
- * רישום טוקן FCM וטיפול בהתראות
+ *
+ * Smart chat notification behavior:
+ * - If user is viewing the SAME chat → only play "ding" sound, no notification banner
+ * - If user is in a DIFFERENT chat or not in chat → show full notification, tap navigates to chat
+ * - Background/quit tap → deep-link to the correct chat thread
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
 
 import { useAuth } from './useAuth';
 import { playSound } from '../services/sound';
+import { navigateFromNotification, getActiveChatId } from '../services/navigation';
 
 // ──────────────────────────────────────────────
 // Types
@@ -72,8 +77,6 @@ export function useNotifications(): UseNotificationsResult {
         const granted = await requestPermission();
         if (!granted) return;
 
-        // iOS auto-registers via firebase.json — no manual call needed.
-        // getToken() may throw on simulator (no APNs) — catch gracefully.
         const token = await messaging().getToken();
         setFcmToken(token);
 
@@ -110,27 +113,45 @@ export function useNotifications(): UseNotificationsResult {
       async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
         console.log('[Notifications] Foreground message:', remoteMessage);
 
-        if (remoteMessage.notification) {
-          // Play sound based on notification type
-          const notifType = remoteMessage.data?.type as string | undefined;
-          if (notifType === 'new_listing_nearby') playSound('new_delivery');
-          else if (notifType === 'driver_interested') playSound('driver_interested');
-          else if (notifType === 'payment_confirmed') playSound('payment');
-          else playSound('success');
+        if (!remoteMessage.notification) return;
 
-          const channelId = await ensureAndroidChannel();
+        const data = remoteMessage.data as Record<string, string> | undefined;
+        const notifEvent = data?.event;
+        const incomingChatId = data?.chatId;
+        const activeChatId = getActiveChatId();
 
-          await notifee.displayNotification({
-            title: remoteMessage.notification.title || 'MOOVIZ',
-            body: remoteMessage.notification.body || '',
-            data: remoteMessage.data as Record<string, string>,
-            android: { channelId, smallIcon: 'ic_launcher', pressAction: { id: 'default' } },
-          });
+        // Smart chat notification: if user is viewing the same chat, only play ding
+        if (notifEvent === 'new_chat_message' && incomingChatId && incomingChatId === activeChatId) {
+          console.log('[Notifications] Same chat active — ding only, no banner');
+          playSound('success');
+          return;
         }
+
+        // Play sound based on notification type
+        if (notifEvent === 'new_listing_nearby') playSound('new_delivery');
+        else if (notifEvent === 'driver_interested') playSound('driver_interested');
+        else if (notifEvent === 'payment_confirmed') playSound('payment');
+        else playSound('success');
+
+        const channelId = await ensureAndroidChannel();
+
+        await notifee.displayNotification({
+          title: remoteMessage.notification.title || 'MOOVIZ',
+          body: remoteMessage.notification.body || '',
+          data: data as Record<string, string>,
+          android: { channelId, smallIcon: 'ic_launcher', pressAction: { id: 'default' } },
+        });
       },
     );
 
-    // Background/quit notification tap handler
+    // Notifee foreground event — handle notification tap while app is open
+    const unsubscribeNotifee = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.PRESS && detail.notification?.data) {
+        handleNotificationNavigation(detail.notification.data as Record<string, string>);
+      }
+    });
+
+    // Background/quit notification tap handler (FCM)
     messaging().onNotificationOpenedApp((remoteMessage) => {
       console.log('[Notifications] Opened from background:', remoteMessage);
       handleNotificationNavigation(remoteMessage.data as Record<string, string> | undefined);
@@ -146,7 +167,10 @@ export function useNotifications(): UseNotificationsResult {
         }
       });
 
-    return () => unsubscribeForeground();
+    return () => {
+      unsubscribeForeground();
+      unsubscribeNotifee();
+    };
   }, []);
 
   return { fcmToken, hasPermission, requestPermission };
@@ -154,24 +178,40 @@ export function useNotifications(): UseNotificationsResult {
 
 /**
  * Handle navigation from notification tap.
- * ניווט מלחיצה על התראה
+ * Uses the navigation service to deep-link to the correct screen.
  */
 function handleNotificationNavigation(data?: Record<string, string>): void {
   if (!data) return;
 
-  const { type, deliveryId, chatId } = data;
+  const { event, deliveryId, chatId, senderName } = data;
 
-  switch (type) {
-    case 'delivery_update':
-      console.log('[Nav] Navigate to delivery:', deliveryId);
+  switch (event) {
+    case 'new_chat_message':
+      if (chatId) {
+        console.log('[Nav] Navigate to chat:', chatId);
+        navigateFromNotification('ChatRoom', {
+          chatId,
+          recipientName: senderName || '',
+        });
+      }
       break;
-    case 'new_message':
-      console.log('[Nav] Navigate to chat:', chatId);
+    case 'driver_interested':
+    case 'sender_approved':
+    case 'delivery_picked_up':
+    case 'delivery_delivered':
+    case 'delivery_cancelled':
+      if (deliveryId) {
+        console.log('[Nav] Navigate to delivery:', deliveryId);
+        // Try sender detail first, driver detail if that fails
+        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+      }
       break;
-    case 'new_interest':
-      console.log('[Nav] Navigate to delivery interests:', deliveryId);
+    case 'payment_confirmed':
+      if (deliveryId) {
+        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+      }
       break;
     default:
-      console.log('[Nav] Unknown notification type:', type);
+      console.log('[Nav] Unknown notification event:', event);
   }
 }

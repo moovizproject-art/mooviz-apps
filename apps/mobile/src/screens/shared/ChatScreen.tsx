@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,10 @@ import {
   I18nManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { setActiveChatId } from '../../services/navigation';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
@@ -51,6 +52,16 @@ export function ChatScreen(): React.JSX.Element {
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const insets = useSafeAreaInsets();
 
+  // Track active chatId for smart notification suppression
+  useFocusEffect(
+    useCallback(() => {
+      if (chatId) {
+        setActiveChatId(chatId);
+        return () => setActiveChatId(null);
+      }
+    }, [chatId]),
+  );
+
   const handleSend = useCallback(async (): Promise<void> => {
     const text = inputText.trim();
     if (!text) return;
@@ -67,14 +78,39 @@ export function ChatScreen(): React.JSX.Element {
   const handleImagePick = useCallback(async (): Promise<void> => {
     const result = await launchImageLibrary({
       mediaType: 'photo',
-      quality: 0.7,
+      quality: 0.5,       // Lower quality for <300KB target
+      maxWidth: 1280,      // Max HD resolution
+      maxHeight: 1280,
     });
 
     if (!result.didCancel && result.assets?.[0]) {
+      const asset = result.assets[0];
+      const fileSize = asset.fileSize ?? 0;
+      console.log(`[Chat] Image picked: ${asset.width}x${asset.height}, ${(fileSize / 1024).toFixed(0)}KB`);
+
+      // If still over 300KB, re-pick at lower quality (fallback)
+      if (fileSize > 300 * 1024) {
+        console.log('[Chat] Image over 300KB, re-picking at lower quality');
+        const retry = await launchImageLibrary({
+          mediaType: 'photo',
+          quality: 0.3,
+          maxWidth: 960,
+          maxHeight: 960,
+        });
+        if (!retry.didCancel && retry.assets?.[0]) {
+          await sendImage({
+            chatId,
+            senderId: currentUser!.uid,
+            imageUri: retry.assets[0].uri!,
+          });
+          return;
+        }
+      }
+
       await sendImage({
         chatId,
         senderId: currentUser!.uid,
-        imageUri: result.assets[0].uri!,
+        imageUri: asset.uri!,
       });
     }
   }, [chatId, currentUser, sendImage]);
