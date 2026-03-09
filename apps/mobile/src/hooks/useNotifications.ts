@@ -19,9 +19,44 @@ import notifee, { AndroidImportance, AndroidAction, EventType } from '@notifee/r
 import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './useAuth';
 import { playSound } from '../services/sound';
 import { navigateFromNotification, getActiveChatId } from '../services/navigation';
+
+const PREFS_KEY = '@driver_preferences';
+
+/** Check if current time falls within any quiet hour range */
+async function isInQuietHours(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(PREFS_KEY);
+    if (!raw) return false;
+    const prefs = JSON.parse(raw);
+    const quietHours: Array<{ from: string; to: string }> = prefs.quietHours || [];
+    if (quietHours.length === 0) return false;
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    for (const qh of quietHours) {
+      const [fh, fm] = (qh.from || '22:00').split(':').map(Number);
+      const [th, tm] = (qh.to || '08:00').split(':').map(Number);
+      const fromMin = (fh || 0) * 60 + (fm || 0);
+      const toMin = (th || 0) * 60 + (tm || 0);
+
+      if (fromMin <= toMin) {
+        // Same day range (e.g., 14:00-18:00)
+        if (currentMinutes >= fromMin && currentMinutes < toMin) return true;
+      } else {
+        // Overnight range (e.g., 22:00-08:00)
+        if (currentMinutes >= fromMin || currentMinutes < toMin) return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // ──────────────────────────────────────────────
 // Types
@@ -227,11 +262,16 @@ export function useNotifications(): UseNotificationsResult {
           return;
         }
 
-        // Play sound based on notification type
-        if (notifEvent === 'new_listing_nearby') playSound('new_delivery');
-        else if (notifEvent === 'driver_interested') playSound('driver_interested');
-        else if (notifEvent === 'payment_confirmed') playSound('payment');
-        else playSound('success');
+        // Check quiet hours — silence notifications during quiet time
+        const quietMode = await isInQuietHours();
+
+        // Play sound based on notification type (skip if quiet hours)
+        if (!quietMode) {
+          if (notifEvent === 'new_listing_nearby') playSound('new_delivery');
+          else if (notifEvent === 'driver_interested') playSound('driver_interested');
+          else if (notifEvent === 'payment_confirmed') playSound('payment');
+          else playSound('success');
+        }
 
         const channelId = await ensureAndroidChannels();
         const isChatNotif = notifEvent === 'new_chat_message';
@@ -246,10 +286,12 @@ export function useNotifications(): UseNotificationsResult {
             channelId: isChatNotif ? 'mooviz_chat' : channelId,
             smallIcon: 'ic_launcher',
             pressAction: { id: 'default' },
-            importance: AndroidImportance.HIGH,
+            importance: quietMode ? AndroidImportance.LOW : AndroidImportance.HIGH,
+            ...(quietMode && { sound: undefined }),
             ...(androidActions && { actions: androidActions }),
           },
           ...(iosCategoryId && { ios: { categoryId: iosCategoryId } }),
+          ...(quietMode && { ios: { sound: undefined, ...(iosCategoryId && { categoryId: iosCategoryId }) } }),
         };
 
         // Add driver photo as largeIcon for driver_interested

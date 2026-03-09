@@ -36,6 +36,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/design';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
+import { DriverOnboarding, shouldShowOnboarding } from '../../components/DriverOnboarding';
 
 const logo = require('../../assets/logo.png');
 
@@ -55,7 +56,7 @@ const VEHICLE_ICONS = { bicycle: '\u{1F6B2}', bike: '\u{1F3CD}', car: '\u{1F697}
 const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: 'אופניים', bike: 'קטנוע', car: 'רכב', truck: 'משאית' };
 const SIZE_OPTIONS = ['small', 'medium', 'large'] as const;
 const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦📦' };
-const SIZE_LABELS_HE: Record<string, string> = { small: 'מעטפה', medium: 'קופסה', large: 'גדול' };
+const SIZE_LABELS_HE: Record<string, string> = { small: 'מעטפה', medium: 'חבילה', large: 'קופסה' };
 
 const PREFS_KEY = '@driver_preferences';
 
@@ -67,6 +68,11 @@ const EARNINGS_TABS = [
   { key: 'thisYear', label: 'השנה' },
 ] as const;
 
+interface QuietHour {
+  from: string; // "HH:MM"
+  to: string;   // "HH:MM"
+}
+
 interface DriverPreferences {
   nickname: string;
   radiusKm: number;
@@ -76,6 +82,7 @@ interface DriverPreferences {
   homeAddress: string;
   workAddress: string;
   schedule: Record<string, boolean>;
+  quietHours: QuietHour[];
 }
 
 const DEFAULT_PREFS: DriverPreferences = {
@@ -90,6 +97,7 @@ const DEFAULT_PREFS: DriverPreferences = {
     sunday: true, monday: true, tuesday: true, wednesday: true,
     thursday: true, friday: false, saturday: false,
   },
+  quietHours: [],
 };
 
 /**
@@ -123,10 +131,12 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   // ── Preferences state ──
   const [prefs, setPrefs] = useState<DriverPreferences>(DEFAULT_PREFS);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const isFirstDelivery = (currentUser?.completedDeliveries ?? 0) === 0;
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [earningsOpen, setEarningsOpen] = useState(false);
   const [nicknameDirty, setNicknameDirty] = useState(false);
   const [earningsTab, setEarningsTab] = useState<string>('thisWeek');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(PREFS_KEY).then((val) => {
@@ -137,6 +147,13 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         } catch {}
       }
       setPrefsLoaded(true);
+    });
+    // Show onboarding on first visit
+    shouldShowOnboarding().then((show) => {
+      if (show) {
+        setShowOnboarding(true);
+        setAdvancedOpen(true); // Expand for first-timers
+      }
     });
   }, []);
 
@@ -278,7 +295,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           <View style={styles.toggleLabelRow}>
             <View style={[styles.statusDot, { backgroundColor: prefs.isAvailable ? colors.success : colors.textTertiary }]} />
             <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-              {prefs.isAvailable ? t('driver.available') : t('driver.occupied')}
+              {prefs.isAvailable ? t('driver.available') : 'לא זמין'}
             </Text>
           </View>
           <Switch
@@ -315,25 +332,25 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         )}
       </GlassCard>
 
-      {/* ── Radar (25% smaller) ── */}
-      <View style={styles.radarContainer}>
-        <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
-          {RING_SIZES.map((size, i) => (
-            <View
-              key={i}
-              style={[
-                styles.radarRing,
-                {
-                  width: size,
-                  height: size,
-                  borderRadius: size / 2,
-                  borderColor: prefs.isAvailable ? radarColor : colors.border,
-                  opacity: 0.3 + i * 0.1,
-                },
-              ]}
-            />
-          ))}
-          {prefs.isAvailable && (
+      {/* ── Radar — only shown when available ── */}
+      {prefs.isAvailable && (
+        <View style={styles.radarContainer}>
+          <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
+            {RING_SIZES.map((size, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.radarRing,
+                  {
+                    width: size,
+                    height: size,
+                    borderRadius: size / 2,
+                    borderColor: radarColor,
+                    opacity: 0.3 + i * 0.1,
+                  },
+                ]}
+              />
+            ))}
             <Animated.View
               style={[
                 styles.sweepBeam,
@@ -343,13 +360,13 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
               <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
               <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
             </Animated.View>
-          )}
-          <View style={[styles.radarCenter, { backgroundColor: prefs.isAvailable ? radarColor : colors.border }]} />
+            <View style={[styles.radarCenter, { backgroundColor: radarColor }]} />
+          </View>
+          <Text style={[styles.radarLabel, { color: radarColor }]}>
+            {t('driver.scanning')}
+          </Text>
         </View>
-        <Text style={[styles.radarLabel, { color: prefs.isAvailable ? radarColor : colors.textSecondary }]}>
-          {prefs.isAvailable ? t('driver.scanning') : t('driver.occupied')}
-        </Text>
-      </View>
+      )}
 
       {/* ── Current Delivery Strip ── */}
       {currentDelivery && (
@@ -394,11 +411,16 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           setEarningsOpen((prev) => !prev);
         }} style={styles.sectionRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            {earningsOpen ? '▼' : '▶'} 💰 הכנסות
+            💰 הכנסות
           </Text>
-          <Text style={[styles.earningsQuickTotal, { color: colors.success }]}>
-            ₪{currentEarnings.total.toLocaleString()}
-          </Text>
+          <View style={styles.collapseEndRow}>
+            <Text style={[styles.earningsQuickTotal, { color: colors.success }]}>
+              ₪{currentEarnings.total.toLocaleString()}
+            </Text>
+            <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+              {earningsOpen ? '▼' : '◀'}
+            </Text>
+          </View>
         </Pressable>
 
         {earningsOpen && (
@@ -453,164 +475,237 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         )}
       </GlassCard>
 
-      {/* ── Delivery Sizes (distinct icons) ── */}
-      <GlassCard style={styles.section} padding="lg">
-        <Text style={[styles.sectionLabel, { color: colors.textPrimary, marginBottom: SPACING.sm }]}>
-          📦 גודל משלוחים
-        </Text>
-        <View style={styles.squareButtonRow}>
-          {SIZE_OPTIONS.map((size) => {
-            const active = prefs.deliverySizes[size] ?? true;
-            return (
-              <Pressable
-                key={size}
-                onPress={() =>
-                  updatePref('deliverySizes', {
-                    ...prefs.deliverySizes,
-                    [size]: !prefs.deliverySizes[size],
-                  })
-                }
-                style={[
-                  styles.squareButton,
-                  {
-                    backgroundColor: active ? colors.primary : colors.surface,
-                    borderColor: active ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text style={[styles.squareButtonIcon, size === 'large' ? { fontSize: 16 } : undefined]}>{SIZE_ICONS[size]}</Text>
-                <Text style={[
-                  styles.squareButtonLabel,
-                  { color: active ? colors.textInverse : colors.textPrimary },
-                ]}>
-                  {SIZE_LABELS_HE[size] || t(`driver.${size}`)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </GlassCard>
-
       {/* ── Advanced Settings (collapsible) ── */}
       <GlassCard style={styles.section} padding="lg">
         <Pressable onPress={toggleAdvanced} style={styles.sectionRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            {advancedOpen ? '▼' : '▶'} הגדרות מתקדמות
+            ⚙️ הגדרות מתקדמות
+          </Text>
+          <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+            {advancedOpen ? '▼' : '◀'}
           </Text>
         </Pressable>
 
         {advancedOpen && (
           <View style={styles.advancedContent}>
-            {/* Vehicle Type */}
-            <Text style={[styles.advancedSubLabel, { color: colors.textPrimary }]}>
-              🚛 סוג רכב
-            </Text>
-            <View style={styles.squareButtonRow}>
-              {VEHICLE_TYPES.map((type) => {
-                const active = prefs.vehicleType === type;
-                return (
+            {/* ── Delivery Sizes Card ── */}
+            <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
+                📦 גודל משלוחים
+              </Text>
+              <View style={styles.squareButtonRow}>
+                {SIZE_OPTIONS.map((size) => {
+                  const active = prefs.deliverySizes[size] ?? true;
+                  return (
+                    <Pressable
+                      key={size}
+                      onPress={() =>
+                        updatePref('deliverySizes', {
+                          ...prefs.deliverySizes,
+                          [size]: !prefs.deliverySizes[size],
+                        })
+                      }
+                      style={[
+                        styles.squareButton,
+                        {
+                          backgroundColor: active ? colors.primary : colors.background,
+                          borderColor: active ? colors.primary : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.squareButtonIcon, size === 'large' ? { fontSize: 16 } : undefined]}>{SIZE_ICONS[size]}</Text>
+                      <Text style={[
+                        styles.squareButtonLabel,
+                        { color: active ? colors.textInverse : colors.textPrimary },
+                      ]}>
+                        {SIZE_LABELS_HE[size] || t(`driver.${size}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ── Vehicle Type Card ── */}
+            <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
+                🚛 סוג רכב
+              </Text>
+              <View style={styles.squareButtonRow}>
+                {VEHICLE_TYPES.map((type) => {
+                  const active = prefs.vehicleType === type;
+                  return (
+                    <Pressable
+                      key={type}
+                      onPress={() => updatePref('vehicleType', type)}
+                      style={[
+                        styles.squareButton,
+                        {
+                          backgroundColor: active ? colors.primary : colors.background,
+                          borderColor: active ? colors.primary : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.squareButtonIcon}>{VEHICLE_ICONS[type]}</Text>
+                      <Text style={[
+                        styles.squareButtonLabel,
+                        { color: active ? colors.textInverse : colors.textPrimary },
+                      ]}>
+                        {VEHICLE_LABELS_HE[type] || t(`driver.${type}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ── Schedule Card ── */}
+            <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
+                📅 {t('driver.availability')}
+              </Text>
+              <View style={styles.scheduleGrid}>
+                {DAYS.map((day) => (
                   <Pressable
-                    key={type}
-                    onPress={() => updatePref('vehicleType', type)}
+                    key={day}
+                    onPress={() =>
+                      updatePref('schedule', {
+                        ...prefs.schedule,
+                        [day]: !prefs.schedule[day],
+                      })
+                    }
                     style={[
-                      styles.squareButton,
+                      styles.dayChip,
                       {
-                        backgroundColor: active ? colors.primary : colors.surface,
-                        borderColor: active ? colors.primary : colors.border,
+                        backgroundColor: prefs.schedule[day] ? colors.primary : colors.background,
+                        borderColor: prefs.schedule[day] ? colors.primary : colors.border,
                       },
                     ]}
                   >
-                    <Text style={styles.squareButtonIcon}>{VEHICLE_ICONS[type]}</Text>
-                    <Text style={[
-                      styles.squareButtonLabel,
-                      { color: active ? colors.textInverse : colors.textPrimary },
-                    ]}>
-                      {VEHICLE_LABELS_HE[type] || t(`driver.${type}`)}
+                    <Text style={[styles.dayText, { color: prefs.schedule[day] ? colors.textInverse : colors.textPrimary }]}>
+                      {t(`driver.${day}`)}
                     </Text>
                   </Pressable>
-                );
-              })}
+                ))}
+              </View>
             </View>
 
-            {/* Weekly availability schedule */}
-            <Text style={[styles.advancedSubLabel, { color: colors.textPrimary, marginTop: SPACING.md }]}>
-              {t('driver.availability')}
-            </Text>
-            <View style={styles.scheduleGrid}>
-              {DAYS.map((day) => (
-                <Pressable
-                  key={day}
-                  onPress={() =>
-                    updatePref('schedule', {
-                      ...prefs.schedule,
-                      [day]: !prefs.schedule[day],
-                    })
-                  }
-                  style={[
-                    styles.dayChip,
-                    {
-                      backgroundColor: prefs.schedule[day] ? colors.primary : colors.surface,
-                      borderColor: prefs.schedule[day] ? colors.primary : colors.border,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.dayText, { color: prefs.schedule[day] ? colors.textInverse : colors.textPrimary }]}>
-                    {t(`driver.${day}`)}
-                  </Text>
-                </Pressable>
+            {/* ── Quiet Hours Card ── */}
+            <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
+                🔇 שעות שקט
+              </Text>
+              <Text style={[styles.innerCardHint, { color: colors.textTertiary }]}>
+                התראות יגיעו בשקט בשעות אלו
+              </Text>
+              {(prefs.quietHours || []).map((qh, index) => (
+                <View key={index} style={styles.quietHourRow}>
+                  <TextInput
+                    style={[styles.quietHourInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                    value={qh.from}
+                    placeholder="08:00"
+                    placeholderTextColor={colors.inputPlaceholder}
+                    keyboardType="numbers-and-punctuation"
+                    onChangeText={(v) => {
+                      const updated = [...(prefs.quietHours || [])];
+                      updated[index] = { ...updated[index], from: v };
+                      updatePref('quietHours', updated);
+                    }}
+                    textAlign="center"
+                  />
+                  <Text style={[styles.quietHourDash, { color: colors.textSecondary }]}>—</Text>
+                  <TextInput
+                    style={[styles.quietHourInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                    value={qh.to}
+                    placeholder="22:00"
+                    placeholderTextColor={colors.inputPlaceholder}
+                    keyboardType="numbers-and-punctuation"
+                    onChangeText={(v) => {
+                      const updated = [...(prefs.quietHours || [])];
+                      updated[index] = { ...updated[index], to: v };
+                      updatePref('quietHours', updated);
+                    }}
+                    textAlign="center"
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      const updated = (prefs.quietHours || []).filter((_, i) => i !== index);
+                      updatePref('quietHours', updated);
+                    }}
+                    style={styles.quietHourRemove}
+                  >
+                    <Text style={{ color: '#E53935', fontSize: 18, fontWeight: '700' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               ))}
+              <TouchableOpacity
+                onPress={() => {
+                  const updated = [...(prefs.quietHours || []), { from: '22:00', to: '08:00' }];
+                  updatePref('quietHours', updated);
+                }}
+                style={[styles.addQuietHourBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.addQuietHourText, { color: colors.primary }]}>+ הוסף שעות שקט</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Addresses */}
-            <Text style={[styles.advancedSubLabel, { color: colors.textPrimary, marginTop: SPACING.md }]}>
-              {t('driver.homeAddress')}
-            </Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
-              placeholder={t('driver.addressPlaceholder')}
-              placeholderTextColor={colors.inputPlaceholder}
-              value={prefs.homeAddress}
-              onChangeText={(v) => updatePref('homeAddress', v)}
-              writingDirection="rtl"
-            />
-
-            <Text style={[styles.advancedSubLabel, { color: colors.textPrimary, marginTop: SPACING.md }]}>
-              {t('driver.workAddress')}
-            </Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
-              placeholder={t('driver.addressPlaceholder')}
-              placeholderTextColor={colors.inputPlaceholder}
-              value={prefs.workAddress}
-              onChangeText={(v) => updatePref('workAddress', v)}
-              writingDirection="rtl"
-            />
-            <Text style={[styles.addressHint, { color: colors.textTertiary }]}>{t('driver.addressHint')}</Text>
-
-            {/* Nickname */}
-            <Text style={[styles.advancedSubLabel, { color: colors.textPrimary, marginTop: SPACING.md }]}>
-              {t('driver.nickname')}
-            </Text>
-            <View style={styles.nicknameRow}>
+            {/* ── Addresses Card ── */}
+            <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
+                📍 כתובות מועדפות
+              </Text>
+              <Text style={[styles.advancedSubLabel, { color: colors.textSecondary }]}>
+                {t('driver.homeAddress')}
+              </Text>
               <TextInput
-                style={[styles.textInput, styles.nicknameInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
-                placeholder={t('driver.nicknamePlaceholder')}
+                style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                placeholder={t('driver.addressPlaceholder')}
                 placeholderTextColor={colors.inputPlaceholder}
-                value={prefs.nickname}
-                onChangeText={(v) => {
-                  updatePref('nickname', v);
-                  setNicknameDirty(true);
-                }}
+                value={prefs.homeAddress}
+                onChangeText={(v) => updatePref('homeAddress', v)}
                 writingDirection="rtl"
               />
-              {nicknameDirty && (
-                <TouchableOpacity
-                  style={[styles.nicknameSaveBtn, { backgroundColor: colors.primary }]}
-                  onPress={handleSaveNickname}
-                >
-                  <Text style={styles.nicknameSaveBtnText}>שמור</Text>
-                </TouchableOpacity>
-              )}
+
+              <Text style={[styles.advancedSubLabel, { color: colors.textSecondary, marginTop: SPACING.md }]}>
+                {t('driver.workAddress')}
+              </Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                placeholder={t('driver.addressPlaceholder')}
+                placeholderTextColor={colors.inputPlaceholder}
+                value={prefs.workAddress}
+                onChangeText={(v) => updatePref('workAddress', v)}
+                writingDirection="rtl"
+              />
+              <Text style={[styles.addressHint, { color: colors.textTertiary }]}>{t('driver.addressHint')}</Text>
+            </View>
+
+            {/* ── Nickname Card ── */}
+            <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
+                🏷️ {t('driver.nickname')}
+              </Text>
+              <View style={styles.nicknameRow}>
+                <TextInput
+                  style={[styles.textInput, styles.nicknameInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                  placeholder={t('driver.nicknamePlaceholder')}
+                  placeholderTextColor={colors.inputPlaceholder}
+                  value={prefs.nickname}
+                  onChangeText={(v) => {
+                    updatePref('nickname', v);
+                    setNicknameDirty(true);
+                  }}
+                  writingDirection="rtl"
+                />
+                {nicknameDirty && (
+                  <TouchableOpacity
+                    style={[styles.nicknameSaveBtn, { backgroundColor: colors.primary }]}
+                    onPress={handleSaveNickname}
+                  >
+                    <Text style={styles.nicknameSaveBtnText}>שמור</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
         )}
@@ -674,6 +769,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         )}
       </ScrollView>
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
+      <DriverOnboarding visible={showOnboarding} onDone={() => setShowOnboarding(false)} />
     </View>
   );
 }
@@ -805,6 +901,15 @@ const styles = StyleSheet.create({
   earningsQuickTotal: {
     fontSize: 16,
     fontWeight: '800',
+  },
+  collapseEndRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  collapseArrow: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   toggleLabelRow: {
     flexDirection: 'row',
@@ -949,6 +1054,30 @@ const styles = StyleSheet.create({
   // ── Advanced Settings ──
   advancedContent: {
     marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  innerCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    padding: SPACING.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  innerCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: SPACING.sm,
+  },
+  innerCardHint: {
+    fontSize: 12,
+    marginBottom: SPACING.sm,
   },
   advancedSubLabel: {
     ...TYPOGRAPHY.bodyBold,
@@ -975,6 +1104,47 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+
+  // ── Quiet Hours ──
+  quietHourRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  quietHourInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    fontSize: 15,
+    fontWeight: '600',
+    height: 42,
+  },
+  quietHourDash: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  quietHourRemove: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addQuietHourBtn: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+    marginTop: SPACING.xs,
+  },
+  addQuietHourText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // ── Text Input ──

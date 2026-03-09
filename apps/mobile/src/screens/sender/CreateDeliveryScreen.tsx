@@ -74,6 +74,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const [showDestinationMap, setShowDestinationMap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSizeInfo, setShowSizeInfo] = useState(false);
 
   const updateField = <K extends keyof DeliveryForm>(key: K, value: DeliveryForm[K]): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -161,10 +162,10 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     }
   };
 
-  const sizeOptions: { value: DeliveryForm['itemSize']; label: string }[] = [
-    { value: 'small', label: t('form.sizeSmall') },
-    { value: 'medium', label: t('form.sizeMedium') },
-    { value: 'large', label: t('form.sizeLarge') },
+  const sizeOptions: { value: DeliveryForm['itemSize']; label: string; icon: string; hint: string }[] = [
+    { value: 'small', label: 'מעטפה', icon: '✉️', hint: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות' },
+    { value: 'medium', label: 'חבילה', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
+    { value: 'large', label: 'קופסה', icon: '📦📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
   ];
 
   const infoButton = (
@@ -243,9 +244,14 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
 
         {/* Item size */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.textPrimary }]}>
-            {t('form.itemSize')}
-          </Text>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>
+              {t('form.itemSize')}
+            </Text>
+            <TouchableOpacity onPress={() => setShowSizeInfo(true)}>
+              <Text style={[styles.sizeInfoBtn, { color: colors.primary }]}>ℹ️ מידות</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.sizeRow}>
             {sizeOptions.map((opt) => (
               <TouchableOpacity
@@ -257,6 +263,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
                 ]}
                 onPress={() => updateField('itemSize', opt.value)}
               >
+                <Text style={styles.sizeChipIcon}>{opt.icon}</Text>
                 <Text
                   style={[
                     styles.sizeChipText,
@@ -368,6 +375,34 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         </View>
       </ScrollView>
 
+      {/* Size info modal */}
+      <Modal visible={showSizeInfo} transparent animationType="fade" onRequestClose={() => setShowSizeInfo(false)}>
+        <View style={styles.helpOverlay}>
+          <View style={[styles.helpCard, { backgroundColor: colors.background }]}>
+            <View style={[styles.helpHeader, { backgroundColor: colors.primary }]}>
+              <Text style={styles.helpHeaderTitle}>📏 מידות משלוח</Text>
+            </View>
+            <View style={styles.helpScrollContent}>
+              {sizeOptions.map((opt) => (
+                <View key={opt.value} style={[styles.sizeInfoRow, { borderBottomColor: colors.border }]}>
+                  <Text style={styles.sizeInfoIcon}>{opt.icon}</Text>
+                  <View style={styles.sizeInfoContent}>
+                    <Text style={[styles.sizeInfoTitle, { color: colors.textPrimary }]}>{opt.label}</Text>
+                    <Text style={[styles.sizeInfoHint, { color: colors.textSecondary }]}>{opt.hint}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.helpButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowSizeInfo(false)}
+            >
+              <Text style={styles.helpButtonText}>{t('form.gotIt')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Help modal */}
       <Modal visible={showHelp} transparent animationType="fade" onRequestClose={() => setShowHelp(false)}>
         <View style={styles.helpOverlay}>
@@ -437,11 +472,43 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     alignItems: 'center',
+    gap: 4,
     ...SHADOWS.sm,
   },
+  sizeChipIcon: {
+    fontSize: 20,
+  },
   sizeChipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
+  },
+  sizeInfoBtn: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sizeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  sizeInfoIcon: {
+    fontSize: 28,
+    width: 40,
+    textAlign: 'center',
+  },
+  sizeInfoContent: {
+    flex: 1,
+  },
+  sizeInfoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sizeInfoHint: {
+    fontSize: 13,
+    lineHeight: 20,
   },
   mediaSection: {
     marginBottom: SPACING.lg,

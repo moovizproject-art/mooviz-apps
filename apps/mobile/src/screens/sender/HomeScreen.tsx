@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,11 @@ import {
   Image,
   StatusBar,
   TouchableOpacity,
+  Pressable,
+  ScrollView,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClientTabScreenProps } from '../../navigation/types';
@@ -23,6 +28,20 @@ import { EmptyState } from '../../components/EmptyState';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
+import { useSenderExpenses } from '../../hooks/useSenderExpenses';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const EXPENSES_TABS = [
+  { key: 'thisWeek', label: 'השבוע' },
+  { key: 'lastWeek', label: 'שבוע שעבר' },
+  { key: 'thisMonth', label: 'החודש' },
+  { key: 'lastMonth', label: 'חודש שעבר' },
+  { key: 'thisYear', label: 'השנה' },
+] as const;
 
 const logo = require('../../assets/logo.png');
 
@@ -49,11 +68,16 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
     statusFilter: ['pending', 'matched', 'picked_up', 'in_transit'],
   });
 
+  const { expenses } = useSenderExpenses(currentUser?.uid);
+  const [expensesOpen, setExpensesOpen] = useState(false);
+  const [expensesTab, setExpensesTab] = useState<string>('thisWeek');
+
   const recentDeliveries = deliveries.slice(0, 5);
   const fullName = currentUser?.fullName || '';
   const firstName = fullName.split(' ')[0] || fullName;
   const rating = currentUser?.ratingAsSender?.average;
   const deliveryCount = currentUser?.completedDeliveries ?? 0;
+  const currentExpenses = expenses[expensesTab as keyof typeof expenses] || expenses.thisWeek;
 
   const handleCreateDelivery = useCallback(() => {
     navigation.navigate('CreateDelivery');
@@ -126,6 +150,77 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
 
   const renderFooter = (): React.JSX.Element => (
     <View>
+      {/* ── Expenses Dashboard (collapsible) ── */}
+      <GlassCard style={styles.expensesCard} padding="md">
+        <Pressable onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setExpensesOpen((prev) => !prev);
+        }} style={styles.expensesHeader}>
+          <Text style={[styles.expensesTitle, { color: colors.textPrimary }]}>
+            💸 הוצאות
+          </Text>
+          <View style={styles.expensesEndRow}>
+            <Text style={[styles.expensesQuickTotal, { color: '#E53935' }]}>
+              ₪{currentExpenses.total.toLocaleString()}
+            </Text>
+            <Text style={[styles.expensesArrow, { color: colors.textTertiary }]}>
+              {expensesOpen ? '▼' : '◀'}
+            </Text>
+          </View>
+        </Pressable>
+
+        {expensesOpen && (
+          <View style={{ marginTop: SPACING.sm }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.sm }}>
+              <View style={styles.expensesTabsRow}>
+                {EXPENSES_TABS.map((tab) => (
+                  <Pressable
+                    key={tab.key}
+                    onPress={() => setExpensesTab(tab.key)}
+                    style={[
+                      styles.expensesTab,
+                      {
+                        backgroundColor: expensesTab === tab.key ? colors.primary : colors.surface,
+                        borderColor: expensesTab === tab.key ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.expensesTabText,
+                      { color: expensesTab === tab.key ? colors.textInverse : colors.textPrimary },
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.expensesStatsRow}>
+              <View style={styles.expensesStat}>
+                <Text style={[styles.expensesStatValue, { color: '#E53935' }]}>
+                  ₪{currentExpenses.total.toLocaleString()}
+                </Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>סה״כ</Text>
+              </View>
+              <View style={[styles.expensesDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.expensesStat}>
+                <Text style={[styles.expensesStatValue, { color: colors.primary }]}>
+                  {currentExpenses.count}
+                </Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+              </View>
+              <View style={[styles.expensesDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.expensesStat}>
+                <Text style={[styles.expensesStatValue, { color: colors.textPrimary }]}>
+                  {currentExpenses.totalDistanceKm} ק"מ
+                </Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>מרחק</Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </GlassCard>
+
       {/* Stats Row */}
       <View style={styles.statsRow}>
         <GlassCard style={{ ...styles.statCard, backgroundColor: colors.surface }} padding="md">
@@ -281,6 +376,70 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     textAlign: 'center',
     marginBottom: 0,
+  },
+  // ── Expenses Dashboard ──
+  expensesCard: {
+    marginHorizontal: SPACING.xxl,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  expensesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  expensesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  expensesEndRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  expensesQuickTotal: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  expensesArrow: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  expensesTabsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  expensesTab: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+  },
+  expensesTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  expensesStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: SPACING.sm,
+  },
+  expensesStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  expensesStatValue: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  expensesStatLabel: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  expensesDivider: {
+    width: 1,
+    height: 32,
   },
   // ── Stats ──
   statsRow: {
