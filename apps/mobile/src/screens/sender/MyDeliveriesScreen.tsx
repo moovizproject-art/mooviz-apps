@@ -145,11 +145,11 @@ const styles = StyleSheet.create({
   },
   tabBarCard: {
     marginHorizontal: 24,
-    marginTop: 30,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    padding: 8,
+    padding: 6,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
