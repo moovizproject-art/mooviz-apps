@@ -345,10 +345,11 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={({ route }) => ({
+            options={{
               headerShown: true,
-              title: (route.params as any)?.recipientName || t('tabs.chat'),
-            })}
+              title: '',
+              headerStyle: { backgroundColor: colors.surface },
+            }}
           />
           <Stack.Screen
             name="Rating"
@@ -382,10 +383,11 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen
             name="ChatRoom"
             component={ChatScreen}
-            options={({ route }) => ({
+            options={{
               headerShown: true,
-              title: (route.params as any)?.recipientName || t('tabs.chat'),
-            })}
+              title: '',
+              headerStyle: { backgroundColor: colors.surface },
+            }}
           />
           <Stack.Screen
             name="Rating"

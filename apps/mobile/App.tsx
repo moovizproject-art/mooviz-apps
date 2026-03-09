@@ -24,6 +24,7 @@ if (!I18nManager.isRTL) {
 LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
   'Setting a timer for a long period',
+  'This method is deprecated',  // RN Firebase namespaced API warnings (v22 migration)
 ]);
 
 const linking: LinkingOptions<RootStackParamList> = {

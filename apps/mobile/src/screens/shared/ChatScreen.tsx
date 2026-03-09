@@ -17,6 +17,7 @@ import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/nativ
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { setActiveChatId } from '../../services/navigation';
+import { ChatDeliveryBanner } from '../../components/ChatDeliveryBanner';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
@@ -61,6 +62,13 @@ export function ChatScreen(): React.JSX.Element {
       }
     }, [chatId]),
   );
+
+  // Navigate to delivery detail from banner
+  const handleNavigateToDelivery = useCallback((deliveryId: string) => {
+    // Use sender detail for sender, driver detail for driver
+    const screen = currentUser?.activeMode === 'driver' ? 'DriverDeliveryDetail' : 'SenderDeliveryDetail';
+    navigation.navigate(screen as any, { deliveryId });
+  }, [navigation, currentUser?.activeMode]);
 
   const handleSend = useCallback(async (): Promise<void> => {
     const text = inputText.trim();
@@ -219,6 +227,13 @@ export function ChatScreen(): React.JSX.Element {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={90}
     >
+      {/* Delivery info banner */}
+      <ChatDeliveryBanner
+        chatId={chatId}
+        recipientName={recipientName}
+        onNavigateToDelivery={handleNavigateToDelivery}
+      />
+
       {/* Messages list */}
       <FlatList
         ref={flatListRef}
