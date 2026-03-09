@@ -289,7 +289,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       </View>
 
       {/* ── Availability Toggle + Range (grouped) ── */}
-      <View style={[styles.sectionCard, styles.section, { marginTop: SPACING.lg, backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: prefs.isAvailable ? colors.success : colors.textTertiary, borderStartWidth: 4 }]}>
+      <View style={[styles.sectionCard, styles.section, { marginTop: SPACING.lg, backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: prefs.isAvailable ? colors.success : colors.textTertiary, borderStartWidth: 4, padding: SPACING.lg }]}>
         <View style={styles.sectionRow}>
           <View style={styles.toggleLabelRow}>
             <View style={[styles.statusDot, { backgroundColor: prefs.isAvailable ? colors.success : colors.textTertiary }]} />
@@ -329,43 +329,43 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             </View>
           </View>
         )}
-      </View>
 
-      {/* ── Radar — only shown when available ── */}
-      {prefs.isAvailable && (
-        <View style={styles.radarContainer}>
-          <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
-            {RING_SIZES.map((size, i) => (
-              <View
-                key={i}
+        {/* ── Radar — inside availability card ── */}
+        {prefs.isAvailable && (
+          <View style={styles.radarContainer}>
+            <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
+              {RING_SIZES.map((size, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.radarRing,
+                    {
+                      width: size,
+                      height: size,
+                      borderRadius: size / 2,
+                      borderColor: radarColor,
+                      opacity: 0.3 + i * 0.1,
+                    },
+                  ]}
+                />
+              ))}
+              <Animated.View
                 style={[
-                  styles.radarRing,
-                  {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    borderColor: radarColor,
-                    opacity: 0.3 + i * 0.1,
-                  },
+                  styles.sweepBeam,
+                  { transform: [{ rotate: sweepRotate }] },
                 ]}
-              />
-            ))}
-            <Animated.View
-              style={[
-                styles.sweepBeam,
-                { transform: [{ rotate: sweepRotate }] },
-              ]}
-            >
-              <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
-              <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
-            </Animated.View>
-            <View style={[styles.radarCenter, { backgroundColor: radarColor }]} />
+              >
+                <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
+                <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
+              </Animated.View>
+              <View style={[styles.radarCenter, { backgroundColor: radarColor }]} />
+            </View>
+            <Text style={[styles.radarLabel, { color: radarColor }]}>
+              {t('driver.scanning')}
+            </Text>
           </View>
-          <Text style={[styles.radarLabel, { color: radarColor }]}>
-            {t('driver.scanning')}
-          </Text>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* ── Current Delivery Strip ── */}
       {currentDelivery && (
@@ -837,7 +837,8 @@ const styles = StyleSheet.create({
   // ── Radar ──
   radarContainer: {
     alignItems: 'center',
-    paddingVertical: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
   radarOuter: {
     alignItems: 'center',

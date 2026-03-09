@@ -20,7 +20,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
-import { GlassCard } from '../../components/GlassCard';
 import { AnimatedButton } from '../../components/AnimatedButton';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { SkeletonCard } from '../../components/SkeletonLoader';
@@ -151,7 +150,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const renderFooter = (): React.JSX.Element => (
     <View>
       {/* ── Expenses Dashboard (collapsible) ── */}
-      <GlassCard style={styles.expensesCard} padding="md">
+      <View style={[styles.sectionCard, styles.expensesCard, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: '#E53935', borderStartWidth: 4 }]}>
         <Pressable onPress={() => {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setExpensesOpen((prev) => !prev);
@@ -219,20 +218,20 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
             </View>
           </View>
         )}
-      </GlassCard>
+      </View>
 
       {/* Stats Row */}
       <View style={styles.statsRow}>
-        <GlassCard style={{ ...styles.statCard, backgroundColor: colors.surface }} padding="md">
+        <View style={[styles.sectionCard, styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 3 }]}>
           <Text style={styles.statEmoji}>📦</Text>
           <Text style={[styles.statValue, { color: colors.primary }]}>{deliveryCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home.deliveries')}</Text>
-        </GlassCard>
-        <GlassCard style={{ ...styles.statCard, backgroundColor: colors.surface }} padding="md">
+        </View>
+        <View style={[styles.sectionCard, styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.success, borderStartWidth: 3 }]}>
           <Text style={styles.statEmoji}>⭐</Text>
           <Text style={[styles.statValue, { color: colors.primary }]}>{rating ? rating.toFixed(1) : '—'}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home.rating')}</Text>
-        </GlassCard>
+        </View>
       </View>
       <View style={styles.footerSpacer} />
     </View>
@@ -377,11 +376,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 0,
   },
+  // ── 3D Card ──
+  sectionCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
   // ── Expenses Dashboard ──
   expensesCard: {
     marginHorizontal: SPACING.xxl,
     marginTop: SPACING.md,
     marginBottom: SPACING.sm,
+    padding: SPACING.md,
   },
   expensesHeader: {
     flexDirection: 'row',
@@ -451,8 +467,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: 'center',
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
+    padding: SPACING.md,
   },
   statEmoji: {
     fontSize: 28,

@@ -6,6 +6,7 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { DriverTabScreenProps } from '../../navigation/types';
 import { useTheme } from '../../theme/ThemeContext';
@@ -71,26 +72,28 @@ export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
       <TabHeader title={t('driver.myJobs')} onSettingsPress={drawer.open} />
 
       {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tab,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-              activeTab === tab.key && { backgroundColor: colors.primary, borderColor: colors.primary },
-            ]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[
-              styles.tabText,
-              { color: colors.textSecondary },
-              activeTab === tab.key && styles.tabTextActive,
-            ]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={[styles.tabBarCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.tabBar}>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tab,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                activeTab === tab.key && { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
+              onPress={() => setActiveTab(tab.key)}
+            >
+              <Text style={[
+                styles.tabText,
+                { color: colors.textSecondary },
+                activeTab === tab.key && styles.tabTextActive,
+              ]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Jobs list */}
@@ -134,11 +137,25 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
   },
-  tabBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
+  tabBarCard: {
+    marginHorizontal: 24,
     marginTop: 30,
     marginBottom: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: { elevation: 5 },
+    }),
+  },
+  tabBar: {
+    flexDirection: 'row',
     gap: 8,
   },
   tab: {
