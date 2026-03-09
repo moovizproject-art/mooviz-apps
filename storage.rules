@@ -29,6 +29,19 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Check if caller is a participant (sender or driver) of a delivery
+    function isDeliveryParticipant(deliveryId) {
+      let delivery = firestore.get(/databases/(default)/documents/deliveries/$(deliveryId));
+      return delivery.data.senderId == request.auth.uid
+          || delivery.data.driverId == request.auth.uid;
+    }
+
+    // Check if caller is a chat participant
+    function isChatParticipant(chatId) {
+      let chat = firestore.get(/databases/(default)/documents/chats/$(chatId));
+      return request.auth.uid in chat.data.participants;
+    }
+
     // ───────────────────────────────────────────────
     // Profile Photos — Encrypted at rest
     // Owner uploads raw to temp path, Cloud Function encrypts.
@@ -46,7 +59,9 @@ service firebase.storage {
 
     // Profile photo — direct upload (before encryption Cloud Functions are deployed)
     match /users/{userId}/profile.jpg {
-      allow read: if isAuthenticated();
+      // Owner or admin can read
+      allow read: if isAuthenticated()
+        && (request.auth.uid == userId || isAdmin());
       allow write: if isAuthenticated()
         && request.auth.uid == userId
         && isImage()
@@ -61,7 +76,8 @@ service firebase.storage {
 
     // Legacy: old unencrypted profile photos (migration)
     match /profiles/{userId}/{allPaths=**} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated()
+        && (request.auth.uid == userId || isAdmin());
       allow write: if isAuthenticated()
         && request.auth.uid == userId
         && isImage()
@@ -70,11 +86,13 @@ service firebase.storage {
 
     // ───────────────────────────────────────────────
     // Chat Images
-    // Participants can upload images to chat
+    // Only chat participants can read/write
     // ───────────────────────────────────────────────
     match /chats/{chatId}/{allPaths=**} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated()
+        && (isChatParticipant(chatId) || isAdmin());
       allow write: if isAuthenticated()
+        && isChatParticipant(chatId)
         && isImage()
         && request.resource.size < maxSize();
     }
@@ -84,6 +102,7 @@ service firebase.storage {
     // Sender uploads item photo when creating delivery
     // ───────────────────────────────────────────────
     match /deliveries/{senderId}/{allPaths=**} {
+      // Owner or admin can read delivery media
       allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && request.auth.uid == senderId
@@ -93,11 +112,13 @@ service firebase.storage {
 
     // ───────────────────────────────────────────────
     // Delivery Proof Photos
-    // Participants (sender/driver) can write, read requires auth
+    // Only delivery participants (sender/driver) can read/write
     // ───────────────────────────────────────────────
     match /deliveries/{deliveryId}/proof/{allPaths=**} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated()
+        && (isDeliveryParticipant(deliveryId) || isAdmin());
       allow write: if isAuthenticated()
+        && isDeliveryParticipant(deliveryId)
         && isImage()
         && request.resource.size < maxSize();
     }

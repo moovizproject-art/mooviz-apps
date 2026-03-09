@@ -5,10 +5,13 @@ import * as crypto from "crypto";
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
-// Server secret — in production use Secret Manager
-const SERVER_SECRET =
-  process.env.ENCRYPTION_SECRET ||
-  "mooviz-dev-encryption-key-change-in-production";
+// Server secret — MUST be set via environment/Secret Manager
+const SERVER_SECRET = process.env.ENCRYPTION_SECRET;
+if (!SERVER_SECRET) {
+  throw new Error(
+    "ENCRYPTION_SECRET environment variable is required. Set it via Firebase Secret Manager."
+  );
+}
 
 const ALGORITHM = "aes-256-cbc";
 const IV_LENGTH = 16;
@@ -234,33 +237,8 @@ export const getAuthorizedPhoto = onCall(async (request) => {
   }
 });
 
-/**
- * Get a per-user encryption key derived from UID + server secret.
- * Only the document owner or admin can request this.
- */
-export const getEncryptionKey = onCall(async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) {
-    throw new HttpsError("unauthenticated", "Authentication required");
-  }
-
-  const { targetUserId } = request.data;
-  const uid = targetUserId || callerUid;
-
-  // Only allow self or admin
-  if (uid !== callerUid) {
-    const callerDoc = await db.collection("users").doc(callerUid).get();
-    if (!callerDoc.exists || callerDoc.data()?.role !== "admin") {
-      throw new HttpsError(
-        "permission-denied",
-        "Cannot access other user's encryption key"
-      );
-    }
-  }
-
-  const key = deriveKey(uid);
-  return { key: key.toString("hex").substring(0, 32) };
-});
+// getEncryptionKey endpoint REMOVED — encryption keys must never leave the server.
+// All encryption/decryption happens server-side only.
 
 /**
  * Admin-only: Decrypt a document at a given storage path.

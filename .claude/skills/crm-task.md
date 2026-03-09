@@ -20,14 +20,12 @@ Load credentials before making requests:
 if [ -f .env.crm-api ]; then
   source .env.crm-api
 else
-  CRM_API_URL="https://crm-app.kal-trade.com/projects_extended/projects_api"
-  CRM_API_KEY="20ecc8d1c487e0b7666da0fd7ea975a210875572160b980b9e99b10ea0ce2332"
-  CRM_API_SECRET="38659ec8afbe13eb043ea3fb2df9ba221bccba3b4914aebd717f77d65ef9828f"
-  CRM_PROJECT_ID=1
+  echo "ERROR: .env.crm-api not found. Create it with CRM_API_URL, CRM_API_KEY, CRM_API_SECRET, CRM_PROJECT_ID"
+  exit 1
 fi
 ```
 
-**IMPORTANT**: `.env.crm-api` is gitignored. Never commit it.
+**IMPORTANT**: `.env.crm-api` is gitignored. Never commit credentials. Keys must be loaded from `.env.crm-api` only.
 
 ## Quick Reference — All Endpoints
 

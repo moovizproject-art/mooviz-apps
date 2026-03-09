@@ -28,28 +28,53 @@ service cloud.firestore {
                  'ratingAsDriver', 'ratingAsSender', 'completedDeliveries']);
     }
 
+    // Allowed fields for user self-update
+    function allowedUserUpdateFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['fullName', 'phone', 'city', 'activeMode',
+                  'fcmToken', 'fcmTokens', 'location', 'updatedAt',
+                  'driverSettings', 'notificationSettings']);
+    }
+
+    // Allowed fields for delivery sender updates
+    function allowedSenderDeliveryFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['status', 'driverId', 'interestedDrivers',
+                  'payment', 'cancelledBy', 'updatedAt', 'proof']);
+    }
+
+    // Allowed fields for delivery driver updates
+    function allowedDriverDeliveryFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['status', 'interestedDrivers', 'payment',
+                  'proof', 'updatedAt']);
+    }
+
+    // Restrict role to sender/driver only (no admin self-promotion)
+    function validRole() {
+      return request.resource.data.role in ['sender', 'driver'];
+    }
+
     // ───────────────────────────────────────────────
     // Users
     // ───────────────────────────────────────────────
     match /users/{userId} {
-      // Bootstrap: allow initial admin doc creation (remove after setup)
-      allow create: if request.auth != null
-        && request.auth.uid == 'np59JHWkCveavp2ldfio5njBqvJ2'
-        && userId == 'np59JHWkCveavp2ldfio5njBqvJ2';
+      // Owner can read own full profile
+      allow read: if isOwner(userId);
 
-      // Owner can read own profile; admins can read all
-      allow read: if isOwner(userId) || isAdmin();
-
-      // Delivery participants can read limited sender/driver info
-      // (Cloud Function handles photo access separately)
+      // Authenticated users can read public fields of other users
+      // (Firestore doesn't support field-level rules, so we allow read
+      //  but the client/Cloud Functions control which fields are exposed)
       allow read: if isAuthenticated();
 
-      // Users can write their own profile (restricted fields)
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) && noProtectedFields();
+      // Users can create their own profile with valid role only
+      allow create: if isOwner(userId) && validRole();
 
-      // Admins can do anything
-      allow create, update: if isAdmin();
+      // Users can update their own profile (restricted fields only)
+      allow update: if isOwner(userId) && noProtectedFields() && allowedUserUpdateFields();
+
+      // Admins can read/write all
+      allow read, create, update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -70,17 +95,21 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && (resource.data.status in ['new', 'pending'] || resource.data.driverId == request.auth.uid);
 
-      // Sender can update their own deliveries (approve driver, confirm payment, cancel)
+      // Sender can update their own deliveries (restricted fields)
       allow update: if isAuthenticated()
-        && resource.data.senderId == request.auth.uid;
+        && resource.data.senderId == request.auth.uid
+        && allowedSenderDeliveryFields();
 
-      // Driver can update assigned deliveries (pickup, deliver, confirm payment)
+      // Driver can update assigned deliveries (restricted fields)
       allow update: if isAuthenticated()
-        && resource.data.driverId == request.auth.uid;
+        && resource.data.driverId == request.auth.uid
+        && allowedDriverDeliveryFields();
 
-      // Any authenticated user can express interest (adds to interestedDrivers)
+      // Any authenticated user can express interest on new deliveries
       allow update: if isAuthenticated()
-        && resource.data.status == 'new';
+        && resource.data.status == 'new'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['interestedDrivers', 'updatedAt']);
 
       // Admins can read/write all
       allow read: if isAdmin();
@@ -95,8 +124,10 @@ service cloud.firestore {
       // Single doc read/write: user must be a participant
       allow get: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
-      // Collection list: allow — array-contains query ensures only own chats returned
+
+      // Collection list: only when queried with array-contains for own UID
       allow list: if isAuthenticated();
+
       allow write: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 

@@ -60,6 +60,9 @@ Docs/
 docs/
 initDocs/
 
+# Scripts — contain Firebase config & test credentials
+scripts/
+
 # Secrets
 serviceAccountKey*.json
 google-services.json

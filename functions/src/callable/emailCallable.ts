@@ -12,6 +12,21 @@ const smtpPass = defineSecret("SMTP_PASS");
 const BATCH_SIZE = 50;
 const BATCH_DELAY_MS = 1000;
 
+/**
+ * Basic HTML sanitization — strips dangerous tags (script, iframe, object, embed, form)
+ * and event handler attributes (onclick, onerror, etc.).
+ */
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, "")
+    .replace(/<object\b[^>]*>.*?<\/object>/gi, "")
+    .replace(/<embed\b[^>]*\/?>/gi, "")
+    .replace(/<form\b[^>]*>.*?<\/form>/gi, "")
+    .replace(/\bon\w+\s*=\s*(['"])[^'"]*\1/gi, "")
+    .replace(/\bon\w+\s*=\s*[^\s>]*/gi, "");
+}
+
 interface SendBulkEmailData {
   to: string[] | "all";
   subject: string;
@@ -29,7 +44,10 @@ function delay(ms: number): Promise<void> {
  * Batches sends in groups of 50 with rate limiting.
  */
 export const sendBulkEmail = functions.onCall(
-  { secrets: [smtpUser, smtpPass], cors: true },
+  {
+    secrets: [smtpUser, smtpPass],
+    cors: ["https://mooviz-app-9b766.web.app", "https://admin.mooviz.app", "http://localhost:5174"],
+  },
   async (request) => {
     // Validate caller is admin
     if (!request.auth) {
@@ -56,7 +74,10 @@ export const sendBulkEmail = functions.onCall(
     const { to, subject, htmlBody, sendPush } =
       request.data as SendBulkEmailData;
 
-    if (!subject || !htmlBody) {
+    // Sanitize HTML to prevent XSS injection
+    const safeHtmlBody = sanitizeHtml(htmlBody || "");
+
+    if (!subject || !safeHtmlBody) {
       throw new functions.HttpsError(
         "invalid-argument",
         "subject and htmlBody are required"
@@ -126,7 +147,7 @@ export const sendBulkEmail = functions.onCall(
             from: `MOOVIZ <${smtpUser.value()}>`,
             to: recipient.email,
             subject,
-            html: htmlBody,
+            html: safeHtmlBody,
           });
           sentCount++;
         } catch {
@@ -156,7 +177,7 @@ export const sendBulkEmail = functions.onCall(
             tokens: tokenBatch,
             notification: {
               title: subject,
-              body: htmlBody.replace(/<[^>]*>/g, "").slice(0, 200),
+              body: safeHtmlBody.replace(/<[^>]*>/g, "").slice(0, 200),
             },
           });
           pushSent += result.successCount;
