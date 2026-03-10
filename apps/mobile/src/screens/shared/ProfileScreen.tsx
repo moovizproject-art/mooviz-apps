@@ -106,7 +106,9 @@ export function ProfileScreen(): React.JSX.Element {
     ]);
   };
 
-  const ratingData = currentUser?.ratingAsSender ?? { average: 0, count: 0 };
+  const senderRating = currentUser?.ratingAsSender ?? { average: 0, count: 0 };
+  const driverRating = (currentUser as any)?.ratingAsDriver ?? { average: 0, count: 0 };
+  const hasDriverRating = currentUser?.role === 'driver' || currentUser?.driverUnlocked || driverRating.count > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -142,13 +144,13 @@ export function ProfileScreen(): React.JSX.Element {
           )}
         </View>
 
-        {/* Ratings section */}
+        {/* Sender Ratings */}
         <View style={[styles.ratingsSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('profile.rating')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>📦 {t('profile.senderRating')}</Text>
           <View style={styles.ratingRow}>
             <View style={styles.ratingItem}>
               <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                {ratingData.average > 0 ? ratingData.average.toFixed(1) : '—'}
+                {senderRating.average > 0 ? senderRating.average.toFixed(1) : '—'}
               </Text>
               <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.average')}</Text>
             </View>
@@ -160,12 +162,33 @@ export function ProfileScreen(): React.JSX.Element {
             </View>
             <View style={styles.ratingItem}>
               <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                {ratingData.count || 0}
+                {senderRating.count || 0}
               </Text>
               <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.ratingsCount')}</Text>
             </View>
           </View>
         </View>
+
+        {/* Driver Ratings — only if applicable */}
+        {hasDriverRating && (
+          <View style={[styles.ratingsSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>🚗 {t('profile.driverRating')}</Text>
+            <View style={styles.ratingRow}>
+              <View style={styles.ratingItem}>
+                <Text style={[styles.ratingValue, { color: colors.primary }]}>
+                  {driverRating.average > 0 ? driverRating.average.toFixed(1) : '—'}
+                </Text>
+                <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.average')}</Text>
+              </View>
+              <View style={styles.ratingItem}>
+                <Text style={[styles.ratingValue, { color: colors.primary }]}>
+                  {driverRating.count || 0}
+                </Text>
+                <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.ratingsCount')}</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Profile details / edit form */}
         <View style={styles.detailsSection}>
@@ -366,6 +389,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
+    gap: 16,
   },
   infoLabel: {
     fontSize: 14,
@@ -374,6 +398,7 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     flex: 1,
+    textAlign: 'left',
   },
   logoutButton: {
     borderRadius: 12,
