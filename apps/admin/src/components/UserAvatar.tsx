@@ -32,12 +32,6 @@ const sizeClasses = {
 };
 
 export default function UserAvatar({ name, photoURL, role, size = 'md' }: UserAvatarProps) {
-  const initials = name
-    .split(' ')
-    .map((part) => part.charAt(0))
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <div className="flex items-center gap-3">

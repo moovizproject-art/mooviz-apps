@@ -6,7 +6,6 @@ import {
   where,
   getDocs,
   orderBy,
-  limit,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../services/firebase';

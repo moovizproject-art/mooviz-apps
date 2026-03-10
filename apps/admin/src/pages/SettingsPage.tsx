@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { useI18n, type Locale } from '../i18n/I18nContext';
+import { useI18n } from '../i18n/I18nContext';
 
 interface AppSettings {
   platformName: string;

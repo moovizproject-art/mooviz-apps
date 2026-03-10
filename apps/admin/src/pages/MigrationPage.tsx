@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { collection, doc, setDoc, addDoc, writeBatch, Timestamp, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, writeBatch, Timestamp, query, where, getDocs, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { useI18n } from '../i18n/I18nContext';
 
@@ -468,7 +468,7 @@ export default function MigrationPage() {
       const usersSnap = await getDocs(query(collection(db, 'users'), where('migratedFrom', '==', 'glide')));
       let count = 0;
       for (const d of usersSnap.docs) {
-        await d.ref.delete();
+        await deleteDoc(d.ref);
         count++;
       }
       log('success', `Deleted ${count} migrated users`);
@@ -477,7 +477,7 @@ export default function MigrationPage() {
       const delSnap = await getDocs(query(collection(db, 'deliveries'), where('migratedFrom', '==', 'glide')));
       let delCount = 0;
       for (const d of delSnap.docs) {
-        await d.ref.delete();
+        await deleteDoc(d.ref);
         delCount++;
       }
       log('success', `Deleted ${delCount} migrated deliveries`);
@@ -486,7 +486,7 @@ export default function MigrationPage() {
       const chatSnap = await getDocs(query(collection(db, 'chats'), where('migratedFrom', '==', 'glide')));
       let chatCount = 0;
       for (const d of chatSnap.docs) {
-        await d.ref.delete();
+        await deleteDoc(d.ref);
         chatCount++;
       }
       log('success', `Deleted ${chatCount} migrated chats`);

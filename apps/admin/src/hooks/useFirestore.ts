@@ -8,7 +8,7 @@ import {
   type DeliveriesQueryParams,
   type Delivery,
 } from '../services/deliveries';
-import { getReports, type ReportsQueryParams, type Report } from '../services/reports';
+import { getReports, type ReportsQueryParams } from '../services/reports';
 
 // ─── Users ──────────────────────────────────────────────
 

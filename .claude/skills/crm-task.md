@@ -82,10 +82,17 @@ fi
 ### Assignees & Followers
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/task_assignees?task_id=X` | List assignees |
+| GET | `/task_assignees?task_id=X` | List staff assignees |
 | POST | `/task_assignees` | Assign staff (`task_id`, `staff_id`) |
-| DELETE | `/task_assignee/{task_id}/{staff_id}` | Remove assignee |
+| DELETE | `/task_assignee/{task_id}/{staff_id}` | Remove staff assignee |
 | POST | `/task_followers` | Add watcher (`task_id`, `staff_id`) |
+
+### External Assignees (Contacts, Partners, Affiliates)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/task_external_assignees?task_id=X` | List external assignees with name/email |
+| POST | `/task_external_assignees` | Add external assignee (`task_id`, `assignee_type`, `assignee_id`) |
+| DELETE | `/task_external_assignee/{task_id}/{id}` | Remove external assignee by record ID |
 
 ### Comments & Files
 | Method | Endpoint | Description |
@@ -174,6 +181,23 @@ curl -s -X POST "$CRM_API_URL/sprint_close/19" -H "X-API-Key: $CRM_API_KEY" -H "
   -H "Content-Type: application/json" -d '{"carry_over_sprint_id": 20}'
 ```
 
+### Assign External User to Task
+```bash
+# assignee_type: contact | partner | affiliate
+curl -s -X POST "$CRM_API_URL/task_external_assignees" \
+  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 100, "assignee_type": "contact", "assignee_id": 5}'
+
+# List external assignees
+curl -s "$CRM_API_URL/task_external_assignees?task_id=100" \
+  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET"
+
+# Remove external assignee (use record ID from list response)
+curl -s -X DELETE "$CRM_API_URL/task_external_assignee/100/3" \
+  -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET"
+```
+
 ### Send Notification
 ```bash
 curl -s -X POST "$CRM_API_URL/notify" -H "X-API-Key: $CRM_API_KEY" -H "X-API-Secret: $CRM_API_SECRET" \
@@ -200,6 +224,11 @@ curl -s -X POST "$CRM_API_URL/notify_task" -H "X-API-Key: $CRM_API_KEY" -H "X-AP
 | `task_type` | string | No | task/feature/bug/story/epic/design |
 | `story_points` | int | No | Estimation |
 | `parent_task_id` | int | No | For subtasks |
+
+### External Assignee Types
+`contact` (client contacts) | `partner` (business partners) | `affiliate`
+
+**Note:** `GET /task/{id}` now includes `external_assignees[]` with name/email in the response.
 
 ### Notification Types
 `question` | `update` | `done` | `blocked`

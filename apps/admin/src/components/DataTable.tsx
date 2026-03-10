@@ -30,7 +30,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   }, obj as unknown);
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T extends Record<string, any>>({
   columns,
   data,
   keyField,
