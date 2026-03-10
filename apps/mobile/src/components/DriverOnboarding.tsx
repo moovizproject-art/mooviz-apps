@@ -77,7 +77,7 @@ export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
+        <View style={[styles.bubble, { backgroundColor: 'rgba(0,0,0,0.75)' }]}>
           {/* Step indicator */}
           <View style={styles.dotsRow}>
             {STEPS.map((_, i) => (
@@ -85,20 +85,20 @@ export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element 
                 key={i}
                 style={[
                   styles.dot,
-                  { backgroundColor: i === step ? colors.primary : colors.border },
+                  { backgroundColor: i === step ? '#FFFFFF' : 'rgba(255,255,255,0.3)' },
                 ]}
               />
             ))}
           </View>
 
           <Text style={styles.icon}>{current.icon}</Text>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>{current.title}</Text>
-          <Text style={[styles.description, { color: colors.textSecondary }]}>{current.description}</Text>
+          <Text style={[styles.title, { color: '#FFFFFF' }]}>{current.title}</Text>
+          <Text style={[styles.description, { color: '#FFFFFF' }]}>{current.description}</Text>
 
           <View style={styles.actions}>
             {!isLast && (
               <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                <Text style={[styles.skipText, { color: colors.textTertiary }]}>דלג</Text>
+                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>דלג</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity

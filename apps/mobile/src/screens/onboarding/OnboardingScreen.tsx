@@ -20,6 +20,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import { useSound } from '../../hooks/useSound';
 
 const logo = require('../../assets/logo.png');
+// logo.jpg = old small logo, logo.png = new high-res logo
 const carImage = require('../../assets/car.png');
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const isRTL = I18nManager.isRTL;
@@ -58,6 +59,7 @@ const PAGES: PageData[] = [
   {
     key: 'sender',
     titleKey: 'onboarding.senderTitle',
+    subtitleKey: 'onboarding.senderSubtitle',
     bullets: [
       { textKey: 'onboarding.senderBullet1', icon: '\u{26A1}' },
       { textKey: 'onboarding.senderBullet2', icon: '\u{1F697}' },
@@ -67,23 +69,19 @@ const PAGES: PageData[] = [
   {
     key: 'driver',
     titleKey: 'onboarding.driverTitle',
+    subtitleKey: 'onboarding.driverSubtitle',
     bullets: [
       { textKey: 'onboarding.driverBullet1', icon: '\u{1F50D}' },
       { textKey: 'onboarding.driverBullet2', icon: '\u{23F0}' },
       { textKey: 'onboarding.driverBullet3', icon: '\u{1F4B0}' },
     ],
-  },
-  {
-    key: 'getStarted',
-    titleKey: 'onboarding.getStarted',
-    subtitleKey: 'onboarding.getStartedSubtitle',
     isLast: true,
   },
 ];
 
 const BLUE = '#1565C0';
 const BLUE_LIGHT = '#1E88E5';
-const HEADER_HEIGHT = SCREEN_HEIGHT * 0.28;
+const HEADER_HEIGHT = SCREEN_HEIGHT * 0.18;
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.JSX.Element {
   const { colors } = useTheme();
@@ -159,21 +157,21 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
         {/* Blue header area with logo only */}
         <View style={styles.headerSection}>
           <View style={styles.logoCircle}>
-            <Image source={logo} style={styles.logoInCircle} resizeMode="contain" />
+            <Image source={logo} style={[styles.logoInCircle, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
           </View>
-          {/* Decorative wave bottom */}
-          <View style={styles.waveCurve} />
+          <View style={[styles.waveCurve, { backgroundColor: colors.background }]} />
         </View>
 
         {/* Content card */}
         <Animated.View style={[
           styles.contentSection,
           {
+            backgroundColor: colors.background,
             opacity: fadeAnim,
             transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
           },
         ]}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }} bounces={false}>
+          <View style={styles.contentInner}>
             <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>{t(item.titleKey)}</Text>
 
             {item.subtitleKey && (
@@ -190,7 +188,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
             {item.bullets && (
               <View style={styles.bulletList}>
                 {item.bullets.map((bullet, i) => (
-                  <View key={i} style={[styles.bulletRow, { backgroundColor: '#F0F7FF' }]}>
+                  <View key={i} style={styles.bulletRow}>
                     <View style={styles.bulletIconBg}>
                       <Text style={styles.bulletIcon}>{bullet.icon}</Text>
                     </View>
@@ -200,12 +198,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
               </View>
             )}
 
-            {item.isLast && (
-              <View style={styles.lastPageExtra}>
-                <Image source={logo} style={styles.footerLogo} resizeMode="contain" />
-              </View>
-            )}
-          </ScrollView>
+          </View>
         </Animated.View>
       </View>
     );
@@ -295,40 +288,30 @@ const styles = StyleSheet.create({
     backgroundColor: BLUE,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 52,
+    paddingTop: 0,
     position: 'relative',
     overflow: 'hidden',
     zIndex: 1,
   },
   logoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#FFFFFF',
+    width: 180,
+    height: 180,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: { elevation: 6 },
-    }),
+    marginTop: -18,
   },
   logoInCircle: {
-    width: 64,
-    height: 64,
+    width: 180,
+    height: 180,
   },
   illustrationArea: {
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: 24,
   },
   illustration: {
     width: SCREEN_WIDTH * 0.75,
-    height: SCREEN_WIDTH * 0.35,
+    height: SCREEN_WIDTH * 0.44,
     borderRadius: 16,
   },
   waveCurve: {
@@ -337,7 +320,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 30,
-    backgroundColor: '#FAFBFC',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
@@ -345,7 +327,9 @@ const styles = StyleSheet.create({
   contentSection: {
     flex: 1,
     paddingHorizontal: 28,
-    paddingTop: 20,
+    justifyContent: 'center',
+  },
+  contentInner: {
   },
   pageTitle: {
     fontSize: 26,
@@ -361,22 +345,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   bulletList: {
-    marginTop: 12,
-    gap: 6,
+    marginTop: 24,
+    gap: 10,
   },
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     borderRadius: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 1 },
+    }),
   },
   bulletIconBg: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -384,10 +378,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   bulletText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     flex: 1,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   lastPageExtra: {
     alignItems: 'center',
