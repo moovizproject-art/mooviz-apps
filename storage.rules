@@ -59,9 +59,8 @@ service firebase.storage {
 
     // Profile photo — direct upload (before encryption Cloud Functions are deployed)
     match /users/{userId}/profile.jpg {
-      // Owner or admin can read
-      allow read: if isAuthenticated()
-        && (request.auth.uid == userId || isAdmin());
+      // Any authenticated user can read (shown in delivery cards, chat, etc.)
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && request.auth.uid == userId
         && isImage()
@@ -76,8 +75,7 @@ service firebase.storage {
 
     // Legacy: old unencrypted profile photos (migration)
     match /profiles/{userId}/{allPaths=**} {
-      allow read: if isAuthenticated()
-        && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated()
         && request.auth.uid == userId
         && isImage()
@@ -98,24 +96,26 @@ service firebase.storage {
     }
 
     // ───────────────────────────────────────────────
-    // Delivery Item Photos
-    // Sender uploads item photo when creating delivery
+    // Delivery Item Photos & Media
+    // Sender uploads item photos/videos when creating delivery.
+    // Path: deliveries/{senderId}/media_*.jpg, deliveries/{senderId}/item_*.jpg
+    // Any authenticated user can READ (needed for feed display).
+    // Only the owner (sender) can WRITE.
     // ───────────────────────────────────────────────
-    match /deliveries/{senderId}/{allPaths=**} {
-      // Owner or admin can read delivery media
-      allow read: if isAuthenticated()
-        && (request.auth.uid == senderId || isAdmin());
+    match /deliveries/{ownerId}/{fileName} {
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated()
-        && request.auth.uid == senderId
+        && request.auth.uid == ownerId
         && isMedia()
         && request.resource.size < maxSize();
     }
 
     // ───────────────────────────────────────────────
     // Delivery Proof Photos
-    // Only delivery participants (sender/driver) can read/write
+    // Only delivery participants (sender/driver) can read/write.
+    // Path: deliveries/{deliveryId}/proof/pickup_*.jpg, delivery_*.jpg, payment_*.jpg
     // ───────────────────────────────────────────────
-    match /deliveries/{deliveryId}/proof/{allPaths=**} {
+    match /deliveries/{deliveryId}/proof/{fileName} {
       allow read: if isAuthenticated()
         && (isDeliveryParticipant(deliveryId) || isAdmin());
       allow write: if isAuthenticated()
