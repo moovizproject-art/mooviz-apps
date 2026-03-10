@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, StatusBar, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
+
+const logo = require('../assets/logo.png');
 
 interface ScreenHeaderProps {
   title: string;
@@ -21,7 +23,10 @@ export function ScreenHeader({ title, onBack, rightElement }: ScreenHeaderProps)
         backgroundColor={colors.headerBg}
         translucent={false}
       />
-      <View style={[styles.container, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.sm }]}>
+      <View style={[styles.container, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.xs }]}>
+        <View style={styles.logoRow}>
+          <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+        </View>
         <View style={styles.row}>
           {onBack ? (
             <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -42,11 +47,20 @@ export function ScreenHeader({ title, onBack, rightElement }: ScreenHeaderProps)
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.md,
     paddingHorizontal: SPACING.xl,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
     ...SHADOWS.lg,
+  },
+  logoRow: {
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  logoImage: {
+    width: 120,
+    height: 45,
+    tintColor: '#FFFFFF',
   },
   row: {
     flexDirection: 'row',

@@ -157,8 +157,8 @@ export function DriverKYCScreen(): React.JSX.Element {
           <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
           <View style={styles.headerTopRow}>
-            <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
-              <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+            <View style={styles.logoCircle}>
+              <Image source={logo} style={[styles.logoImage, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
             </View>
             <TouchableOpacity
               style={styles.backButton}
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SPACING.xxl,
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xxxl,
+    paddingBottom: SPACING.lg,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
     alignItems: 'center',
@@ -332,19 +332,15 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xs,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.md,
   },
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 160,
+    height: 70,
   },
   backButton: {
     position: 'absolute',

@@ -20,8 +20,8 @@ export function TabHeader({ title, onSettingsPress }: TabHeaderProps): React.JSX
       <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
 
       <View style={styles.headerTopRow}>
-        <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
-          <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+        <View style={styles.logoCircle}>
+          <Image source={logo} style={[styles.logoImage, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
         </View>
         {onSettingsPress && (
           <TouchableOpacity
@@ -44,7 +44,7 @@ export function TabHeader({ title, onSettingsPress }: TabHeaderProps): React.JSX
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SPACING.xxl,
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.md,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
     alignItems: 'center',
@@ -54,37 +54,33 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xs,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.md,
   },
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 160,
+    height: 70,
   },
   settingsButton: {
     position: 'absolute',
     left: 0,
     top: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   settingsIcon: {
-    fontSize: 22,
+    fontSize: 16,
     color: '#FFFFFF',
   },
   title: {
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: '700',
     textAlign: 'center',
   },

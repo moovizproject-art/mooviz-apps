@@ -9,6 +9,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -50,6 +51,10 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
   const [focusedField, setFocusedField] = useState<FormField | null>(null);
+  const [gender, setGender] = useState<'male' | 'female' | ''>('');
+  const [ageRange, setAgeRange] = useState<string>('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -86,6 +91,11 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
 
   const handleRegister = async (): Promise<void> => {
     if (!validate()) return;
+    if (!acceptedTerms) {
+      setTermsError(t('auth.termsRequired'));
+      return;
+    }
+    setTermsError(null);
 
     try {
       setIsLoading(true);
@@ -96,6 +106,8 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
         fullName: form.fullName,
         email: form.email,
         phone: form.phone,
+        gender: gender || undefined,
+        ageRange: ageRange || undefined,
       });
 
       navigation.navigate('OTPVerification', {
@@ -227,11 +239,90 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
         {errors.phone && <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>}
       </View>
 
+      {/* Gender */}
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.gender')}</Text>
+        <View style={styles.chipRow}>
+          {(['male', 'female'] as const).map((g) => (
+            <TouchableOpacity
+              key={g}
+              style={[
+                styles.chip,
+                { borderColor: colors.border, backgroundColor: colors.inputBg },
+                gender === g && { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
+              onPress={() => setGender(gender === g ? '' : g)}
+            >
+              <Text style={[
+                styles.chipText,
+                { color: colors.textPrimary },
+                gender === g && { color: '#FFFFFF' },
+              ]}>
+                {t(`auth.${g}`)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Age range */}
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.ageRange')}</Text>
+        <View style={styles.chipRow}>
+          {['18-24', '25-34', '35-44', '45-54', '55+'].map((range) => (
+            <TouchableOpacity
+              key={range}
+              style={[
+                styles.chip,
+                { borderColor: colors.border, backgroundColor: colors.inputBg },
+                ageRange === range && { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
+              onPress={() => setAgeRange(ageRange === range ? '' : range)}
+            >
+              <Text style={[
+                styles.chipText,
+                { color: colors.textPrimary },
+                ageRange === range && { color: '#FFFFFF' },
+              ]}>
+                {range}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Terms of Service */}
+      <View style={styles.fieldGroup}>
+        <TouchableOpacity
+          style={styles.termsRow}
+          onPress={() => { setAcceptedTerms(!acceptedTerms); setTermsError(null); }}
+          activeOpacity={0.7}
+        >
+          <View style={[
+            styles.checkbox,
+            { borderColor: colors.border, backgroundColor: colors.inputBg },
+            acceptedTerms && { backgroundColor: colors.primary, borderColor: colors.primary },
+          ]}>
+            {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={[styles.termsText, { color: colors.textSecondary }]}>
+            {t('auth.acceptTerms')}{' '}
+            <Text
+              style={{ color: colors.primary, fontWeight: '700' }}
+              onPress={() => Linking.openURL('https://mooviz.app/terms')}
+            >
+              {t('auth.termsOfService')}
+            </Text>
+          </Text>
+        </TouchableOpacity>
+        {termsError && <Text style={[styles.errorText, { color: colors.error }]}>{termsError}</Text>}
+      </View>
+
       {/* Submit */}
       <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor: colors.primary, shadowColor: colors.primary }, isLoading && styles.submitButtonDisabled]}
+        style={[styles.submitButton, { backgroundColor: colors.primary, shadowColor: colors.primary }, (isLoading || !acceptedTerms) && styles.submitButtonDisabled]}
         onPress={handleRegister}
-        disabled={isLoading}
+        disabled={isLoading || !acceptedTerms}
         activeOpacity={0.85}
       >
         <Text style={styles.submitButtonText}>
@@ -332,5 +423,42 @@ const styles = StyleSheet.create({
   },
   keyboardSpacer: {
     height: 120,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  termsText: {
+    fontSize: 14,
+    flex: 1,
   },
 });

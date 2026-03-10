@@ -7,7 +7,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  I18nManager,
+  Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -16,6 +16,8 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validateEmail } from '../../utils/validators';
 import { sendPasswordReset, mapFirebaseAuthError } from '../../services/auth';
+
+const logo = require('../../assets/logo.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
@@ -61,6 +63,7 @@ export function ForgotPasswordScreen({ navigation }: Props): React.JSX.Element {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t('auth.resetPassword')}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {t('auth.resetSubtitle')}
@@ -127,6 +130,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+  },
+  logo: {
+    width: 200,
+    height: 70,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   title: {
     fontSize: 24,

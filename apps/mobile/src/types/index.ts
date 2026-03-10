@@ -63,6 +63,8 @@ export interface User {
   status: UserStatus;
   fcmTokens: string[];
   location: UserLocation;
+  gender?: 'male' | 'female' | '';
+  ageRange?: string;
   migratedFrom?: string;
   lastOtpAt?: Date;
   createdAt: Date;

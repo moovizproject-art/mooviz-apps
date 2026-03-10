@@ -42,6 +42,7 @@ interface DeliveryForm {
   scheduledDate: Date | null;
   isAsap: boolean;
   notes: string;
+  timeRange: string | null;
 }
 
 const isVideoUri = (uri: string): boolean => {
@@ -69,6 +70,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     scheduledDate: null,
     isAsap: true,
     notes: '',
+    timeRange: null,
   });
   const [showPickupMap, setShowPickupMap] = useState(false);
   const [showDestinationMap, setShowDestinationMap] = useState(false);
@@ -143,6 +145,9 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       setIsSubmitting(true);
       await createDelivery({
         senderId: currentUser!.uid,
+        senderName: currentUser!.fullName,
+        senderPhotoUrl: currentUser!.profilePhotoURL,
+        senderRating: currentUser!.ratingAsSender?.average ?? 0,
         pickup: form.pickup,
         destination: form.destination,
         itemDescription: form.itemDescription,
@@ -163,10 +168,10 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   };
 
   const sizeOptions: { value: DeliveryForm['itemSize']; label: string; icon: string; hint: string }[] = [
-    { value: 'small', label: 'מעטפה', icon: '✉️', hint: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות' },
-    { value: 'medium', label: 'שקית / חבילה', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
-    { value: 'large', label: 'קופסא / ארגז', icon: '📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
-    { value: 'xlarge', label: 'דברים גדולים', icon: '🚚', hint: 'מעל 30 ק"ג\nמעל 60 ס"מ\nרהיטים, מוצרי חשמל גדולים' },
+    { value: 'small', label: 'קטן', icon: '✉️', hint: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות' },
+    { value: 'medium', label: 'בינוני', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
+    { value: 'large', label: 'גדול', icon: '📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
+    { value: 'xlarge', label: 'אחר', icon: '🚚', hint: 'מעל 30 ק"ג\nמעל 60 ס"מ\nרהיטים, מוצרי חשמל גדולים' },
   ];
 
   const infoButton = (
@@ -279,6 +284,17 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </View>
 
+        {/* Notes — under "מידע נוסף" label, above gallery */}
+        <ThemedInput
+          label={t('form.notes')}
+          placeholder={t('form.notesPlaceholder')}
+          value={form.notes}
+          onChangeText={(v) => updateField('notes', v)}
+          multiline
+          numberOfLines={2}
+          textAlignVertical="top"
+        />
+
         {/* Media — photos + video */}
         <View style={styles.mediaSection}>
           <View style={styles.labelRow}>
@@ -289,33 +305,50 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
               {t('form.optional')}
             </Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaStrip}>
-            {form.mediaUris.map((uri, index) => (
-              <View key={index} style={styles.mediaThumbnailContainer}>
-                <Image source={{ uri }} style={styles.mediaThumbnail} />
-                {isVideoUri(uri) && (
-                  <View style={styles.videoOverlay}>
-                    <Text style={styles.videoIcon}>{'\u25B6'}</Text>
-                  </View>
-                )}
-                <TouchableOpacity style={styles.removeMediaButton} onPress={() => handleRemoveMedia(index)}>
-                  <Text style={styles.removeMediaIcon}>{'\u2715'}</Text>
+          {form.mediaUris.length === 0 ? (
+            <View style={styles.mediaCenteredRow}>
+              {imageCount < 5 && (
+                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddPhotos}>
+                  <Text style={styles.addMediaIconText}>{'\uD83D\uDCF7'}</Text>
+                  <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addPhoto')}</Text>
                 </TouchableOpacity>
-              </View>
-            ))}
-            {imageCount < 5 && (
-              <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddPhotos}>
-                <Text style={styles.addMediaIconText}>{'\uD83D\uDCF7'}</Text>
-                <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addPhoto')}</Text>
-              </TouchableOpacity>
-            )}
-            {!hasVideo && (
-              <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddVideo}>
-                <Text style={styles.addMediaIconText}>{'\uD83C\uDFAC'}</Text>
-                <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addVideo')}</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
+              )}
+              {!hasVideo && (
+                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddVideo}>
+                  <Text style={styles.addMediaIconText}>{'\uD83C\uDFAC'}</Text>
+                  <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addVideo')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaStrip}>
+              {form.mediaUris.map((uri, index) => (
+                <View key={index} style={styles.mediaThumbnailContainer}>
+                  <Image source={{ uri }} style={styles.mediaThumbnail} />
+                  {isVideoUri(uri) && (
+                    <View style={styles.videoOverlay}>
+                      <Text style={styles.videoIcon}>{'\u25B6'}</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity style={styles.removeMediaButton} onPress={() => handleRemoveMedia(index)}>
+                    <Text style={styles.removeMediaIcon}>{'\u2715'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {imageCount < 5 && (
+                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddPhotos}>
+                  <Text style={styles.addMediaIconText}>{'\uD83D\uDCF7'}</Text>
+                  <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addPhoto')}</Text>
+                </TouchableOpacity>
+              )}
+              {!hasVideo && (
+                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddVideo}>
+                  <Text style={styles.addMediaIconText}>{'\uD83C\uDFAC'}</Text>
+                  <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addVideo')}</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          )}
           <Text style={[styles.mediaHint, { color: colors.textSecondary }]}>
             {t('form.mediaHint', { imageCount: String(imageCount), videoSuffix: hasVideo ? t('form.mediaHintVideo') : '' })}
           </Text>
@@ -327,6 +360,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           isAsap={form.isAsap}
           onDateChange={(date) => updateField('scheduledDate', date)}
           onAsapToggle={(val) => updateField('isAsap', val)}
+          timeRange={form.timeRange}
+          onTimeRangeChange={(range) => updateField('timeRange', range)}
         />
 
         {/* Price */}
@@ -337,17 +372,6 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           value={form.suggestedPrice}
           onChangeText={(v) => updateField('suggestedPrice', v)}
           keyboardType="numeric"
-        />
-
-        {/* Notes */}
-        <ThemedInput
-          label={t('form.notes')}
-          placeholder={t('form.notesPlaceholder')}
-          value={form.notes}
-          onChangeText={(v) => updateField('notes', v)}
-          multiline
-          numberOfLines={2}
-          textAlignVertical="top"
         />
 
         {/* Buttons */}
@@ -380,8 +404,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       <Modal visible={showSizeInfo} transparent animationType="fade" onRequestClose={() => setShowSizeInfo(false)}>
         <View style={styles.helpOverlay}>
           <View style={[styles.helpCard, { backgroundColor: colors.background }]}>
-            <View style={[styles.helpHeader, { backgroundColor: colors.primary }]}>
-              <Text style={styles.helpHeaderTitle}>📏 מידות משלוח</Text>
+            <View style={[styles.helpHeader, { backgroundColor: colors.accent }]}>
+              <Text style={styles.helpHeaderTitle}>📏 מדריך מידות</Text>
             </View>
             <View style={styles.helpScrollContent}>
               {sizeOptions.map((opt) => (
@@ -513,6 +537,12 @@ const styles = StyleSheet.create({
   },
   mediaSection: {
     marginBottom: SPACING.lg,
+  },
+  mediaCenteredRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
   },
   mediaStrip: {
     flexDirection: 'row',

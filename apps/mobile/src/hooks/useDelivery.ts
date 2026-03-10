@@ -64,6 +64,9 @@ interface UseDeliveryOptions {
 
 interface CreateDeliveryInput {
   senderId: string;
+  senderName?: string;
+  senderPhotoUrl?: string | null;
+  senderRating?: number;
   pickup: { latitude: number; longitude: number; address: string };
   destination: { latitude: number; longitude: number; address: string };
   itemDescription: string;
@@ -193,6 +196,9 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
       const now = firestore.FieldValue.serverTimestamp();
       const deliveryData = {
         senderId: input.senderId,
+        senderName: input.senderName || '',
+        senderPhotoUrl: input.senderPhotoUrl || null,
+        senderRating: input.senderRating ?? 0,
         driverId: null,
         status: 'new',
         pickup: {

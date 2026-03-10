@@ -183,11 +183,16 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     }).catch((err: unknown) => console.warn('[FeedScreen] Location sync failed:', err));
   }, [location?.latitude, location?.longitude, currentUser?.uid]);
   // When location unavailable, show all pending deliveries (no geo filter)
-  const { deliveries, isLoading, refresh } = useDelivery({
+  const { deliveries: rawDeliveries, isLoading, refresh } = useDelivery({
     role: 'driver',
     statusFilter: ['new', 'pending'],
     ...(nearLocation ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
   });
+  // Exclude own deliveries — driver shouldn't see packages they sent
+  const deliveries = useMemo(
+    () => rawDeliveries.filter((d) => d.senderId !== currentUser?.uid),
+    [rawDeliveries, currentUser?.uid],
+  );
 
   // ── Current active delivery (driver's own) ──
   const { deliveries: activeDeliveries } = useDelivery({
@@ -287,8 +292,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + SPACING.sm }]}>
         <StatusBar barStyle="light-content" backgroundColor={colors.headerBg} />
         <View style={styles.headerTopRow}>
-          <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
-            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          <View style={styles.logoCircle}>
+            <Image source={logo} style={[styles.logoImage, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
           </View>
           <TouchableOpacity style={styles.settingsButton} onPress={drawer.open}>
             <Text style={styles.settingsIcon}>{'\u2699'}</Text>
@@ -826,7 +831,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SPACING.xxl,
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xxxl,
+    paddingBottom: SPACING.lg,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
     alignItems: 'center',
@@ -836,33 +841,29 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xs,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.md,
   },
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 160,
+    height: 70,
   },
   settingsButton: {
     position: 'absolute',
     left: 0,
     top: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   settingsIcon: {
-    fontSize: 22,
+    fontSize: 16,
     color: '#FFFFFF',
   },
   greeting: {

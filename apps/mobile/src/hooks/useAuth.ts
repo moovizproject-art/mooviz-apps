@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 
 const SESSION_MAX_DAYS = 30;
@@ -90,12 +91,14 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           if (doc.exists) {
             const data = doc.data();
 
-            // Check 30-day session expiry
+            // Check session expiry — 30 days if "remember me", 1 day otherwise
             const lastLogin = safeToDate(data?.lastLoginAt);
             if (lastLogin) {
+              const rememberMe = await AsyncStorage.getItem('@remember_me');
+              const maxDays = rememberMe === 'true' ? SESSION_MAX_DAYS : 1;
               const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
-              if (daysSinceLogin > SESSION_MAX_DAYS) {
-                console.log('[useAuth] Session expired after', Math.floor(daysSinceLogin), 'days');
+              if (daysSinceLogin > maxDays) {
+                console.log('[useAuth] Session expired after', Math.floor(daysSinceLogin), 'days (max:', maxDays, ')');
                 await auth().signOut();
                 setCurrentUser(null);
                 setFirebaseUser(null);
@@ -124,6 +127,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               status: data?.status || 'active',
               fcmTokens: data?.fcmTokens || [],
               location: data?.location || { lat: 0, lng: 0, geohash: '' },
+              gender: data?.gender || '',
+              ageRange: data?.ageRange || '',
               migratedFrom: data?.migratedFrom,
               lastOtpAt: safeToDate(data?.lastOtpAt),
               createdAt: safeToDate(data?.createdAt) || new Date(),

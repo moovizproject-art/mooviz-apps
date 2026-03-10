@@ -89,8 +89,12 @@ export async function assertUserRole(
     throw new HttpsError("not-found", "User not found");
   }
   const userData = userDoc.data();
-  const role = userData?.role ?? userData?.activeMode;
-  if (role !== requiredRole) {
+  // For "driver" checks: accept activeMode='driver' OR driverUnlocked=true,
+  // because dual-mode users keep role='sender' while switching via activeMode.
+  const effectiveRole = userData?.activeMode || userData?.role;
+  const isDualModeDriver =
+    requiredRole === "driver" && userData?.driverUnlocked === true;
+  if (effectiveRole !== requiredRole && !isDualModeDriver) {
     throw new HttpsError(
       "permission-denied",
       `This action requires the '${requiredRole}' role`

@@ -184,6 +184,24 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
               >
                 <Image source={socialTiktok} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: '#FF0000' }]}
+                onPress={() => Linking.openURL('https://youtube.com/@mooviz')}
+              >
+                <Text style={styles.socialLetter}>▶</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: '#0A66C2' }]}
+                onPress={() => Linking.openURL('https://linkedin.com/company/mooviz')}
+              >
+                <Text style={styles.socialLetter}>in</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: '#1A73E8' }]}
+                onPress={() => Linking.openURL('https://mooviz.app')}
+              >
+                <Text style={styles.socialLetter}>W</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -301,6 +319,8 @@ const styles = StyleSheet.create({
   },
   socialRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: SPACING.md,
   },
   socialButton: {
@@ -314,5 +334,10 @@ const styles = StyleSheet.create({
   socialImage: {
     width: 40,
     height: 40,
+  },
+  socialLetter: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

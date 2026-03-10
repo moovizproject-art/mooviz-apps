@@ -28,6 +28,7 @@ import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDraw
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 import { useSenderExpenses } from '../../hooks/useSenderExpenses';
+import { SenderOnboarding, shouldShowSenderOnboarding } from '../../components/SenderOnboarding';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -53,12 +54,17 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const drawer = useSettingsDrawer();
 
-  // Request permissions on first launch
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Request permissions on first launch + check onboarding
   useEffect(() => {
     (async () => {
       await requestNotificationPermission();
       await requestLocationPermission();
     })();
+    shouldShowSenderOnboarding().then((show) => {
+      if (show) setShowOnboarding(true);
+    });
   }, []);
 
   const { deliveries, isLoading, refresh } = useDelivery({
@@ -97,8 +103,8 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
 
         {/* Top row: logo centered, gear absolute on end */}
         <View style={styles.headerTopRow}>
-          <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
-            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          <View style={styles.logoCircle}>
+            <Image source={logo} style={[styles.logoImage, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
           </View>
           <TouchableOpacity
             style={styles.settingsButton}
@@ -137,9 +143,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
           {t('home.chooseWay')}
         </Text>
 
-        <Text style={[styles.brandName, { color: colors.primary }]}>
-          {t('common.appName')}
-        </Text>
+        <Image source={logo} style={styles.brandLogo} resizeMode="contain" />
         <Text style={[styles.brandTagline, { color: colors.textSecondary }]}>
           {t('common.tagline')}
         </Text>
@@ -156,7 +160,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
           setExpensesOpen((prev) => !prev);
         }} style={styles.expensesHeader}>
           <Text style={[styles.expensesTitle, { color: colors.textPrimary }]}>
-            💸 עלויות משלוחים עד כה
+            💸 סה״כ עלויות משלוחים
           </Text>
           <View style={styles.expensesEndRow}>
             <Text style={[styles.expensesQuickTotal, { color: '#E53935' }]}>
@@ -278,6 +282,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
       />
 
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
+      <SenderOnboarding visible={showOnboarding} onDone={() => setShowOnboarding(false)} />
     </View>
   );
 }
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SPACING.xxl,
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xxxl,
+    paddingBottom: SPACING.lg,
     borderBottomLeftRadius: BORDER_RADIUS.xxl,
     borderBottomRightRadius: BORDER_RADIUS.xxl,
     alignItems: 'center',
@@ -300,34 +305,30 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xs,
   },
   settingsButton: {
     position: 'absolute',
     left: 0,
     top: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   settingsIcon: {
-    fontSize: 22,
+    fontSize: 16,
     color: '#FFFFFF',
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.md,
   },
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 160,
+    height: 70,
   },
   greeting: {
     fontSize: 25,
@@ -367,10 +368,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.xl,
   },
-  brandName: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 2,
+  brandLogo: {
+    width: 100,
+    height: 35,
+    alignSelf: 'center',
     marginBottom: SPACING.xs,
   },
   brandTagline: {

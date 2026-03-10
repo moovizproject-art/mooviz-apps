@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING, BORDER_RADIUS } from '../constants/design';
 
-const ONBOARDING_KEY = '@driver_onboarding_done';
+const ONBOARDING_KEY = '@sender_onboarding_done';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface OnboardingStep {
@@ -22,34 +22,34 @@ interface OnboardingStep {
 
 const STEPS: OnboardingStep[] = [
   {
-    icon: '🟢',
-    title: 'זמינות',
-    description: 'הפעילו את מצב הזמינות כדי להתחיל לקבל הזמנות משלוח באזור שלכם.',
-  },
-  {
-    icon: '📏',
-    title: 'טווח התראות',
-    description: 'הגדירו את הרדיוס בק"מ כדי לראות משלוחים שמתאימים לאזור שלכם.',
-  },
-  {
-    icon: '📡',
-    title: 'רדאר',
-    description: 'הרדאר סורק משלוחים זמינים בסביבתכם בזמן אמת.',
+    icon: '📦',
+    title: 'פרסום משלוח',
+    description: 'צרו משלוח חדש — הוסיפו כתובת איסוף, יעד, תיאור הפריט ותמונות.',
   },
   {
     icon: '💰',
-    title: 'הכנסות',
-    description: 'עקבו אחרי ההכנסות שלכם — לפי שבוע, חודש ושנה.',
+    title: 'הצעת מחיר',
+    description: 'הגדירו מחיר מוצע למשלוח. נהגים יוכלו לראות את ההצעה ולהביע עניין.',
+  },
+  {
+    icon: '🚛',
+    title: 'בחירת נהג',
+    description: 'כשנהג מביע עניין — תקבלו התראה. צפו בפרופיל הנהג ואשרו את המשלוח.',
+  },
+  {
+    icon: '💬',
+    title: 'צ׳אט ומעקב',
+    description: 'תקשרו עם הנהג דרך הצ׳אט המובנה ועקבו אחרי סטטוס המשלוח בזמן אמת.',
   },
   {
     icon: '💳',
     title: 'תשלום ישיר',
-    description: 'התשלום עבור המשלוח מתבצע ישירות בין השולח לנהג. האפליקציה לא מעבדת תשלומים — היא רק מחברת ביניכם.',
+    description: 'התשלום מתבצע ישירות בינכם לנהג. האפליקציה לא מעבדת תשלומים — היא רק מחברת ביניכם.',
   },
   {
-    icon: '⚙️',
-    title: 'הגדרות מתקדמות',
-    description: 'התאימו סוג רכב, גדלי משלוחים, כתובות מועדפות וזמני עבודה.',
+    icon: '⭐',
+    title: 'דירוג',
+    description: 'לאחר השלמת המשלוח — דרגו את הנהג. הדירוג עוזר לשמור על קהילה אמינה.',
   },
 ];
 
@@ -58,7 +58,7 @@ interface Props {
   onDone: () => void;
 }
 
-export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element {
+export function SenderOnboarding({ visible, onDone }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const [step, setStep] = useState(0);
 
@@ -119,7 +119,7 @@ export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element 
   );
 }
 
-export async function shouldShowOnboarding(): Promise<boolean> {
+export async function shouldShowSenderOnboarding(): Promise<boolean> {
   const done = await AsyncStorage.getItem(ONBOARDING_KEY);
   return done !== 'true';
 }

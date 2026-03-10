@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Linking, Dimensions, I18nManager, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, Image, StyleSheet, Linking, Dimensions, I18nManager, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 
 const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
@@ -9,6 +9,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
+
+const carIcon = require('../assets/car.png');
 
 interface LiveMapViewProps {
   pickup: { latitude: number; longitude: number; address?: string };
@@ -110,13 +112,15 @@ export function LiveMapView({
           pinColor="red"
         />
 
-        {/* Driver marker - blue */}
+        {/* Driver marker - car icon */}
         {driverLocation && (
           <Marker
             coordinate={{ latitude: driverLocation.lat, longitude: driverLocation.lng }}
             title={t('map.driver')}
-            pinColor="#2196F3"
-          />
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <Image source={carIcon} style={styles.driverMarker} resizeMode="contain" />
+          </Marker>
         )}
       </MapView>
 
@@ -199,5 +203,9 @@ const styles = StyleSheet.create({
   fabIcon: {
     fontSize: 20,
     color: '#fff',
+  },
+  driverMarker: {
+    width: 36,
+    height: 36,
   },
 });

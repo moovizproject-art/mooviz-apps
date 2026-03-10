@@ -13,6 +13,7 @@ import {
   Easing,
   useWindowDimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../../navigation/RootNavigator';
@@ -41,7 +42,14 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const passwordRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@remember_me').then((val) => {
+      if (val === 'true') setRememberMe(true);
+    });
+  }, []);
   const { width: screenWidth } = useWindowDimensions();
   // Under RTL, absolute pos defaults to right edge. translateX: 0 = right edge, negative = leftward.
   const truckX = useRef(new Animated.Value(45)).current; // start just off visible right edge
@@ -102,6 +110,8 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
+      // Persist remember me preference
+      await AsyncStorage.setItem('@remember_me', rememberMe ? 'true' : 'false');
       // Set flag BEFORE signIn so RootNavigator knows OTP is required
       setForceOtp(true);
       const cred = await signInWithEmail(email, password);
@@ -204,6 +214,24 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
           {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
 
+          {/* Remember me */}
+          <TouchableOpacity
+            style={styles.rememberRow}
+            onPress={() => setRememberMe(!rememberMe)}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.checkbox,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+              rememberMe && { backgroundColor: colors.primary, borderColor: colors.primary },
+            ]}>
+              {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={[styles.rememberText, { color: colors.textSecondary }]}>
+              {t('auth.rememberMe')}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary, shadowColor: colors.primary }, isLoading && styles.buttonDisabled]}
             onPress={handleLogin}
@@ -273,9 +301,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginVertical: 8,
     marginHorizontal: -28,
+    justifyContent: 'center',
   },
   truckWrap: {
     position: 'absolute',
+    top: 2.5,
   },
   truckImage: {
     width: 45,
@@ -296,7 +326,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputSection: {
-    marginBottom: 20,
+    marginBottom: 28,
   },
   label: {
     fontSize: 14,
@@ -304,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   labelSpacing: {
-    marginTop: 16,
+    marginTop: 24,
   },
   inputWrapper: {
     borderWidth: 1,
@@ -329,7 +359,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 28,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -373,5 +403,27 @@ const styles = StyleSheet.create({
   },
   registerTextBold: {
     fontWeight: '700',
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rememberText: {
+    fontSize: 14,
   },
 });

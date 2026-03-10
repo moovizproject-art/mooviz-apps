@@ -145,8 +145,8 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
           <TouchableOpacity style={[styles.backButton, { top: insets.top + 4 }]} onPress={handleLogout}>
             <View style={styles.backChevron} />
           </TouchableOpacity>
-          <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
-            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          <View style={styles.logoCircle}>
+            <Image source={logo} style={[styles.logoImage, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
           </View>
           <Text style={[styles.headerTitle, { color: colors.headerText }]}>
             {t('auth.verifyPhone')}
@@ -242,15 +242,12 @@ const styles = StyleSheet.create({
     marginRight: -3,
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   logoImage: {
-    width: 50,
+    width: 100,
     height: 50,
   },
   headerTitle: {

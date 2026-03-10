@@ -28,6 +28,18 @@ import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { ProofCamera } from '../../components/ProofCamera';
 import { uploadProofPhoto } from '../../services/storage';
+import Geolocation from 'react-native-geolocation-service';
+
+/** Haversine distance in km between two lat/lng points */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 /** Size emoji map */
 const SIZE_ICONS: Record<string, { icon: string; label: string }> = {
@@ -97,6 +109,22 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     return unsub;
   }, [deliveryId]);
 
+  // Fallback: fetch sender info from users collection if not denormalized on the delivery
+  useEffect(() => {
+    if (!delivery?.senderId || delivery.senderName) return;
+    firestore().collection('users').doc(delivery.senderId).get().then((snap) => {
+      if (snap.exists) {
+        const u = snap.data()!;
+        setDelivery((prev) => prev ? {
+          ...prev,
+          senderName: u.fullName || '',
+          senderPhotoUrl: u.profilePhotoURL || null,
+          senderRating: u.ratingAsSender?.average ?? 0,
+        } : prev);
+      }
+    }).catch(() => {});
+  }, [delivery?.senderId, delivery?.senderName]);
+
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
@@ -134,13 +162,39 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     setProofModalVisible(true);
   }, []);
 
-  const handleExpressInterest = async (): Promise<void> => {
+  const doExpressInterest = async (): Promise<void> => {
     try {
       await expressInterest(deliveryId, currentUser!.uid);
       carAlert.show('success', t('common.success'), t('driver.interestSent'));
     } catch (err) {
       carAlert.show('error', t('common.error'), t('driver.interestError'));
     }
+  };
+
+  const handleExpressInterest = (): void => {
+    if (!delivery?.pickup) {
+      doExpressInterest();
+      return;
+    }
+    // Get driver's current location and show distance confirmation
+    Geolocation.getCurrentPosition(
+      (pos) => {
+        const distKm = haversineKm(
+          pos.coords.latitude, pos.coords.longitude,
+          delivery.pickup!.latitude, delivery.pickup!.longitude,
+        );
+        const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} מ׳` : `${distKm.toFixed(1)} ק״מ`;
+        carAlert.show('info', 'אישור איסוף', `נקודת האיסוף נמצאת ${distStr} ממך.\nלהמשיך?`, [
+          { text: 'ביטול', style: 'cancel' },
+          { text: 'אשר איסוף', onPress: () => doExpressInterest() },
+        ]);
+      },
+      () => {
+        // Location unavailable — proceed without distance
+        doExpressInterest();
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+    );
   };
 
   const openNavigation = useCallback((lat: number, lng: number, label: string) => {

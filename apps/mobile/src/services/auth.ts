@@ -208,6 +208,8 @@ export async function createUserDocument(
     email: string;
     phone: string;
     city?: string;
+    gender?: 'male' | 'female';
+    ageRange?: string;
   },
 ): Promise<void> {
   await firestore().collection('users').doc(uid).set({
@@ -216,6 +218,8 @@ export async function createUserDocument(
     email: data.email,
     phone: normalizePhoneNumber(data.phone),
     city: data.city || '',
+    gender: data.gender || '',
+    ageRange: data.ageRange || '',
     role: 'sender',
     profilePhotoURL: '',
     kycDocumentURL: '',

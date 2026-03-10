@@ -211,8 +211,8 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
           <TouchableOpacity style={styles.cancelButton} onPress={() => auth().signOut()}>
             <Text style={styles.cancelText}>{t('auth.backToLogin')}</Text>
           </TouchableOpacity>
-          <View style={[styles.logoCircle, { backgroundColor: '#FFFFFF' }]}>
-            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          <View style={styles.logoCircle}>
+            <Image source={logo} style={[styles.logoImage, { tintColor: '#FFFFFF' }]} resizeMode="contain" />
           </View>
           <Text style={[styles.headerTitle, { color: colors.headerText }]}>
             {t('auth.phoneVerification')}
@@ -357,15 +357,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   logoImage: {
-    width: 50,
+    width: 100,
     height: 50,
   },
   headerTitle: {

@@ -239,6 +239,12 @@ export function ProfileScreen(): React.JSX.Element {
               <InfoRow label={t('profile.phone')} value={currentUser?.phone || '—'} colors={colors} />
               <InfoRow label={t('profile.email')} value={currentUser?.email || '—'} colors={colors} />
               <InfoRow label={t('profile.city')} value={currentUser?.city || '—'} colors={colors} />
+              {currentUser?.gender ? (
+                <InfoRow label={t('auth.gender')} value={t(`auth.${currentUser.gender}`)} colors={colors} />
+              ) : null}
+              {currentUser?.ageRange ? (
+                <InfoRow label={t('auth.ageRange')} value={currentUser.ageRange} colors={colors} />
+              ) : null}
             </>
           )}
         </View>
@@ -265,12 +271,12 @@ export function ProfileScreen(): React.JSX.Element {
   );
 }
 
-/** Info row — in RTL, row auto-flips so label (1st child) goes right, value (2nd) goes left */
+/** Info row — label pinned to start (right in RTL), value pinned to end (left in RTL) */
 function InfoRow({ label, value, colors }: { label: string; value: string; colors: Record<string, string> }): React.JSX.Element {
   return (
     <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
       <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.infoValue, { color: colors.textPrimary }]} numberOfLines={1}>{value}</Text>
     </View>
   );
 }
@@ -387,17 +393,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    gap: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 48,
   },
   infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   infoValue: {
-    fontSize: 14,
-    flex: 1,
+    fontSize: 15,
     textAlign: 'left',
   },
   logoutButton: {
