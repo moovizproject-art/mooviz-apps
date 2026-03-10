@@ -11,6 +11,7 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +26,7 @@ import { validateEmail } from '../../utils/validators';
 import { signInWithEmail, mapFirebaseAuthError } from '../../services/auth';
 
 const logo = require('../../assets/logo.png');
+const kalIcon = require('../../assets/kal-icon.png');
 const carImage = require('../../assets/car.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -277,6 +279,16 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
           </Text>
         </TouchableOpacity>
 
+        {/* Developed by KAL Solutions (reversed order for RTL) */}
+        <TouchableOpacity
+          style={styles.kalSection}
+          onPress={() => Linking.openURL('https://kal.solutions')}
+        >
+          <Text style={[styles.kalName, { color: colors.textSecondary }]}>KAL Solutions</Text>
+          <Image source={kalIcon} style={styles.kalIcon} resizeMode="contain" />
+          <Text style={[styles.kalText, { color: colors.textSecondary }]}>Developed by</Text>
+        </TouchableOpacity>
+
         <View style={styles.spacer} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -402,6 +414,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   registerTextBold: {
+    fontWeight: '700',
+  },
+  kalSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    gap: 6,
+  },
+  kalText: {
+    fontSize: 12,
+  },
+  kalIcon: {
+    width: 18,
+    height: 18,
+  },
+  kalName: {
+    fontSize: 12,
     fontWeight: '700',
   },
   rememberRow: {
