@@ -36,7 +36,7 @@ interface DeliveryForm {
   pickup: GeoPoint | null;
   destination: GeoPoint | null;
   itemDescription: string;
-  itemSize: 'small' | 'medium' | 'large';
+  itemSize: 'small' | 'medium' | 'large' | 'xlarge';
   mediaUris: string[];
   suggestedPrice: string;
   scheduledDate: Date | null;
@@ -164,8 +164,9 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
 
   const sizeOptions: { value: DeliveryForm['itemSize']; label: string; icon: string; hint: string }[] = [
     { value: 'small', label: 'מעטפה', icon: '✉️', hint: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות' },
-    { value: 'medium', label: 'חבילה', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
-    { value: 'large', label: 'קופסה', icon: '📦📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
+    { value: 'medium', label: 'שקית / חבילה', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
+    { value: 'large', label: 'קופסא / ארגז', icon: '📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
+    { value: 'xlarge', label: 'דברים גדולים', icon: '🚚', hint: 'מעל 30 ק"ג\nמעל 60 ס"מ\nרהיטים, מוצרי חשמל גדולים' },
   ];
 
   const infoButton = (

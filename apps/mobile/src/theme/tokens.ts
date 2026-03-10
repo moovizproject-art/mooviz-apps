@@ -78,10 +78,10 @@ export const lightColors: ThemeColors = {
   primaryLight: '#4A9AFF',
   primaryDark: '#0D47A1',
 
-  // Accent
-  accent: '#FF6B35',
-  accentLight: '#FF8F62',
-  accentDark: '#E55A2B',
+  // Accent (Material Orange — matches walkthrough branding)
+  accent: '#FF9800',
+  accentLight: '#FFB74D',
+  accentDark: '#F57C00',
 
   // Surfaces
   background: '#EEF1F5',
@@ -142,10 +142,10 @@ export const darkColors: ThemeColors = {
   primaryLight: '#7AB8FF',
   primaryDark: '#1A73E8',
 
-  // Accent
-  accent: '#FF8F62',
-  accentLight: '#FFB08E',
-  accentDark: '#FF6B35',
+  // Accent (Material Orange — matches walkthrough branding)
+  accent: '#FFB74D',
+  accentLight: '#FFCC80',
+  accentDark: '#FF9800',
 
   // Surfaces
   background: '#121212',

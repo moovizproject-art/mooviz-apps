@@ -156,7 +156,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
           setExpensesOpen((prev) => !prev);
         }} style={styles.expensesHeader}>
           <Text style={[styles.expensesTitle, { color: colors.textPrimary }]}>
-            💸 הוצאות
+            💸 עלויות משלוחים עד כה
           </Text>
           <View style={styles.expensesEndRow}>
             <Text style={[styles.expensesQuickTotal, { color: '#E53935' }]}>
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   // ── Expenses Dashboard ──
   expensesCard: {
     marginHorizontal: SPACING.xxl,
-    marginTop: SPACING.md,
+    marginTop: SPACING.md - 50,
     marginBottom: SPACING.sm,
     padding: SPACING.md,
   },
