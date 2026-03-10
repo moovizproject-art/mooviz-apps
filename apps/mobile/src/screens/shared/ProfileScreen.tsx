@@ -34,6 +34,8 @@ export function ProfileScreen(): React.JSX.Element {
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
   const [editNickname, setEditNickname] = useState<string>((currentUser as any)?.nickname || '');
   const [editCity, setEditCity] = useState<string>(currentUser?.city || '');
+  const [editGender, setEditGender] = useState<'male' | 'female' | ''>(currentUser?.gender || '');
+  const [editAgeRange, setEditAgeRange] = useState<string>(currentUser?.ageRange || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [ownPhotoUri, setOwnPhotoUri] = useState<string | null>(null);
 
@@ -51,6 +53,8 @@ export function ProfileScreen(): React.JSX.Element {
       await updateProfile({
         fullName: editName,
         city: editCity,
+        gender: editGender || '',
+        ageRange: editAgeRange || '',
       });
       // Save nickname to Firestore
       if (currentUser?.uid) {
@@ -229,6 +233,46 @@ export function ProfileScreen(): React.JSX.Element {
                   onChangeText={setEditCity}
                 />
               </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{t('auth.gender')}</Text>
+                <View style={styles.chipRow}>
+                  {(['male', 'female'] as const).map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={[
+                        styles.chip,
+                        { borderColor: colors.border, backgroundColor: colors.surface },
+                        editGender === g && { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setEditGender(editGender === g ? '' : g)}
+                    >
+                      <Text style={[styles.chipText, { color: colors.textPrimary }, editGender === g && { color: '#FFFFFF' }]}>
+                        {t(`auth.${g}`)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{t('auth.ageRange')}</Text>
+                <View style={styles.chipRow}>
+                  {['18-24', '25-34', '35-44', '45-54', '55+'].map((range) => (
+                    <TouchableOpacity
+                      key={range}
+                      style={[
+                        styles.chip,
+                        { borderColor: colors.border, backgroundColor: colors.surface },
+                        editAgeRange === range && { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setEditAgeRange(editAgeRange === range ? '' : range)}
+                    >
+                      <Text style={[styles.chipText, { color: colors.textPrimary }, editAgeRange === range && { color: '#FFFFFF' }]}>
+                        {range}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
               <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>
                 <Text style={styles.saveButtonText}>{t('profile.saveChanges')}</Text>
               </TouchableOpacity>
@@ -377,6 +421,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   saveButton: {
     borderRadius: 10,

@@ -54,9 +54,9 @@ const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 
 const VEHICLE_TYPES = ['bicycle', 'bike', 'car', 'truck'] as const;
 const VEHICLE_ICONS = { bicycle: '\u{1F6B2}', bike: '\u{1F3CD}', car: '\u{1F697}', truck: '\u{1F69A}' };
 const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: 'אופניים', bike: 'קטנוע', car: 'רכב', truck: 'משאית' };
-const SIZE_OPTIONS = ['small', 'medium', 'large'] as const;
-const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦📦' };
-const SIZE_LABELS_HE: Record<string, string> = { small: 'מעטפה', medium: 'חבילה', large: 'קופסה' };
+const SIZE_OPTIONS = ['small', 'medium', 'large', 'xlarge'] as const;
+const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦', xlarge: '🚚' };
+const SIZE_LABELS_HE: Record<string, string> = { small: 'קטן', medium: 'בינוני', large: 'גדול', xlarge: 'אחר' };
 
 const PREFS_KEY = '@driver_preferences';
 
@@ -89,7 +89,7 @@ const DEFAULT_PREFS: DriverPreferences = {
   nickname: '',
   radiusKm: 10,
   isAvailable: true,
-  deliverySizes: { small: true, medium: true, large: true },
+  deliverySizes: { small: true, medium: true, large: true, xlarge: true },
   vehicleType: 'car',
   homeAddress: '',
   workAddress: '',
@@ -1097,7 +1097,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   squareButton: {
-    width: (SCREEN_WIDTH - SPACING.xxl * 2 - SPACING.lg * 2 - SPACING.sm * 3) / 4,
+    width: (SCREEN_WIDTH - SPACING.xxl * 2 - SPACING.lg * 2 - SPACING.md * 2 - SPACING.sm * 3) / 4,
     aspectRatio: 1,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,

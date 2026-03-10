@@ -43,11 +43,11 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 /** Size emoji map */
 const SIZE_ICONS: Record<string, { icon: string; label: string }> = {
-  envelope: { icon: '✉️', label: 'מעטפה' },
-  small: { icon: '📦', label: 'קטן' },
+  envelope: { icon: '✉️', label: 'קטן' },
+  small: { icon: '✉️', label: 'קטן' },
   medium: { icon: '📦', label: 'בינוני' },
   large: { icon: '📦📦', label: 'גדול' },
-  xlarge: { icon: '🏗️', label: 'חריג' },
+  xlarge: { icon: '🚚', label: 'אחר' },
 };
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DriverDeliveryDetail'>;
