@@ -4,6 +4,7 @@ import {
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore";
 import { User } from "@mooviz/shared";
+import { sendPushNotification } from "../services/notificationService";
 
 const db = admin.firestore();
 
@@ -172,6 +173,12 @@ async function handleKycStatusChange(
       read: false,
       createdAt: now,
     });
+
+  // Send push notification
+  await sendPushNotification(userId, titleHe, bodyHe, {
+    event: newStatus === "approved" ? "kyc_approved" : "kyc_rejected",
+    type: "kyc_status",
+  });
 }
 
 /**
@@ -186,18 +193,52 @@ async function handleAccountStatusChange(
 
   if (newStatus === "suspended" || newStatus === "blocked") {
     const now = admin.firestore.Timestamp.now();
+    const titleHe = newStatus === "suspended" ? "\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05D4\u05D5\u05E9\u05E2\u05D4" : "\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05E0\u05D7\u05E1\u05DD";
+    const bodyHe = `\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05E9\u05DC\u05DA ${newStatus === "suspended" ? "\u05D4\u05D5\u05E9\u05E2\u05D4" : "\u05E0\u05D7\u05E1\u05DD"}. \u05E6\u05E8\u05D5 \u05E7\u05E9\u05E8 \u05E2\u05DD \u05D4\u05EA\u05DE\u05D9\u05DB\u05D4 \u05DC\u05DE\u05D9\u05D3\u05E2 \u05E0\u05D5\u05E1\u05E3`;
+
     await db
       .collection("users")
       .doc(userId)
       .collection("notifications")
       .add({
         title: newStatus === "suspended" ? "Account Suspended" : "Account Blocked",
-        titleHe: newStatus === "suspended" ? "\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05D4\u05D5\u05E9\u05E2\u05D4" : "\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05E0\u05D7\u05E1\u05DD",
+        titleHe,
         body: `Your account has been ${newStatus}. Please contact support for more information.`,
-        bodyHe: `.\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05E9\u05DC\u05DA ${newStatus === "suspended" ? "\u05D4\u05D5\u05E9\u05E2\u05D4" : "\u05E0\u05D7\u05E1\u05DD"}. \u05E6\u05E8\u05D5 \u05E7\u05E9\u05E8 \u05E2\u05DD \u05D4\u05EA\u05DE\u05D9\u05DB\u05D4 \u05DC\u05DE\u05D9\u05D3\u05E2 \u05E0\u05D5\u05E1\u05E3`,
+        bodyHe,
         type: "system",
         read: false,
         createdAt: now,
       });
+
+    // Send push notification
+    await sendPushNotification(userId, titleHe, bodyHe, {
+      event: `account_${newStatus}`,
+      type: "account_status",
+    });
+  }
+
+  // Notify user when account is reactivated
+  if (newStatus === "active" && (oldStatus === "suspended" || oldStatus === "blocked")) {
+    const titleHe = "\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05D4\u05D5\u05E4\u05E2\u05DC \u05DE\u05D7\u05D3\u05E9";
+    const bodyHe = "\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05E9\u05DC\u05DA \u05D4\u05D5\u05E4\u05E2\u05DC \u05DE\u05D7\u05D3\u05E9. \u05D1\u05E8\u05D5\u05DB\u05D9\u05DD \u05D4\u05D1\u05D0\u05D9\u05DD!";
+
+    await db
+      .collection("users")
+      .doc(userId)
+      .collection("notifications")
+      .add({
+        title: "Account Reactivated",
+        titleHe,
+        body: "Your account has been reactivated. Welcome back!",
+        bodyHe,
+        type: "system",
+        read: false,
+        createdAt: admin.firestore.Timestamp.now(),
+      });
+
+    await sendPushNotification(userId, titleHe, bodyHe, {
+      event: "account_reactivated",
+      type: "account_status",
+    });
   }
 }

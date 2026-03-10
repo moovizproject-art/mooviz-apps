@@ -128,8 +128,9 @@ export async function sendDeliveryNotification(
     }
   }
 
-  const title = interpolateTemplate(template.titleEn, values);
-  const body = interpolateTemplate(template.bodyEn, values);
+  // Hebrew-first: use Hebrew templates by default
+  const title = interpolateTemplate(template.titleHe, values);
+  const body = interpolateTemplate(template.bodyHe, values);
   const notificationData: Record<string, string> = {
     event,
     deliveryId,

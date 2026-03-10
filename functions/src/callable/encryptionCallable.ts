@@ -6,11 +6,16 @@ const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
 // Server secret — MUST be set via environment/Secret Manager
-const SERVER_SECRET = process.env.ENCRYPTION_SECRET;
-if (!SERVER_SECRET) {
-  throw new Error(
-    "ENCRYPTION_SECRET environment variable is required. Set it via Firebase Secret Manager."
-  );
+// Deferred check: throws only when an encryption function is called, not at module load
+const SERVER_SECRET = process.env.ENCRYPTION_SECRET as string;
+
+function getSecret(): string {
+  if (!SERVER_SECRET) {
+    throw new Error(
+      "ENCRYPTION_SECRET environment variable is required. Set it via Firebase Secret Manager."
+    );
+  }
+  return SERVER_SECRET;
 }
 
 const ALGORITHM = "aes-256-cbc";
@@ -23,7 +28,7 @@ const IV_LENGTH = 16;
  */
 function deriveKey(uid: string): Buffer {
   return crypto
-    .createHmac("sha256", SERVER_SECRET)
+    .createHmac("sha256", getSecret())
     .update(uid)
     .digest(); // 32 bytes = AES-256
 }

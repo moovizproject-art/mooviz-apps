@@ -73,12 +73,29 @@ export const onDeliveryCreate = onDocumentCreated(
       now.toMillis() + DEFAULT_TIMEOUT_HOURS * 60 * 60 * 1000
     );
 
-    // Set default fields
+    // Lookup sender info for denormalization
+    let senderName = "";
+    let senderPhotoUrl = "";
+    let senderRating: number | null = null;
+    if (data.senderId) {
+      const senderDoc = await admin.firestore().collection("users").doc(data.senderId).get();
+      if (senderDoc.exists) {
+        const s = senderDoc.data()!;
+        senderName = s.nickname || s.fullName || "";
+        senderPhotoUrl = s.profilePhotoURL || "";
+        senderRating = s.ratingAsSender?.average ?? null;
+      }
+    }
+
+    // Set default fields + sender info
     await snapshot.ref.update({
       status: "new" as DeliveryStatus,
       statusHistory: [initialStatusEntry],
       payment: { senderConfirmed: false, driverConfirmed: false },
       proof: {},
+      senderName,
+      senderPhotoUrl,
+      senderRating,
       timeoutAt,
       createdAt: now,
       updatedAt: now,
@@ -103,8 +120,8 @@ export const onDeliveryCreate = onDocumentCreated(
           nearbyDrivers.map((driver) =>
             sendPushNotification(
               driver.uid,
-              "New Delivery Nearby",
-              `New delivery from ${pickupCity} to ${destCity} - ${price} ILS`,
+              "משלוח חדש באזורך",
+              `משלוח חדש מ-${pickupCity} ל-${destCity} - ${price} ₪`,
               {
                 event: "new_listing_nearby",
                 deliveryId,

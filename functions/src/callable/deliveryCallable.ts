@@ -64,6 +64,7 @@ async function updateDeliveryStatus(
 /**
  * Driver expresses interest in a delivery.
  * Transitions: new -> pending
+ * Denormalizes driver info onto the delivery document.
  */
 export const expressInterest = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -87,12 +88,24 @@ export const expressInterest = onCall(async (request) => {
     );
   }
 
+  // Lookup driver info for denormalization
+  const driverDoc = await db.collection("users").doc(uid).get();
+  const driverData = driverDoc.data();
+  const driverName = driverData?.nickname || driverData?.fullName || "";
+  const driverPhotoUrl = driverData?.profilePhotoURL || "";
+  const driverRating = driverData?.ratingAsDriver?.average ?? null;
+
   await updateDeliveryStatus(
     ref,
     "pending",
     uid,
     "Driver expressed interest",
-    { driverId: uid }
+    {
+      driverId: uid,
+      driverName,
+      driverPhotoUrl,
+      driverRating,
+    }
   );
 
   // Notify the sender
@@ -106,6 +119,8 @@ export const expressInterest = onCall(async (request) => {
 /**
  * Sender approves a driver for a delivery.
  * Transitions: pending -> waiting
+ * Creates a chat room between sender and driver.
+ * Denormalizes sender info onto the delivery document.
  */
 export const approveDriver = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -131,11 +146,45 @@ export const approveDriver = onCall(async (request) => {
     );
   }
 
+  // Lookup sender info for denormalization
+  const senderDoc = await db.collection("users").doc(uid).get();
+  const senderData = senderDoc.data();
+  const senderName = senderData?.nickname || senderData?.fullName || "";
+  const senderPhotoUrl = senderData?.profilePhotoURL || "";
+  const senderRating = senderData?.ratingAsSender?.average ?? null;
+
+  // Create chat room between sender and driver
+  const chatRef = db.collection("chats").doc();
+  const now = admin.firestore.Timestamp.now();
+  await chatRef.set({
+    deliveryId,
+    participants: [uid, delivery.driverId],
+    senderName,
+    driverName: delivery.driverName || "",
+    lastMessage: "צ'אט נוצר — משלוח אושר",
+    lastMessageAt: now,
+    createdAt: now,
+  });
+
+  // Add system message to chat
+  await chatRef.collection("messages").add({
+    type: "system",
+    text: "✅ המשלוח אושר — אפשר לתאם איסוף",
+    senderId: "system",
+    createdAt: now,
+  });
+
   await updateDeliveryStatus(
     ref,
     "waiting",
     uid,
-    "Sender approved driver"
+    "Sender approved driver",
+    {
+      chatId: chatRef.id,
+      senderName,
+      senderPhotoUrl,
+      senderRating,
+    }
   );
 
   // Notify the driver

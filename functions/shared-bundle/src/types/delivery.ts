@@ -45,7 +45,14 @@ export interface StatusEntry {
 export interface Delivery {
   id?: string;
   senderId: string;
+  senderName?: string;
+  senderPhotoUrl?: string;
+  senderRating?: number | null;
   driverId?: string;
+  driverName?: string;
+  driverPhotoUrl?: string;
+  driverRating?: number | null;
+  chatId?: string;
   status: DeliveryStatus;
   pickup: GeoPoint;
   destination: GeoPoint;
