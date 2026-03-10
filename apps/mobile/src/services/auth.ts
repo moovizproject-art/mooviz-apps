@@ -216,6 +216,7 @@ export async function createUserDocument(
     email: data.email,
     phone: normalizePhoneNumber(data.phone),
     city: data.city || '',
+    role: 'sender',
     profilePhotoURL: '',
     kycDocumentURL: '',
     kycStatus: 'pending',

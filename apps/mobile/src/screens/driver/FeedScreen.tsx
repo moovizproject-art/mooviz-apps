@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import firestore from '@react-native-firebase/firestore';
 
 import { DriverTabScreenProps } from '../../navigation/types';
+import { encodeGeohash } from '../../services/geohash';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -172,6 +173,15 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     () => location ? { latitude: location.latitude, longitude: location.longitude } : undefined,
     [location?.latitude, location?.longitude],
   );
+
+  // Sync device GPS location to Firestore so nearby-driver queries work
+  useEffect(() => {
+    if (!location || !currentUser?.uid) return;
+    const geohash = encodeGeohash(location.latitude, location.longitude, 6);
+    firestore().collection('users').doc(currentUser.uid).update({
+      location: { lat: location.latitude, lng: location.longitude, geohash },
+    }).catch((err: unknown) => console.warn('[FeedScreen] Location sync failed:', err));
+  }, [location?.latitude, location?.longitude, currentUser?.uid]);
   // When location unavailable, show all pending deliveries (no geo filter)
   const { deliveries, isLoading, refresh } = useDelivery({
     role: 'driver',
