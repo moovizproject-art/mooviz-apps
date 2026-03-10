@@ -103,7 +103,8 @@ service firebase.storage {
     // ───────────────────────────────────────────────
     match /deliveries/{senderId}/{allPaths=**} {
       // Owner or admin can read delivery media
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated()
+        && (request.auth.uid == senderId || isAdmin());
       allow write: if isAuthenticated()
         && request.auth.uid == senderId
         && isMedia()

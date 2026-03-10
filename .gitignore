@@ -63,6 +63,10 @@ initDocs/
 # Scripts — contain Firebase config & test credentials
 scripts/
 
+# Tool artifacts — debug logs, worktrees
+.playwright-mcp/
+.claude/worktrees/
+
 # Secrets
 serviceAccountKey*.json
 google-services.json

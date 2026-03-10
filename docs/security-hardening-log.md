@@ -5,7 +5,14 @@ Based on security audit report dated March 9, 2026.
 
 ### Batch 1 — Commit: ee0defb
 ### Batch 2 — Commit: a78a489
-### Batch 3 — Commit: (pending)
+### Batch 3 — Commit: 41ab1a5
+### Batch 4 — Commit: f63ac61 (documentation suite)
+
+### Post-Audit Fix — Cloud Run IAM (March 10, 2026)
+- **Issue**: All Gen 2 callable Cloud Functions returned 401 "not authorized to invoke this service"
+- **Root Cause**: Firebase Gen 2 functions run on Cloud Run, which defaults to IAM-authenticated invocation only. `allUsers` → `roles/run.invoker` binding was missing.
+- **Fix**: Applied `roles/run.invoker` IAM policy for `allUsers` to all 16 callable services via Cloud Run REST API
+- **Services Fixed**: approveDriver, cancelDelivery, confirmDelivery, confirmPayment, confirmPickup, createUser, declineDriver, decryptDocument, expressInterest, getAuthorizedPhoto, removeFCMToken, reviewKYC, sendBulkEmail, updateFCMToken, updateProfile, uploadProfilePhoto
 
 | # | Severity | Finding | Status |
 |---|----------|---------|--------|
@@ -35,9 +42,18 @@ Based on security audit report dated March 9, 2026.
 | L2 | LOW | Rate limiter defined but not active | FIXED — wired to expressInterest + sendBulkEmail callables |
 | L3 | LOW | Chat queries without proper filtering | FIXED — list rule now requires participant check |
 
+### Re-Audit Fixes — March 10, 2026
+
+| # | Severity | Finding | Status |
+|---|----------|---------|--------|
+| R1 | MEDIUM | Delivery item photos readable by any authenticated user (storage.rules) | FIXED — restricted to owner (senderId) or admin |
+| R2 | LOW | .playwright-mcp/ and .claude/worktrees/ not gitignored | FIXED — added to .gitignore |
+| R3 | N/A | Cloud Run IAM missing for all callable functions | FIXED — allUsers → roles/run.invoker applied to 16 services |
+| R4 | LOW | picked_up → cancelled transition allowed in status constants | VERIFIED FIXED — only allows ["delivered"] |
+
 ## Summary
-- **Fixed**: 22/23 findings
-- **Accepted Risk**: 1/23 (C4 — admin panel direct Firestore access, mitigated by admin role check in rules)
-- **Partial**: 1/23 (H5 — users collection readable, mitigated by Cloud Function photo access)
+- **Fixed**: 23/24 findings (including re-audit)
+- **Accepted Risk**: 1/24 (C4 — admin panel direct Firestore access, mitigated by admin role check in rules)
+- **Partial**: 1/24 (H5 — users collection readable, mitigated by Cloud Function photo access)
 - **Open Critical/High**: 0
 - **Risk Level**: HIGH → LOW
