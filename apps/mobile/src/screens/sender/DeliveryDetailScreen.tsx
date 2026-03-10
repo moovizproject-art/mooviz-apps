@@ -552,29 +552,41 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           {mediaUploading && <ActivityIndicator size="small" color={colors.primary} />}
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaList}>
-          {mediaList.map((url, i) => (
-            <TouchableOpacity
-              key={`${i}-${url}`}
-              style={styles.mediaThumbWrapper}
-              activeOpacity={0.8}
-              onPress={() => { setGalleryIndex(i); setGalleryVisible(true); }}
-            >
-              <Image source={{ uri: url }} style={styles.mediaThumb} />
-              {canEditMedia && (
-                <TouchableOpacity
-                  style={[styles.mediaDeleteBtn, { backgroundColor: colors.error }]}
-                  onPress={() => handleDeleteMedia(url, i)}
-                >
-                  <Text style={styles.mediaDeleteText}>✕</Text>
-                </TouchableOpacity>
-              )}
-              {(url.toLowerCase().includes('video') || url.toLowerCase().endsWith('.mp4')) && (
-                <View style={styles.videoOverlay}>
-                  <Text style={styles.videoIcon}>▶</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+          {mediaList.map((url, i) => {
+            const isVideo = url.toLowerCase().includes('video') || url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov');
+            return (
+              <TouchableOpacity
+                key={`${i}-${url}`}
+                style={styles.mediaThumbWrapper}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (isVideo) {
+                    Linking.openURL(url).catch(() => {});
+                  } else {
+                    setGalleryIndex(i);
+                    setGalleryVisible(true);
+                  }
+                }}
+              >
+                {isVideo ? (
+                  <View style={[styles.mediaThumb, { backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ fontSize: 28 }}>🎬</Text>
+                    <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>וידאו</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: url }} style={styles.mediaThumb} />
+                )}
+                {canEditMedia && (
+                  <TouchableOpacity
+                    style={[styles.mediaDeleteBtn, { backgroundColor: colors.error }]}
+                    onPress={() => handleDeleteMedia(url, i)}
+                  >
+                    <Text style={styles.mediaDeleteText}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            );
+          })}
           {/* Add photo button */}
           {canAddImage && (
             <TouchableOpacity

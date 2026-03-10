@@ -14,11 +14,17 @@ import {
   Dimensions,
   StatusBar,
   Platform,
+  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+function isVideoUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return lower.includes('video') || lower.endsWith('.mp4') || lower.endsWith('.mov');
+}
 
 interface Props {
   visible: boolean;
@@ -71,7 +77,23 @@ export function ImageGalleryModal({ visible, images, initialIndex = 0, onClose }
           keyExtractor={(item, i) => `${i}-${item}`}
           renderItem={({ item }) => (
             <View style={styles.imageContainer}>
-              <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
+              {isVideoUrl(item) ? (
+                <TouchableOpacity
+                  style={styles.videoContainer}
+                  onPress={() => Linking.openURL(item).catch(() => {})}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
+                  <View style={styles.playOverlay}>
+                    <View style={styles.playButton}>
+                      <Text style={styles.playIcon}>▶</Text>
+                    </View>
+                    <Text style={styles.playLabel}>לחץ להפעלת וידאו</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
+              )}
             </View>
           )}
         />
@@ -189,5 +211,36 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  videoContainer: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  playButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playIcon: {
+    fontSize: 36,
+    color: '#1a237e',
+    marginStart: 4,
+  },
+  playLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 12,
   },
 });

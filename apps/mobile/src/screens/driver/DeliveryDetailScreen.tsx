@@ -263,6 +263,52 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
       </View>
 
+      {/* ── Action buttons (above map for visibility) ── */}
+      <View style={styles.actions}>
+        {isAvailable && !isMyJob && (
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary }]} onPress={handleExpressInterest}>
+            <Text style={styles.actionButtonText}>🚛 {t('driver.expressInterest')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {isMyJob && (delivery.status === 'matched' || delivery.status === 'waiting') && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => openProofCamera('pickup')}
+            disabled={proofUploading}
+          >
+            {proofUploading && proofType === 'pickup' ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.actionButtonText}>📸 {t('driver.confirmPickup')}</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {isMyJob && (delivery.status === 'picked_up' || delivery.status === 'in_transit') && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.success }]}
+            onPress={() => openProofCamera('delivery')}
+            disabled={proofUploading}
+          >
+            {proofUploading && proofType === 'delivery' ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.actionButtonText}>📸 {t('driver.confirmDelivery')}</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {isMyJob && !!delivery.chatId && (
+          <TouchableOpacity
+            style={[styles.chatButton, { borderColor: colors.primary }]}
+            onPress={() => navigation.navigate('ChatRoom', { chatId: delivery.chatId!, recipientName: delivery.senderName || '' })}
+          >
+            <Text style={[styles.chatButtonText, { color: colors.primary }]}>💬 {t('driver.chatWithSender')}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* ── 4. Map ── */}
       <View style={styles.mapContainer}>
         <MapView
@@ -332,20 +378,32 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             תמונות הפריט ({imageCount}/5{hasVideo ? ' + וידאו' : ''})
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaList}>
-            {mediaList.map((url, i) => (
-              <TouchableOpacity
-                key={`${i}-${url}`}
-                activeOpacity={0.8}
-                onPress={() => { setGalleryIndex(i); setGalleryVisible(true); }}
-              >
-                <Image source={{ uri: url }} style={styles.mediaThumb} />
-                {(url.toLowerCase().includes('video') || url.toLowerCase().endsWith('.mp4')) && (
-                  <View style={styles.videoOverlay}>
-                    <Text style={styles.videoIcon}>▶</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+            {mediaList.map((url, i) => {
+              const isVideo = url.toLowerCase().includes('video') || url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov');
+              return (
+                <TouchableOpacity
+                  key={`${i}-${url}`}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (isVideo) {
+                      Linking.openURL(url).catch(() => {});
+                    } else {
+                      setGalleryIndex(i);
+                      setGalleryVisible(true);
+                    }
+                  }}
+                >
+                  {isVideo ? (
+                    <View style={[styles.mediaThumb, { backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Text style={{ fontSize: 28 }}>🎬</Text>
+                      <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>וידאו</Text>
+                    </View>
+                  ) : (
+                    <Image source={{ uri: url }} style={styles.mediaThumb} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       )}
@@ -420,52 +478,6 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           )}
         </View>
       )}
-
-      {/* ── 8. Action buttons ── */}
-      <View style={styles.actions}>
-        {isAvailable && !isMyJob && (
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary }]} onPress={handleExpressInterest}>
-            <Text style={styles.actionButtonText}>🚛 {t('driver.expressInterest')}</Text>
-          </TouchableOpacity>
-        )}
-
-        {isMyJob && (delivery.status === 'matched' || delivery.status === 'waiting') && (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => openProofCamera('pickup')}
-            disabled={proofUploading}
-          >
-            {proofUploading && proofType === 'pickup' ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.actionButtonText}>📸 {t('driver.confirmPickup')}</Text>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {isMyJob && (delivery.status === 'picked_up' || delivery.status === 'in_transit') && (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.success }]}
-            onPress={() => openProofCamera('delivery')}
-            disabled={proofUploading}
-          >
-            {proofUploading && proofType === 'delivery' ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.actionButtonText}>📸 {t('driver.confirmDelivery')}</Text>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {isMyJob && !!delivery.chatId && (
-          <TouchableOpacity
-            style={[styles.chatButton, { borderColor: colors.primary }]}
-            onPress={() => navigation.navigate('ChatRoom', { chatId: delivery.chatId!, recipientName: delivery.senderName || '' })}
-          >
-            <Text style={[styles.chatButtonText, { color: colors.primary }]}>💬 {t('driver.chatWithSender')}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
 
     </ScrollView>
 

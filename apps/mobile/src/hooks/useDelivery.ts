@@ -233,13 +233,10 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
   );
 
   const expressInterest = useCallback(
-    async (deliveryId: string, driverId: string): Promise<void> => {
-      // Add driver to interested array
-      // הוספת נהג לרשימת המעוניינים
-      await firestore().collection('deliveries').doc(deliveryId).update({
-        interestedDrivers: firestore.FieldValue.arrayUnion(driverId),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+    async (deliveryId: string, _driverId: string): Promise<void> => {
+      // Route through Cloud Function for proper status transition + notifications
+      const fn = functions().httpsCallable('expressInterest');
+      await fn({ deliveryId });
     },
     [],
   );

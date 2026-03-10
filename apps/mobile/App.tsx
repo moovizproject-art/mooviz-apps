@@ -3,6 +3,7 @@ import { I18nManager, LogBox } from 'react-native';
 import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
+import RNRestart from 'react-native-restart';
 
 import { AuthProvider } from './src/hooks/useAuth';
 import { ThemeProvider } from './src/theme/ThemeContext';
@@ -15,9 +16,12 @@ import { navigationRef } from './src/services/navigation';
 
 // Force RTL layout for Hebrew-first UI
 // כפיית כיוון ימין-לשמאל עבור ממשק עברית
+// forceRTL requires an app restart to take effect on first install
 if (!I18nManager.isRTL) {
   I18nManager.allowRTL(true);
   I18nManager.forceRTL(true);
+  // Auto-restart on first install so RTL takes effect immediately
+  setTimeout(() => RNRestart.restart(), 100);
 }
 
 // Suppress known harmless warnings in development
