@@ -196,26 +196,23 @@ async function handleStatusChange(
   );
 
   // Map status changes to notification events
-  const statusToNotificationEvent: Partial<
+  // NOTE: Notifications for statuses handled by callable functions
+  // (pending, waiting, picked_up, delivered, cancelled) are sent there
+  // to avoid duplicates and to have correct context (actor name, etc.).
+  // The trigger only sends for completed_paid (fired by payment logic).
+  const triggerOnlyEvents: Partial<
     Record<DeliveryStatus, string>
   > = {
-    pending: "driver_interested",
-    waiting: "sender_approved",
-    picked_up: "delivery_picked_up",
-    delivered: "delivery_delivered",
     completed_paid: "payment_confirmed",
-    cancelled: "delivery_cancelled",
   };
 
-  const notificationEvent = statusToNotificationEvent[newStatus];
+  const notificationEvent = triggerOnlyEvents[newStatus];
   if (notificationEvent) {
     try {
       await sendDeliveryNotification(
         deliveryId,
         notificationEvent as import("@mooviz/shared").NotificationEventType,
-        {
-          cancelledBy: after.cancelledBy ?? "unknown",
-        }
+        {}
       );
     } catch (error) {
       console.error(

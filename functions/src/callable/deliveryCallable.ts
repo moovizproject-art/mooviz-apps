@@ -407,11 +407,11 @@ export const cancelDelivery = onCall(async (request) => {
   // so another driver could potentially pick it up
   // (only if the sender cancels — driver cancel is permanent)
 
-  // Notify the other party
-  const cancellerName = isSender ? "sender" : "driver";
+  // Notify the other party (Hebrew role names for notification text)
+  const cancellerNameHe = isSender ? "השולח" : "הנהג";
   await sendDeliveryNotification(deliveryId, "delivery_cancelled", {
     actorId: uid,
-    cancelledBy: cancellerName,
+    cancelledBy: cancellerNameHe,
   });
 
   return { success: true, message: "Delivery cancelled successfully" };
