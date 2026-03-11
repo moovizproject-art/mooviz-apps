@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable, { type Column } from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
+import CsvExport from '../components/CsvExport';
 import { useDeliveries } from '../hooks/useFirestore';
 import { useI18n } from '../i18n/I18nContext';
 import type { Delivery, DeliveryStatus } from '../services/deliveries';
@@ -102,9 +103,38 @@ export default function DeliveriesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">{t('deliveries.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t('deliveries.subtitle')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{t('deliveries.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t('deliveries.subtitle')}</p>
+        </div>
+        {deliveries && (
+          <CsvExport
+            data={deliveries.map((d) => ({
+              id: d.id,
+              senderName: d.senderName || '',
+              driverName: d.driverName || '',
+              pickupCity: d.pickup?.city || '',
+              destinationCity: d.destination?.city || '',
+              status: d.status,
+              price: d.price,
+              currency: d.currency,
+              createdAt: d.createdAt ? format(d.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '',
+            }))}
+            columns={[
+              { key: 'id', label: 'ID' },
+              { key: 'senderName', label: 'שולח' },
+              { key: 'driverName', label: 'נהג' },
+              { key: 'pickupCity', label: 'עיר איסוף' },
+              { key: 'destinationCity', label: 'עיר יעד' },
+              { key: 'status', label: 'סטטוס' },
+              { key: 'price', label: 'מחיר' },
+              { key: 'currency', label: 'מטבע' },
+              { key: 'createdAt', label: 'תאריך' },
+            ]}
+            filename="mooviz-deliveries"
+          />
+        )}
       </div>
 
       {/* Filters */}

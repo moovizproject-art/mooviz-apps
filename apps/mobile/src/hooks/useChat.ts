@@ -34,6 +34,7 @@ interface SendImageInput {
 interface UseChatResult {
   messages: ChatMessage[];
   isLoading: boolean;
+  isClosed: boolean;
   sendMessage: (input: SendMessageInput) => Promise<void>;
   sendImage: (input: SendImageInput) => Promise<void>;
   markAsRead: (messageIds: string[]) => Promise<void>;
@@ -46,7 +47,22 @@ interface UseChatResult {
  */
 export function useChat(chatId: string): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isClosed, setIsClosed] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Listen to chat document for closed status
+  useEffect(() => {
+    if (!chatId) return;
+    const unsub = firestore()
+      .collection('chats')
+      .doc(chatId)
+      .onSnapshot((doc) => {
+        if (doc.exists) {
+          setIsClosed(doc.data()?.closed === true);
+        }
+      });
+    return unsub;
+  }, [chatId]);
 
   // Real-time listener for chat messages
   // מאזין בזמן אמת להודעות צ׳אט
@@ -170,5 +186,5 @@ export function useChat(chatId: string): UseChatResult {
     [chatId],
   );
 
-  return { messages, isLoading, sendMessage, sendImage, markAsRead };
+  return { messages, isLoading, isClosed, sendMessage, sendImage, markAsRead };
 }

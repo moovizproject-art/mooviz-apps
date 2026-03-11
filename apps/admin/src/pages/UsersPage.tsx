@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import CsvExport from '../components/CsvExport';
 import DataTable, { type Column } from '../components/DataTable';
 import UserAvatar from '../components/UserAvatar';
 import { useUsers } from '../hooks/useFirestore';
@@ -155,6 +156,18 @@ export default function UsersPage() {
           </button>
         )}
       </div>
+
+      <CsvExport
+        data={users ?? []}
+        columns={[
+          { key: 'fullName', label: 'שם' },
+          { key: 'email', label: 'אימייל' },
+          { key: 'phone', label: 'טלפון' },
+          { key: 'role', label: 'תפקיד' },
+          { key: 'completedDeliveries', label: 'משלוחים' },
+        ]}
+        filename="mooviz-users"
+      />
 
       <DataTable
         columns={columns}

@@ -163,6 +163,7 @@ export const approveDriver = onCall(async (request) => {
     driverName: delivery.driverName || "",
     lastMessage: "צ'אט נוצר — משלוח אושר",
     lastMessageAt: now,
+    closed: false,
     createdAt: now,
   });
 

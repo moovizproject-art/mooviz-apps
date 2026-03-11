@@ -403,6 +403,7 @@ export const strings = {
     noMessages: { he: 'אין הודעות עדיין', en: 'No messages yet' } as LocaleStrings,
     noChats: { he: 'אין שיחות', en: 'No chats yet' } as LocaleStrings,
     noChatsHint: { he: 'שיחות יופיעו כאן כשתתחיל לדבר עם נהג או שולח', en: 'Chats will appear here when you start talking with a driver or sender' } as LocaleStrings,
+    closed: { he: 'הצ׳אט נסגר. לא ניתן לשלוח הודעות נוספות.', en: 'Chat is closed. No more messages can be sent.' } as LocaleStrings,
   },
 
   // ── Onboarding ──

@@ -246,13 +246,30 @@ async function handleStatusChange(
             read: true,
           });
         // Update chat metadata
+        const chatUpdate: Record<string, unknown> = {
+          lastMessage: systemMsg,
+          lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastSenderId: "system",
+        };
+
+        // Set chat auto-close timer when delivery is completed/delivered
+        if (newStatus === "delivered" || newStatus === "completed_paid") {
+          const closeAt = admin.firestore.Timestamp.fromMillis(
+            Date.now() + 12 * 60 * 60 * 1000 // 12 hours
+          );
+          chatUpdate.chatCloseAt = closeAt;
+          chatUpdate.closed = false;
+        }
+
+        // If delivery is cancelled, close chat immediately
+        if (newStatus === "cancelled") {
+          chatUpdate.closed = true;
+          chatUpdate.closedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+
         await admin.firestore()
           .collection("chats").doc(chatId)
-          .update({
-            lastMessage: systemMsg,
-            lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
-            lastSenderId: "system",
-          });
+          .update(chatUpdate);
       } catch (error) {
         console.error(
           `Failed to create system message for delivery ${deliveryId}:`,

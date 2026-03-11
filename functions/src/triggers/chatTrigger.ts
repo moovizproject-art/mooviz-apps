@@ -38,6 +38,13 @@ export const onMessageCreate = onDocumentCreated(
     const chatRoom = chatRoomDoc.data();
     const participants: string[] = chatRoom?.participants ?? [];
 
+    // If chat is closed, delete the message and skip notification
+    if (chatRoom?.closed === true) {
+      console.log(`Chat ${chatId} is closed, deleting message ${event.params.messageId}`);
+      await snapshot.ref.delete();
+      return;
+    }
+
     // Update the chat room with the last message info
     await chatRoomDoc.ref.update({
       lastMessage: message.type === "image" ? "[Image]" : (message.text ?? ""),

@@ -12,6 +12,8 @@ import { db } from '../services/firebase';
 import { subDays, startOfDay, format } from 'date-fns';
 import { getRecentDeliveries, type Delivery } from '../services/deliveries';
 import { getRecentUsers, getMigratedUsersCount, type AppUser } from '../services/users';
+import type { Period } from '../components/PeriodFilter';
+import { periodToDays } from '../components/PeriodFilter';
 
 export interface DashboardStats {
   totalDeliveries: number;
@@ -44,13 +46,18 @@ export interface RecentActivity {
   recentUsers: AppUser[];
 }
 
-export function useStats() {
+export function useStats(period?: Period) {
   return useQuery<DashboardStats>({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', period ?? 'all'],
     queryFn: async () => {
       const deliveriesRef = collection(db, 'deliveries');
       const usersRef = collection(db, 'users');
       const reportsRef = collection(db, 'reports');
+
+      const days = period ? periodToDays(period) : null;
+      const periodConstraints = days
+        ? [where('createdAt', '>=', Timestamp.fromDate(subDays(new Date(), days)))]
+        : [];
 
       const [
         totalDeliveriesSnap,
@@ -60,11 +67,11 @@ export function useStats() {
         pendingKycSnap,
         openReportsSnap,
       ] = await Promise.all([
-        getCountFromServer(query(deliveriesRef)),
+        getCountFromServer(query(deliveriesRef, ...periodConstraints)),
         getCountFromServer(
-          query(deliveriesRef, where('status', 'in', ['new', 'pending', 'waiting', 'picked_up'])),
+          query(deliveriesRef, where('status', 'in', ['new', 'pending', 'waiting', 'picked_up']), ...periodConstraints),
         ),
-        getCountFromServer(query(usersRef)),
+        getCountFromServer(query(usersRef, ...periodConstraints)),
         getCountFromServer(
           query(usersRef, where('role', 'in', ['driver', 'both']), where('status', '==', 'active')),
         ),
@@ -76,6 +83,7 @@ export function useStats() {
       const completedQuery = query(
         deliveriesRef,
         where('status', 'in', ['delivered', 'completed_paid']),
+        ...periodConstraints,
       );
       const completedSnap = await getDocs(completedQuery);
       const totalRevenue = completedSnap.docs.reduce(
@@ -127,17 +135,23 @@ export function useDeliveryChart(days: number = 14) {
   });
 }
 
-export function useStatusDistribution() {
+export function useStatusDistribution(period?: Period) {
   return useQuery<StatusDistribution[]>({
-    queryKey: ['status-distribution'],
+    queryKey: ['status-distribution', period ?? 'all'],
     queryFn: async () => {
       const statuses = ['new', 'pending', 'waiting', 'picked_up', 'delivered', 'completed_paid', 'cancelled'];
       const deliveriesRef = collection(db, 'deliveries');
 
+      // If period is provided and not 'all', filter by createdAt
+      const days = period ? periodToDays(period) : null;
+      const periodConstraints = days
+        ? [where('createdAt', '>=', Timestamp.fromDate(subDays(new Date(), days)))]
+        : [];
+
       const counts = await Promise.all(
         statuses.map(async (status) => {
           const snap = await getCountFromServer(
-            query(deliveriesRef, where('status', '==', status)),
+            query(deliveriesRef, where('status', '==', status), ...periodConstraints),
           );
           return { status, count: snap.data().count };
         }),

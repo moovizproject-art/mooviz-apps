@@ -10,6 +10,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useI18n } from '../i18n/I18nContext';
+import { saveAs } from 'file-saver';
+import { toCsv } from '../components/CsvExport';
 import avatarDriver from '../assets/avatar-driver.png';
 import avatarSender from '../assets/avatar-sender.jpg';
 
@@ -27,6 +29,7 @@ interface Message {
   senderId: string;
   text: string;
   type: string;
+  imageUrl?: string;
   read: boolean;
   createdAt: Timestamp;
 }
@@ -73,7 +76,10 @@ export default function ChatsPage() {
       orderBy('createdAt', 'asc'),
     );
     const unsub = onSnapshot(q, (snap) => {
-      const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message));
+      const msgs = snap.docs.map((d) => {
+        const data = d.data();
+        return { id: d.id, ...data, imageUrl: data.imageUrl || '' } as Message;
+      });
       setMessages(msgs);
       setMessagesLoading(false);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -123,6 +129,23 @@ export default function ChatsPage() {
       ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
   }
 
+  function handleExportChat() {
+    const rows = messages.map((msg) => ({
+      timestamp: formatTime(msg.createdAt),
+      sender: getUserName(msg.senderId),
+      type: msg.type,
+      message: msg.type === 'image' ? msg.imageUrl || '' : msg.text,
+    }));
+    const csv = toCsv(rows, [
+      { key: 'timestamp', label: 'תאריך' },
+      { key: 'sender', label: 'שולח' },
+      { key: 'type', label: 'סוג' },
+      { key: 'message', label: 'הודעה' },
+    ]);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, `chat-${selectedChat}-${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
   function getChatTitle(chat: Chat): string {
     return chat.participants.map((p) => getUserName(p)).join(' / ');
   }
@@ -137,9 +160,38 @@ export default function ChatsPage() {
 
   return (
     <div className="flex h-[calc(100vh-2rem)] flex-col">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">{t('chats.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t('chats.subtitle')}</p>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{t('chats.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t('chats.subtitle')}</p>
+        </div>
+        <button
+          onClick={() => {
+            const rows = chats.map((c) => ({
+              chatId: c.id,
+              deliveryId: c.deliveryId,
+              participants: c.participants.map((p) => getUserName(p)).join(' / '),
+              lastMessage: c.lastMessage,
+              lastMessageAt: formatTime(c.lastMessageAt),
+            }));
+            const csv = toCsv(rows, [
+              { key: 'chatId', label: 'Chat ID' },
+              { key: 'deliveryId', label: 'Delivery ID' },
+              { key: 'participants', label: 'משתתפים' },
+              { key: 'lastMessage', label: 'הודעה אחרונה' },
+              { key: 'lastMessageAt', label: 'תאריך' },
+            ]);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            saveAs(blob, `mooviz-all-chats-${new Date().toISOString().slice(0, 10)}.csv`);
+          }}
+          disabled={chats.length === 0}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          ייצוא כל הצ'אטים
+        </button>
       </div>
 
       <div className="flex flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -205,6 +257,15 @@ export default function ChatsPage() {
                 <span className="text-xs text-gray-400">
                   {t('chats.delivery')}: {selectedChat?.slice(0, 8)}...
                 </span>
+                <button
+                  onClick={handleExportChat}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  ייצוא שיחה
+                </button>
               </div>
 
               {/* Messages */}
@@ -213,6 +274,17 @@ export default function ChatsPage() {
                   <div className="text-center text-sm text-gray-400 py-8">{t('chats.noMessages')}</div>
                 ) : (
                   messages.map((msg) => {
+                    // System messages — centered, no avatar
+                    if (msg.type === 'system') {
+                      return (
+                        <div key={msg.id} className="flex justify-center">
+                          <div className="rounded-xl bg-gray-100 px-4 py-2 text-xs text-gray-500 italic max-w-[80%] text-center">
+                            {msg.text}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     const isFirst = chats.find((c) => c.id === selectedChat)?.participants[0] === msg.senderId;
                     return (
                       <div key={msg.id} className={`flex ${isFirst ? 'justify-end' : 'justify-start'}`}>
@@ -230,7 +302,17 @@ export default function ChatsPage() {
                                   : 'rounded-bl-sm bg-gray-100 text-gray-900'
                               }`}
                             >
-                              {msg.text}
+                              {msg.type === 'image' && msg.imageUrl ? (
+                                <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={msg.imageUrl}
+                                    alt="chat image"
+                                    className="max-w-[240px] max-h-[180px] rounded-lg object-cover cursor-pointer"
+                                  />
+                                </a>
+                              ) : (
+                                msg.text
+                              )}
                             </div>
                             <div className={`mt-0.5 flex items-center gap-1 text-xs text-gray-400 ${isFirst ? 'justify-end' : ''}`}>
                               <span>{getUserName(msg.senderId)}</span>

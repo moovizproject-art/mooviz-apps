@@ -38,3 +38,4 @@ export { sendBulkEmail } from "./callable/emailCallable";
 
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";
+export { chatAutoClose } from "./scheduled/chatAutoClose";

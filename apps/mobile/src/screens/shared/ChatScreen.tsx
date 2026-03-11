@@ -46,7 +46,7 @@ export function ChatScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
-  const { messages, sendMessage, sendImage } = useChat(chatId);
+  const { messages, sendMessage, sendImage, isClosed } = useChat(chatId);
   const { threads, isLoading: threadsLoading } = useChatList(chatId ? undefined : currentUser?.uid);
   const drawer = useSettingsDrawer();
 
@@ -126,11 +126,12 @@ export function ChatScreen(): React.JSX.Element {
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
-      // System messages — centered, gray, no avatar
+      // System messages — centered, gray, with Mooviz car icon
       if (item.type === 'system') {
         return (
           <View style={styles.systemMessageRow}>
             <View style={[styles.systemMessageBubble, { backgroundColor: colors.surface }]}>
+              <Image source={require('../../assets/car.png')} style={styles.systemMessageIcon} resizeMode="contain" />
               <Text style={[styles.systemMessageText, { color: colors.textSecondary }]}>
                 {item.text}
               </Text>
@@ -310,29 +311,38 @@ export function ChatScreen(): React.JSX.Element {
         }
       />
 
-      {/* Input bar */}
-      <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 8) }]}>
-        <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
-          <Text style={styles.imageButtonIcon}>📷</Text>
-        </TouchableOpacity>
-        <TextInput
-          style={[styles.textInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder={t('chat.messagePlaceholder')}
-          placeholderTextColor={colors.inputPlaceholder}
-          textAlign={I18nManager.isRTL ? 'right' : 'left'}
-          multiline
-          maxLength={1000}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, { backgroundColor: colors.primary }, !inputText.trim() && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!inputText.trim()}
-        >
-          <Text style={styles.sendButtonText}>{t('chat.send')}</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Input bar or closed banner */}
+      {isClosed ? (
+        <View style={[styles.closedBanner, { borderTopColor: colors.border, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 8) }]}>
+          <Image source={require('../../assets/car.png')} style={styles.closedIcon} resizeMode="contain" />
+          <Text style={[styles.closedText, { color: colors.textSecondary }]}>
+            {t('chat.closed')}
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 8) }]}>
+          <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
+            <Text style={styles.imageButtonIcon}>📷</Text>
+          </TouchableOpacity>
+          <TextInput
+            style={[styles.textInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder={t('chat.messagePlaceholder')}
+            placeholderTextColor={colors.inputPlaceholder}
+            textAlign={I18nManager.isRTL ? 'right' : 'left'}
+            multiline
+            maxLength={1000}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, { backgroundColor: colors.primary }, !inputText.trim() && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!inputText.trim()}
+          >
+            <Text style={styles.sendButtonText}>{t('chat.send')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
     </KeyboardAvoidingView>
   );
@@ -553,14 +563,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   systemMessageBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 12,
     maxWidth: '80%',
+    gap: 6,
+  },
+  systemMessageIcon: {
+    width: 20,
+    height: 20,
   },
   systemMessageText: {
     fontSize: 12,
     textAlign: 'center',
+    fontStyle: 'italic',
+    flex: 1,
+  },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    gap: 8,
+  },
+  closedIcon: {
+    width: 20,
+    height: 20,
+  },
+  closedText: {
+    fontSize: 14,
     fontStyle: 'italic',
   },
 });
