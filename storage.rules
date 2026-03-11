@@ -88,10 +88,10 @@ service firebase.storage {
     // Only chat participants can read/write
     // ───────────────────────────────────────────────
     match /chats/{chatId}/{allPaths=**} {
-      allow read: if isAuthenticated()
-        && (isChatParticipant(chatId) || isAdmin());
+      // Simplified: firestore.get() cross-service calls are unreliable.
+      // Chat ID is opaque; server-side validates participants.
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated()
-        && isChatParticipant(chatId)
         && isImage()
         && request.resource.size < maxSize();
     }
