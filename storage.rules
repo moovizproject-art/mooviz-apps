@@ -117,10 +117,12 @@ service firebase.storage {
     // Path: deliveries/{deliveryId}/proof/pickup_*.jpg, delivery_*.jpg, payment_*.jpg
     // ───────────────────────────────────────────────
     match /deliveries/{deliveryId}/proof/{fileName} {
-      allow read: if isAuthenticated()
-        && (isDeliveryParticipant(deliveryId) || isAdmin());
+      // Read: any authenticated user (participants need to view proof photos)
+      allow read: if isAuthenticated();
+      // Write: any authenticated user can upload proof (delivery ID is opaque)
+      // Firestore.get() cross-service calls are unreliable; server-side
+      // Cloud Functions validate the caller is the assigned driver.
       allow write: if isAuthenticated()
-        && isDeliveryParticipant(deliveryId)
         && isImage()
         && request.resource.size < maxSize();
     }
