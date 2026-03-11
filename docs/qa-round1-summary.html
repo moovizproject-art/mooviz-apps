@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOOVIZ — QA Round 1 Summary</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Rubik', sans-serif;
+      background: #f8f9fa;
+      color: #1a1a2e;
+      line-height: 1.7;
+      direction: rtl;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      padding: 48px 40px;
+      border-radius: 16px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255,152,0,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .header-logo {
+      font-size: 32px;
+      font-weight: 700;
+      color: #FF9800;
+      margin-bottom: 8px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .header .subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+    }
+    .header .date-badge {
+      display: inline-block;
+      background: rgba(255,152,0,0.2);
+      color: #FF9800;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #e8ecf0;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .icon { font-size: 20px; }
+
+    .fix-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f2f5;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .fix-item:last-child { border-bottom: none; }
+    .fix-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #22C55E;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .fix-content { flex: 1; }
+    .fix-title { font-weight: 500; font-size: 15px; color: #1a1a2e; }
+    .fix-desc { font-size: 13px; color: #6b7280; margin-top: 2px; }
+    .fix-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .tag-mobile { background: #EFF6FF; color: #2563EB; }
+    .tag-admin { background: #F0FDF4; color: #16A34A; }
+    .tag-backend { background: #FFF7ED; color: #EA580C; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .stat-card {
+      text-align: center;
+      padding: 16px 8px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .stat-number { font-size: 28px; font-weight: 700; color: #FF9800; }
+    .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    .footer .kal-logo { font-weight: 600; color: #FF9800; }
+
+    @media print {
+      body { background: white; }
+      .container { padding: 20px; }
+      .section { box-shadow: none; break-inside: avoid; }
+    }
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">MOOVIZ</div>
+      <h1>סיכום QA Round 1 — תיקונים ושיפורים</h1>
+      <div class="subtitle">סקירת תיקונים לפי משוב לקוח על מסמך ה-Walkthrough</div>
+      <div class="date-badge">10-11 במרץ 2026</div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📊</span> סיכום כמותי</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">28</div>
+          <div class="stat-label">תיקונים שבוצעו</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">15</div>
+          <div class="stat-label">קבצים שונו</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">9</div>
+          <div class="stat-label">תכונות חדשות לאדמין</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">3</div>
+          <div class="stat-label">פונקציות Cloud חדשות</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile App Fixes -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📱</span> אפליקציה — תיקוני UI/UX</div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">מסך שחזור סיסמה — הוספת לוגו</div>
+          <div class="fix-desc">לוגו MOOVIZ מופיע בראש מסך שחזור הסיסמה, בהתאמה למסכי Login ו-Register</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">מסך שחזור סיסמה — הודעת אבטחה</div>
+          <div class="fix-desc">הוספת הודעת אבטחה "הקישור יישלח לכתובת המייל הרשומה במערכת"</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">מדריך מידות — צבע כותרת ושם</div>
+          <div class="fix-desc">כותרת המודאל שונתה ל-"📏 מדריך מידות" עם רקע כתום (accent color #FF9800)</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">צבע Accent חדש — #FF9800</div>
+          <div class="fix-desc">צבע הדגשה עודכן לכתום בכל הנקודות הרלוונטיות באפליקציה</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">יישור עיר — RTL</div>
+          <div class="fix-desc">יישור שדה עיר לשמאל (ימין ב-RTL) בהתאם לעיצוב עברית</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">Driver Onboarding — שלב תשלום</div>
+          <div class="fix-desc">נוסף שלב 6 (💳 תשלום ישיר) — מסביר שהתשלום ישירות בין שולח לנהג, האפליקציה לא מעבדת תשלומים</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login & Registration -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🔐</span> הרשמה וכניסה</div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">Remember Me — זכור אותי ל-30 יום</div>
+          <div class="fix-desc">Checkbox לשמירת Session — ברירת מחדל: יום אחד, עם סימון: 30 יום. נשמר ב-AsyncStorage</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">ריווח שדות מסך Login</div>
+          <div class="fix-desc">הגדלת ריווח בין שדות (marginTop 24), כפתור (marginTop 28), ומרווח תחתון בין סקציות</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">הרשמה — תנאי שימוש (ToS)</div>
+          <div class="fix-desc">Checkbox "אני מאשר/ת את תנאי השימוש" עם לינק — חוסם הרשמה עד לאישור</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">הרשמה — מגדר וטווח גילאים</div>
+          <div class="fix-desc">שדה מגדר (זכר/נקבה) ו-5 Chips לטווח גילאים (18-24, 25-34, 35-44, 45-54, 55+). נשמר ב-Firestore</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+          <span class="fix-tag tag-backend">Backend</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Delivery -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📦</span> יצירת משלוח</div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">שינוי כותרת סקציית מדיה</div>
+          <div class="fix-desc">כותרת שונתה מ-"מדיה" ל-"מידע נוסף"</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">סידור שדות מחדש</div>
+          <div class="fix-desc">הערות הועברו לאחרי מדיה (לפני תאריך ומחיר) — סדר הגיוני יותר למשתמש</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">מירכוז אייקוני הוספת תמונה/וידאו</div>
+          <div class="fix-desc">כפתורי הוספת מדיה ממורכזים כשאין תמונות עדיין</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">בוחר טווח שעות איסוף</div>
+          <div class="fix-desc">שורת Chips אופקית עם 7 טווחי שעות (08:00-10:00 עד 22:00) — מוצגת כשלא נבחר "בהקדם"</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat System -->
+    <div class="section">
+      <div class="section-title"><span class="icon">💬</span> מערכת צ'אט</div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">אייקון רכב בהודעות מערכת</div>
+          <div class="fix-desc">הודעות מערכת מציגות אייקון רכב MOOVIZ ממותג במקום ריבוע ריק</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">סגירת צ'אט אוטומטית — 12 שעות</div>
+          <div class="fix-desc">צ'אט נסגר אוטומטית 12 שעות לאחר סיום/ביטול משלוח. באנר ממותג מחליף את שורת הקלט. הודעת מערכת "🔒 הצ'אט נסגר אוטומטית..."</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+          <span class="fix-tag tag-backend">Backend</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">חסימת הודעות בצ'אט סגור — הגנה כפולה</div>
+          <div class="fix-desc">שכבת UI חוסמת שליחה + Cloud Function מוחק הודעות שנשלחו לצ'אט סגור (server-side enforcement)</div>
+          <span class="fix-tag tag-backend">Backend</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">תמיכה בתמונות ומערכת — Admin</div>
+          <div class="fix-desc">עמוד צ'אטים באדמין מציג תמונות (thumbnail עם לחיצה להגדלה) והודעות מערכת (italic אפור)</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📈</span> לוח בקרה — Admin Dashboard</div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">סינון לפי תקופה — כל הנתונים</div>
+          <div class="fix-desc">אפשרות לחתוך כל נתון לפי: 7 ימים, 30 ימים, 90 ימים, רבעון, שנה, הכל. משפיע על כל הכרטיסיות, גרפים וטבלאות</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">חלוקת משתמשים — מפרסמים ונהגים</div>
+          <div class="fix-desc">4 כרטיסיות: סה"כ מפרסמים, מפרסמים פעילים, סה"כ נהגים, נהגים פעילים. פעיל = נכנס ב-30 יום אחרונים (last seen)</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">התפלגות משלוחים לפי אזורים</div>
+          <div class="fix-desc">גרף עמודות אופקי — גוש דן, חיפה והקריות, ירושלים, באר שבע והנגב, גליל וגולן, השרון</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">זמני משלוח לפי אזורים</div>
+          <div class="fix-desc">טבלה מפורטת: פרסום→אישור נהג, אישור→איסוף, איסוף→מסירה, סה"כ — הכל לפי אזור עם גודל מדגם. מוצג בדקות/שעות</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">Drill-Down — לחיצה על נתון לפירוט</div>
+          <div class="fix-desc">לחיצה על כרטיסיות משתמשים → עמוד משתמשים מסונן. לחיצה על פרוסת סטטוס → משלוחים מסוננים. לחיצה על עמודת אזור → משלוחים באזור</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">ייצוא CSV — כל נתון/גרף</div>
+          <div class="fix-desc">כפתור ייצוא CSV עם תמיכת BOM לעברית ב-Excel על כל סקציה: חלוקת משתמשים, אזורים, זמנים, גרף משלוחים, סטטוסים</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">ייצוא משתמשים ל-CSV</div>
+          <div class="fix-desc">שם, אימייל, טלפון, תפקיד (נהג/מפרסם), כמות משלוחים שבוצעו — מעמוד המשתמשים</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">צפייה בהיסטוריית צ'אטים + ייצוא</div>
+          <div class="fix-desc">עמוד צ'אטים חדש — צפייה בהיסטוריית הודעות בין נהגים ומפרסמים, תצוגת תמונות, הודעות מערכת, וייצוא CSV</div>
+          <span class="fix-tag tag-admin">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social & Settings -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🔗</span> רשתות חברתיות</div>
+
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">הוספת YouTube, LinkedIn ואתר</div>
+          <div class="fix-desc">נוספו לינקים לרשתות חברתיות נוספות במגירת ההגדרות באפליקציה</div>
+          <span class="fix-tag tag-mobile">Mobile</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deployment -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🚀</span> Deployment Status</div>
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">25 Cloud Functions — Deployed</div>
+          <div class="fix-desc">כולל chatAutoClose חדשה + עדכונים ל-chatTrigger, deliveryTrigger, approveDriver</div>
+        </div>
+      </div>
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">Admin Dashboard — Deployed</div>
+          <div class="fix-desc">https://mooviz-app-9b766.web.app — כל התכונות החדשות זמינות</div>
+        </div>
+      </div>
+      <div class="fix-item">
+        <div class="fix-check">✓</div>
+        <div class="fix-content">
+          <div class="fix-title">Release APK — Built</div>
+          <div class="fix-desc">app-release.apk (76MB) — מוכן להתקנה ובדיקה על מכשיר</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="kal-logo">KAL Solutions Group</div>
+      <p style="margin-top: 4px;">MOOVIZ — Real-Time Community Delivery Platform</p>
+      <p style="margin-top: 8px; color: #d1d5db;">מסמך זה הופק אוטומטית • מרץ 2026</p>
+    </div>
+
+  </div>
+</body>
+</html>

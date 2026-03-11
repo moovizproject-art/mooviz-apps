@@ -1,119 +1,107 @@
 # MOOVIZ — Session Continuation Guide
-> Last updated: 2026-03-08 | Sprint 2 IN PROGRESS
+> Last updated: 2026-03-11 | Sprint 3 (M3) IN PROGRESS
 
 ## Current State
 
-### Branch: `feature/improvements-epic`
-
-### What Was Done (March 8)
-
-#### iOS Build & Crash Fix
-1. **iOS build working** — Firebase pods with selective modular_headers, AppDelegate patch, PrivacyInfo.xcprivacy, GoogleService-Info.plist
-2. **Hermes login crash fixed** — `EXC_BREAKPOINT/SIGTRAP` caused by native Firebase error objects crashing Hermes stack trace construction. Fixed with `sanitizeFirebaseError()` in auth.ts, `safeToDate()` in useAuth.ts, global ErrorUtils handler in index.js
-3. **Sounds off by default** — `useSound.tsx` initial state set to false
-4. **RNFirebase v21.14.0** — Upgraded Firebase native modules
-
-#### Key Commit
-```
-91b724f feat(mobile): iOS build support, fix Hermes login crash, sounds off by default
-```
-
-### What Was Done Previously (March 6-7)
-
-#### Bug Fixes
-1. **Sound crash on device** — Made sound service crash-proof with global kill switch, skip iOS-only `setCategory` on Android, wrap all native calls in try-catch
-2. **Onboarding RTL on device** — Removed all broken RTL hacks (inverted/scaleX/direction). Added `scrollToIndex(0)` on mount for RTL. DO NOT ADD RTL HACKS — see comment in code
-3. **Driver feed stuck/refresh loop** — Replaced FlatList with ScrollView, removed RefreshControl
-4. **Delivery not in My Deliveries** — STATUS_MAP was missing `new`, `waiting`, `completed_paid`
-5. **OTP → empty screen** — `refreshUserDoc()` only updated `lastOtpAt` partial. Fixed to full user doc load when `currentUser` is null
-6. **Push notifications not arriving** — Fixed token field mismatch (`fcmToken` vs `fcmTokens` array), added Android 13+ POST_NOTIFICATIONS runtime permission, hooked `useNotifications()` in RootNavigator
-7. **MapPicker** — Complete rewrite with map pin dragging + reverse geocoding
-8. **Radar animation** — Pure Animated concentric circles with rotating sweep beam (no GIF)
-
-#### Features
-9. **Email broadcasting** — Cloud Function deployed with SMTP secrets, admin UI page
-10. **Functions deployment** — Bundled shared as tgz for Cloud Run compatibility
-
-#### Infra
-11. **PR #3 created** — `feature/ui-ux-redesign` → `main`
-12. **CRM updated** — 3 tasks moved to Awaiting Feedback (176, 177, 178)
-13. **Client PDF** — Gamma sprint report generated
-
-### Key Commits (feature/ui-ux-redesign)
-```
-757629d fix(mobile): delivery list filter, OTP empty screen, push permissions
-25b24a9 fix(functions,mobile): fix FCM push notifications not sending
-57888ea fix(mobile): force onboarding FlatList to index 0 on RTL mount
-cb17358 fix(mobile): crash-proof sound service, onboarding RTL verified on device
-3e556a9 feat(mobile,functions): map picker, driver feed redesign, email deploy, mode switch
-```
+### Branch: `main` (merged from `feature/optimization-qa-round1`)
+### Last commit: `f3dec81` — QA Round 1 complete
 
 ---
 
-## Next Session Tasks (feature/improvements-epic)
+## What Was Done (March 10-11) — QA Round 1
 
-### ~~Priority 1: iOS Build~~ DONE
-### ~~Priority 2: Sounds Off by Default~~ DONE
+### Mobile App Fixes
+1. **ForgotPasswordScreen** — Logo added, security message
+2. **Accent color** — Changed to #FF9800 across app
+3. **LoginScreen** — Remember Me checkbox (30-day session), field spacing, car centering
+4. **RegisterScreen** — ToS checkbox, gender field, age range chips, saved to Firestore
+5. **CreateDeliveryScreen** — Size guide modal (accent color + "מדריך מידות"), field reorder (notes after media), centered add-media icons, time range picker chips
+6. **DriverOnboarding** — 6th step (💳 direct payment info)
+7. **SettingsDrawer** — YouTube, LinkedIn, Website social links
+8. **ChatScreen** — Car icon on system messages, 12h auto-close banner
 
-### Priority 1: Delivery Save & Multi-Media Upload
-- [ ] Fix delivery not saving (investigate CreateDeliveryScreen submit flow)
-- [ ] Allow 5 images + 1 video (up to 5MB each) per delivery
-- [ ] Add video compression before upload
-- [ ] Update Firestore data model: `item.photoURL` → `item.mediaURLs: string[]`
-- [ ] Update CreateDeliveryScreen UI with multi-image picker + video picker
-- [ ] Update Cloud Storage rules for video content types
+### Chat Auto-Close System (12 hours)
+- `functions/src/scheduled/chatAutoClose.ts` — Hourly cron, closes chats 12h after delivery
+- `functions/src/triggers/deliveryTrigger.ts` — Sets `chatCloseAt` on completion, immediate close on cancel
+- `functions/src/triggers/chatTrigger.ts` — Blocks messages on closed chats (server-side deletion)
+- `apps/mobile/src/hooks/useChat.ts` — Real-time `isClosed` listener
+- `apps/mobile/src/screens/shared/ChatScreen.tsx` — Closed banner replaces input bar
+- `functions/src/callable/deliveryCallable.ts` — New chats get `closed: false`
 
-### Priority 2: Glide Migration Image Fetcher
-- [ ] Modify `scripts/migrate-glide-data.ts`
-- [ ] For users with image URLs in Glide data: fetch images in background
-- [ ] Upload fetched images to Firebase Storage under `users/{uid}/profile/`
-- [ ] Update Firestore user docs with new Storage URLs
-- [ ] Handle rate limiting and retries for bulk fetch
+### Admin Dashboard Enhancements
+- **PeriodFilter** — 7d/30d/90d/quarter/year/all on ALL stats, charts, tables
+- **User breakdown** — 4 cards: senders/drivers × registered/active (active = last 30 days)
+- **Regional distribution** — Horizontal bar chart (גוש דן, חיפה, ירושלים, נגב, גליל, השרון)
+- **Delivery timings** — Table: post→approval, approval→pickup, pickup→delivery, total by region
+- **Monthly deliveries** — Bar chart, last 12 months
+- **Monthly cashflow** — Area chart, revenue per month (completed deliveries)
+- **Drill-down** — Click user cards→users page, pie slices→deliveries, regional bars→filtered view
+- **CSV export on EVERYTHING** — Dashboard charts, users, deliveries, all chats, per-chat messages
+- **ChatsPage** — Image rendering, system messages, per-chat + all-chats CSV export
 
-### Priority 3: Continue CRM Sprint 2 Tasks
-Open tasks (status=1):
-- 140: Live map tracking view
+### Deployments
+- 25 Cloud Functions deployed (incl. new `chatAutoClose`)
+- Admin: https://mooviz-app-9b766.web.app
+- Release APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` (76MB)
+- QA summary PDF: `docs/qa-round1-summary.pdf`
+
+---
+
+## Next Session Tasks
+
+### Priority 1: Remaining M3 Items
+- [ ] Glide migration image fetcher (`scripts/fix-glide-migration.ts` ready but not executed)
+  - Downloads profile photos, KYC docs, item photos from Glide URLs → Firebase Storage
+  - Resets all migrated users to sender role + pending KYC
+  - Fixes chat participant names
+- [ ] KAL Solutions "Developed by" attribution (footer/splash)
+- [ ] Ratings & reviews system
+- [ ] E2E testing on physical devices
+
+### Priority 2: CRM Sprint Tasks
 - 141: Navigation deep links
-- 143: System messages in chat
-- 144: Chat image upload
-- 146-148: Push notification triggers, FCM client, in-app fallback
-- 149-150: Payment confirmation UI + backend
 - 159: Interstitial ad infrastructure
 - 160: Analytics events
 
+### Priority 3: Admin Polish
+- [ ] Custom domain setup for admin (DNS → Firebase Hosting)
+- [ ] Admin DrillDown drawer (Task 9 from dashboard plan — deferred)
+- [ ] Deliveries page: read `?status=` and `?region=` query params from drill-down navigation
+
 ---
 
-## Critical RTL Rules (DO NOT CHANGE)
-- Onboarding FlatList: NO `inverted`, NO `scaleX`, NO `direction: 'ltr'`, NO reversed arrays
-- Just use `scrollToIndex(0)` on mount when `isRTL`
-- Always test on physical Hebrew device, not just emulator
+## Key Files Changed in QA Round 1
+| File | What |
+|------|------|
+| `apps/admin/src/hooks/useAnalytics.ts` | User breakdown, regional, timings, monthly charts hooks |
+| `apps/admin/src/hooks/useStats.ts` | Period-filtered stats + status distribution |
+| `apps/admin/src/pages/DashboardPage.tsx` | Full dashboard with all charts + drill-down |
+| `apps/admin/src/components/CsvExport.tsx` | Reusable CSV export with BOM |
+| `apps/admin/src/components/PeriodFilter.tsx` | Period selector component |
+| `apps/admin/src/constants/regions.ts` | Israel city→region mapping |
+| `functions/src/scheduled/chatAutoClose.ts` | Hourly cron for chat closure |
+| `docs/qa-round1-summary.html` | Client-facing summary (Hebrew) |
+| `docs/qa-round1-summary.pdf` | PDF version |
 
 ## Environment Quick Start
 ```bash
 # Start Metro (from apps/mobile/)
 cd apps/mobile && node ../../node_modules/react-native/cli.js start --reset-cache
 
-# Android
-~/Library/Android/sdk/emulator/emulator -avd Pixel_9_Pro_API_35 &
+# Android build + install
 cd apps/mobile/android && ./gradlew assembleRelease
-adb connect 10.0.0.18:PORT
-adb -s 10.0.0.18:PORT install -r app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
 
-# iOS
-cd apps/mobile/ios && pod install
-npx react-native run-ios  # or open .xcworkspace in Xcode
-
-# Admin panel
+# Admin dev
 cd apps/admin && npm run dev -- --port 5002
 
 # Deploy functions
-cd functions && FIREBASE_TOKEN=<token> npx firebase deploy --only functions
-```
+cd functions && npm run build && firebase deploy --only functions
 
-## CRM Integration
-- API: `https://crm-app.kal-trade.com/projects_extended/projects_api`
-- Credentials: `.env.crm-api`
-- On task completion: `PATCH /task_status/{task_id}` with `{"status": 5}`
+# Deploy admin
+cd apps/admin && node ../../node_modules/.pnpm/vite@5.4.21_@types+node@25.3.3_terser@5.46.0/node_modules/vite/bin/vite.js build
+firebase deploy --only hosting
+```
 
 ## User Preferences
 - **NO** `Co-Authored-By: Claude` in git commits
