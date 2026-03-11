@@ -307,12 +307,12 @@ const styles = StyleSheet.create({
   },
   illustrationArea: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 14,
   },
   illustration: {
-    width: SCREEN_WIDTH * 0.75,
-    height: SCREEN_WIDTH * 0.44,
-    borderRadius: 16,
+    width: SCREEN_WIDTH * 0.65,
+    height: SCREEN_WIDTH * 0.38,
+    borderRadius: 14,
   },
   waveCurve: {
     position: 'absolute',
@@ -332,29 +332,29 @@ const styles = StyleSheet.create({
   contentInner: {
   },
   pageTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
-    marginTop: 4,
+    lineHeight: 20,
+    marginTop: 2,
     paddingHorizontal: 8,
   },
   bulletList: {
-    marginTop: 24,
-    gap: 10,
+    marginTop: 16,
+    gap: 8,
   },
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    gap: 10,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: {
@@ -367,19 +367,19 @@ const styles = StyleSheet.create({
     }),
   },
   bulletIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   bulletIcon: {
-    fontSize: 20,
+    fontSize: 18,
   },
   bulletText: {
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     flex: 1,
     fontWeight: '700',
   },

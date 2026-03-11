@@ -32,8 +32,9 @@ service firebase.storage {
     // Check if caller is a participant (sender or driver) of a delivery
     function isDeliveryParticipant(deliveryId) {
       let delivery = firestore.get(/databases/(default)/documents/deliveries/$(deliveryId));
-      return delivery.data.senderId == request.auth.uid
-          || delivery.data.driverId == request.auth.uid;
+      return delivery != null
+          && (delivery.data.senderId == request.auth.uid
+          || delivery.data.driverId == request.auth.uid);
     }
 
     // Check if caller is a chat participant
