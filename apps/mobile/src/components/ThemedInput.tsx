@@ -81,7 +81,6 @@ export function ThemedInput({
         <TextInput
           style={[styles.input, { color: colors.textPrimary }]}
           placeholderTextColor={colors.inputPlaceholder}
-          writingDirection="rtl"
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           {...inputProps}

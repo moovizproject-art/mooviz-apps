@@ -45,7 +45,7 @@ export function SkeletonLoader({
     <Animated.View
       style={[
         styles.skeleton,
-        { width: width as number | string, height, borderRadius },
+        { width, height, borderRadius } as ViewStyle,
         animatedStyle,
         style,
       ]}

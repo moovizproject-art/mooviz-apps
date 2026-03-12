@@ -19,7 +19,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootStackParamList } from '../../navigation/types';
+// RootStackParamList import removed — Props uses any
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone } from '../../utils/validators';
@@ -28,7 +28,7 @@ import { VerificationStepper } from '../../components/VerificationStepper';
 
 const logo = require('../../assets/logo.png');
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PhoneVerification'>;
+type Props = NativeStackScreenProps<any, any>;
 
 /**
  * AddPhoneScreen -- phone verification gate (required before app access)

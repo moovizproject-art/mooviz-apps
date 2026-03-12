@@ -17,6 +17,7 @@ import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native
 const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
+import { formatCurrency } from '../../utils/formatters';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -28,6 +29,8 @@ import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { ProofCamera } from '../../components/ProofCamera';
 import { uploadProofPhoto } from '../../services/storage';
+import { strings } from '../../i18n/strings';
+import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import Geolocation from 'react-native-geolocation-service';
 
 /** Haversine distance in km between two lat/lng points */
@@ -125,6 +128,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     }).catch(() => {});
   }, [delivery?.senderId, delivery?.senderName]);
 
+  // Continue location tracking while viewing delivery details
+  useDriverLocationTracking({
+    userId: currentUser?.uid,
+    isDriver: true,
+    activeDeliveryStatus: delivery?.status,
+  });
+
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
@@ -181,12 +191,12 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       (pos) => {
         const distKm = haversineKm(
           pos.coords.latitude, pos.coords.longitude,
-          delivery.pickup!.latitude, delivery.pickup!.longitude,
+          delivery?.pickup?.latitude ?? 0, delivery?.pickup?.longitude ?? 0,
         );
-        const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} מ׳` : `${distKm.toFixed(1)} ק״מ`;
-        carAlert.show('info', 'אישור איסוף', `נקודת האיסוף נמצאת ${distStr} ממך.\nלהמשיך?`, [
-          { text: 'ביטול', style: 'cancel' },
-          { text: 'אשר איסוף', onPress: () => doExpressInterest() },
+        const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} ${strings.commonExtra.meters.he}` : `${distKm.toFixed(1)} ${strings.commonExtra.km.he}`;
+        carAlert.show('info', strings.driver.confirmPickup.he, strings.deliveryExtra.confirmPickupPrompt.he.replace('{dist}', distStr), [
+          { text: strings.common.cancel.he, style: 'cancel' },
+          { text: strings.driver.confirmPickup.he, onPress: () => doExpressInterest() },
         ]);
       },
       () => {
@@ -272,7 +282,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         <View style={styles.itemHeader}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.itemTitle, { color: colors.textPrimary }]} numberOfLines={2}>
-              {delivery.itemDescription || 'משלוח'}
+              {delivery.itemDescription || strings.commonExtra.deliveryItem.he}
             </Text>
             <View style={styles.sizeRow}>
               <Text style={styles.sizeIcon}>{sizeInfo.icon}</Text>
@@ -280,7 +290,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             </View>
           </View>
           <View style={[styles.priceTag, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={styles.priceValue}>₪{delivery.suggestedPrice || 0}</Text>
+            <Text style={styles.priceValue}>{formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}</Text>
             {delivery.status === 'completed_paid' && (
               <View style={styles.earningsBadge}>
                 <Text style={styles.earningsBadgeText}>✅ נוסף לרווחים</Text>
@@ -465,7 +475,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 6b. Proof Photos ── */}
       {proofImages.length > 0 && (
         <View style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
-          <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>📸 הוכחות משלוח</Text>
+          <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{`📸 ${strings.deliveryExtra.deliveryProofs.he}`}</Text>
           <View style={styles.proofRow}>
             {proofImages.map((proof, i) => (
               <TouchableOpacity
@@ -517,7 +527,11 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
           {!delivery.payment?.driverConfirmed && (
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.success, marginTop: 12 }]}
+              style={[styles.actionButton, {
+                backgroundColor: delivery.payment?.senderConfirmed ? colors.success : '#9E9E9E',
+                marginTop: 12,
+              }]}
+              disabled={!delivery.payment?.senderConfirmed}
               onPress={async () => {
                 try {
                   await confirmPayment(delivery.id);
@@ -527,10 +541,24 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 }
               }}
             >
-              <Text style={styles.actionButtonText}>💰 {t('payment.confirmButton')}</Text>
+              <Text style={styles.actionButtonText}>
+                {delivery.payment?.senderConfirmed
+                  ? `💰 ${t('payment.confirmButton')}`
+                  : `⏳ ${t('payment.waitingForSender')}`}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
+      )}
+
+      {/* ── 8. Rate sender ── */}
+      {['delivered', 'completed_paid'].includes(delivery.status) && !delivery.rated && (
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: colors.accent, alignItems: 'center', paddingVertical: 16 }]}
+          onPress={() => navigation.navigate('Rating', { deliveryId: delivery.id, targetUserId: delivery.senderId })}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{t('delivery.rateSender')}</Text>
+        </TouchableOpacity>
       )}
 
     </ScrollView>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,17 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  PermissionsAndroid,
   Image,
   ActivityIndicator,
   I18nManager,
+  ActionSheetIOS,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { setActiveChatId } from '../../services/navigation';
 import { ChatDeliveryBanner } from '../../components/ChatDeliveryBanner';
 
@@ -31,6 +34,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { getStatusConfig } from '../../constants/statusConfig';
 import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
+import { strings } from '../../i18n/strings';
 
 type ChatRoomParams = RootStackParamList['ChatRoom'];
 
@@ -61,6 +65,7 @@ export function ChatScreen(): React.JSX.Element {
         setActiveChatId(chatId);
         return () => setActiveChatId(null);
       }
+      return undefined;
     }, [chatId]),
   );
 
@@ -123,6 +128,52 @@ export function ChatScreen(): React.JSX.Element {
       });
     }
   }, [chatId, currentUser, sendImage]);
+
+  const handleTakePhoto = useCallback(async (): Promise<void> => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: strings.permissions.cameraTitle.he,
+          message: strings.permissions.cameraMessage.he,
+          buttonPositive: strings.permissions.allow.he,
+          buttonNegative: strings.common.cancel.he,
+        },
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+    }
+    const result = await launchCamera({
+      mediaType: 'photo',
+      quality: 0.5,
+      maxWidth: 1280,
+      maxHeight: 1280,
+      saveToPhotos: false,
+    });
+    if (!result.didCancel && result.assets?.[0]?.uri) {
+      await sendImage({
+        chatId,
+        senderId: currentUser!.uid,
+        imageUri: result.assets[0].uri,
+      });
+    }
+  }, [chatId, currentUser, sendImage]);
+
+  const [showMediaModal, setShowMediaModal] = useState(false);
+
+  const showMediaPicker = useCallback((): void => {
+    const options = ['\uD83D\uDCF8 ' + strings.common.takePhoto.he, '\uD83D\uDDBC ' + strings.common.chooseFromGallery.he, strings.common.cancel.he];
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: 2 },
+        (index) => {
+          if (index === 0) handleTakePhoto();
+          else if (index === 1) handleImagePick();
+        },
+      );
+    } else {
+      setShowMediaModal(true);
+    }
+  }, [handleTakePhoto, handleImagePick]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
@@ -321,8 +372,8 @@ export function ChatScreen(): React.JSX.Element {
         </View>
       ) : (
         <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 8) }]}>
-          <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
-            <Text style={styles.imageButtonIcon}>📷</Text>
+          <TouchableOpacity style={styles.imageButton} onPress={showMediaPicker}>
+            <Text style={styles.imageButtonIcon}>{'\uD83D\uDCF7'}</Text>
           </TouchableOpacity>
           <TextInput
             style={[styles.textInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
@@ -344,6 +395,32 @@ export function ChatScreen(): React.JSX.Element {
         </View>
       )}
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
+
+      {/* Android media source picker modal */}
+      <Modal visible={showMediaModal} transparent animationType="fade" onRequestClose={() => setShowMediaModal(false)}>
+        <TouchableOpacity style={styles.mediaModalOverlay} activeOpacity={1} onPress={() => setShowMediaModal(false)}>
+          <View style={[styles.mediaModalContent, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={[styles.mediaModalOption, { borderBottomColor: colors.border }]}
+              onPress={() => { setShowMediaModal(false); handleTakePhoto(); }}
+            >
+              <Text style={[styles.mediaModalOptionText, { color: colors.textPrimary }]}>{'\uD83D\uDCF8'}  {strings.common.takePhoto.he}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mediaModalOption, { borderBottomColor: colors.border }]}
+              onPress={() => { setShowMediaModal(false); handleImagePick(); }}
+            >
+              <Text style={[styles.mediaModalOptionText, { color: colors.textPrimary }]}>{'\uD83D\uDDBC'}  {strings.common.chooseFromGallery.he}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mediaModalOption}
+              onPress={() => setShowMediaModal(false)}
+            >
+              <Text style={[styles.mediaModalOptionText, { color: colors.error }]}>{strings.common.cancel.he}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -597,5 +674,25 @@ const styles = StyleSheet.create({
   closedText: {
     fontSize: 14,
     fontStyle: 'italic',
+  },
+  mediaModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  mediaModalContent: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  mediaModalOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  mediaModalOptionText: {
+    fontSize: 17,
+    textAlign: 'center',
   },
 });

@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, StatusBar, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import { TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
+import { SPACING, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
 
 const logo = require('../assets/logo.png');
 

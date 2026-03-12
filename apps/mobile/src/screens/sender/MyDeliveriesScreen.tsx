@@ -23,7 +23,7 @@ type Props = SenderTabScreenProps<'MyDeliveries'>;
 type TabKey = 'active' | 'completed' | 'cancelled';
 
 const STATUS_MAP: Record<TabKey, string[]> = {
-  active: ['new', 'pending', 'waiting', 'matched', 'picked_up', 'in_transit'],
+  active: ['new', 'pending', 'waiting', 'picked_up'],
   completed: ['delivered', 'completed_paid'],
   cancelled: ['cancelled'],
 };

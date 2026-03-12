@@ -38,14 +38,14 @@ const RESEND_COOLDOWN_SECONDS = __DEV__ ? 10 : 60;
  * OTPScreen -- 6-digit OTP verification for phone linking
  */
 export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
-  const { phoneNumber, mode } = route.params;
+  const { phoneNumber } = route.params ?? {};
   const { colors } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { refreshFirebaseUser, refreshUserDoc, setForceOtp } = useAuth();
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
-  const [verificationId, setVerificationId] = useState<string>(route.params.verificationId || '');
+  const [verificationId, setVerificationId] = useState<string>(route.params?.verificationId || '');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

@@ -42,11 +42,12 @@ export interface DeliveryDoc {
 }
 
 type DeliveryStatusType =
+  | 'new'
   | 'pending'
-  | 'matched'
+  | 'waiting'
   | 'picked_up'
-  | 'in_transit'
   | 'delivered'
+  | 'completed_paid'
   | 'cancelled';
 
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
@@ -76,7 +77,7 @@ export async function createDelivery(data: {
 
   const doc = {
     senderId: data.senderId,
-    status: 'pending' as DeliveryStatusType,
+    status: 'new' as DeliveryStatusType,
     pickup: {
       ...data.pickup,
       geohash,
@@ -90,7 +91,7 @@ export async function createDelivery(data: {
     notes: data.notes || null,
     interestedDrivers: [],
     statusHistory: {
-      pending: firestore.FieldValue.serverTimestamp(),
+      new: firestore.FieldValue.serverTimestamp(),
     },
     rated: false,
     createdAt: firestore.FieldValue.serverTimestamp(),
@@ -148,7 +149,7 @@ export async function getNearbyDeliveries(
 
   const snapshot = await firestore()
     .collection(COLLECTION)
-    .where('status', '==', 'pending')
+    .where('status', '==', 'new')
     .where('pickup.geohash', '>=', lower)
     .where('pickup.geohash', '<=', upper)
     .orderBy('pickup.geohash')
@@ -190,7 +191,7 @@ export async function matchDriver(
   driverId: string,
   chatId: string,
 ): Promise<void> {
-  await updateDeliveryStatus(deliveryId, 'matched', {
+  await updateDeliveryStatus(deliveryId, 'pending', {
     driverId,
     chatId,
   });

@@ -4,6 +4,8 @@
  * כלי עיזר לעיצוב תאריך, מטבע ומרחק
  */
 
+import { strings } from '../i18n/strings';
+
 // ──────────────────────────────────────────────
 // Date formatters
 // ──────────────────────────────────────────────
@@ -75,11 +77,11 @@ export function formatRelativeDate(date: Date | string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMinutes < 1) return 'עכשיו'; // Now
-  if (diffMinutes < 60) return `לפני ${diffMinutes} דק׳`; // X minutes ago
-  if (diffHours < 24) return `לפני ${diffHours} שע׳`; // X hours ago
-  if (diffDays === 1) return 'אתמול'; // Yesterday
-  if (diffDays < 7) return `לפני ${diffDays} ימים`; // X days ago
+  if (diffMinutes < 1) return strings.time.now.he;
+  if (diffMinutes < 60) return strings.time.minutesAgo.he.replace('{n}', String(diffMinutes));
+  if (diffHours < 24) return strings.time.hoursAgo.he.replace('{n}', String(diffHours));
+  if (diffDays === 1) return strings.time.yesterday.he;
+  if (diffDays < 7) return strings.time.daysAgo.he.replace('{n}', String(diffDays));
   return formatDate(d);
 }
 
@@ -88,15 +90,21 @@ export function formatRelativeDate(date: Date | string): string {
 // ──────────────────────────────────────────────
 
 /**
+ * Add thousand separators (commas) to an integer.
+ * Manual fallback for Hermes engines where toLocaleString may not work.
+ */
+function addThousandSeparators(n: number): string {
+  const s = Math.round(n).toString();
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
  * Format amount as Israeli Shekel (₪).
  * עיצוב סכום בשקלים ישראליים
  */
 export function formatCurrency(amount: number): string {
   if (isNaN(amount)) return '₪0';
-  return `₪${amount.toLocaleString('he-IL', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
+  return `₪${addThousandSeparators(amount)}`;
 }
 
 /**
@@ -124,10 +132,10 @@ export function formatDistance(distanceKm: number): string {
 
   if (distanceKm < 1) {
     const meters = Math.round(distanceKm * 1000);
-    return `${meters} מ׳`; // meters
+    return `${meters} ${strings.commonExtra.meters.he}`;
   }
 
-  return `${distanceKm.toFixed(1)} ק״מ`; // km
+  return `${distanceKm.toFixed(1)} ${strings.commonExtra.km.he}`;
 }
 
 /**

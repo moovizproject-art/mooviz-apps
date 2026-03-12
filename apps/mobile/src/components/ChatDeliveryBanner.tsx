@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  I18nManager,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 
@@ -21,6 +20,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
 import { AvatarCircle } from './AvatarCircle';
 import { getStatusConfig } from '../constants/statusConfig';
+import { formatCurrency } from '../utils/formatters';
+import { strings } from '../i18n/strings';
 
 interface ChatDeliveryBannerProps {
   chatId: string;
@@ -107,7 +108,7 @@ export function ChatDeliveryBanner({
         }
 
         // Format pickup date
-        let dateStr = 'בהקדם';
+        let dateStr = strings.time.asap.he;
         if (d.pickupDate && d.pickupDate !== 'asap') {
           const date = d.pickupDate?.toDate ? d.pickupDate.toDate() : new Date(d.pickupDate);
           dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
@@ -115,7 +116,7 @@ export function ChatDeliveryBanner({
 
         setDelivery({
           id: deliveryId,
-          status: d.status || 'pending',
+          status: d.status || 'new',
           pickupCity: d.pickup?.city || d.pickup?.address || '',
           destinationCity: d.destination?.city || d.destination?.address || '',
           pickupDate: dateStr,
@@ -204,12 +205,12 @@ export function ChatDeliveryBanner({
             {/* Date + Price + View delivery link */}
             <View style={styles.metaRow}>
               <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                {delivery.pickupDate} • ₪{delivery.price}
+                {delivery.pickupDate} • {formatCurrency(delivery.price)}
               </Text>
               {onNavigateToDelivery && (
                 <TouchableOpacity onPress={() => onNavigateToDelivery(delivery.id)}>
                   <Text style={[styles.linkText, { color: colors.primary }]}>
-                    צפה במשלוח ←
+                    {strings.commonExtra.viewDelivery.he} ←
                   </Text>
                 </TouchableOpacity>
               )}

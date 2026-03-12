@@ -14,6 +14,7 @@ import { requestMediaLibraryPermission } from '../../utils/permissions';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
+import { sendPasswordReset } from '../../services/auth';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
@@ -102,6 +103,17 @@ export function ProfileScreen(): React.JSX.Element {
       setUploadingPhoto(false);
     }
   }, [currentUser, t, carAlert]);
+
+  const handleChangePassword = async (): Promise<void> => {
+    const email = currentUser?.email;
+    if (!email) return;
+    try {
+      await sendPasswordReset(email);
+      carAlert.show('success', t('common.success'), t('auth.passwordResetSent'));
+    } catch {
+      carAlert.show('error', t('common.error'), t('auth.resetPassword'));
+    }
+  };
 
   const handleLogout = (): void => {
     carAlert.show('info', t('profile.logoutTitle'), t('profile.logoutConfirm'), [
@@ -293,6 +305,14 @@ export function ProfileScreen(): React.JSX.Element {
           )}
         </View>
 
+        {/* Change password */}
+        <TouchableOpacity
+          style={[styles.changePasswordButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={handleChangePassword}
+        >
+          <Text style={[styles.changePasswordText, { color: colors.primary }]}>{t('auth.changePassword')}</Text>
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity
           style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.error }]}
@@ -300,6 +320,9 @@ export function ProfileScreen(): React.JSX.Element {
         >
           <Text style={[styles.logoutButtonText, { color: colors.error }]}>{t('profile.logout')}</Text>
         </TouchableOpacity>
+
+        {/* Version */}
+        <Text style={[styles.versionText, { color: colors.textTertiary }]}>v0.9.8.5</Text>
       </ScrollView>
 
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />
@@ -316,7 +339,7 @@ export function ProfileScreen(): React.JSX.Element {
 }
 
 /** Info row — label pinned to start (right in RTL), value pinned to end (left in RTL) */
-function InfoRow({ label, value, colors }: { label: string; value: string; colors: Record<string, string> }): React.JSX.Element {
+function InfoRow({ label, value, colors }: { label: string; value: string; colors: any }): React.JSX.Element {
   return (
     <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
       <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}</Text>
@@ -464,6 +487,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'left',
   },
+  changePasswordButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    marginHorizontal: 24,
+    marginBottom: 12,
+  },
+  changePasswordText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
   logoutButton: {
     borderRadius: 12,
     paddingVertical: 14,
@@ -474,5 +509,11 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  versionText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 24,
+    marginBottom: 16,
   },
 });

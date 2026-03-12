@@ -7,6 +7,7 @@
 import { Alert, Linking, Platform, PermissionsAndroid } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import messaging from '@react-native-firebase/messaging';
+import { strings } from '../i18n/strings';
 
 // ──────────────────────────────────────────────
 // Location permissions — הרשאות מיקום
@@ -27,8 +28,8 @@ export async function requestLocationPermission(): Promise<boolean> {
     const status = await Geolocation.requestAuthorization('whenInUse');
     if (status !== 'granted') {
       showPermissionDeniedAlert(
-        'הרשאת מיקום',
-        'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
+        strings.permissions.locationTitle.he,
+        strings.permissions.locationMessage.he,
       );
       return false;
     }
@@ -39,17 +40,17 @@ export async function requestLocationPermission(): Promise<boolean> {
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     {
-      title: 'הרשאת מיקום',
-      message: 'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
-      buttonPositive: 'אשר',
-      buttonNegative: 'ביטול',
+      title: strings.permissions.locationTitle.he,
+      message: strings.permissions.locationMessage.he,
+      buttonPositive: strings.permissions.allow.he,
+      buttonNegative: strings.common.cancel.he,
     },
   );
 
   if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
     showPermissionDeniedAlert(
-      'הרשאת מיקום',
-      'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
+      strings.permissions.locationTitle.he,
+      strings.permissions.locationMessage.he,
     );
     return false;
   }
@@ -71,10 +72,10 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
       {
-        title: 'הרשאת מיקום ברקע',
-        message: 'מעקב משלוחים בזמן אמת דורש הרשאת מיקום ברקע.',
-        buttonPositive: 'אשר',
-        buttonNegative: 'ביטול',
+        title: strings.permissions.backgroundLocationTitle.he,
+        message: strings.permissions.backgroundLocationMessage.he,
+        buttonPositive: strings.permissions.allow.he,
+        buttonNegative: strings.common.cancel.he,
       },
     );
     return granted === PermissionsAndroid.RESULTS.GRANTED;
@@ -100,17 +101,17 @@ export async function requestCameraPermission(): Promise<boolean> {
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.CAMERA,
     {
-      title: 'הרשאת מצלמה',
-      message: 'MOOVIZ צריך גישה למצלמה לצילום הוכחות איסוף ומסירה.',
-      buttonPositive: 'אשר',
-      buttonNegative: 'ביטול',
+      title: strings.permissions.cameraTitle.he,
+      message: strings.permissions.cameraMessage.he,
+      buttonPositive: strings.permissions.allow.he,
+      buttonNegative: strings.common.cancel.he,
     },
   );
 
   if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
     showPermissionDeniedAlert(
-      'הרשאת מצלמה',
-      'MOOVIZ צריך גישה למצלמה לצילום הוכחות איסוף ומסירה.',
+      strings.permissions.cameraTitle.he,
+      strings.permissions.cameraMessage.he,
     );
     return false;
   }
@@ -135,16 +136,16 @@ export async function requestMediaLibraryPermission(): Promise<boolean> {
     : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
 
   const granted = await PermissionsAndroid.request(permission, {
-    title: 'הרשאת גלריה',
-    message: 'MOOVIZ צריך גישה לתמונות שלך לצורך צירוף תמונות פריט.',
-    buttonPositive: 'אשר',
-    buttonNegative: 'ביטול',
+    title: strings.permissions.galleryTitle.he,
+    message: strings.permissions.galleryMessage.he,
+    buttonPositive: strings.permissions.allow.he,
+    buttonNegative: strings.common.cancel.he,
   });
 
   if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
     showPermissionDeniedAlert(
-      'הרשאת גלריה',
-      'MOOVIZ צריך גישה לתמונות שלך לצורך צירוף תמונות פריט.',
+      strings.permissions.galleryTitle.he,
+      strings.permissions.galleryMessage.he,
     );
     return false;
   }
@@ -176,8 +177,8 @@ export async function requestNotificationPermission(): Promise<boolean> {
     );
     if (result !== PermissionsAndroid.RESULTS.GRANTED) {
       showPermissionDeniedAlert(
-        'הרשאת התראות',
-        'MOOVIZ צריך לשלוח לך התראות על עדכוני משלוחים והודעות.',
+        strings.permissions.notificationTitle.he,
+        strings.permissions.notificationMessage.he,
       );
       return false;
     }
@@ -206,11 +207,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
 function showPermissionDeniedAlert(title: string, message: string): void {
   Alert.alert(
     title,
-    `${message}\n\nניתן לאשר בהגדרות המכשיר.`,
+    `${message}\n\n${strings.permissions.deniedSettingsHint.he}`,
     [
-      { text: 'ביטול', style: 'cancel' },
+      { text: strings.common.cancel.he, style: 'cancel' },
       {
-        text: 'פתח הגדרות',
+        text: strings.permissions.openSettings.he,
         onPress: () => {
           if (Platform.OS === 'ios') {
             Linking.openURL('app-settings:');

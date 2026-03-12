@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react';
+import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
 
 import { useFirestore } from './useFirestore';
-import { encodeGeohash, getGeohashRange } from '../services/geohash';
-import { GEOHASH_PRECISION } from '../constants/config';
+import { getGeohashRange } from '../services/geohash';
 
 // ──────────────────────────────────────────────
 // Types
@@ -22,21 +22,32 @@ export interface Delivery {
   driverRating?: number;
   status: string;
   pickup?: {
-    latitude: number;
-    longitude: number;
+    lat?: number;
+    lng?: number;
+    latitude?: number;
+    longitude?: number;
     address: string;
+    city?: string;
     geohash?: string;
   };
   destination?: {
-    latitude: number;
-    longitude: number;
+    lat?: number;
+    lng?: number;
+    latitude?: number;
+    longitude?: number;
     address: string;
+    city?: string;
   };
-  itemDescription: string;
+  // HLD canonical fields (from callable)
+  item?: { description: string; type?: string; size?: string; photoURL?: string };
+  price?: number;
+  pickupDate?: string | null;
+  // Legacy flat fields (from old direct writes)
+  itemDescription?: string;
   itemSize?: string;
   photoUrl?: string;
   mediaURLs?: string[];
-  suggestedPrice: number;
+  suggestedPrice?: number;
   scheduledDate?: string | null;
   notes?: string;
   chatId?: string;
@@ -52,6 +63,26 @@ export interface Delivery {
     paymentURL?: string;
   };
   createdAt?: Date | string;
+}
+
+/** Get the effective price from a delivery (handles both old and new field names). */
+export function getDeliveryPrice(d: Delivery): number {
+  return d.price ?? d.suggestedPrice ?? 0;
+}
+
+/** Get the effective item description from a delivery. */
+export function getDeliveryItemDescription(d: Delivery): string {
+  return d.item?.description ?? d.itemDescription ?? '';
+}
+
+/** Get pickup latitude from a delivery (handles both field formats). */
+export function getPickupLat(d: Delivery): number | undefined {
+  return d.pickup?.lat ?? d.pickup?.latitude;
+}
+
+/** Get pickup longitude from a delivery (handles both field formats). */
+export function getPickupLng(d: Delivery): number | undefined {
+  return d.pickup?.lng ?? d.pickup?.longitude;
 }
 
 interface UseDeliveryOptions {
@@ -162,13 +193,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
 
   const createDelivery = useCallback(
     async (input: CreateDeliveryInput): Promise<string> => {
-      const pickupGeohash = encodeGeohash(
-        input.pickup.latitude,
-        input.pickup.longitude,
-        GEOHASH_PRECISION,
-      );
-
-      // Upload media files to Storage if provided
+      // Upload media files to Storage first (client-side, needs user auth)
       let photoUrl: string | null = null;
       let mediaURLs: string[] = [];
 
@@ -176,13 +201,11 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         try {
           const { uploadDeliveryMedia } = require('../services/storage');
           mediaURLs = await uploadDeliveryMedia(input.senderId, input.mediaUris);
-          // Backward compat: first image URL as photoUrl
           photoUrl = mediaURLs[0] || null;
         } catch (err) {
           console.warn('[useDelivery] Media upload failed, continuing without media:', err);
         }
       } else if (input.photoUri) {
-        // Legacy single photo support
         try {
           const { uploadImage } = require('../services/storage');
           const path = `deliveries/${input.senderId}/${Date.now()}.jpg`;
@@ -193,87 +216,98 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         }
       }
 
-      const now = firestore.FieldValue.serverTimestamp();
-      const deliveryData = {
-        senderId: input.senderId,
-        senderName: input.senderName || '',
-        senderPhotoUrl: input.senderPhotoUrl || null,
-        senderRating: input.senderRating ?? 0,
-        driverId: null,
-        status: 'new',
-        pickup: {
-          ...input.pickup,
-          geohash: pickupGeohash,
-        },
-        destination: input.destination,
-        itemDescription: input.itemDescription,
-        itemSize: input.itemSize,
-        photoUrl,
-        mediaURLs,
-        suggestedPrice: input.suggestedPrice,
-        scheduledDate: input.scheduledDate,
-        notes: input.notes,
-        payment: { senderConfirmed: false, driverConfirmed: false },
-        proof: {},
-        statusHistory: [{ status: 'new', timestamp: new Date().toISOString() }],
-        interestedDrivers: [],
-        createdAt: now,
-        updatedAt: now,
-      };
+      // Call Cloud Function — server handles normalization, validation, geohash, notifications
+      try {
+        const fn = functions().httpsCallable('createDelivery');
+        const result = await fn({
+          pickup: input.pickup,
+          destination: input.destination,
+          itemDescription: input.itemDescription,
+          itemSize: input.itemSize,
+          photoUrl,
+          mediaURLs,
+          suggestedPrice: input.suggestedPrice,
+          scheduledDate: input.scheduledDate,
+          notes: input.notes,
+        });
 
-      const docRef = await firestore().collection('deliveries').add(deliveryData);
-      return docRef.id;
+        return (result.data as { deliveryId: string }).deliveryId;
+      } catch (err) {
+        console.error('[useDelivery] createDelivery failed:', err);
+        throw new Error((err as any)?.message || 'Create delivery failed');
+      }
     },
     [],
   );
 
   const updateDeliveryStatus = useCallback(
     async (deliveryId: string, status: string): Promise<void> => {
-      await firestore().collection('deliveries').doc(deliveryId).update({
-        status,
-        [`statusHistory.${status}`]: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      try {
+        await firestore().collection('deliveries').doc(deliveryId).update({
+          status,
+          [`statusHistory.${status}`]: firestore.FieldValue.serverTimestamp(),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        console.error('[useDelivery] updateDeliveryStatus failed:', err);
+        throw new Error((err as any)?.message || 'Status update failed');
+      }
     },
     [],
   );
 
   const expressInterest = useCallback(
     async (deliveryId: string, _driverId: string): Promise<void> => {
-      // Route through Cloud Function for proper status transition + notifications
-      const fn = functions().httpsCallable('expressInterest');
-      await fn({ deliveryId });
+      try {
+        // Route through Cloud Function for proper status transition + notifications
+        const fn = functions().httpsCallable('expressInterest');
+        await fn({ deliveryId });
+      } catch (err) {
+        console.error('[useDelivery] expressInterest failed:', err);
+        throw new Error((err as any)?.message || 'Express interest failed');
+      }
     },
     [],
   );
 
   const submitRating = useCallback(
     async (input: RatingInput): Promise<void> => {
-      const batch = firestore().batch();
+      try {
+        const batch = firestore().batch();
 
-      // Create rating document
-      const ratingRef = firestore().collection('ratings').doc();
-      batch.set(ratingRef, {
-        deliveryId: input.deliveryId,
-        targetUserId: input.targetUserId,
-        rating: input.rating,
-        comment: input.comment || null,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-      });
+        // Create rating document
+        const ratingRef = firestore().collection('ratings').doc();
+        batch.set(ratingRef, {
+          deliveryId: input.deliveryId,
+          fromUserId: auth().currentUser?.uid,
+          targetUserId: input.targetUserId,
+          rating: input.rating,
+          comment: input.comment || null,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+        });
 
-      // Mark delivery as rated
-      const deliveryRef = firestore().collection('deliveries').doc(input.deliveryId);
-      batch.update(deliveryRef, { rated: true });
+        // Mark delivery as rated
+        const deliveryRef = firestore().collection('deliveries').doc(input.deliveryId);
+        batch.update(deliveryRef, { rated: true });
 
-      await batch.commit();
+        await batch.commit();
+      } catch (err) {
+        console.error('[useDelivery] submitRating failed:', err);
+        throw new Error((err as any)?.message || 'Rating submission failed');
+      }
     },
     [],
   );
 
   const confirmPayment = useCallback(async (deliveryId: string, paymentPhotoURL?: string) => {
-    // All payment confirmations MUST go through Cloud Functions for server-side validation
-    const fn = functions().httpsCallable('confirmPayment');
-    await fn({ deliveryId, paymentPhotoURL });
+    try {
+      // All payment confirmations MUST go through Cloud Functions for server-side validation
+      const fn = functions().httpsCallable('confirmPayment');
+      await fn({ deliveryId, paymentPhotoURL });
+    } catch (err) {
+      console.error('[useDelivery] confirmPayment failed:', err);
+      throw new Error((err as any)?.message || 'Payment confirmation failed');
+    }
   }, []);
 
   return {

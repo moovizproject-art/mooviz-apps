@@ -51,7 +51,7 @@ export async function uploadEncryptedProfilePhoto(
   // Step 3: Invalidate cache
   photoCache.delete(userId);
 
-  return result.data.storagePath;
+  return (result.data as any).storagePath;
 }
 
 /**

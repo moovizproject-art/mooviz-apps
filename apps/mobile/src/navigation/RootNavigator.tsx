@@ -4,6 +4,7 @@ import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigatio
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -117,6 +118,8 @@ export type RootStackParamList = {
     driverPhone?: string;
     chatId?: string;
     recipientName?: string;
+    deliveryStatus?: string;
+    deliveredAt?: string | null;
   };
 };
 
@@ -272,6 +275,22 @@ export function RootNavigator(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+  const [firestoreTimeout, setFirestoreTimeout] = useState(false);
+
+  // Safety timeout: if firebaseUser exists but currentUser never loads,
+  // stop waiting after 8s so the user doesn't get stuck on a spinner forever.
+  useEffect(() => {
+    if (!firebaseUser || currentUser || isLoading) {
+      setFirestoreTimeout(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      console.warn('[RootNavigator] Firestore user doc timeout — signing out for clean retry');
+      try { await auth().signOut(); } catch (_) {}
+      setFirestoreTimeout(true);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [firebaseUser, currentUser, isLoading]);
 
   useEffect(() => {
     console.log('[RootNavigator] Checking onboarding status...');
@@ -342,8 +361,8 @@ export function RootNavigator(): React.JSX.Element {
   }
 
   // firebaseUser exists but Firestore doc not loaded yet → show loading
-  // We need currentUser to check lastOtpAt, so wait for it
-  if (firebaseUser && !currentUser && !needsEmailVerification) {
+  // We need currentUser to check lastOtpAt, so wait for it (max 8s)
+  if (firebaseUser && !currentUser && !needsEmailVerification && !firestoreTimeout) {
     // Only exception: phone not linked at all → can show AddPhone right away
     if (!firebaseUser.phoneNumber) {
       // Fall through to show PhoneVerification screen

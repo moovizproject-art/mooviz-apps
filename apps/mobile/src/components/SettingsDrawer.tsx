@@ -16,7 +16,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { useAuth } from '../hooks/useAuth';
 import { useSound } from '../hooks/useSound';
 import { ProfileIcon } from './TabIcons';
-import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../theme/tokens';
+import { SPACING, TYPOGRAPHY, SHADOWS } from '../theme/tokens';
 
 const carImage = require('../assets/car.png');
 const socialFacebook = require('../assets/social/facebook.png');
@@ -46,7 +46,7 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
     onClose();
     if (isDriverMode) {
       // Already driver — switch back to sender
-      await updateProfile({ activeMode: 'sender' });
+      await updateProfile({ activeMode: 'client' });
     } else if (driverUnlocked) {
       // KYC approved — switch to driver mode
       await updateProfile({ activeMode: 'driver' });

@@ -7,10 +7,12 @@ import {
   ScrollView,
   Image,
   Modal,
-  Animated,
+  Platform,
+  PermissionsAndroid,
+  ActionSheetIOS,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,6 +25,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { DatePickerInput } from '../../components/DatePickerInput';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
+import { strings } from '../../i18n/strings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateDelivery'>;
 
@@ -85,6 +88,23 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const imageCount = form.mediaUris.filter(u => !isVideoUri(u)).length;
   const hasVideo = form.mediaUris.some(u => isVideoUri(u));
 
+  const showMediaPicker = (): void => {
+    const options = ['\u{1F4F8} \u05E6\u05DC\u05DD \u05EA\u05DE\u05D5\u05E0\u05D4', '\u{1F5BC} \u05D1\u05D7\u05E8 \u05DE\u05D4\u05D2\u05DC\u05E8\u05D9\u05D4', '\u05D1\u05D9\u05D8\u05D5\u05DC'];
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: 2 },
+        (index) => {
+          if (index === 0) handleTakePhoto();
+          else if (index === 1) handleAddPhotos();
+        },
+      );
+    } else {
+      setShowMediaModal(true);
+    }
+  };
+
+  const [showMediaModal, setShowMediaModal] = useState(false);
+
   const handleAddPhotos = async (): Promise<void> => {
     const maxNew = 5 - imageCount;
     if (maxNew <= 0) return;
@@ -100,6 +120,38 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       }
     } catch (e) {
       console.warn('Image pick error:', e);
+    }
+  };
+
+  const handleTakePhoto = async (): Promise<void> => {
+    if (imageCount >= 5) return;
+    try {
+      // Request camera permission on Android
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: strings.permissions.cameraTitle.he,
+            message: strings.permissions.cameraMessage.he,
+            buttonPositive: strings.permissions.allow.he,
+            buttonNegative: strings.common.cancel.he,
+          },
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          console.warn('Camera permission denied');
+          return;
+        }
+      }
+      const result = await launchCamera({
+        mediaType: 'photo',
+        quality: 0.7,
+        saveToPhotos: false,
+      });
+      if (!result.didCancel && result.assets?.[0]?.uri) {
+        updateField('mediaUris', [...form.mediaUris, result.assets[0].uri]);
+      }
+    } catch (e) {
+      console.warn('Camera error:', e);
     }
   };
 
@@ -160,8 +212,9 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
         { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
-    } catch {
-      carAlert.show('error', t('common.error'), t('delivery.createError'));
+    } catch (e: any) {
+      const msg = e?.message || e?.userInfo?.message || t('delivery.createError');
+      carAlert.show('error', t('common.error'), msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -308,7 +361,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           {form.mediaUris.length === 0 ? (
             <View style={styles.mediaCenteredRow}>
               {imageCount < 5 && (
-                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddPhotos}>
+                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={showMediaPicker}>
                   <Text style={styles.addMediaIconText}>{'\uD83D\uDCF7'}</Text>
                   <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addPhoto')}</Text>
                 </TouchableOpacity>
@@ -336,7 +389,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
                 </View>
               ))}
               {imageCount < 5 && (
-                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={handleAddPhotos}>
+                <TouchableOpacity style={[styles.addMediaButton, { borderColor: colors.border }]} onPress={showMediaPicker}>
                   <Text style={styles.addMediaIconText}>{'\uD83D\uDCF7'}</Text>
                   <Text style={[styles.addMediaText, { color: colors.textSecondary }]}>{t('form.addPhoto')}</Text>
                 </TouchableOpacity>
@@ -369,8 +422,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           label={t('form.suggestedPrice')}
           required
           placeholder="0"
-          value={form.suggestedPrice}
-          onChangeText={(v) => updateField('suggestedPrice', v)}
+          value={form.suggestedPrice ? `₪${form.suggestedPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}` : ''}
+          onChangeText={(v) => updateField('suggestedPrice', v.replace(/[^0-9]/g, ''))}
           keyboardType="numeric"
         />
 
@@ -450,6 +503,32 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         </View>
       </Modal>
       <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
+
+      {/* Android media source picker modal */}
+      <Modal visible={showMediaModal} transparent animationType="fade" onRequestClose={() => setShowMediaModal(false)}>
+        <TouchableOpacity style={styles.mediaModalOverlay} activeOpacity={1} onPress={() => setShowMediaModal(false)}>
+          <View style={[styles.mediaModalContent, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={[styles.mediaModalOption, { borderBottomColor: colors.border }]}
+              onPress={() => { setShowMediaModal(false); handleTakePhoto(); }}
+            >
+              <Text style={[styles.mediaModalOptionText, { color: colors.textPrimary }]}>{'\uD83D\uDCF8'}  {'\u05E6\u05DC\u05DD \u05EA\u05DE\u05D5\u05E0\u05D4'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mediaModalOption, { borderBottomColor: colors.border }]}
+              onPress={() => { setShowMediaModal(false); handleAddPhotos(); }}
+            >
+              <Text style={[styles.mediaModalOptionText, { color: colors.textPrimary }]}>{'\uD83D\uDDBC'}  {'\u05D1\u05D7\u05E8 \u05DE\u05D4\u05D2\u05DC\u05E8\u05D9\u05D4'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mediaModalOption}
+              onPress={() => setShowMediaModal(false)}
+            >
+              <Text style={[styles.mediaModalOptionText, { color: colors.error }]}>{'\u05D1\u05D9\u05D8\u05D5\u05DC'}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -704,5 +783,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  mediaModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  mediaModalContent: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  mediaModalOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  mediaModalOptionText: {
+    fontSize: 17,
+    textAlign: 'center',
   },
 });

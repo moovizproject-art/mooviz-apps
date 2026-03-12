@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
-import { SPACING, BORDER_RADIUS } from '../constants/design';
+import { BORDER_RADIUS } from '../constants/design';
+import { strings } from '../i18n/strings';
 
 const ONBOARDING_KEY = '@driver_onboarding_done';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -23,33 +24,33 @@ interface OnboardingStep {
 const STEPS: OnboardingStep[] = [
   {
     icon: '🟢',
-    title: 'זמינות',
-    description: 'הפעילו את מצב הזמינות כדי להתחיל לקבל הזמנות משלוח באזור שלכם.',
+    title: strings.driverOnboarding.availabilityTitle.he,
+    description: strings.driverOnboarding.availabilityDesc.he,
   },
   {
     icon: '📏',
-    title: 'טווח התראות',
-    description: 'הגדירו את הרדיוס בק"מ כדי לראות משלוחים שמתאימים לאזור שלכם.',
+    title: strings.driver.notificationRange.he,
+    description: strings.driverOnboarding.radiusDesc.he,
   },
   {
     icon: '📡',
-    title: 'רדאר',
-    description: 'הרדאר סורק משלוחים זמינים בסביבתכם בזמן אמת.',
+    title: strings.driverOnboarding.radarTitle.he,
+    description: strings.driverOnboarding.radarDesc.he,
   },
   {
     icon: '💰',
-    title: 'הכנסות',
-    description: 'עקבו אחרי ההכנסות שלכם — לפי שבוע, חודש ושנה.',
+    title: strings.driverOnboarding.earningsTitle.he,
+    description: strings.driverOnboarding.paymentDesc.he,
   },
   {
     icon: '💳',
-    title: 'תשלום ישיר',
-    description: 'התשלום עבור המשלוח מתבצע ישירות בין השולח לנהג. האפליקציה לא מעבדת תשלומים — היא רק מחברת ביניכם.',
+    title: strings.driverOnboarding.directPaymentTitle.he,
+    description: strings.driverOnboarding.paymentDesc.he,
   },
   {
     icon: '⚙️',
-    title: 'הגדרות מתקדמות',
-    description: 'התאימו סוג רכב, גדלי משלוחים, כתובות מועדפות וזמני עבודה.',
+    title: strings.driverOnboarding.advancedSettingsTitle.he,
+    description: strings.driverOnboarding.preferencesDesc.he,
   },
 ];
 
@@ -103,14 +104,14 @@ export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element 
           <View style={styles.actions}>
             {!isLast && (
               <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>דלג</Text>
+                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>{strings.onboarding.skip.he}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               onPress={handleNext}
               style={[styles.nextBtn, { backgroundColor: colors.primary }]}
             >
-              <Text style={styles.nextText}>{isLast ? 'בוא נתחיל' : 'הבא'}</Text>
+              <Text style={styles.nextText}>{isLast ? strings.onboarding.getStarted.he : strings.onboarding.next.he}</Text>
             </TouchableOpacity>
           </View>
         </View>

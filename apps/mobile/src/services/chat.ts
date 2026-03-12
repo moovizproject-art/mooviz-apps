@@ -120,7 +120,7 @@ export async function sendImageMessage(
     .add(messageData);
 
   await firestore().collection('chats').doc(chatId).update({
-    lastMessage: '[תמונה]', // [Image]
+    lastMessage: '[Image]',
     lastMessageAt: firestore.FieldValue.serverTimestamp(),
     lastSenderId: senderId,
   });

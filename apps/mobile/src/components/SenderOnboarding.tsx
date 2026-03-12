@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
-import { SPACING, BORDER_RADIUS } from '../constants/design';
+import { BORDER_RADIUS } from '../constants/design';
+import { strings } from '../i18n/strings';
 
 const ONBOARDING_KEY = '@sender_onboarding_done';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -23,33 +24,33 @@ interface OnboardingStep {
 const STEPS: OnboardingStep[] = [
   {
     icon: '📦',
-    title: 'פרסום משלוח',
-    description: 'צרו משלוח חדש — הוסיפו כתובת איסוף, יעד, תיאור הפריט ותמונות.',
+    title: strings.senderOnboarding.postDeliveryTitle.he,
+    description: strings.senderOnboarding.postDeliveryDesc.he,
   },
   {
     icon: '💰',
-    title: 'הצעת מחיר',
-    description: 'הגדירו מחיר מוצע למשלוח. נהגים יוכלו לראות את ההצעה ולהביע עניין.',
+    title: strings.senderOnboarding.priceSuggestionTitle.he,
+    description: strings.senderOnboarding.priceDesc.he,
   },
   {
     icon: '🚛',
-    title: 'בחירת נהג',
-    description: 'כשנהג מביע עניין — תקבלו התראה. צפו בפרופיל הנהג ואשרו את המשלוח.',
+    title: strings.senderOnboarding.chooseDriverTitle.he,
+    description: strings.senderOnboarding.approvalDesc.he,
   },
   {
     icon: '💬',
-    title: 'צ׳אט ומעקב',
-    description: 'תקשרו עם הנהג דרך הצ׳אט המובנה ועקבו אחרי סטטוס המשלוח בזמן אמת.',
+    title: strings.senderOnboarding.chatAndTrackTitle.he,
+    description: strings.senderOnboarding.chatTrackDesc.he,
   },
   {
     icon: '💳',
-    title: 'תשלום ישיר',
-    description: 'התשלום מתבצע ישירות בינכם לנהג. האפליקציה לא מעבדת תשלומים — היא רק מחברת ביניכם.',
+    title: strings.driverOnboarding.directPaymentTitle.he,
+    description: strings.driverOnboarding.paymentDesc.he,
   },
   {
     icon: '⭐',
-    title: 'דירוג',
-    description: 'לאחר השלמת המשלוח — דרגו את הנהג. הדירוג עוזר לשמור על קהילה אמינה.',
+    title: strings.profile.rating.he,
+    description: strings.senderOnboarding.ratingDesc.he,
   },
 ];
 
@@ -103,14 +104,14 @@ export function SenderOnboarding({ visible, onDone }: Props): React.JSX.Element 
           <View style={styles.actions}>
             {!isLast && (
               <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>דלג</Text>
+                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>{strings.onboarding.skip.he}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               onPress={handleNext}
               style={[styles.nextBtn, { backgroundColor: colors.primary }]}
             >
-              <Text style={styles.nextText}>{isLast ? 'בוא נתחיל' : 'הבא'}</Text>
+              <Text style={styles.nextText}>{isLast ? strings.onboarding.getStarted.he : strings.onboarding.next.he}</Text>
             </TouchableOpacity>
           </View>
         </View>

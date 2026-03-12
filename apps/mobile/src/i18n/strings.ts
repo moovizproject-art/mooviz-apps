@@ -148,6 +148,9 @@ export const strings = {
     resendCode: { he: 'שלח קוד חדש', en: 'Resend code' } as LocaleStrings,
     invalidCode: { he: 'יש להזין קוד בן 6 ספרות', en: 'Please enter a 6-digit code' } as LocaleStrings,
     resetPassword: { he: 'איפוס סיסמה', en: 'Reset password' } as LocaleStrings,
+    changePassword: { he: 'שינוי סיסמה', en: 'Change password' } as LocaleStrings,
+    passwordResetSent: { he: 'קישור לאיפוס סיסמה נשלח למייל שלך', en: 'Password reset link sent to your email' } as LocaleStrings,
+    sessionExpired: { he: 'החיבור נכשל. נסה להתחבר מחדש.', en: 'Connection failed. Try logging in again.' } as LocaleStrings,
     resetSent: { he: 'נשלח לך קישור לאיפוס רק אם האימייל שלך נמצא במערכת', en: 'We will send you the reset link only if your email is found in the system' } as LocaleStrings,
     resetSubtitle: { he: 'הזן את כתובת האימייל שלך ונשלח לך קישור לאיפוס סיסמה', en: 'Enter your email and we\'ll send you a reset link' } as LocaleStrings,
     backToLogin: { he: 'חזרה להתחברות', en: 'Back to login' } as LocaleStrings,
@@ -243,6 +246,7 @@ export const strings = {
     priceLabel: { he: 'מחיר:', en: 'Price:' } as LocaleStrings,
     mapPlaceholder: { he: 'מפה — מיקום הנהג בזמן אמת', en: 'Map — Real-time driver location' } as LocaleStrings,
     rateDriver: { he: 'דרג את הנהג', en: 'Rate the driver' } as LocaleStrings,
+    rateSender: { he: 'דרג את השולח', en: 'Rate the sender' } as LocaleStrings,
     waitingForDriver: { he: 'ממתין לנהג', en: 'Waiting for driver' } as LocaleStrings,
     driverFound: { he: 'נהג נמצא', en: 'Driver found' } as LocaleStrings,
     size: { he: 'גודל:', en: 'Size:' } as LocaleStrings,
@@ -440,6 +444,7 @@ export const strings = {
     successTitle: { he: 'תשלום אושר', en: 'Payment confirmed' } as LocaleStrings,
     senderConfirmedMsg: { he: 'אישרת את התשלום. ממתין לאישור הנהג.', en: 'You confirmed payment. Waiting for driver confirmation.' } as LocaleStrings,
     driverConfirmedMsg: { he: 'אישרת את התשלום. ממתין לאישור השולח.', en: 'You confirmed payment. Waiting for sender confirmation.' } as LocaleStrings,
+    waitingForSender: { he: 'ממתין לאישור השולח', en: 'Waiting for sender' } as LocaleStrings,
   },
 
   // ── Map ──
@@ -448,6 +453,147 @@ export const strings = {
     destination: { he: 'יעד', en: 'Destination' } as LocaleStrings,
     driver: { he: 'נהג', en: 'Driver' } as LocaleStrings,
     fullScreen: { he: 'מסך מלא', en: 'Full screen' } as LocaleStrings,
+  },
+
+  // ── Errors ──
+  errors: {
+    networkError: { he: 'שגיאת רשת. בדוק את החיבור ונסה שוב.', en: 'Network error. Check your connection and try again.' } as LocaleStrings,
+    firestorePermission: { he: 'אין הרשאה לפעולה זו.', en: 'Permission denied for this action.' } as LocaleStrings,
+    firestoreNotFound: { he: 'המידע המבוקש לא נמצא.', en: 'The requested data was not found.' } as LocaleStrings,
+    cloudFunctionFailed: { he: 'הפעולה נכשלה. נסה שוב מאוחר יותר.', en: 'Operation failed. Try again later.' } as LocaleStrings,
+    invalidStatusChange: { he: 'לא ניתן לשנות סטטוס זה.', en: 'Cannot change this status.' } as LocaleStrings,
+    uploadFailed: { he: 'העלאת הקובץ נכשלה. נסה שוב.', en: 'File upload failed. Try again.' } as LocaleStrings,
+    locationUnavailable: { he: 'לא ניתן לקבל מיקום. בדוק הרשאות GPS.', en: 'Cannot get location. Check GPS permissions.' } as LocaleStrings,
+    permissionDenied: { he: 'ההרשאה נדחתה. ניתן לשנות בהגדרות.', en: 'Permission denied. You can change it in settings.' } as LocaleStrings,
+    sessionExpired: { he: 'פג תוקף החיבור. יש להתחבר מחדש.', en: 'Session expired. Please log in again.' } as LocaleStrings,
+    paymentConfirmFailed: { he: 'אישור התשלום נכשל. נסה שוב.', en: 'Payment confirmation failed. Try again.' } as LocaleStrings,
+    ratingFailed: { he: 'שליחת הדירוג נכשלה. נסה שוב.', en: 'Rating submission failed. Try again.' } as LocaleStrings,
+    interestFailed: { he: 'הבעת העניין נכשלה. נסה שוב.', en: 'Interest expression failed. Try again.' } as LocaleStrings,
+    mediaUploadPartial: { he: 'חלק מהתמונות לא הועלו. המשלוח נוצר ללא מדיה.', en: 'Some photos failed to upload. Delivery created without media.' } as LocaleStrings,
+    notificationsFailed: { he: 'לא ניתן להפעיל התראות. ייתכן שלא תקבל עדכונים.', en: 'Cannot enable notifications. You may not receive updates.' } as LocaleStrings,
+    chatLoadFailed: { he: 'טעינת הצ׳אט נכשלה.', en: 'Failed to load chat.' } as LocaleStrings,
+    unexpected: { he: 'שגיאה לא צפויה. נסה שוב.', en: 'Unexpected error. Try again.' } as LocaleStrings,
+    locationPermission: { he: 'שגיאה בבקשת הרשאת מיקום', en: 'Error requesting location permission' } as LocaleStrings,
+    locationNotGranted: { he: 'הרשאת מיקום לא אושרה', en: 'Location permission not granted' } as LocaleStrings,
+    locationServiceUnavailable: { he: 'שירות מיקום לא זמין', en: 'Location service unavailable' } as LocaleStrings,
+    currentLocationFailed: { he: 'לא ניתן לקבל מיקום נוכחי', en: 'Cannot get current location' } as LocaleStrings,
+    cancelAfterPickup: { he: 'לא ניתן לבטל משלוח לאחר איסוף הפריט', en: 'Cannot cancel delivery after pickup' } as LocaleStrings,
+  },
+
+  // ── Time / Relative Dates ──
+  time: {
+    now: { he: 'עכשיו', en: 'Now' } as LocaleStrings,
+    minutesAgo: { he: 'לפני {n} דק׳', en: '{n}m ago' } as LocaleStrings,
+    hoursAgo: { he: 'לפני {n} שע׳', en: '{n}h ago' } as LocaleStrings,
+    yesterday: { he: 'אתמול', en: 'Yesterday' } as LocaleStrings,
+    daysAgo: { he: 'לפני {n} ימים', en: '{n} days ago' } as LocaleStrings,
+    asap: { he: 'בהקדם', en: 'ASAP' } as LocaleStrings,
+  },
+
+  // ── Permissions ──
+  permissions: {
+    locationTitle: { he: 'הרשאת מיקום', en: 'Location Permission' } as LocaleStrings,
+    locationMessage: { he: 'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.', en: 'MOOVIZ needs access to your location to find deliveries near you.' } as LocaleStrings,
+    backgroundLocationTitle: { he: 'הרשאת מיקום ברקע', en: 'Background Location Permission' } as LocaleStrings,
+    backgroundLocationMessage: { he: 'מעקב משלוחים בזמן אמת דורש הרשאת מיקום ברקע.', en: 'Real-time delivery tracking requires background location permission.' } as LocaleStrings,
+    cameraTitle: { he: 'הרשאת מצלמה', en: 'Camera Permission' } as LocaleStrings,
+    cameraMessage: { he: 'MOOVIZ צריך גישה למצלמה כדי לצלם תמונה של המשלוח', en: 'MOOVIZ needs camera access to take a photo of the delivery' } as LocaleStrings,
+    galleryTitle: { he: 'הרשאת גלריה', en: 'Gallery Permission' } as LocaleStrings,
+    galleryMessage: { he: 'MOOVIZ צריך גישה לגלריה כדי לבחור תמונות', en: 'MOOVIZ needs gallery access to select photos' } as LocaleStrings,
+    notificationTitle: { he: 'הרשאת התראות', en: 'Notification Permission' } as LocaleStrings,
+    notificationMessage: { he: 'MOOVIZ צריך הרשאה לשלוח התראות על משלוחים ועדכונים', en: 'MOOVIZ needs permission to send delivery notifications and updates' } as LocaleStrings,
+    deniedSettingsHint: { he: 'ניתן לאשר בהגדרות המכשיר.', en: 'You can enable it in device settings.' } as LocaleStrings,
+    openSettings: { he: 'פתח הגדרות', en: 'Open Settings' } as LocaleStrings,
+    allow: { he: 'אשר', en: 'Allow' } as LocaleStrings,
+  },
+
+  // ── Common (additional) ──
+  commonExtra: {
+    playVideo: { he: 'לחץ להפעלת וידאו', en: 'Tap to play video' } as LocaleStrings,
+    hide: { he: 'הסתר', en: 'Hide' } as LocaleStrings,
+    show: { he: 'הצג', en: 'Show' } as LocaleStrings,
+    viewDelivery: { he: 'צפה במשלוח', en: 'View delivery' } as LocaleStrings,
+    noAddress: { he: 'כתובת לא זמינה', en: 'Address unavailable' } as LocaleStrings,
+    meters: { he: 'מ׳', en: 'm' } as LocaleStrings,
+    km: { he: 'ק״מ', en: 'km' } as LocaleStrings,
+    total: { he: 'סה״כ', en: 'Total' } as LocaleStrings,
+    distance: { he: 'מרחק', en: 'Distance' } as LocaleStrings,
+    deliveryItem: { he: 'משלוח', en: 'Delivery' } as LocaleStrings,
+  },
+
+  // ── Delivery (additional) ──
+  deliveryExtra: {
+    cancelDelivery: { he: 'ביטול משלוח', en: 'Cancel delivery' } as LocaleStrings,
+    cancelAction: { he: 'בטל משלוח', en: 'Cancel delivery' } as LocaleStrings,
+    deliveryProofs: { he: 'הוכחות משלוח', en: 'Delivery proofs' } as LocaleStrings,
+    confirmPickupPrompt: { he: 'נקודת האיסוף נמצאת {dist} ממך.\nלהמשיך?', en: 'Pickup point is {dist} from you.\nContinue?' } as LocaleStrings,
+    totalExpenses: { he: 'סה״כ עלויות משלוחים', en: 'Total delivery expenses' } as LocaleStrings,
+    activeDelivery: { he: 'משלוח פעיל', en: 'Active delivery' } as LocaleStrings,
+    deliverySizes: { he: 'גודל משלוחים', en: 'Delivery sizes' } as LocaleStrings,
+    deletePhoto: { he: 'מחיקת תמונה', en: 'Delete photo' } as LocaleStrings,
+    deletePhotoConfirm: { he: 'האם אתה בטוח שברצונך למחוק תמונה זו?', en: 'Are you sure you want to delete this photo?' } as LocaleStrings,
+    deleteAction: { he: 'מחק', en: 'Delete' } as LocaleStrings,
+    pickupProof: { he: 'הוכחת איסוף', en: 'Pickup proof' } as LocaleStrings,
+    deliveryProof: { he: 'הוכחת מסירה', en: 'Delivery proof' } as LocaleStrings,
+    paymentProofUploaded: { he: 'צילום תשלום הועלה', en: 'Payment screenshot uploaded' } as LocaleStrings,
+    confirmPaymentPrompt: { he: 'האם ברצונך לצרף צילום מסך של התשלום?', en: 'Would you like to attach a payment screenshot?' } as LocaleStrings,
+    confirmWithoutScreenshot: { he: 'אשר ללא צילום', en: 'Confirm without screenshot' } as LocaleStrings,
+    uploadScreenshot: { he: '📸 העלה צילום מסך', en: '📸 Upload screenshot' } as LocaleStrings,
+    chatWithDriver: { he: 'צ׳אט עם הנהג', en: 'Chat with driver' } as LocaleStrings,
+    itemPhotos: { he: 'תמונות הפריט', en: 'Item photos' } as LocaleStrings,
+    video: { he: 'וידאו', en: 'Video' } as LocaleStrings,
+    photo: { he: 'תמונה', en: 'Photo' } as LocaleStrings,
+    cancelPrompt: { he: 'ביטול אפשרי רק לפני איסוף הפריט.\nלאחר איסוף לא ניתן לבטל.\n\nהאם אתה בטוח?', en: 'Cancellation is only possible before pickup.\nAfter pickup, cancellation is not allowed.\n\nAre you sure?' } as LocaleStrings,
+  },
+
+  // ── Driver Onboarding Steps ──
+  driverOnboarding: {
+    radarTitle: { he: 'רדאר', en: 'Radar' } as LocaleStrings,
+    earningsTitle: { he: 'הכנסות', en: 'Earnings' } as LocaleStrings,
+    directPaymentTitle: { he: 'תשלום ישיר', en: 'Direct payment' } as LocaleStrings,
+    advancedSettingsTitle: { he: 'הגדרות מתקדמות', en: 'Advanced settings' } as LocaleStrings,
+    availabilityTitle: { he: 'זמינות', en: 'Availability' } as LocaleStrings,
+    availabilityDesc: { he: 'הפעילו את מצב הזמינות כדי להתחיל לקבל הזמנות משלוח באזור שלכם.', en: 'Activate availability mode to start receiving delivery orders in your area.' } as LocaleStrings,
+    radiusDesc: { he: 'הגדירו את הרדיוס בק"מ כדי לראות משלוחים שמתאימים לאזור שלכם.', en: 'Set the radius in km to see deliveries matching your area.' } as LocaleStrings,
+    radarDesc: { he: 'הרדאר סורק משלוחים זמינים בסביבתכם בזמן אמת.', en: 'The radar scans available deliveries around you in real time.' } as LocaleStrings,
+    paymentDesc: { he: 'התשלום עבור המשלוח מתבצע ישירות בין השולח לנהג. האפליקציה לא מעבדת תשלומים — היא רק מחברת ביניכם.', en: 'Payment is made directly between sender and driver. The app does not process payments — it only connects you.' } as LocaleStrings,
+    preferencesDesc: { he: 'התאימו סוג רכב, גדלי משלוחים, כתובות מועדפות וזמני עבודה.', en: 'Customize vehicle type, delivery sizes, preferred addresses, and work hours.' } as LocaleStrings,
+    availableForDeliveries: { he: 'זמין למשלוחים', en: 'Available for deliveries' } as LocaleStrings,
+    notAvailable: { he: 'לא זמין', en: 'Not available' } as LocaleStrings,
+  },
+
+  // ── Sender Onboarding Steps ──
+  senderOnboarding: {
+    priceSuggestionTitle: { he: 'הצעת מחיר', en: 'Price suggestion' } as LocaleStrings,
+    chooseDriverTitle: { he: 'בחירת נהג', en: 'Choose driver' } as LocaleStrings,
+    chatAndTrackTitle: { he: 'צ׳אט ומעקב', en: 'Chat & track' } as LocaleStrings,
+    postDeliveryTitle: { he: 'פרסום משלוח', en: 'Post delivery' } as LocaleStrings,
+    postDeliveryDesc: { he: 'צרו משלוח חדש — הוסיפו כתובת איסוף, יעד, תיאור הפריט ותמונות.', en: 'Create a new delivery — add pickup address, destination, item description, and photos.' } as LocaleStrings,
+    priceDesc: { he: 'הגדירו מחיר מוצע למשלוח. הנהג יראה אותו לפני שיבחר לקחת את המשלוח.', en: 'Set a suggested price for the delivery. The driver sees it before choosing to take the delivery.' } as LocaleStrings,
+    approvalDesc: { he: 'כשנהג מביע עניין — תקבלו התראה. צפו בפרופיל הנהג ואשרו את המשלוח.', en: 'When a driver shows interest — you\'ll get a notification. View driver profile and approve the delivery.' } as LocaleStrings,
+    chatTrackDesc: { he: 'תקשרו עם הנהג דרך הצ׳אט המובנה ועקבו אחרי סטטוס המשלוח בזמן אמת.', en: 'Communicate with the driver via built-in chat and track delivery status in real time.' } as LocaleStrings,
+    ratingDesc: { he: 'לאחר השלמת המשלוח — דרגו את הנהג. הדירוג עוזר לשמור על קהילה אמינה.', en: 'After delivery completion — rate the driver. Rating helps keep the community reliable.' } as LocaleStrings,
+  },
+
+  // ── Earnings / Stats ──
+  earnings: {
+    thisWeek: { he: 'השבוע', en: 'This week' } as LocaleStrings,
+    lastWeek: { he: 'שבוע שעבר', en: 'Last week' } as LocaleStrings,
+    thisMonth: { he: 'החודש', en: 'This month' } as LocaleStrings,
+    lastMonth: { he: 'חודש שעבר', en: 'Last month' } as LocaleStrings,
+    thisYear: { he: 'השנה', en: 'This year' } as LocaleStrings,
+  },
+
+  // ── Notifications (action labels) ──
+  notifications: {
+    openChat: { he: 'פתח צ׳אט', en: 'Open chat' } as LocaleStrings,
+    viewDelivery: { he: 'צפה במשלוח', en: 'View delivery' } as LocaleStrings,
+    tracking: { he: 'מעקב', en: 'Track' } as LocaleStrings,
+    approve: { he: 'אשר', en: 'Approve' } as LocaleStrings,
+    decline: { he: 'דחה', en: 'Decline' } as LocaleStrings,
+    deliveriesAndAlerts: { he: 'משלוחים והתראות', en: 'Deliveries & alerts' } as LocaleStrings,
+    deliveriesAndAlertsDesc: { he: 'התראות על משלוחים, צ׳אט ותשלומים', en: 'Delivery, chat, and payment notifications' } as LocaleStrings,
+    chatMessages: { he: 'הודעות צ׳אט', en: 'Chat messages' } as LocaleStrings,
   },
 
   // ── Error Boundary ──

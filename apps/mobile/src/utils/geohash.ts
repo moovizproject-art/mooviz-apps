@@ -4,6 +4,7 @@
  * עטיפה סביב ngeohash לחישוב מחרוזות ג׳יאוהש מקואורדינטות
  */
 
+// @ts-ignore — ngeohash has no type declarations
 import ngeohash from 'ngeohash';
 
 /** Default precision for driver proximity queries (1-5km radius) */

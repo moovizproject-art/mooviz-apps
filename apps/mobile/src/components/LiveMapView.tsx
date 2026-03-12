@@ -21,6 +21,8 @@ interface LiveMapViewProps {
   recipientName?: string;
   isFullScreen?: boolean;
   hideFabs?: boolean;
+  deliveryStatus?: string;
+  deliveredAt?: Date | string | null;
   onExpand?: () => void;
   onCollapse?: () => void;
 }
@@ -30,19 +32,48 @@ interface DriverLocation {
   lng: number;
 }
 
+const DRIVER_HIDE_AFTER_MS = 10 * 60 * 1000; // 10 minutes after delivery
+
 export function LiveMapView({
   pickup, destination, driverId, driverPhone, chatId, recipientName,
-  isFullScreen = false, hideFabs = false, onExpand, onCollapse,
+  isFullScreen = false, hideFabs = false, deliveryStatus, deliveredAt,
+  onExpand, onCollapse,
 }: LiveMapViewProps): React.JSX.Element {
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
+  const [hideDriver, setHideDriver] = useState(false);
   const mapRef = useRef<MapView>(null);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
   const { t } = useI18n();
 
+  // Hide driver car 10 min after delivery
+  useEffect(() => {
+    if (deliveryStatus !== 'delivered' && deliveryStatus !== 'completed_paid') {
+      setHideDriver(false);
+      return;
+    }
+    if (!deliveredAt) return;
+
+    const deliveredTime = typeof deliveredAt === 'string' ? new Date(deliveredAt).getTime()
+      : deliveredAt instanceof Date ? deliveredAt.getTime()
+      : Date.now();
+    const elapsed = Date.now() - deliveredTime;
+
+    if (elapsed >= DRIVER_HIDE_AFTER_MS) {
+      setHideDriver(true);
+      return;
+    }
+
+    const timer = setTimeout(() => setHideDriver(true), DRIVER_HIDE_AFTER_MS - elapsed);
+    return () => clearTimeout(timer);
+  }, [deliveryStatus, deliveredAt]);
+
   // Listen to driver location in real-time
   useEffect(() => {
-    if (!driverId) return;
+    if (!driverId || hideDriver) {
+      if (hideDriver) setDriverLocation(null);
+      return;
+    }
     const unsubscribe = firestore()
       .collection('users')
       .doc(driverId)
@@ -53,9 +84,9 @@ export function LiveMapView({
         }
       });
     return unsubscribe;
-  }, [driverId]);
+  }, [driverId, hideDriver]);
 
-  // Fit map to show all markers
+  // Fit map to show all markers on initial load (not on every driver location update)
   useEffect(() => {
     if (!mapRef.current) return;
     const coords = [
@@ -71,7 +102,8 @@ export function LiveMapView({
         animated: true,
       });
     }, 500);
-  }, [pickup, destination, driverLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup, destination]);
 
   const handleMessage = () => {
     if (chatId && recipientName) {
