@@ -11,6 +11,7 @@ import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
 import { useTheme } from '../theme/ThemeContext';
 import { AvatarCircle } from './AvatarCircle';
+import { LoadingOverlay } from './LoadingOverlay';
 
 interface DriverApprovalCardProps {
   driverId: string;
@@ -23,6 +24,8 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
   const [driver, setDriver] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<'approve' | 'decline' | null>(null);
+  const [loadingVisible, setLoadingVisible] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
 
   useEffect(() => {
     if (!driverId) return;
@@ -37,11 +40,17 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
 
   const handleApprove = async () => {
     setActionLoading('approve');
+    setLoadingStep(0);
+    setLoadingVisible(true);
     try {
       const fn = functions().httpsCallable('approveDriver');
       await fn({ deliveryId });
+      setLoadingStep(1);
+      await new Promise(r => setTimeout(r, 600));
+      setLoadingVisible(false);
       onActionComplete?.();
     } catch (err: any) {
+      setLoadingVisible(false);
       console.error('[DriverApprovalCard] Approve error:', err);
     } finally {
       setActionLoading(null);
@@ -50,11 +59,17 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
 
   const handleDecline = async () => {
     setActionLoading('decline');
+    setLoadingStep(0);
+    setLoadingVisible(true);
     try {
       const fn = functions().httpsCallable('declineDriver');
       await fn({ deliveryId });
+      setLoadingStep(1);
+      await new Promise(r => setTimeout(r, 600));
+      setLoadingVisible(false);
       onActionComplete?.();
     } catch (err: any) {
+      setLoadingVisible(false);
       console.error('[DriverApprovalCard] Decline error:', err);
     } finally {
       setActionLoading(null);
@@ -136,6 +151,14 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
           )}
         </TouchableOpacity>
       </View>
+      <LoadingOverlay
+        visible={loadingVisible}
+        steps={['sendingRequest', 'almostDone']}
+        currentStep={loadingStep}
+        timeout={60000}
+        onTimeout={() => setLoadingVisible(false)}
+        onCancel={() => setLoadingVisible(false)}
+      />
     </View>
   );
 }

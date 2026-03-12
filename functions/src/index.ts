@@ -10,6 +10,7 @@ export { onMessageCreate } from "./triggers/chatTrigger";
 
 // ─── Callable Functions ─────────────────────────────────────────────
 export {
+  createDelivery,
   expressInterest,
   approveDriver,
   declineDriver,
@@ -36,6 +37,10 @@ export {
 
 export { sendBulkEmail } from "./callable/emailCallable";
 
+// ─── One-time Admin Fix (DELETE AFTER USE) ─────────────────────────
+export { purgeTestUsers } from "./callable/adminFixCallable";
+
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";
 export { chatAutoClose } from "./scheduled/chatAutoClose";
+export { notifyExpansion } from "./scheduled/notifyExpansion";

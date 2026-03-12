@@ -87,7 +87,7 @@ export function useStats(period?: Period) {
       );
       const completedSnap = await getDocs(completedQuery);
       const totalRevenue = completedSnap.docs.reduce(
-        (sum, docSnap) => sum + (docSnap.data().price ?? 0),
+        (sum, docSnap) => sum + (docSnap.data().price ?? docSnap.data().suggestedPrice ?? 0),
         0,
       );
 

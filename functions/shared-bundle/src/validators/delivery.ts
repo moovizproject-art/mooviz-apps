@@ -32,6 +32,7 @@ export function validateStatusTransition(
 
 /**
  * Validate a GeoPoint object has all required fields.
+ * Accepts both HLD format (lat/lng) and mobile format (latitude/longitude).
  */
 function validateGeoPoint(point: unknown, fieldName: string): string[] {
   const errors: string[] = [];
@@ -45,24 +46,24 @@ function validateGeoPoint(point: unknown, fieldName: string): string[] {
   if (!gp.address || typeof gp.address !== "string") {
     errors.push(`${fieldName}.address is required`);
   }
-  if (!gp.city || typeof gp.city !== "string") {
-    errors.push(`${fieldName}.city is required`);
-  }
-  if (typeof gp.lat !== "number" || gp.lat < -90 || gp.lat > 90) {
+  // city is optional — mobile doesn't always send it
+  // Accept both lat/lng (HLD) and latitude/longitude (mobile)
+  const lat = (gp.lat as number) ?? (gp.latitude as number);
+  const lng = (gp.lng as number) ?? (gp.longitude as number);
+  if (typeof lat !== "number" || lat < -90 || lat > 90) {
     errors.push(`${fieldName}.lat must be a valid latitude (-90 to 90)`);
   }
-  if (typeof gp.lng !== "number" || gp.lng < -180 || gp.lng > 180) {
+  if (typeof lng !== "number" || lng < -180 || lng > 180) {
     errors.push(`${fieldName}.lng must be a valid longitude (-180 to 180)`);
   }
-  if (!gp.geohash || typeof gp.geohash !== "string") {
-    errors.push(`${fieldName}.geohash is required`);
-  }
+  // geohash is optional for destination (mobile generates it only for pickup)
 
   return errors;
 }
 
 /**
  * Validate delivery creation data.
+ * Accepts both HLD field names and mobile client field names.
  */
 export function validateDeliveryCreate(data: unknown): ValidationResult {
   const errors: string[] = [];
@@ -79,34 +80,21 @@ export function validateDeliveryCreate(data: unknown): ValidationResult {
   // Validate destination
   errors.push(...validateGeoPoint(d.destination, "destination"));
 
-  // Validate item
-  if (!d.item || typeof d.item !== "object") {
-    errors.push("item is required and must be an object");
-  } else {
-    const item = d.item as Record<string, unknown>;
-    if (!item.description || typeof item.description !== "string") {
-      errors.push("item.description is required");
-    }
-    if (!item.type || typeof item.type !== "string") {
-      errors.push("item.type is required");
-    }
-    if (!item.size || typeof item.size !== "string") {
-      errors.push("item.size is required");
-    }
-    if (!item.photoURL || typeof item.photoURL !== "string") {
-      errors.push("item.photoURL is required");
-    }
+  // Validate item — accept both { item: { description } } and { itemDescription }
+  const hasItemObj = d.item && typeof d.item === "object";
+  const hasItemFlat = typeof d.itemDescription === "string" && (d.itemDescription as string).length > 0;
+  if (!hasItemObj && !hasItemFlat) {
+    errors.push("item description is required");
   }
 
-  // Validate price
-  if (typeof d.price !== "number" || d.price <= 0) {
+  // Validate price — accept both "price" and "suggestedPrice"
+  const price = (typeof d.price === "number" ? d.price : null) ??
+    (typeof d.suggestedPrice === "number" ? d.suggestedPrice : null);
+  if (price === null || price <= 0) {
     errors.push("price must be a positive number");
   }
 
-  // Validate pickupDate
-  if (d.pickupDate !== "asap" && !d.pickupDate) {
-    errors.push("pickupDate is required (Timestamp or 'asap')");
-  }
+  // pickupDate / scheduledDate are optional — mobile uses scheduledDate or null for ASAP
 
   return { valid: errors.length === 0, errors };
 }

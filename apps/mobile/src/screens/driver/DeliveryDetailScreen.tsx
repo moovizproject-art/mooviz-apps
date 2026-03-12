@@ -25,6 +25,7 @@ import { useDelivery, Delivery } from '../../hooks/useDelivery';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { ProofCamera } from '../../components/ProofCamera';
@@ -92,6 +93,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               itemSize: d.itemSize,
               photoUrl: d.photoUrl,
               mediaURLs: d.mediaURLs,
+              price: d.price || d.suggestedPrice || 0,
               suggestedPrice: d.suggestedPrice || 0,
               scheduledDate: d.scheduledDate,
               notes: d.notes,
@@ -142,10 +144,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [proofModalVisible, setProofModalVisible] = useState(false);
   const [proofType, setProofType] = useState<'pickup' | 'delivery'>('pickup');
   const [proofUploading, setProofUploading] = useState(false);
+  const [loadingVisible, setLoadingVisible] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
 
   const handleProofCapture = useCallback(async (photoUri: string) => {
     setProofModalVisible(false);
     setProofUploading(true);
+    setLoadingSteps(['uploadingProof', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
     try {
       const url = await uploadProofPhoto(deliveryId, proofType, photoUri);
       const newStatus = proofType === 'pickup' ? 'picked_up' : 'delivered';
@@ -155,12 +161,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         [proofField]: url,
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
+      setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
       carAlert.show(
         'success',
         t('common.success'),
         proofType === 'pickup' ? t('driver.pickupConfirmed') : t('driver.deliveryConfirmed'),
       );
     } catch (err: any) {
+      setLoadingVisible(false);
       carAlert.show('error', t('common.error'), err.message || t('driver.statusUpdateError'));
     } finally {
       setProofUploading(false);
@@ -173,10 +181,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   }, []);
 
   const doExpressInterest = async (): Promise<void> => {
+    setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
     try {
       await expressInterest(deliveryId, currentUser!.uid);
+      setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
       carAlert.show('success', t('common.success'), t('driver.interestSent'));
     } catch (err) {
+      setLoadingVisible(false);
       carAlert.show('error', t('common.error'), t('driver.interestError'));
     }
   };
@@ -533,10 +544,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               }]}
               disabled={!delivery.payment?.senderConfirmed}
               onPress={async () => {
+                setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
                 try {
                   await confirmPayment(delivery.id);
+                  setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
                   carAlert.show('success', t('payment.successTitle'), t('payment.driverConfirmedMsg'));
                 } catch (e: any) {
+                  setLoadingVisible(false);
                   carAlert.show('error', t('common.error'), e.message);
                 }
               }}
@@ -583,6 +597,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       onClose={() => setProofGalleryVisible(false)}
     />
     <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
+    <LoadingOverlay
+      visible={loadingVisible}
+      steps={loadingSteps}
+      currentStep={loadingStep}
+      timeout={60000}
+      onTimeout={() => setLoadingVisible(false)}
+      onCancel={() => setLoadingVisible(false)}
+    />
     </>
   );
 }

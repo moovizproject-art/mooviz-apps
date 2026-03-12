@@ -157,9 +157,13 @@ export async function sendDeliveryNotification(
     ? recipients.filter((id) => id !== actorId)
     : recipients;
 
-  await Promise.all(
+  console.log(`sendDeliveryNotification: event=${event}, recipients=[${filteredRecipients.join(",")}], actorId=${actorId}, title="${title}"`);
+
+  const results = await Promise.all(
     filteredRecipients.map((userId) =>
       sendPushNotification(userId, title, body, notificationData)
     )
   );
+
+  console.log(`sendDeliveryNotification: results=[${results.join(",")}]`);
 }

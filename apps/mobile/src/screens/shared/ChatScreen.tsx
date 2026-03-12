@@ -95,37 +95,40 @@ export function ChatScreen(): React.JSX.Element {
       quality: 0.5,       // Lower quality for <300KB target
       maxWidth: 1280,      // Max HD resolution
       maxHeight: 1280,
+      selectionLimit: 5,
     });
 
-    if (!result.didCancel && result.assets?.[0]) {
-      const asset = result.assets[0];
-      const fileSize = asset.fileSize ?? 0;
-      console.log(`[Chat] Image picked: ${asset.width}x${asset.height}, ${(fileSize / 1024).toFixed(0)}KB`);
+    if (!result.didCancel && result.assets?.length) {
+      for (const asset of result.assets) {
+        if (!asset.uri) continue;
+        const fileSize = asset.fileSize ?? 0;
+        console.log(`[Chat] Image picked: ${asset.width}x${asset.height}, ${(fileSize / 1024).toFixed(0)}KB`);
 
-      // If still over 300KB, re-pick at lower quality (fallback)
-      if (fileSize > 300 * 1024) {
-        console.log('[Chat] Image over 300KB, re-picking at lower quality');
-        const retry = await launchImageLibrary({
-          mediaType: 'photo',
-          quality: 0.3,
-          maxWidth: 960,
-          maxHeight: 960,
-        });
-        if (!retry.didCancel && retry.assets?.[0]) {
-          await sendImage({
-            chatId,
-            senderId: currentUser!.uid,
-            imageUri: retry.assets[0].uri!,
+        // If still over 300KB, re-pick at lower quality (fallback) — only for single image
+        if (fileSize > 300 * 1024 && result.assets.length === 1) {
+          console.log('[Chat] Image over 300KB, re-picking at lower quality');
+          const retry = await launchImageLibrary({
+            mediaType: 'photo',
+            quality: 0.3,
+            maxWidth: 960,
+            maxHeight: 960,
           });
-          return;
+          if (!retry.didCancel && retry.assets?.[0]) {
+            await sendImage({
+              chatId,
+              senderId: currentUser!.uid,
+              imageUri: retry.assets[0].uri!,
+            });
+            return;
+          }
         }
-      }
 
-      await sendImage({
-        chatId,
-        senderId: currentUser!.uid,
-        imageUri: asset.uri!,
-      });
+        await sendImage({
+          chatId,
+          senderId: currentUser!.uid,
+          imageUri: asset.uri,
+        });
+      }
     }
   }, [chatId, currentUser, sendImage]);
 

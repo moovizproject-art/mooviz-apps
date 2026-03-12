@@ -90,9 +90,9 @@ export function DeliveryCard({
         <View style={styles.details}>
           {/* Top row: status on end side */}
           <View style={styles.topRow}>
-            {delivery.itemDescription ? (
+            {(delivery.item?.description || delivery.itemDescription) ? (
               <Text style={styles.itemText} numberOfLines={1}>
-                {delivery.itemDescription}
+                {delivery.item?.description || delivery.itemDescription}
               </Text>
             ) : (
               <Text style={styles.itemText} numberOfLines={1}>{strings.commonExtra.deliveryItem.he}</Text>

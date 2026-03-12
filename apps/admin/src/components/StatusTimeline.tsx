@@ -6,16 +6,25 @@ interface StatusTimelineProps {
   events: StatusEvent[];
 }
 
+/** Safely convert any timestamp format to a Date */
+function toDate(ts: unknown): Date {
+  if (!ts) return new Date(0);
+  if (typeof (ts as { toDate?: unknown }).toDate === 'function') return (ts as { toDate: () => Date }).toDate();
+  if (typeof (ts as { seconds?: number }).seconds === 'number') return new Date((ts as { seconds: number }).seconds * 1000);
+  if (ts instanceof Date) return ts;
+  return new Date(0);
+}
+
 export default function StatusTimeline({ events }: StatusTimelineProps) {
   const sortedEvents = [...events].sort(
-    (a, b) => b.timestamp.toMillis() - a.timestamp.toMillis(),
+    (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime(),
   );
 
   return (
     <div className="flow-root">
       <ul className="-mb-8">
         {sortedEvents.map((event, idx) => (
-          <li key={`${event.status}-${event.timestamp.toMillis()}`}>
+          <li key={`${event.status}-${toDate(event.timestamp).getTime()}`}>
             <div className="relative pb-8">
               {idx !== sortedEvents.length - 1 && (
                 <span
@@ -33,7 +42,7 @@ export default function StatusTimeline({ events }: StatusTimelineProps) {
                   <div className="flex items-center gap-3">
                     <StatusBadge status={event.status} />
                     <span className="text-xs text-gray-500">
-                      {format(event.timestamp.toDate(), 'MMM d, yyyy HH:mm')}
+                      {format(toDate(event.timestamp), 'MMM d, yyyy HH:mm')}
                     </span>
                   </div>
                   {event.note && (

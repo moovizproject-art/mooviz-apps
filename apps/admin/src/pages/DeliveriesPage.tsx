@@ -1,27 +1,41 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import DataTable, { type Column } from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 import CsvExport from '../components/CsvExport';
 import { useDeliveries } from '../hooks/useFirestore';
 import { useI18n } from '../i18n/I18nContext';
 import type { Delivery, DeliveryStatus } from '../services/deliveries';
+import { cityToRegion, REGION_NAMES } from '../constants/regions';
 
 export default function DeliveriesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useI18n();
-  const [statusFilter, setStatusFilter] = useState<DeliveryStatus | ''>('');
-  const [cityFilter, setCityFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState<DeliveryStatus | ''>(
+    (searchParams.get('status') as DeliveryStatus) || '',
+  );
+  const [regionFilter, setRegionFilter] = useState(searchParams.get('region') || '');
+  const [dateFrom, setDateFrom] = useState(() => {
+    const month = searchParams.get('month');
+    return month ? format(startOfMonth(new Date(month + '-01')), 'yyyy-MM-dd') : '';
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    const month = searchParams.get('month');
+    return month ? format(endOfMonth(new Date(month + '-01')), 'yyyy-MM-dd') : '';
+  });
 
-  const { data: deliveries, isLoading } = useDeliveries({
+  const { data: rawDeliveries, isLoading } = useDeliveries({
     status: statusFilter || undefined,
-    city: cityFilter || undefined,
     dateFrom: dateFrom ? new Date(dateFrom) : undefined,
     dateTo: dateTo ? new Date(dateTo) : undefined,
   });
+
+  // Client-side region filtering (regions map to multiple cities)
+  const deliveries = regionFilter
+    ? rawDeliveries?.filter((d) => cityToRegion(d.pickup?.city || '') === regionFilter)
+    : rawDeliveries;
 
   const columns: Column<Delivery>[] = [
     {
@@ -84,7 +98,7 @@ export default function DeliveriesPage() {
       sortable: true,
       render: (d) => (
         <span className="font-medium">
-          {d.price.toFixed(0)} {d.currency}
+          ₪{d.price.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </span>
       ),
       className: 'text-right',
@@ -158,14 +172,15 @@ export default function DeliveriesPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500">{t('deliveries.city')}</label>
-          <input
-            type="text"
-            placeholder={t('deliveries.cityPlaceholder')}
-            value={cityFilter}
-            onChange={(e) => setCityFilter(e.target.value)}
+          <label className="block text-xs font-medium text-gray-500">{t('deliveries.region')}</label>
+          <select
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
             className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          />
+          >
+            <option value="">{t('deliveries.allRegions')}</option>
+            {REGION_NAMES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
         </div>
 
         <div>
@@ -188,11 +203,11 @@ export default function DeliveriesPage() {
           />
         </div>
 
-        {(statusFilter || cityFilter || dateFrom || dateTo) && (
+        {(statusFilter || regionFilter || dateFrom || dateTo) && (
           <button
             onClick={() => {
               setStatusFilter('');
-              setCityFilter('');
+              setRegionFilter('');
               setDateFrom('');
               setDateTo('');
             }}

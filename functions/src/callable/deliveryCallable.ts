@@ -4,6 +4,7 @@ import {
   Delivery,
   DeliveryStatus,
   StatusEntry,
+  DEFAULT_TIMEOUT_HOURS,
 } from "@mooviz/shared";
 import {
   assertValidTransition,
@@ -12,8 +13,10 @@ import {
   assertUserRole,
 } from "../validators/statusValidator";
 import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
+import { getNearbyDriverTokens, encodeGeohash } from "../services/geohashService";
 
 const db = admin.firestore();
+const GEOHASH_PRECISION = 7;
 
 /**
  * Helper to get a delivery document or throw.
@@ -62,6 +65,171 @@ async function updateDeliveryStatus(
 }
 
 /**
+ * Create a new delivery.
+ * Validates input, normalizes field names to HLD format, computes geohash,
+ * denormalizes sender info, and notifies nearby drivers.
+ */
+export const createDelivery = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const senderData = await assertUserRole(db, uid, "sender");
+
+  const d = request.data;
+
+  // --- Extract & normalize coordinates ---
+  const pickupRaw = d.pickup;
+  const destRaw = d.destination;
+  if (!pickupRaw || !destRaw) {
+    throw new HttpsError("invalid-argument", "pickup and destination are required");
+  }
+
+  const pickupLat = pickupRaw.lat ?? pickupRaw.latitude;
+  const pickupLng = pickupRaw.lng ?? pickupRaw.longitude;
+  const destLat = destRaw.lat ?? destRaw.latitude;
+  const destLng = destRaw.lng ?? destRaw.longitude;
+
+  if (typeof pickupLat !== "number" || typeof pickupLng !== "number") {
+    throw new HttpsError("invalid-argument", "pickup must have valid lat/lng");
+  }
+  if (typeof destLat !== "number" || typeof destLng !== "number") {
+    throw new HttpsError("invalid-argument", "destination must have valid lat/lng");
+  }
+
+  // --- Normalize item ---
+  const itemDescription: string =
+    d.item?.description ?? d.itemDescription ?? "";
+  const itemSize: string = d.item?.size ?? d.itemSize ?? "";
+  const itemType: string = d.item?.type ?? d.itemType ?? "general";
+  const photoURL: string = d.item?.photoURL ?? d.photoUrl ?? "";
+  const mediaURLs: string[] = Array.isArray(d.mediaURLs) ? d.mediaURLs : [];
+
+  if (!itemDescription) {
+    throw new HttpsError("invalid-argument", "item description is required");
+  }
+
+  // --- Normalize price ---
+  const price: number = typeof d.price === "number" ? d.price
+    : typeof d.suggestedPrice === "number" ? d.suggestedPrice : 0;
+  if (price <= 0) {
+    throw new HttpsError("invalid-argument", "price must be a positive number");
+  }
+
+  // --- Normalize pickupDate ---
+  const rawDate = d.pickupDate ?? d.scheduledDate;
+  let pickupDate: admin.firestore.Timestamp | "asap";
+  if (!rawDate || rawDate === "asap") {
+    pickupDate = "asap";
+  } else if (typeof rawDate === "string") {
+    const ms = Date.parse(rawDate);
+    if (isNaN(ms)) {
+      throw new HttpsError("invalid-argument", "Invalid date format for pickupDate");
+    }
+    pickupDate = admin.firestore.Timestamp.fromMillis(ms);
+  } else {
+    pickupDate = "asap";
+  }
+
+  // --- Compute geohash ---
+  const pickupGeohash = encodeGeohash(pickupLat, pickupLng, GEOHASH_PRECISION);
+  const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
+
+  // --- Sender info (already fetched by assertUserRole) ---
+  const senderName = senderData?.nickname || senderData?.fullName || "";
+  const senderPhotoUrl = senderData?.profilePhotoURL || "";
+  const senderRating = senderData?.ratingAsSender?.average ?? null;
+
+  // --- Build delivery document (HLD-canonical format) ---
+  const now = admin.firestore.Timestamp.now();
+  const timeoutAt = admin.firestore.Timestamp.fromMillis(
+    now.toMillis() + DEFAULT_TIMEOUT_HOURS * 60 * 60 * 1000
+  );
+
+  const deliveryDoc = {
+    senderId: uid,
+    senderName,
+    senderPhotoUrl,
+    senderRating,
+    driverId: null,
+    status: "new" as DeliveryStatus,
+    pickup: {
+      address: pickupRaw.address ?? "",
+      city: pickupRaw.city ?? "",
+      lat: pickupLat,
+      lng: pickupLng,
+      geohash: pickupGeohash,
+    },
+    destination: {
+      address: destRaw.address ?? "",
+      city: destRaw.city ?? "",
+      lat: destLat,
+      lng: destLng,
+      geohash: destGeohash,
+    },
+    item: {
+      description: itemDescription,
+      type: itemType,
+      size: itemSize,
+      photoURL,
+    },
+    mediaURLs,
+    price,
+    pickupDate,
+    notes: d.notes ?? "",
+    payment: { senderConfirmed: false, driverConfirmed: false },
+    proof: {},
+    statusHistory: [
+      {
+        status: "new" as DeliveryStatus,
+        timestamp: now,
+        actor: uid,
+        note: "Delivery created",
+      },
+    ],
+    interestedDrivers: [],
+    timeoutAt,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // --- Write to Firestore ---
+  const docRef = await db.collection("deliveries").add(deliveryDoc);
+  const deliveryId = docRef.id;
+
+  console.log(`createDelivery: ${deliveryId} created by ${uid}`);
+
+  // --- Notify nearby drivers (fire-and-forget — don't block response) ---
+  if (pickupGeohash) {
+    const pickupCity = pickupRaw.city ?? "";
+    const destCity = destRaw.city ?? "";
+    getNearbyDriverTokens(pickupGeohash, 15, pickupLat, pickupLng)
+      .then((nearbyDrivers) =>
+        Promise.all(
+          nearbyDrivers.map((driver) =>
+            sendPushNotification(
+              driver.uid,
+              "משלוח חדש באזורך",
+              `משלוח חדש מ-${pickupCity} ל-${destCity} - ${price} ₪`,
+              {
+                event: "new_listing_nearby",
+                deliveryId,
+                pickupCity,
+                destinationCity: destCity,
+                price: String(price),
+              }
+            )
+          )
+        ).then(() => console.log(`createDelivery: notified ${nearbyDrivers.length} nearby drivers`))
+      )
+      .catch((err) => console.error("createDelivery: nearby driver notification failed:", err));
+  }
+
+  return { success: true, deliveryId };
+});
+
+/**
  * Driver expresses interest in a delivery.
  * Transitions: new -> pending
  * Denormalizes driver info onto the delivery document.
@@ -73,7 +241,7 @@ export const expressInterest = onCall(async (request) => {
   }
 
   const { deliveryId } = request.data;
-  await assertUserRole(db, uid, "driver");
+  const driverData = await assertUserRole(db, uid, "driver");
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 
@@ -88,12 +256,12 @@ export const expressInterest = onCall(async (request) => {
     );
   }
 
-  // Lookup driver info for denormalization
-  const driverDoc = await db.collection("users").doc(uid).get();
-  const driverData = driverDoc.data();
+  // Driver info (already fetched by assertUserRole)
   const driverName = driverData?.nickname || driverData?.fullName || "";
   const driverPhotoUrl = driverData?.profilePhotoURL || "";
   const driverRating = driverData?.ratingAsDriver?.average ?? null;
+
+  console.log(`expressInterest: driver ${uid} -> delivery ${deliveryId} (sender: ${delivery.senderId})`);
 
   await updateDeliveryStatus(
     ref,
@@ -108,10 +276,18 @@ export const expressInterest = onCall(async (request) => {
     }
   );
 
+  console.log(`expressInterest: status updated to pending, sending notification to sender ${delivery.senderId}`);
+
   // Notify the sender
-  await sendDeliveryNotification(deliveryId, "driver_interested", {
-    actorId: uid,
-  });
+  try {
+    await sendDeliveryNotification(deliveryId, "driver_interested", {
+      actorId: uid,
+      driverName,
+    });
+    console.log(`expressInterest: notification sent successfully`);
+  } catch (notifErr: unknown) {
+    console.error(`expressInterest: notification failed:`, notifErr);
+  }
 
   return { success: true, message: "Interest expressed successfully" };
 });
@@ -129,6 +305,7 @@ export const approveDriver = onCall(async (request) => {
   }
 
   const { deliveryId } = request.data;
+  console.log(`approveDriver: sender ${uid} approving delivery ${deliveryId}`);
   await assertUserRole(db, uid, "sender");
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
@@ -343,6 +520,12 @@ export const confirmPayment = onCall(async (request) => {
       throw new HttpsError(
         "already-exists",
         "Driver has already confirmed payment"
+      );
+    }
+    if (!delivery.payment.senderConfirmed) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Sender must confirm payment before driver can confirm"
       );
     }
     updateData["payment.driverConfirmed"] = true;

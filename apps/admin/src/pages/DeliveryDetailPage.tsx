@@ -145,7 +145,7 @@ export default function DeliveryDetailPage() {
               <div>
                 <p className="text-xs font-medium uppercase text-gray-500">Price</p>
                 <p className="mt-1 text-lg font-semibold text-gray-900">
-                  {delivery.price.toFixed(0)} {delivery.currency}
+                  ₪{delivery.price.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </p>
               </div>
               <div>

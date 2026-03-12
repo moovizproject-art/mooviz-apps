@@ -25,6 +25,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { DatePickerInput } from '../../components/DatePickerInput';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { strings } from '../../i18n/strings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateDelivery'>;
@@ -78,6 +79,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const [showPickupMap, setShowPickupMap] = useState(false);
   const [showDestinationMap, setShowDestinationMap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingVisible, setLoadingVisible] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
   const [showSizeInfo, setShowSizeInfo] = useState(false);
 
@@ -193,8 +196,14 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       return;
     }
 
+    setLoadingVisible(true);
+    setLoadingStep(0);
     try {
       setIsSubmitting(true);
+      // Step 0: uploading images (handled inside createDelivery)
+      setLoadingStep(0);
+      // Step 1: creating delivery (Cloud Function / Firestore write)
+      setLoadingStep(1);
       await createDelivery({
         senderId: currentUser!.uid,
         senderName: currentUser!.fullName,
@@ -209,10 +218,14 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         scheduledDate: form.isAsap ? 'asap' : (form.scheduledDate ? form.scheduledDate.toISOString() : null),
         notes: form.notes,
       });
+      setLoadingStep(2);
+      await new Promise(r => setTimeout(r, 800));
+      setLoadingVisible(false);
       carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
         { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
     } catch (e: any) {
+      setLoadingVisible(false);
       const msg = e?.message || e?.userInfo?.message || t('delivery.createError');
       carAlert.show('error', t('common.error'), msg);
     } finally {
@@ -529,6 +542,18 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <LoadingOverlay
+        visible={loadingVisible}
+        steps={['uploadingImages', 'creatingDelivery', 'almostDone']}
+        currentStep={loadingStep}
+        timeout={60000}
+        onTimeout={() => {
+          setLoadingVisible(false);
+          carAlert.show('error', t('common.error'), t('delivery.createError'));
+        }}
+        onCancel={() => setLoadingVisible(false)}
+      />
     </View>
   );
 }

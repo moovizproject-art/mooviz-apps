@@ -127,7 +127,7 @@ function normalizeDelivery(docSnap: DocumentSnapshot): Delivery {
         }
       : null,
     status: data.status ?? 'new',
-    price: data.price ?? 0,
+    price: data.price ?? data.suggestedPrice ?? 0,
     currency: data.currency ?? 'ILS',
     proof: data.proof ?? null,
     proofPhotoURL: data.proof?.deliveryURL ?? data.proofPhotoURL ?? null,

@@ -173,6 +173,9 @@ importers:
       react-native-sound:
         specifier: ^0.11.2
         version: 0.11.2(react-native@0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)(typescript@5.9.3))
+      react-native-video:
+        specifier: ^6.19.0
+        version: 6.19.0(react-native@0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)(typescript@5.9.3))(react@18.2.0)
     devDependencies:
       '@babel/core':
         specifier: ^7.23.0
@@ -1982,7 +1985,7 @@ packages:
         optional: true
 
   '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    resolution: {integrity: sha512-P0pjNYsuN6VOkdwnW2iyogoTm4TIs1w/CHYe5tN+PwLbekBoGKPCMH7j4+elLgqH8J6xSuKf3lQSbr4eP9DyQQ==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    resolution: {integrity: sha512-nENfo/tr5bPg+2emyXhWRlATH8e3pGHjGel/wr81XT++C2cEt/agAGYae5eKZjlMxWgjN/m5EcHdqRID2FPHaA==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
     version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':
@@ -6184,6 +6187,12 @@ packages:
   react-native-uuid@2.0.3:
     resolution: {integrity: sha512-f/YfIS2f5UB+gut7t/9BKGSCYbRA9/74A5R1MDp+FLYsuS+OSWoiM/D8Jko6OJB6Jcu3v6ONuddvZKHdIGpeiw==}
     engines: {node: '>=10.0.0', npm: '>=6.0.0'}
+
+  react-native-video@6.19.0:
+    resolution: {integrity: sha512-JVojWIxwuH5C3RjVrF4UyuweuOH/Guq/W2xeN9zugePXZI8Xn/j6/oU94gCWHaFzkR/HGeJpqMq+l9aEHSnpIQ==}
+    peerDependencies:
+      react: 18.2.0
+      react-native: '*'
 
   react-native@0.75.5:
     resolution: {integrity: sha512-9vyUHhkmesL2A++b3dKuhprEq7Nh/1gKgB7MD0ybjCgI4ARob0+j6Myfphzes8fYRcVSAwuiNdp8H+N96+eXSA==}
@@ -14849,6 +14858,11 @@ snapshots:
       react-native: 0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)(typescript@5.9.3)
 
   react-native-uuid@2.0.3: {}
+
+  react-native-video@6.19.0(react-native@0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)(typescript@5.9.3))(react@18.2.0):
+    dependencies:
+      react: 18.2.0
+      react-native: 0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)(typescript@5.9.3)
 
   react-native@0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)(typescript@5.9.3):
     dependencies:
