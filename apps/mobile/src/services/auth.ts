@@ -5,7 +5,7 @@
 import { Platform, NativeModules } from 'react-native';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import messaging from '@react-native-firebase/messaging';
+// messaging import removed — not currently used
 
 /** Detect iOS Simulator — verifyPhoneNumber crashes without APNs */
 const isIOSSimulator = Platform.OS === 'ios' && (
@@ -126,34 +126,54 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   const normalized = normalizePhoneNumber(phone);
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
-  try {
-    // Emulator bypass: iOS crashes without APNs, Android can't receive SMS.
-    // Return test verificationId so user can navigate to OTP screen and enter 123456.
-    if (isIOSSimulator || isAndroidEmulator) {
-      console.warn(`[sendPhoneOTP] Emulator detected (${Platform.OS}) — returning test verificationId. Enter 123456 on OTP screen.`);
-      return 'simulator-test-verification-id';
-    }
-
-    const result = await auth().verifyPhoneNumber(normalized);
-    console.log('[sendPhoneOTP] Result type:', typeof result, result);
-    if (typeof result === 'string') {
-      return result;
-    }
-    // On Android, result may be an object with verificationId
-    return (result as any).verificationId || String(result);
-  } catch (err: unknown) {
-    // Sanitize native error → plain JS Error to prevent Hermes EXC_BREAKPOINT crash
-    const error = sanitizeFirebaseError(err) as any;
-    console.log('[sendPhoneOTP] Error:', error.code, error.message);
-    // Map known error codes
-    const msg = error.message || '';
-    if (error.code?.includes('17006') || msg.includes('17006') || msg.includes('region')) {
-      const regionError = new Error('SMS region not enabled in Firebase Console') as any;
-      regionError.code = 'auth/sms-region-not-enabled';
-      throw regionError;
-    }
-    throw error;
+  // Emulator bypass: iOS crashes without APNs, Android can't receive SMS.
+  if (isIOSSimulator || isAndroidEmulator) {
+    console.warn(`[sendPhoneOTP] Emulator detected (${Platform.OS}) — returning test verificationId.`);
+    return 'simulator-test-verification-id';
   }
+
+  // On Android, verifyPhoneNumber waits for auto-verification before resolving.
+  // Use event-based approach to get verificationId as soon as code is sent.
+  return new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(Object.assign(new Error('Phone verification timed out. Please try again.'), { code: 'auth/timeout' }));
+    }, 30000);
+
+    try {
+      const listener = auth().verifyPhoneNumber(normalized);
+
+      listener.on('state_changed', (phoneAuthSnapshot) => {
+        console.log('[sendPhoneOTP] state_changed:', phoneAuthSnapshot.state, 'verificationId:', !!phoneAuthSnapshot.verificationId);
+
+        if (phoneAuthSnapshot.state === 'sent' || phoneAuthSnapshot.state === 'timeout') {
+          // Code sent — resolve with verificationId so we can navigate to OTP screen
+          clearTimeout(timer);
+          if (phoneAuthSnapshot.verificationId) {
+            resolve(phoneAuthSnapshot.verificationId);
+          } else {
+            reject(Object.assign(new Error('No verification ID received'), { code: 'auth/missing-verification-id' }));
+          }
+        } else if (phoneAuthSnapshot.state === 'verified') {
+          // Auto-verified (Android read the SMS) — resolve anyway
+          clearTimeout(timer);
+          resolve(phoneAuthSnapshot.verificationId || 'auto-verified');
+        } else if (phoneAuthSnapshot.state === 'error') {
+          clearTimeout(timer);
+          const err = phoneAuthSnapshot.error || new Error('Phone verification failed');
+          reject(sanitizeFirebaseError(err));
+        }
+      });
+    } catch (err: unknown) {
+      clearTimeout(timer);
+      const error = sanitizeFirebaseError(err) as any;
+      const msg = error.message || '';
+      if (error.code?.includes('17006') || msg.includes('17006') || msg.includes('region')) {
+        reject(Object.assign(new Error('SMS region not enabled in Firebase Console'), { code: 'auth/sms-region-not-enabled' }));
+      } else {
+        reject(error);
+      }
+    }
+  });
 }
 
 /**
@@ -276,6 +296,7 @@ export function mapFirebaseAuthError(code: string): string {
     'auth/app-not-authorized': 'האפליקציה לא מורשית לשימוש ב-Firebase Auth.',
     'auth/captcha-check-failed': 'בדיקת reCAPTCHA נכשלה.',
     'auth/sms-region-not-enabled': 'שליחת SMS לא מופעלת לאזור זה. יש להפעיל ב-Firebase Console.',
+    'auth/timeout': 'אימות הטלפון נכשל. אנא נסה שוב.',
   };
   // Handle SMS region error (code 17006)
   if (code.includes('17006') || code.includes('region')) {

@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { strings } from '../i18n/strings';
 
 const carImage = require('../assets/car.png');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -137,17 +138,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         </View>
 
         <Text style={[styles.title, { color: c.textPrimary }]}>
-          {'אופס! משהו השתבש'}
+          {strings.errorBoundary.title.he}
         </Text>
         <Text style={[styles.message, { color: c.textSecondary }]}>
-          {'הרכב נתקע... נסה שוב'}
+          {strings.errorBoundary.message.he}
         </Text>
 
         <TouchableOpacity
           style={[styles.retryButton, { backgroundColor: c.primary }]}
           onPress={this.handleRetry}
         >
-          <Text style={styles.retryButtonText}>{'נסה שוב'}</Text>
+          <Text style={styles.retryButtonText}>{strings.errorBoundary.retry.he}</Text>
         </TouchableOpacity>
       </Animated.View>
     );

@@ -142,9 +142,9 @@ export function DriverKYCScreen(): React.JSX.Element {
   };
 
   const statusDisplay = getStatusDisplay();
-  const hasExistingDocs = remoteLicenseUrl || remoteIdUrl;
+  const hasExistingDocs = !!(remoteLicenseUrl || remoteIdUrl);
   const isPendingWithDocs = kycStatus === 'pending' && hasExistingDocs;
-  const isFormLocked = isPendingWithDocs && !licenseUri && !idUri; // Lock when pending, unless user picked new images
+  const isFormLocked = !!(isPendingWithDocs && !licenseUri && !idUri); // Lock when pending, unless user picked new images
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>

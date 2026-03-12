@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Image,
   ViewToken,
   Platform,
-  ScrollView,
   I18nManager,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -80,7 +79,6 @@ const PAGES: PageData[] = [
 ];
 
 const BLUE = '#1565C0';
-const BLUE_LIGHT = '#1E88E5';
 const HEADER_HEIGHT = SCREEN_HEIGHT * 0.18;
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.JSX.Element {
@@ -102,6 +100,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
       }, 50);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, []);
 
   useEffect(() => {

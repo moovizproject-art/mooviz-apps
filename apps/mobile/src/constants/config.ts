@@ -53,6 +53,16 @@ export const DELIVERIES_PAGE_SIZE = 20;
 // סולם דירוג כוכבים
 export const RATING_SCALE = 5;
 
+/** Location tracking interval — idle mode (ms) */
+export const LOCATION_IDLE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+/** Location tracking interval — active delivery mode (ms) */
+export const LOCATION_ACTIVE_INTERVAL_MS = 1 * 60 * 1000; // 1 minute
+
+/** Minimum distance change to trigger update (meters) */
+export const LOCATION_DISTANCE_FILTER_IDLE = 200; // 200m for idle
+export const LOCATION_DISTANCE_FILTER_ACTIVE = 30; // 30m for active delivery
+
 /** App version */
 export const APP_VERSION = '1.0.0';
 

@@ -135,8 +135,66 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               updatedAt: safeToDate(data?.updatedAt),
             });
           } else {
-            // User exists in Auth but not in Firestore yet (mid-registration)
-            setCurrentUser(null);
+            // User exists in Auth but not in Firestore — auto-create a minimal doc
+            // This prevents users from being stuck after a failed registration
+            console.warn('[useAuth] Auth user has no Firestore doc — auto-creating for', fbUser.uid);
+            const autoProfile: Record<string, unknown> = {
+              uid: fbUser.uid,
+              fullName: fbUser.displayName || '',
+              email: fbUser.email || '',
+              phone: fbUser.phoneNumber || '',
+              city: '',
+              role: 'sender',
+              activeMode: 'client',
+              profilePhotoURL: fbUser.photoURL || '',
+              kycStatus: 'pending',
+              kycDocumentURL: '',
+              ratingAsDriver: { average: 0, count: 0 },
+              ratingAsSender: { average: 0, count: 0 },
+              completedDeliveries: 0,
+              status: 'active',
+              fcmTokens: [],
+              location: { lat: 0, lng: 0, geohash: '' },
+              driverAvailable: false,
+              driverUnlocked: false,
+              gender: '',
+              ageRange: '',
+              // If phone already linked, stamp OTP so they don't get stuck at verification
+              ...(fbUser.phoneNumber ? { lastOtpAt: firestore.FieldValue.serverTimestamp() } : {}),
+              createdAt: firestore.FieldValue.serverTimestamp(),
+              updatedAt: firestore.FieldValue.serverTimestamp(),
+            };
+            try {
+              await firestore().collection('users').doc(fbUser.uid).set(autoProfile, { merge: true });
+              setCurrentUser({
+                uid: fbUser.uid,
+                fullName: (autoProfile.fullName as string) || '',
+                email: (autoProfile.email as string) || '',
+                phone: (autoProfile.phone as string) || '',
+                profilePhotoURL: (autoProfile.profilePhotoURL as string) || null,
+                role: 'sender',
+                activeMode: 'client',
+                driverAvailable: false,
+                driverUnlocked: false,
+                city: null,
+                kycStatus: 'pending',
+                kycDocumentURL: null,
+                kycIdURL: null,
+                ratingAsDriver: { average: 0, count: 0 },
+                ratingAsSender: { average: 0, count: 0 },
+                completedDeliveries: 0,
+                status: 'active',
+                fcmTokens: [],
+                location: { lat: 0, lng: 0, geohash: '' },
+                gender: '',
+                ageRange: '',
+                lastOtpAt: fbUser.phoneNumber ? new Date() : undefined,
+                createdAt: new Date(),
+              });
+            } catch (autoCreateErr) {
+              console.error('[useAuth] Failed to auto-create user doc:', autoCreateErr);
+              setCurrentUser(null);
+            }
           }
         } catch (error) {
           console.error('[useAuth] Error fetching user profile:', error);
@@ -179,6 +237,13 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const logout = useCallback(async (): Promise<void> => {
     try {
       await auth().signOut();
+      // Terminate Firestore then clear cache to prevent stale data on next login
+      try {
+        await firestore().terminate();
+        await firestore().clearPersistence();
+      } catch (_) {
+        // Non-critical — cache will be refreshed by listeners on next login
+      }
       setCurrentUser(null);
     } catch (error) {
       console.error('[useAuth] Logout error:', error);
@@ -244,7 +309,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           phone: data?.phone || user.phoneNumber || '',
           city: data?.city || '',
           role: data?.role || 'sender',
-          activeMode: data?.activeMode || 'sender',
+          activeMode: data?.activeMode || 'client',
           profilePhotoURL: data?.profilePhotoURL || '',
           kycStatus: data?.kycStatus || 'pending',
           rating: data?.rating || { average: 0, count: 0 },
@@ -256,7 +321,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           ...base,
           lastOtpAt: safeToDate(data?.lastOtpAt),
           updatedAt: safeToDate(data?.updatedAt),
-        };
+        } as User;
       });
     }
   }, []);

@@ -23,12 +23,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import firestore from '@react-native-firebase/firestore';
 
 import { DriverTabScreenProps } from '../../navigation/types';
-import { encodeGeohash } from '../../services/geohash';
+import { formatCurrency } from '../../utils/formatters';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
-import { useLocation } from '../../hooks/useLocation';
+import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import { useDriverEarnings } from '../../hooks/useDriverEarnings';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { SkeletonCard } from '../../components/SkeletonLoader';
@@ -37,6 +37,7 @@ import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDraw
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/design';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 import { DriverOnboarding, shouldShowOnboarding } from '../../components/DriverOnboarding';
+import { strings } from '../../i18n/strings';
 
 const logo = require('../../assets/logo.png');
 
@@ -53,19 +54,19 @@ const RADAR_SIZE = 135; // 25% smaller (was 180)
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const VEHICLE_TYPES = ['bicycle', 'bike', 'car', 'truck'] as const;
 const VEHICLE_ICONS = { bicycle: '\u{1F6B2}', bike: '\u{1F3CD}', car: '\u{1F697}', truck: '\u{1F69A}' };
-const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: 'אופניים', bike: 'קטנוע', car: 'רכב', truck: 'משאית' };
+const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: strings.driver.bicycle.he, bike: strings.driver.bike.he, car: strings.driver.car.he, truck: strings.driver.truck.he };
 const SIZE_OPTIONS = ['small', 'medium', 'large', 'xlarge'] as const;
 const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦', xlarge: '🚚' };
-const SIZE_LABELS_HE: Record<string, string> = { small: 'קטן', medium: 'בינוני', large: 'גדול', xlarge: 'אחר' };
+const SIZE_LABELS_HE: Record<string, string> = { small: strings.driver.small.he, medium: strings.driver.medium.he, large: strings.driver.large.he, xlarge: 'אחר' };
 
 const PREFS_KEY = '@driver_preferences';
 
 const EARNINGS_TABS = [
-  { key: 'thisWeek', label: 'השבוע' },
-  { key: 'lastWeek', label: 'שבוע שעבר' },
-  { key: 'thisMonth', label: 'החודש' },
-  { key: 'lastMonth', label: 'חודש שעבר' },
-  { key: 'thisYear', label: 'השנה' },
+  { key: 'thisWeek', label: strings.earnings.thisWeek.he },
+  { key: 'lastWeek', label: strings.earnings.lastWeek.he },
+  { key: 'thisMonth', label: strings.earnings.thisMonth.he },
+  { key: 'lastMonth', label: strings.earnings.lastMonth.he },
+  { key: 'thisYear', label: strings.earnings.thisYear.he },
 ] as const;
 
 interface QuietHour {
@@ -131,8 +132,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
   // ── Preferences state ──
   const [prefs, setPrefs] = useState<DriverPreferences>(DEFAULT_PREFS);
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const isFirstDelivery = (currentUser?.completedDeliveries ?? 0) === 0;
+  const [_prefsLoaded, setPrefsLoaded] = useState(false);
+  // isFirstDelivery removed — reserved for future onboarding UX
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [earningsOpen, setEarningsOpen] = useState(false);
   const [nicknameDirty, setNicknameDirty] = useState(false);
@@ -167,23 +168,32 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     });
   }, []);
 
-  // ── Location & deliveries ──
-  const { location, isLoading: locationLoading, error: locationError } = useLocation();
+  // ── Current active delivery (driver's own) — must come before location hook ──
+  const { deliveries: activeDeliveries } = useDelivery({
+    userId: currentUser?.uid,
+    role: 'driver',
+    statusFilter: ['pending', 'waiting', 'picked_up'],
+  });
+  const currentDelivery = activeDeliveries[0] || null;
+
+  // ── Location tracking (two-tier: idle 5min / active 1min) ──
+  // Syncs to Firestore automatically — no manual sync needed
+  const {
+    location,
+    error: locationError,
+  } = useDriverLocationTracking({
+    userId: currentUser?.uid,
+    isDriver: true,
+    activeDeliveryStatus: currentDelivery?.status,
+  });
+  const locationLoading = !location && !locationError;
   const nearLocation = useMemo(
     () => location ? { latitude: location.latitude, longitude: location.longitude } : undefined,
     [location?.latitude, location?.longitude],
   );
 
-  // Sync device GPS location to Firestore so nearby-driver queries work
-  useEffect(() => {
-    if (!location || !currentUser?.uid) return;
-    const geohash = encodeGeohash(location.latitude, location.longitude, 6);
-    firestore().collection('users').doc(currentUser.uid).update({
-      location: { lat: location.latitude, lng: location.longitude, geohash },
-    }).catch((err: unknown) => console.warn('[FeedScreen] Location sync failed:', err));
-  }, [location?.latitude, location?.longitude, currentUser?.uid]);
   // When location unavailable, show all pending deliveries (no geo filter)
-  const { deliveries: rawDeliveries, isLoading, refresh } = useDelivery({
+  const { deliveries: rawDeliveries, isLoading, refresh: _refresh } = useDelivery({
     role: 'driver',
     statusFilter: ['new', 'pending'],
     ...(nearLocation ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
@@ -193,14 +203,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     () => rawDeliveries.filter((d) => d.senderId !== currentUser?.uid),
     [rawDeliveries, currentUser?.uid],
   );
-
-  // ── Current active delivery (driver's own) ──
-  const { deliveries: activeDeliveries } = useDelivery({
-    userId: currentUser?.uid,
-    role: 'driver',
-    statusFilter: ['pending', 'matched', 'waiting', 'picked_up', 'in_transit'],
-  });
-  const currentDelivery = activeDeliveries[0] || null;
 
   // ── Latest chat message for current delivery ──
   const [lastChatMessage, setLastChatMessage] = useState<string>('');
@@ -227,7 +229,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   }, [currentDelivery?.chatId]);
 
   // ── Earnings ──
-  const { earnings, isLoading: earningsLoading } = useDriverEarnings(currentUser?.uid);
+  const { earnings, isLoading: _earningsLoading } = useDriverEarnings(currentUser?.uid);
 
   const handleDeliveryPress = useCallback(
     (deliveryId: string) => {
@@ -423,7 +425,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
               <View style={styles.currentDeliveryInfo}>
                 <View style={styles.currentDeliveryTop}>
                   <Text style={[styles.currentDeliveryTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {currentDelivery.itemDescription || 'משלוח פעיל'}
+                    {currentDelivery.itemDescription || strings.deliveryExtra.activeDelivery.he}
                   </Text>
                   <View style={[styles.currentDeliveryBadge, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[styles.currentDeliveryBadgeText, { color: colors.primary }]}>
@@ -456,7 +458,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           </Text>
           <View style={styles.collapseEndRow}>
             <Text style={[styles.earningsQuickTotal, { color: colors.success }]}>
-              ₪{currentEarnings.total.toLocaleString()}
+              {formatCurrency(currentEarnings.total)}
             </Text>
             <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
               {earningsOpen ? '▼' : '◀'}
@@ -493,21 +495,21 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             <View style={styles.earningsContent}>
               <View style={styles.earningsItem}>
                 <Text style={[styles.earningsValue, { color: colors.success }]}>
-                  ₪{currentEarnings.total.toLocaleString()}
+                  {formatCurrency(currentEarnings.total)}
                 </Text>
-                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>סה״כ</Text>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{strings.commonExtra.total.he}</Text>
               </View>
               <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
               <View style={styles.earningsItem}>
                 <Text style={[styles.earningsValue, { color: colors.primary }]}>
                   {currentEarnings.count}
                 </Text>
-                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{strings.home.deliveries.he}</Text>
               </View>
               <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
               <View style={styles.earningsItem}>
                 <Text style={[styles.earningsValue, { color: colors.textPrimary }]}>
-                  ₪{currentEarnings.avgPerDelivery}
+                  {formatCurrency(currentEarnings.avgPerDelivery)}
                 </Text>
                 <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>ממוצע</Text>
               </View>
@@ -532,7 +534,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Delivery Sizes Card ── */}
             <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
-                📦 גודל משלוחים
+                {`📦 ${strings.deliveryExtra.deliverySizes.he}`}
               </Text>
               <View style={styles.squareButtonRow}>
                 {SIZE_OPTIONS.map((size) => {
@@ -704,7 +706,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                 placeholderTextColor={colors.inputPlaceholder}
                 value={prefs.homeAddress}
                 onChangeText={(v) => updatePref('homeAddress', v)}
-                writingDirection="rtl"
               />
 
               <Text style={[styles.advancedSubLabel, { color: colors.textSecondary, marginTop: SPACING.md }]}>
@@ -716,7 +717,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                 placeholderTextColor={colors.inputPlaceholder}
                 value={prefs.workAddress}
                 onChangeText={(v) => updatePref('workAddress', v)}
-                writingDirection="rtl"
               />
               <Text style={[styles.addressHint, { color: colors.textTertiary }]}>{t('driver.addressHint')}</Text>
             </View>
@@ -736,7 +736,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                     updatePref('nickname', v);
                     setNicknameDirty(true);
                   }}
-                  writingDirection="rtl"
                 />
                 {nicknameDirty && (
                   <TouchableOpacity

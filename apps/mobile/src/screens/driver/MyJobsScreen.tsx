@@ -13,6 +13,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
+import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import { DeliveryCard } from '../../components/DeliveryCard';
 import { EmptyState } from '../../components/EmptyState';
 import { TabHeader } from '../../components/TabHeader';
@@ -23,8 +24,8 @@ type Props = DriverTabScreenProps<'MyJobs'>;
 type TabKey = 'active' | 'completed';
 
 const STATUS_MAP: Record<TabKey, string[]> = {
-  active: ['matched', 'picked_up', 'in_transit'],
-  completed: ['delivered'],
+  active: ['pending', 'waiting', 'matched', 'picked_up', 'in_transit'],
+  completed: ['delivered', 'completed_paid'],
 };
 
 /**
@@ -38,6 +39,19 @@ export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
   const { t } = useI18n();
   const { currentUser } = useAuth();
   const drawer = useSettingsDrawer();
+
+  // Keep location tracking active across all driver tabs
+  const { deliveries: activeJobs } = useDelivery({
+    userId: currentUser?.uid,
+    role: 'driver',
+    statusFilter: ['waiting', 'picked_up'],
+  });
+  useDriverLocationTracking({
+    userId: currentUser?.uid,
+    isDriver: true,
+    activeDeliveryStatus: activeJobs[0]?.status,
+  });
+
   const { deliveries, isLoading, refresh } = useDelivery({
     userId: currentUser?.uid,
     role: 'driver',

@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './useAuth';
 import { playSound } from '../services/sound';
 import { navigateFromNotification, getActiveChatId } from '../services/navigation';
+import { strings } from '../i18n/strings';
 
 const PREFS_KEY = '@driver_preferences';
 
@@ -65,6 +66,7 @@ async function isInQuietHours(): Promise<boolean> {
 interface UseNotificationsResult {
   fcmToken: string | null;
   hasPermission: boolean;
+  notificationError: string | null;
   requestPermission: () => Promise<boolean>;
 }
 
@@ -73,8 +75,8 @@ async function ensureAndroidChannels(): Promise<string> {
   // Main channel — must match backend channelId in notificationService.ts
   await notifee.createChannel({
     id: 'mooviz_deliveries',
-    name: 'משלוחים והתראות',
-    description: 'התראות על משלוחים, צ׳אט ותשלומים',
+    name: strings.notifications.deliveriesAndAlerts.he,
+    description: strings.notifications.deliveriesAndAlertsDesc.he,
     importance: AndroidImportance.HIGH,
     sound: 'default',
     vibration: true,
@@ -83,7 +85,7 @@ async function ensureAndroidChannels(): Promise<string> {
   // Chat channel
   await notifee.createChannel({
     id: 'mooviz_chat',
-    name: 'הודעות צ׳אט',
+    name: strings.notifications.chatMessages.he,
     importance: AndroidImportance.HIGH,
     sound: 'default',
   });
@@ -96,21 +98,21 @@ async function setupNotificationCategories(): Promise<void> {
   await notifee.setNotificationCategories([
     {
       id: 'chat',
-      actions: [{ id: 'reply', title: 'פתח צ׳אט' }],
+      actions: [{ id: 'reply', title: strings.notifications.openChat.he }],
     },
     {
       id: 'delivery',
-      actions: [{ id: 'view', title: 'צפה במשלוח' }],
+      actions: [{ id: 'view', title: strings.notifications.viewDelivery.he }],
     },
     {
       id: 'tracking',
-      actions: [{ id: 'track', title: 'מעקב' }],
+      actions: [{ id: 'track', title: strings.notifications.tracking.he }],
     },
     {
       id: 'driver_approval',
       actions: [
-        { id: 'approve_driver', title: '✓ אשר', foreground: true },
-        { id: 'decline_driver', title: '✗ דחה', destructive: true },
+        { id: 'approve_driver', title: '✓ ' + strings.notifications.approve.he, foreground: true },
+        { id: 'decline_driver', title: '✗ ' + strings.notifications.decline.he, destructive: true },
       ],
     },
   ]);
@@ -124,26 +126,26 @@ function getNotificationActions(notifEvent?: string): {
   switch (notifEvent) {
     case 'new_chat_message':
       return {
-        androidActions: [{ title: 'פתח צ׳אט', pressAction: { id: 'open_chat' } }],
+        androidActions: [{ title: strings.notifications.openChat.he, pressAction: { id: 'open_chat' } }],
         iosCategoryId: 'chat',
       };
     case 'driver_interested':
       return {
         androidActions: [
-          { title: '✓ אשר', pressAction: { id: 'approve_driver' } },
-          { title: '✗ דחה', pressAction: { id: 'decline_driver' } },
+          { title: '✓ ' + strings.notifications.approve.he, pressAction: { id: 'approve_driver' } },
+          { title: '✗ ' + strings.notifications.decline.he, pressAction: { id: 'decline_driver' } },
         ],
         iosCategoryId: 'driver_approval',
       };
     case 'sender_approved':
       return {
-        androidActions: [{ title: 'צפה במשלוח', pressAction: { id: 'view_delivery' } }],
+        androidActions: [{ title: strings.notifications.viewDelivery.he, pressAction: { id: 'view_delivery' } }],
         iosCategoryId: 'delivery',
       };
     case 'delivery_picked_up':
     case 'delivery_delivered':
       return {
-        androidActions: [{ title: 'מעקב', pressAction: { id: 'track' } }],
+        androidActions: [{ title: strings.notifications.tracking.he, pressAction: { id: 'track' } }],
         iosCategoryId: 'tracking',
       };
     default:
@@ -155,6 +157,7 @@ export function useNotifications(): UseNotificationsResult {
   const { currentUser } = useAuth();
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
 
   /** Request notification permissions — Android 13+ needs explicit runtime permission */
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -223,6 +226,7 @@ export function useNotifications(): UseNotificationsResult {
           console.log('[useNotifications] iOS Simulator — FCM not available (no APNs)');
         } else {
           console.warn('[useNotifications] Token registration failed:', (error as any)?.message || error);
+          setNotificationError('token-registration-failed');
         }
       }
     };
@@ -340,7 +344,7 @@ export function useNotifications(): UseNotificationsResult {
     };
   }, []);
 
-  return { fcmToken, hasPermission, requestPermission };
+  return { fcmToken, hasPermission, notificationError, requestPermission };
 }
 
 /**

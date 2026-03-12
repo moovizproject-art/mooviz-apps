@@ -19,6 +19,8 @@ import {
   NativeSyntheticEvent,
 } from 'react-native';
 
+import { strings } from '../i18n/strings';
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function isVideoUrl(url: string): boolean {
@@ -88,7 +90,7 @@ export function ImageGalleryModal({ visible, images, initialIndex = 0, onClose }
                     <View style={styles.playButton}>
                       <Text style={styles.playIcon}>▶</Text>
                     </View>
-                    <Text style={styles.playLabel}>לחץ להפעלת וידאו</Text>
+                    <Text style={styles.playLabel}>{strings.commonExtra.playVideo.he}</Text>
                   </View>
                 </TouchableOpacity>
               ) : (

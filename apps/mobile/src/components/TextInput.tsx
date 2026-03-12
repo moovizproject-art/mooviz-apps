@@ -17,6 +17,7 @@ import {
 
 import { COLORS } from '../constants/colors';
 import { SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
+import { strings } from '../i18n/strings';
 
 interface TextInputProps extends Omit<RNTextInputProps, 'style'> {
   label?: string;
@@ -61,7 +62,7 @@ export function TextInput({
             onPress={() => setIsSecureVisible(!isSecureVisible)}
             style={styles.toggleButton}
           >
-            <Text style={styles.toggleText}>{isSecureVisible ? 'הסתר' : 'הצג'}</Text>
+            <Text style={styles.toggleText}>{isSecureVisible ? strings.commonExtra.hide.he : strings.commonExtra.show.he}</Text>
           </TouchableOpacity>
         )}
       </View>

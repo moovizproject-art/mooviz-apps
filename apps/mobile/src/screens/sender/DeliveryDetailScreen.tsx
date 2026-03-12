@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
+import { formatCurrency } from '../../utils/formatters';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadDeliveryMedia } from '../../services/storage';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
@@ -33,6 +34,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { DriverApprovalCard } from '../../components/DriverApprovalCard';
+import { strings } from '../../i18n/strings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 
@@ -127,19 +129,19 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       setMediaUploading(false);
     } catch (err: any) {
       setMediaUploading(false);
-      Alert.alert('שגיאה', err.message || 'העלאה נכשלה');
+      Alert.alert(strings.common.error.he, err.message || strings.errors.uploadFailed.he);
     }
   }, [delivery?.id, delivery?.senderId, mediaList, imageCount]);
 
   const handleDeleteMedia = useCallback((_url: string, index: number) => {
     if (!delivery) return;
     Alert.alert(
-      'מחיקת תמונה',
-      'האם אתה בטוח שברצונך למחוק תמונה זו?',
+      strings.deliveryExtra.deletePhoto.he,
+      strings.deliveryExtra.deletePhotoConfirm.he,
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: strings.common.cancel.he, style: 'cancel' },
         {
-          text: 'מחק',
+          text: strings.deliveryExtra.deleteAction.he,
           style: 'destructive',
           onPress: async () => {
             const updated = mediaList.filter((_, i) => i !== index);
@@ -170,11 +172,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   };
 
   const showLiveMap = ['matched', 'waiting', 'picked_up', 'in_transit', 'delivered'].includes(delivery.status) && delivery.driverId;
+
+  // Find when delivery was marked as 'delivered' for car hide timer
+  const deliveredAt = (delivery as any)?.statusHistory?.delivered ?? null;
   // Cancel allowed only pre-pickup statuses
   const canCancel = ['new', 'pending', 'matched', 'waiting'].includes(delivery.status);
   const isPostPickup = ['picked_up', 'in_transit', 'delivered', 'completed_paid'].includes(delivery.status);
   const showPayment = delivery.status === 'delivered';
-  const showRate = delivery.status === 'delivered' && !delivery.rated;
+  const showRate = ['delivered', 'completed_paid'].includes(delivery.status) && !delivery.rated;
   const hasDriver = !!delivery.driverId;
   const driverName = driverProfile?.fullName || delivery.driverName || '';
   const driverPhoto = driverProfile?.profilePhotoURL || delivery.driverPhotoUrl;
@@ -238,7 +243,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.priceLabel')}</Text>
           <Text style={[styles.priceValue, { color: colors.success }]}>
-            ₪{delivery.suggestedPrice || 0}
+            {formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}
           </Text>
         </View>
       </View>
@@ -301,7 +306,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         if (delivery.proof?.deliveryURL) proofImages.push(delivery.proof.deliveryURL);
         return (
           <View style={[styles.proofCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>הוכחות משלוח</Text>
+            <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{strings.deliveryExtra.deliveryProofs.he}</Text>
             <View style={styles.proofRow}>
               {delivery.proof?.pickupURL && (
                 <TouchableOpacity
@@ -309,7 +314,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   onPress={() => { setProofGalleryIndex(0); setProofGalleryVisible(true); }}
                 >
                   <Image source={{ uri: delivery.proof.pickupURL }} style={styles.proofThumb} />
-                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>הוכחת איסוף</Text>
+                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.pickupProof.he}</Text>
                 </TouchableOpacity>
               )}
               {delivery.proof?.deliveryURL && (
@@ -321,7 +326,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   }}
                 >
                   <Image source={{ uri: delivery.proof.deliveryURL }} style={styles.proofThumb} />
-                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>הוכחת מסירה</Text>
+                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.deliveryProof.he}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -363,7 +368,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           {delivery.proof?.paymentURL && (
             <View style={styles.paymentProofRow}>
               <Image source={{ uri: delivery.proof.paymentURL }} style={styles.proofThumb} />
-              <Text style={[styles.proofLabel, { color: colors.success }]}>צילום תשלום הועלה</Text>
+              <Text style={[styles.proofLabel, { color: colors.success }]}>{strings.deliveryExtra.paymentProofUploaded.he}</Text>
             </View>
           )}
 
@@ -373,12 +378,12 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               disabled={paymentUploading}
               onPress={() => {
                 Alert.alert(
-                  'אישור תשלום',
-                  'האם ברצונך לצרף צילום מסך של התשלום?',
+                  strings.payment.confirmTitle.he,
+                  strings.deliveryExtra.confirmPaymentPrompt.he,
                   [
-                    { text: 'ביטול', style: 'cancel' },
+                    { text: strings.common.cancel.he, style: 'cancel' },
                     {
-                      text: 'אשר ללא צילום',
+                      text: strings.deliveryExtra.confirmWithoutScreenshot.he,
                       onPress: async () => {
                         try {
                           await confirmPayment(delivery.id);
@@ -389,7 +394,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                       },
                     },
                     {
-                      text: '📸 העלה צילום מסך',
+                      text: strings.deliveryExtra.uploadScreenshot.he,
                       onPress: async () => {
                         try {
                           const result = await launchImageLibrary({
@@ -435,6 +440,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             driverPhone={driverPhone}
             chatId={delivery.chatId}
             recipientName={driverName || t('home.driver')}
+            deliveryStatus={delivery.status}
+            deliveredAt={deliveredAt}
             hideFabs
             onExpand={() =>
               navigation.navigate('FullScreenMap', {
@@ -444,6 +451,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 driverPhone,
                 chatId: delivery.chatId,
                 recipientName: driverName || t('home.driver'),
+                deliveryStatus: delivery.status,
+                deliveredAt: deliveredAt?.toISOString?.() ?? deliveredAt,
               })
             }
           />
@@ -529,7 +538,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               onPress={handleChat}
             >
               <Text style={styles.driverBtnIcon}>💬</Text>
-              <Text style={styles.driverBtnLabel}>צ׳אט עם הנהג</Text>
+              <Text style={styles.driverBtnLabel}>{strings.deliveryExtra.chatWithDriver.he}</Text>
             </TouchableOpacity>
             {driverPhone && (
               <TouchableOpacity
@@ -547,7 +556,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       <View style={styles.mediaSection}>
         <View style={styles.mediaTitleRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            תמונות הפריט ({imageCount}/5{hasVideo ? ' + וידאו' : ''})
+            {strings.deliveryExtra.itemPhotos.he} ({imageCount}/5{hasVideo ? ` + ${strings.deliveryExtra.video.he}` : ''})
           </Text>
           {mediaUploading && <ActivityIndicator size="small" color={colors.primary} />}
         </View>
@@ -571,7 +580,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 {isVideo ? (
                   <View style={[styles.mediaThumb, { backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' }]}>
                     <Text style={{ fontSize: 28 }}>🎬</Text>
-                    <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>וידאו</Text>
+                    <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>{strings.deliveryExtra.video.he}</Text>
                   </View>
                 ) : (
                   <Image source={{ uri: url }} style={styles.mediaThumb} />
@@ -594,7 +603,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               onPress={() => handleAddMedia('photo')}
             >
               <Text style={[styles.mediaAddIcon, { color: colors.primary }]}>+</Text>
-              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>תמונה</Text>
+              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.photo.he}</Text>
             </TouchableOpacity>
           )}
           {/* Add video button */}
@@ -604,7 +613,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               onPress={() => handleAddMedia('video')}
             >
               <Text style={[styles.mediaAddIcon, { color: colors.primary }]}>🎬</Text>
-              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>וידאו</Text>
+              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.video.he}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -628,18 +637,18 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             style={[styles.cancelBtn, { borderColor: '#E53935' }]}
             onPress={() => setCancelAlertVisible(true)}
           >
-            <Text style={styles.cancelBtnText}>ביטול משלוח</Text>
+            <Text style={styles.cancelBtnText}>{strings.deliveryExtra.cancelDelivery.he}</Text>
           </TouchableOpacity>
         )}
         <AppAlert
           visible={cancelAlertVisible}
           icon="🚛"
-          title="ביטול משלוח"
-          message={'ביטול אפשרי רק לפני איסוף הפריט.\nלאחר איסוף לא ניתן לבטל.\n\nהאם אתה בטוח?'}
+          title={strings.deliveryExtra.cancelDelivery.he}
+          message={strings.deliveryExtra.cancelPrompt.he}
           buttons={[
-            { text: 'חזרה', style: 'cancel' },
+            { text: strings.common.back.he, style: 'cancel' },
             {
-              text: 'בטל משלוח',
+              text: strings.deliveryExtra.cancelAction.he,
               style: 'destructive',
               onPress: async () => {
                 try {
@@ -649,7 +658,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                     updatedAt: firestore.Timestamp.now(),
                   });
                 } catch (e: any) {
-                  Alert.alert('שגיאה', e.message);
+                  Alert.alert(strings.common.error.he, e.message);
                 }
               },
             },
@@ -659,7 +668,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         {isPostPickup && (
           <View style={styles.cancelDisabledNote}>
             <Text style={[styles.cancelDisabledText, { color: colors.textSecondary }]}>
-              ⚠️ לא ניתן לבטל משלוח לאחר איסוף הפריט
+              ⚠️ {strings.errors.cancelAfterPickup.he}
             </Text>
           </View>
         )}

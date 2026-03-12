@@ -10,18 +10,21 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { BRAND, BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../constants/design';
+import { BRAND, BORDER_RADIUS, SPACING } from '../constants/design';
 import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatRelativeDate } from '../utils/formatters';
+import { strings } from '../i18n/strings';
 
 interface DeliveryData {
   id: string;
   status: string;
   pickup?: { address: string };
   destination?: { address: string };
+  item?: { description: string };
   itemDescription?: string;
   photoUrl?: string;
   mediaURLs?: string[];
+  price?: number;
   suggestedPrice?: number;
   createdAt?: Date | string;
   distance?: number;
@@ -92,7 +95,7 @@ export function DeliveryCard({
                 {delivery.itemDescription}
               </Text>
             ) : (
-              <Text style={styles.itemText} numberOfLines={1}>משלוח</Text>
+              <Text style={styles.itemText} numberOfLines={1}>{strings.commonExtra.deliveryItem.he}</Text>
             )}
             <StatusIndicator status={delivery.status} size="sm" />
           </View>
@@ -102,14 +105,14 @@ export function DeliveryCard({
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.success }]} />
               <Text style={styles.addressText} numberOfLines={1}>
-                {delivery.pickup?.address || '\u05DB\u05EA\u05D5\u05D1\u05EA \u05DC\u05D0 \u05D6\u05DE\u05D9\u05E0\u05D4'}
+                {delivery.pickup?.address || strings.commonExtra.noAddress.he}
               </Text>
             </View>
             <View style={styles.routeLine} />
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.error }]} />
               <Text style={styles.addressText} numberOfLines={1}>
-                {delivery.destination?.address || '\u05DB\u05EA\u05D5\u05D1\u05EA \u05DC\u05D0 \u05D6\u05DE\u05D9\u05E0\u05D4'}
+                {delivery.destination?.address || strings.commonExtra.noAddress.he}
               </Text>
             </View>
           </View>
@@ -131,12 +134,12 @@ export function DeliveryCard({
             <View style={styles.bottomEnd}>
               {showDistance && delivery.distance != null ? (
                 <Text style={styles.distanceText}>
-                  {delivery.distance.toFixed(1)} {'\u05E7\u05F4\u05DE'}
+                  {delivery.distance.toFixed(1)} {strings.commonExtra.km.he}
                 </Text>
               ) : null}
-              {delivery.suggestedPrice != null && (
+              {(delivery.price ?? delivery.suggestedPrice) != null && (
                 <Text style={styles.price}>
-                  {formatCurrency(delivery.suggestedPrice)}
+                  {formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}
                 </Text>
               )}
             </View>

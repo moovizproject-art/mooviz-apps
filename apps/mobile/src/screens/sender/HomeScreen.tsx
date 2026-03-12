@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClientTabScreenProps } from '../../navigation/types';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
+import { formatCurrency } from '../../utils/formatters';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { AnimatedButton } from '../../components/AnimatedButton';
@@ -29,6 +30,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens'
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 import { useSenderExpenses } from '../../hooks/useSenderExpenses';
 import { SenderOnboarding, shouldShowSenderOnboarding } from '../../components/SenderOnboarding';
+import { strings } from '../../i18n/strings';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -36,11 +38,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const EXPENSES_TABS = [
-  { key: 'thisWeek', label: 'השבוע' },
-  { key: 'lastWeek', label: 'שבוע שעבר' },
-  { key: 'thisMonth', label: 'החודש' },
-  { key: 'lastMonth', label: 'חודש שעבר' },
-  { key: 'thisYear', label: 'השנה' },
+  { key: 'thisWeek', label: strings.earnings.thisWeek.he },
+  { key: 'lastWeek', label: strings.earnings.lastWeek.he },
+  { key: 'thisMonth', label: strings.earnings.thisMonth.he },
+  { key: 'lastMonth', label: strings.earnings.lastMonth.he },
+  { key: 'thisYear', label: strings.earnings.thisYear.he },
 ] as const;
 
 const logo = require('../../assets/logo.png');
@@ -70,7 +72,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries, isLoading, refresh } = useDelivery({
     userId: currentUser?.uid,
     role: 'sender',
-    statusFilter: ['pending', 'matched', 'picked_up', 'in_transit'],
+    statusFilter: ['new', 'pending', 'waiting', 'picked_up'],
   });
 
   const { expenses } = useSenderExpenses(currentUser?.uid);
@@ -160,11 +162,11 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
           setExpensesOpen((prev) => !prev);
         }} style={styles.expensesHeader}>
           <Text style={[styles.expensesTitle, { color: colors.textPrimary }]}>
-            💸 סה״כ עלויות משלוחים
+            💸 {strings.deliveryExtra.totalExpenses.he}
           </Text>
           <View style={styles.expensesEndRow}>
             <Text style={[styles.expensesQuickTotal, { color: '#E53935' }]}>
-              ₪{currentExpenses.total.toLocaleString()}
+              {formatCurrency(currentExpenses.total)}
             </Text>
             <Text style={[styles.expensesArrow, { color: colors.textTertiary }]}>
               {expensesOpen ? '▼' : '◀'}
@@ -201,23 +203,23 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
             <View style={styles.expensesStatsRow}>
               <View style={styles.expensesStat}>
                 <Text style={[styles.expensesStatValue, { color: '#E53935' }]}>
-                  ₪{currentExpenses.total.toLocaleString()}
+                  {formatCurrency(currentExpenses.total)}
                 </Text>
-                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>סה״כ</Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>{strings.commonExtra.total.he}</Text>
               </View>
               <View style={[styles.expensesDivider, { backgroundColor: colors.border }]} />
               <View style={styles.expensesStat}>
                 <Text style={[styles.expensesStatValue, { color: colors.primary }]}>
                   {currentExpenses.count}
                 </Text>
-                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>{strings.home.deliveries.he}</Text>
               </View>
               <View style={[styles.expensesDivider, { backgroundColor: colors.border }]} />
               <View style={styles.expensesStat}>
                 <Text style={[styles.expensesStatValue, { color: colors.textPrimary }]}>
-                  {currentExpenses.totalDistanceKm} ק"מ
+                  {currentExpenses.totalDistanceKm} {strings.commonExtra.km.he}
                 </Text>
-                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>מרחק</Text>
+                <Text style={[styles.expensesStatLabel, { color: colors.textSecondary }]}>{strings.commonExtra.distance.he}</Text>
               </View>
             </View>
           </View>
@@ -398,7 +400,7 @@ const styles = StyleSheet.create({
   // ── Expenses Dashboard ──
   expensesCard: {
     marginHorizontal: SPACING.xxl,
-    marginTop: SPACING.md - 50,
+    marginTop: SPACING.md,
     marginBottom: SPACING.sm,
     padding: SPACING.md,
   },

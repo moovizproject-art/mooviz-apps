@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
+import { strings } from '../i18n/strings';
 
 // ──────────────────────────────────────────────
 // Types
@@ -40,10 +41,10 @@ async function requestLocationPermissionNative(): Promise<boolean> {
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     {
-      title: 'הרשאת מיקום',
-      message: 'MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך.',
-      buttonPositive: 'אשר',
-      buttonNegative: 'ביטול',
+      title: strings.permissions.locationTitle.he,
+      message: strings.permissions.locationMessage.he,
+      buttonPositive: strings.permissions.allow.he,
+      buttonNegative: strings.common.cancel.he,
     },
   );
   return granted === PermissionsAndroid.RESULTS.GRANTED;
@@ -62,7 +63,7 @@ export function useLocation(): UseLocationResult {
       return granted;
     } catch (err) {
       console.error('[useLocation] Permission request failed:', err);
-      setError('שגיאה בבקשת הרשאת מיקום');
+      setError(strings.errors.locationPermission.he);
       return false;
     }
   }, []);
@@ -74,7 +75,7 @@ export function useLocation(): UseLocationResult {
 
       const granted = await requestPermission();
       if (!granted) {
-        setError('הרשאת מיקום לא אושרה');
+        setError(strings.errors.locationNotGranted.he);
         setIsLoading(false);
         return;
       }
@@ -91,7 +92,7 @@ export function useLocation(): UseLocationResult {
           },
           (positionError) => {
             console.error('[useLocation] Error:', positionError);
-            setError('לא ניתן לקבל מיקום נוכחי');
+            setError(strings.errors.currentLocationFailed.he);
             setIsLoading(false);
           },
           {
@@ -104,12 +105,12 @@ export function useLocation(): UseLocationResult {
         );
       } catch (nativeErr) {
         console.error('[useLocation] Native module error:', nativeErr);
-        setError('שירות מיקום לא זמין');
+        setError(strings.errors.locationServiceUnavailable.he);
         setIsLoading(false);
       }
     } catch (err) {
       console.error('[useLocation] Unexpected error:', err);
-      setError('לא ניתן לקבל מיקום נוכחי');
+      setError(strings.errors.currentLocationFailed.he);
       setIsLoading(false);
     }
   }, [requestPermission]);

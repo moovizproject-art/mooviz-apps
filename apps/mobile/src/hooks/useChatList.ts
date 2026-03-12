@@ -29,6 +29,7 @@ export interface ChatThread {
 export function useChatList(userId: string | undefined) {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -74,7 +75,14 @@ export function useChatList(userId: string | undefined) {
                     });
                   }
                 })
-                .catch(() => {}),
+                .catch((err) => {
+                  const code = (err as any)?.code;
+                  if (code === 'permission-denied') {
+                    console.warn(`[useChatList] Permission denied fetching user ${uid}`);
+                  } else {
+                    console.warn(`[useChatList] User ${uid} fetch error:`, err);
+                  }
+                }),
             ),
           );
 
@@ -87,7 +95,7 @@ export function useChatList(userId: string | undefined) {
                 .then((dDoc) => {
                   if (dDoc.exists) {
                     const d = dDoc.data()!;
-                    let dateStr = 'בהקדם';
+                    let dateStr = 'ASAP';
                     if (d.pickupDate && d.pickupDate !== 'asap') {
                       const date = d.pickupDate?.toDate ? d.pickupDate.toDate() : new Date(d.pickupDate);
                       dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
@@ -95,7 +103,7 @@ export function useChatList(userId: string | undefined) {
                     const itemDesc = d.itemDescription || d.item?.description || '';
                     console.log(`[useChatList] Delivery ${dId}: status=${d.status}, item=${itemDesc}, date=${dateStr}`);
                     deliveryMap.set(dId, {
-                      status: d.status || 'pending',
+                      status: d.status || 'new',
                       pickupCity: d.pickup?.city || d.pickup?.address || '',
                       destCity: d.destination?.city || d.destination?.address || '',
                       itemDesc,
@@ -138,8 +146,14 @@ export function useChatList(userId: string | undefined) {
           setThreads(chatThreads);
           setIsLoading(false);
         },
-        (error) => {
-          console.error('[useChatList] Listener error:', error);
+        (err) => {
+          console.error('[useChatList] Listener error:', err);
+          const code = (err as any)?.code;
+          if (code === 'permission-denied') {
+            setError('permission-denied');
+          } else {
+            setError('load-failed');
+          }
           setIsLoading(false);
         },
       );
@@ -147,5 +161,5 @@ export function useChatList(userId: string | undefined) {
     return unsubscribe;
   }, [userId]);
 
-  return { threads, isLoading };
+  return { threads, isLoading, error };
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Switch, StyleSheet, ActivityIndicator } from 'react-native';
 import { BRAND, BORDER_RADIUS, SPACING, TYPOGRAPHY, SHADOWS } from '../constants/design';
+import { strings } from '../i18n/strings';
 
 interface AvailabilityToggleProps {
   isAvailable: boolean;
@@ -28,7 +29,7 @@ export function AvailabilityToggle({
           ]}
         />
         <Text style={[styles.label, isAvailable && styles.labelActive]}>
-          {isAvailable ? 'זמין למשלוחים' : 'לא זמין'}
+          {isAvailable ? strings.driverOnboarding.availableForDeliveries.he : strings.driverOnboarding.notAvailable.he}
         </Text>
       </View>
 

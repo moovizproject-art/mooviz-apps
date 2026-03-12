@@ -306,7 +306,6 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
             value={query}
             onChangeText={handleTextChange}
             autoFocus
-            writingDirection="rtl"
             returnKeyType="done"
             onSubmitEditing={handleManualSubmit}
           />

@@ -14,6 +14,8 @@ interface FullScreenMapParams {
   driverPhone?: string;
   chatId?: string;
   recipientName?: string;
+  deliveryStatus?: string;
+  deliveredAt?: string | null;
 }
 
 export function FullScreenMapScreen(): React.JSX.Element {
@@ -33,6 +35,8 @@ export function FullScreenMapScreen(): React.JSX.Element {
           driverPhone={params.driverPhone}
           chatId={params.chatId}
           recipientName={params.recipientName}
+          deliveryStatus={params.deliveryStatus}
+          deliveredAt={params.deliveredAt}
           isFullScreen
           onCollapse={() => navigation.goBack()}
         />
