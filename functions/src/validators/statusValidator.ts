@@ -83,23 +83,33 @@ export async function assertUserRole(
   db: FirebaseFirestore.Firestore,
   userId: string,
   requiredRole: string
-): Promise<void> {
+): Promise<FirebaseFirestore.DocumentData> {
   const userDoc = await db.collection("users").doc(userId).get();
   if (!userDoc.exists) {
     throw new HttpsError("not-found", "User not found");
   }
-  const userData = userDoc.data();
-  // For "driver" checks: accept activeMode='driver' OR driverUnlocked=true,
-  // because dual-mode users keep role='sender' while switching via activeMode.
-  const effectiveRole = userData?.activeMode || userData?.role;
+  const userData = userDoc.data()!;
+  const role = userData.role ?? "sender";
+  const activeMode = userData.activeMode ?? "client";
+
+  // Admin users can perform any role action
+  if (role === "admin") {
+    return userData;
+  }
+
+  // activeMode 'client' maps to 'sender' role
+  const effectiveRole = activeMode === "driver" ? "driver" : role;
   const isDualModeDriver =
-    requiredRole === "driver" && userData?.driverUnlocked === true;
+    requiredRole === "driver" && userData.driverUnlocked === true;
+
   if (effectiveRole !== requiredRole && !isDualModeDriver) {
     throw new HttpsError(
       "permission-denied",
       `This action requires the '${requiredRole}' role`
     );
   }
+
+  return userData;
 }
 
 /**

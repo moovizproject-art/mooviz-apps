@@ -12,7 +12,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
 
-/** Hook to count unread chat threads (where lastSenderId != current user) */
+/** Hook to count unread chat threads using lastReadBy timestamp tracking */
 function useUnreadChatCount(userId: string | undefined): number {
   const [count, setCount] = useState(0);
 
@@ -26,8 +26,12 @@ function useUnreadChatCount(userId: string | undefined): number {
           let unread = 0;
           snapshot.docs.forEach((doc) => {
             const data = doc.data();
-            // Count threads where last message is from someone else
-            if (data.lastSenderId && data.lastSenderId !== userId && data.lastMessage) {
+            if (!data.lastMessage || data.lastSenderId === userId || data.lastSenderId === 'system') return;
+            if (data.closed) return;
+            // Compare lastMessageAt against user's lastReadBy timestamp
+            const lastReadAt = data.lastReadBy?.[userId]?.toDate?.()?.getTime() ?? 0;
+            const lastMsgAt = data.lastMessageAt?.toDate?.()?.getTime() ?? 0;
+            if (lastMsgAt > lastReadAt) {
               unread++;
             }
           });
@@ -50,6 +54,7 @@ import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { OTPScreen } from '../screens/auth/OTPScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { AddPhoneScreen } from '../screens/auth/AddPhoneScreen';
+import { CompleteProfileScreen } from '../screens/auth/CompleteProfileScreen';
 
 // Sender screens
 import { HomeScreen } from '../screens/sender/HomeScreen';
@@ -101,6 +106,7 @@ export type DriverTabsParamList = {
 export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
   EmailVerification: undefined;
+  CompleteProfile: undefined;
   PhoneVerification: undefined;
   PhoneOTP: { phoneNumber: string; verificationId: string; mode?: 'register' | 'login' | 'addPhone' };
   SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
@@ -389,6 +395,8 @@ export function RootNavigator(): React.JSX.Element {
         </>
       ) : !currentUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
+      ) : !currentUser.fullName || !currentUser.phone ? (
+        <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
       ) : currentUser.activeMode === 'driver' ? (
         <>
           <Stack.Screen name="DriverTabs" component={DriverTabs} options={{ title: t('common.back') }} />

@@ -292,7 +292,9 @@ export default function DashboardPage() {
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                     formatter={(value: number) => [`${value}`, t('dashboard.totalDeliveries')]}
                   />
-                  <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(data: any) => {
+                    if (data?.monthKey) navigate(`/deliveries?month=${data.monthKey}`);
+                  }} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -448,7 +450,7 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {timingsData.map((row) => (
-                  <tr key={row.region} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={row.region} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/deliveries?region=${encodeURIComponent(row.region)}`)}>
                     <td className="px-4 py-3 font-medium text-gray-900">{row.region}</td>
                     <td className="px-4 py-3 text-gray-600">{formatMinutes(row.avgPostToApproval)}</td>
                     <td className="px-4 py-3 text-gray-600">{formatMinutes(row.avgApprovalToPickup)}</td>

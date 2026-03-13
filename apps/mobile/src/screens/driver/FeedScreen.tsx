@@ -38,6 +38,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/des
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 import { DriverOnboarding, shouldShowOnboarding } from '../../components/DriverOnboarding';
 import { strings } from '../../i18n/strings';
+import { AddressAutocomplete, GeoAddress } from '../../components/AddressAutocomplete';
 
 const logo = require('../../assets/logo.png');
 
@@ -80,8 +81,8 @@ interface DriverPreferences {
   isAvailable: boolean;
   deliverySizes: Record<string, boolean>;
   vehicleType: string;
-  homeAddress: string;
-  workAddress: string;
+  homeAddress: GeoAddress | null;
+  workAddress: GeoAddress | null;
   schedule: Record<string, boolean>;
   quietHours: QuietHour[];
 }
@@ -92,8 +93,8 @@ const DEFAULT_PREFS: DriverPreferences = {
   isAvailable: true,
   deliverySizes: { small: true, medium: true, large: true, xlarge: true },
   vehicleType: 'car',
-  homeAddress: '',
-  workAddress: '',
+  homeAddress: null,
+  workAddress: null,
   schedule: {
     sunday: true, monday: true, tuesday: true, wednesday: true,
     thursday: true, friday: false, saturday: false,
@@ -146,6 +147,13 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       if (val) {
         try {
           const saved = JSON.parse(val);
+          // Migrate old string addresses to null (user must re-enter with autocomplete)
+          if (typeof saved.homeAddress === 'string') {
+            saved.homeAddress = null;
+          }
+          if (typeof saved.workAddress === 'string') {
+            saved.workAddress = null;
+          }
           setPrefs({ ...DEFAULT_PREFS, ...saved });
         } catch {}
       }
@@ -160,13 +168,43 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     });
   }, []);
 
+  // ── Sync prefs to Firestore (debounced 2s) ──
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const syncPrefsToFirestore = useCallback((nextPrefs: DriverPreferences) => {
+    if (!currentUser?.uid) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      try {
+        await firestore().collection('users').doc(currentUser.uid).update({
+          driverPrefs: {
+            homeAddress: nextPrefs.homeAddress,
+            workAddress: nextPrefs.workAddress,
+            radiusKm: nextPrefs.radiusKm,
+            vehicleType: nextPrefs.vehicleType,
+            deliverySizes: Object.entries(nextPrefs.deliverySizes)
+              .filter(([_, v]) => v)
+              .map(([k]) => k),
+            schedule: nextPrefs.schedule,
+            quietHoursStart: nextPrefs.quietHours[0]?.from || null,
+            quietHoursEnd: nextPrefs.quietHours[0]?.to || null,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          },
+        });
+      } catch (err) {
+        console.warn('[FeedScreen] Prefs sync error:', err);
+      }
+    }, 2000);
+  }, [currentUser?.uid]);
+
   const updatePref = useCallback(<K extends keyof DriverPreferences>(key: K, value: DriverPreferences[K]) => {
     setPrefs((prev) => {
       const next = { ...prev, [key]: value };
       AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next));
+      syncPrefsToFirestore(next);
       return next;
     });
-  }, []);
+  }, [syncPrefsToFirestore]);
 
   // ── Current active delivery (driver's own) — must come before location hook ──
   const { deliveries: activeDeliveries } = useDelivery({
@@ -697,26 +735,18 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
               <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
                 📍 כתובות מועדפות
               </Text>
-              <Text style={[styles.advancedSubLabel, { color: colors.textSecondary }]}>
-                {t('driver.homeAddress')}
-              </Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
-                placeholder={t('driver.addressPlaceholder')}
-                placeholderTextColor={colors.inputPlaceholder}
+              <AddressAutocomplete
+                label={t('driver.homeAddress')}
                 value={prefs.homeAddress}
-                onChangeText={(v) => updatePref('homeAddress', v)}
-              />
-
-              <Text style={[styles.advancedSubLabel, { color: colors.textSecondary, marginTop: SPACING.md }]}>
-                {t('driver.workAddress')}
-              </Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                onSelect={(addr) => updatePref('homeAddress', addr)}
                 placeholder={t('driver.addressPlaceholder')}
-                placeholderTextColor={colors.inputPlaceholder}
+              />
+              <View style={{ height: SPACING.md }} />
+              <AddressAutocomplete
+                label={t('driver.workAddress')}
                 value={prefs.workAddress}
-                onChangeText={(v) => updatePref('workAddress', v)}
+                onSelect={(addr) => updatePref('workAddress', addr)}
+                placeholder={t('driver.addressPlaceholder')}
               />
               <Text style={[styles.addressHint, { color: colors.textTertiary }]}>{t('driver.addressHint')}</Text>
             </View>

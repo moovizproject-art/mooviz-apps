@@ -14,7 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 import { formatCurrency } from '../../utils/formatters';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { uploadDeliveryMedia } from '../../services/storage';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { AppAlert } from '../../components/AppAlert';
@@ -33,6 +33,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 import { strings } from '../../i18n/strings';
 
@@ -69,6 +70,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
   const [proofGalleryIndex, setProofGalleryIndex] = useState(0);
   const [paymentUploading, setPaymentUploading] = useState(false);
+  const [loadingVisible, setLoadingVisible] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
 
   const handleZoom = useCallback((factor: number) => {
     if (!mapRegion || !staticMapRef.current) return;
@@ -385,10 +389,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                     {
                       text: strings.deliveryExtra.confirmWithoutScreenshot.he,
                       onPress: async () => {
+                        setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
                         try {
                           await confirmPayment(delivery.id);
+                          setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
                           carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
                         } catch (e: any) {
+                          setLoadingVisible(false);
                           carAlert.show('error', t('common.error'), e.message);
                         }
                       },
@@ -406,12 +413,40 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                           });
                           if (result.didCancel || !result.assets?.[0]?.uri) return;
                           setPaymentUploading(true);
+                          setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
                           const url = await uploadPaymentProof(delivery.id, result.assets[0].uri!);
                           await confirmPayment(delivery.id, url);
                           setPaymentUploading(false);
+                          setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
                           carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
                         } catch (e: any) {
                           setPaymentUploading(false);
+                          setLoadingVisible(false);
+                          carAlert.show('error', t('common.error'), e.message);
+                        }
+                      },
+                    },
+                    {
+                      text: strings.common.takePhoto.he,
+                      onPress: async () => {
+                        try {
+                          const result = await launchCamera({
+                            mediaType: 'photo',
+                            quality: 0.8,
+                            maxWidth: 1024,
+                            maxHeight: 1024,
+                          });
+                          if (result.didCancel || !result.assets?.[0]?.uri) return;
+                          setPaymentUploading(true);
+                          setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
+                          const url = await uploadPaymentProof(delivery.id, result.assets[0].uri!);
+                          await confirmPayment(delivery.id, url);
+                          setPaymentUploading(false);
+                          setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
+                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                        } catch (e: any) {
+                          setPaymentUploading(false);
+                          setLoadingVisible(false);
                           carAlert.show('error', t('common.error'), e.message);
                         }
                       },
@@ -629,6 +664,15 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* CarAlert modal */}
       <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
+
+      <LoadingOverlay
+        visible={loadingVisible}
+        steps={loadingSteps}
+        currentStep={loadingStep}
+        timeout={60000}
+        onTimeout={() => setLoadingVisible(false)}
+        onCancel={() => setLoadingVisible(false)}
+      />
 
       {/* ── 7. Secondary Actions (Cancel / Rate) ── */}
       <View style={styles.secondaryActions}>

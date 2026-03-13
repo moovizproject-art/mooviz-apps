@@ -3,18 +3,17 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 
 const db = admin.firestore();
 
-const CHAT_CLOSE_HOURS = 12;
 const CLOSE_MESSAGE =
-  "🔒 הצ׳אט נסגר אוטומטית 12 שעות לאחר סיום המשלוח. לא ניתן לשלוח הודעות נוספות.";
+  "🔒 הצ׳אט נסגר אוטומטית. לא ניתן לשלוח הודעות נוספות.";
 
 /**
- * Scheduled function that runs every hour.
- * Finds chats linked to completed deliveries where chatCloseAt has passed
- * and marks them as closed with a system message.
+ * Scheduled function that runs every 10 minutes.
+ * Finds chats where chatCloseAt has passed and marks them as closed
+ * with a system message. Processes in parallel batches for efficiency.
  */
 export const chatAutoClose = onSchedule(
   {
-    schedule: "every 1 hours",
+    schedule: "every 10 minutes",
     timeZone: "Asia/Jerusalem",
     retryCount: 3,
   },
@@ -22,7 +21,6 @@ export const chatAutoClose = onSchedule(
     const now = admin.firestore.Timestamp.now();
     console.log(`Running chat auto-close at ${now.toDate().toISOString()}`);
 
-    // Find chats where chatCloseAt has passed and chat is not yet closed
     const snapshot = await db
       .collection("chats")
       .where("chatCloseAt", "<=", now)
@@ -37,16 +35,18 @@ export const chatAutoClose = onSchedule(
 
     console.log(`Found ${snapshot.size} chats to close`);
 
-    let closed = 0;
-    for (const chatDoc of snapshot.docs) {
+    const closeChat = async (chatDoc: FirebaseFirestore.QueryDocumentSnapshot): Promise<boolean> => {
       try {
-        // Mark chat as closed
+        // Single update for chat metadata + close status
         await chatDoc.ref.update({
           closed: true,
           closedAt: now,
+          lastMessage: CLOSE_MESSAGE,
+          lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastSenderId: "system",
         });
 
-        // Send system message
+        // Add system message
         await chatDoc.ref.collection("messages").add({
           type: "system",
           text: CLOSE_MESSAGE,
@@ -55,18 +55,20 @@ export const chatAutoClose = onSchedule(
           read: true,
         });
 
-        // Update chat metadata
-        await chatDoc.ref.update({
-          lastMessage: CLOSE_MESSAGE,
-          lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
-          lastSenderId: "system",
-        });
-
-        closed++;
-        console.log(`  [OK] Closed chat ${chatDoc.id}`);
+        return true;
       } catch (error) {
         console.error(`  [FAIL] Chat ${chatDoc.id}:`, error);
+        return false;
       }
+    };
+
+    // Process in parallel batches of 20
+    const BATCH_SIZE = 20;
+    let closed = 0;
+    for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
+      const batch = snapshot.docs.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(closeChat));
+      closed += results.filter(Boolean).length;
     }
 
     console.log(`Chat auto-close complete: ${closed} chats closed`);

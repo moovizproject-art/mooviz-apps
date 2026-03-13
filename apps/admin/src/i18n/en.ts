@@ -130,6 +130,8 @@ const en: Record<string, string> = {
   'deliveries.cancelled': 'Cancelled',
   'deliveries.city': 'City',
   'deliveries.cityPlaceholder': 'Filter by city',
+  'deliveries.region': 'Region',
+  'deliveries.allRegions': 'All Regions',
   'deliveries.from': 'From',
   'deliveries.to': 'To',
   'deliveries.clearFilters': 'Clear filters',

@@ -24,8 +24,8 @@ type Props = DriverTabScreenProps<'MyJobs'>;
 type TabKey = 'active' | 'completed';
 
 const STATUS_MAP: Record<TabKey, string[]> = {
-  active: ['pending', 'waiting', 'matched', 'picked_up', 'in_transit'],
-  completed: ['delivered', 'completed_paid'],
+  active: ['pending', 'waiting', 'picked_up', 'delivered'],
+  completed: ['completed_paid'],
 };
 
 /**

@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { setActiveChatId } from '../../services/navigation';
@@ -58,15 +59,21 @@ export function ChatScreen(): React.JSX.Element {
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const insets = useSafeAreaInsets();
 
-  // Track active chatId for smart notification suppression
+  // Track active chatId for smart notification suppression + mark as read
   useFocusEffect(
     useCallback(() => {
       if (chatId) {
         setActiveChatId(chatId);
+        // Mark chat as read for this user
+        if (currentUser?.uid) {
+          firestore().collection('chats').doc(chatId).update({
+            [`lastReadBy.${currentUser.uid}`]: firestore.FieldValue.serverTimestamp(),
+          }).catch((err) => console.warn('[ChatScreen] markAsRead error:', err));
+        }
         return () => setActiveChatId(null);
       }
       return undefined;
-    }, [chatId]),
+    }, [chatId, currentUser?.uid]),
   );
 
   // Navigate to delivery detail from banner
@@ -95,37 +102,40 @@ export function ChatScreen(): React.JSX.Element {
       quality: 0.5,       // Lower quality for <300KB target
       maxWidth: 1280,      // Max HD resolution
       maxHeight: 1280,
+      selectionLimit: 5,
     });
 
-    if (!result.didCancel && result.assets?.[0]) {
-      const asset = result.assets[0];
-      const fileSize = asset.fileSize ?? 0;
-      console.log(`[Chat] Image picked: ${asset.width}x${asset.height}, ${(fileSize / 1024).toFixed(0)}KB`);
+    if (!result.didCancel && result.assets?.length) {
+      for (const asset of result.assets) {
+        if (!asset.uri) continue;
+        const fileSize = asset.fileSize ?? 0;
+        console.log(`[Chat] Image picked: ${asset.width}x${asset.height}, ${(fileSize / 1024).toFixed(0)}KB`);
 
-      // If still over 300KB, re-pick at lower quality (fallback)
-      if (fileSize > 300 * 1024) {
-        console.log('[Chat] Image over 300KB, re-picking at lower quality');
-        const retry = await launchImageLibrary({
-          mediaType: 'photo',
-          quality: 0.3,
-          maxWidth: 960,
-          maxHeight: 960,
-        });
-        if (!retry.didCancel && retry.assets?.[0]) {
-          await sendImage({
-            chatId,
-            senderId: currentUser!.uid,
-            imageUri: retry.assets[0].uri!,
+        // If still over 300KB, re-pick at lower quality (fallback) — only for single image
+        if (fileSize > 300 * 1024 && result.assets.length === 1) {
+          console.log('[Chat] Image over 300KB, re-picking at lower quality');
+          const retry = await launchImageLibrary({
+            mediaType: 'photo',
+            quality: 0.3,
+            maxWidth: 960,
+            maxHeight: 960,
           });
-          return;
+          if (!retry.didCancel && retry.assets?.[0]) {
+            await sendImage({
+              chatId,
+              senderId: currentUser!.uid,
+              imageUri: retry.assets[0].uri!,
+            });
+            return;
+          }
         }
-      }
 
-      await sendImage({
-        chatId,
-        senderId: currentUser!.uid,
-        imageUri: asset.uri!,
-      });
+        await sendImage({
+          chatId,
+          senderId: currentUser!.uid,
+          imageUri: asset.uri,
+        });
+      }
     }
   }, [chatId, currentUser, sendImage]);
 
@@ -225,7 +235,7 @@ export function ChatScreen(): React.JSX.Element {
   if (!chatId) {
     const renderThread = ({ item }: { item: ChatThread }) => {
       const isOwnLastMessage = item.lastSenderId === currentUser?.uid;
-      const isUnread = !isOwnLastMessage && !!item.lastMessage;
+      const isUnread = item.unreadCount > 0;
       const statusCfg = item.deliveryStatus ? getStatusConfig(item.deliveryStatus) : null;
       const hasRoute = item.pickupCity || item.destinationCity;
 

@@ -11,11 +11,49 @@ import {
   validateStatusTransition,
   DEFAULT_TIMEOUT_HOURS,
 } from "@mooviz/shared";
-import { sendDeliveryNotification } from "../services/notificationService";
-import { getNearbyDriverTokens } from "../services/geohashService";
-import { sendPushNotification } from "../services/notificationService";
+import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
+import { getNearbyDriverTokensMultiLocation } from "../services/geohashService";
 
 const db = admin.firestore();
+
+/**
+ * Convert any timestamp format to a Firestore Timestamp.
+ * Handles: Firestore Timestamp, plain {seconds, nanoseconds}, ISO strings, Date objects.
+ */
+function toFirestoreTimestamp(ts: unknown): admin.firestore.Timestamp {
+  if (!ts) return admin.firestore.Timestamp.now();
+  if (ts instanceof admin.firestore.Timestamp) return ts;
+  if (typeof ts === "object" && ts !== null && "seconds" in ts) {
+    const obj = ts as { seconds: number; nanoseconds?: number };
+    return new admin.firestore.Timestamp(obj.seconds, obj.nanoseconds ?? 0);
+  }
+  if (typeof ts === "string") {
+    const ms = Date.parse(ts);
+    if (!isNaN(ms)) return admin.firestore.Timestamp.fromMillis(ms);
+  }
+  if (ts instanceof Date) return admin.firestore.Timestamp.fromDate(ts);
+  return admin.firestore.Timestamp.now();
+}
+
+/**
+ * Normalize statusHistory entries — ensures all timestamps are proper Firestore Timestamps.
+ */
+function normalizeStatusHistory(
+  entries: unknown[]
+): StatusEntry[] {
+  return entries.map((entry: any) => {
+    const normalized: Record<string, unknown> = {
+      status: entry.status ?? "new",
+      timestamp: toFirestoreTimestamp(entry.timestamp),
+      actor: entry.actor ?? entry.updatedBy ?? "system",
+    };
+    // Firestore Admin SDK rejects undefined — only include note if it has a value
+    if (entry.note !== undefined && entry.note !== null) {
+      normalized.note = entry.note;
+    }
+    return normalized as unknown as StatusEntry;
+  });
+}
 
 /**
  * Firestore onCreate trigger for deliveries.
@@ -36,6 +74,12 @@ export const onDeliveryCreate = onDocumentCreated(
     const deliveryId = event.params.deliveryId;
     const data = snapshot.data() as Partial<Delivery>;
 
+    // Skip if already fully initialized by the createDelivery callable
+    if (data.timeoutAt) {
+      console.log(`onDeliveryCreate: ${deliveryId} already initialized by callable — skipping`);
+      return;
+    }
+
     // Validate the delivery data
     const validation = validateDeliveryCreate(data);
     if (!validation.valid) {
@@ -44,17 +88,18 @@ export const onDeliveryCreate = onDocumentCreated(
         validation.errors
       );
       // Mark as cancelled due to invalid data
+      const cancelNow = admin.firestore.Timestamp.now();
       await snapshot.ref.update({
         status: "cancelled" as DeliveryStatus,
         statusHistory: [
           {
             status: "cancelled",
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            timestamp: cancelNow,
             actor: "system",
             note: `Auto-cancelled: ${validation.errors.join(", ")}`,
           },
         ],
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: cancelNow,
       });
       return;
     }
@@ -101,24 +146,34 @@ export const onDeliveryCreate = onDocumentCreated(
       updatedAt: now,
     });
 
-    // Notify nearby drivers
+    // Notify nearby drivers (multi-location: live GPS + home + work addresses)
     try {
-      const pickupGeohash = data.pickup?.geohash;
-      if (pickupGeohash) {
-        const nearbyDrivers = await getNearbyDriverTokens(
+      const pickup = data.pickup as Record<string, unknown> | undefined;
+      const dest = data.destination as Record<string, unknown> | undefined;
+      const pickupGeohash = pickup?.geohash as string | undefined;
+      // Accept both lat/lng (HLD) and latitude/longitude (mobile)
+      const pickupLat = (pickup?.lat ?? pickup?.latitude) as number | undefined;
+      const pickupLng = (pickup?.lng ?? pickup?.longitude) as number | undefined;
+
+      const initialRadius = 15; // km
+      const notifiedDriverUids: string[] = [];
+
+      if (pickupGeohash && pickupLat && pickupLng) {
+        const nearbyDrivers = await getNearbyDriverTokensMultiLocation(
           pickupGeohash,
-          15, // 15 km radius
-          data.pickup?.lat,
-          data.pickup?.lng
+          initialRadius,
+          pickupLat,
+          pickupLng
         );
 
-        const pickupCity = data.pickup?.city ?? "";
-        const destCity = data.destination?.city ?? "";
-        const price = String(data.price ?? 0);
+        const pickupCity = (pickup?.city ?? "") as string;
+        const destCity = (dest?.city ?? "") as string;
+        const price = String((data as any).suggestedPrice ?? data.price ?? 0);
 
         await Promise.all(
-          nearbyDrivers.map((driver) =>
-            sendPushNotification(
+          nearbyDrivers.map((driver) => {
+            notifiedDriverUids.push(driver.uid);
+            return sendPushNotification(
               driver.uid,
               "משלוח חדש באזורך",
               `משלוח חדש מ-${pickupCity} ל-${destCity} - ${price} ₪`,
@@ -129,14 +184,22 @@ export const onDeliveryCreate = onDocumentCreated(
                 destinationCity: destCity,
                 price,
               }
-            )
-          )
+            );
+          })
         );
 
         console.log(
           `Notified ${nearbyDrivers.length} nearby drivers for delivery ${deliveryId}`
         );
       }
+
+      // Set expansion tracking fields for widening-net notifications
+      await snapshot.ref.update({
+        notifiedDrivers: notifiedDriverUids,
+        notifyRadius: initialRadius,
+        notifyExpansionCount: 0,
+        lastNotifyExpansion: admin.firestore.Timestamp.now(),
+      });
     } catch (error) {
       console.error("Failed to notify nearby drivers:", error);
       // Non-critical, don't fail the trigger
@@ -164,15 +227,30 @@ export const onDeliveryUpdate = onDocumentUpdated(
     const before = change.before.data() as Delivery;
     const after = change.after.data() as Delivery;
 
+    // Normalize statusHistory if any entries have non-Timestamp values.
+    // We continue processing after normalization because the re-trigger from
+    // this write will have identical before/after for status and payment fields,
+    // so the guards below will correctly skip duplicate processing.
+    const rawHistory = (after as any).statusHistory;
+    if (Array.isArray(rawHistory) && rawHistory.some(
+      (e: any) => e.timestamp && typeof e.timestamp === "string"
+    )) {
+      await change.after.ref.update({
+        statusHistory: normalizeStatusHistory(rawHistory),
+      });
+    }
+
     // Detect status change
     if (before.status !== after.status) {
       await handleStatusChange(deliveryId, before, after, change.after.ref);
     }
 
     // Detect payment confirmation changes
+    const beforePayment = before.payment ?? { senderConfirmed: false, driverConfirmed: false };
+    const afterPayment = after.payment ?? { senderConfirmed: false, driverConfirmed: false };
     if (
-      before.payment.senderConfirmed !== after.payment.senderConfirmed ||
-      before.payment.driverConfirmed !== after.payment.driverConfirmed
+      beforePayment.senderConfirmed !== afterPayment.senderConfirmed ||
+      beforePayment.driverConfirmed !== afterPayment.driverConfirmed
     ) {
       await handlePaymentConfirmation(deliveryId, after, change.after.ref);
     }
@@ -245,17 +323,35 @@ async function handleStatusChange(
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             read: true,
           });
-        // Update chat metadata
+        // Update chat metadata — mark system messages as read by both participants
+        // so they don't trigger unread badges
+        const now = admin.firestore.Timestamp.now();
         const chatUpdate: Record<string, unknown> = {
           lastMessage: systemMsg,
-          lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastMessageAt: now,
           lastSenderId: "system",
         };
+        // Stamp lastReadBy for both parties so system messages don't show as unread
+        if (after.senderId) {
+          chatUpdate[`lastReadBy.${after.senderId}`] = now;
+        }
+        if (after.driverId) {
+          chatUpdate[`lastReadBy.${after.driverId}`] = now;
+        }
 
-        // Set chat auto-close timer when delivery is completed/delivered
-        if (newStatus === "delivered" || newStatus === "completed_paid") {
+        // Set chat auto-close timer based on status:
+        // - delivered: 90 minutes after delivery
+        // - completed_paid: 20 minutes after both payments confirmed
+        if (newStatus === "delivered") {
           const closeAt = admin.firestore.Timestamp.fromMillis(
-            Date.now() + 12 * 60 * 60 * 1000 // 12 hours
+            Date.now() + 90 * 60 * 1000 // 90 minutes
+          );
+          chatUpdate.chatCloseAt = closeAt;
+          chatUpdate.closed = false;
+        }
+        if (newStatus === "completed_paid") {
+          const closeAt = admin.firestore.Timestamp.fromMillis(
+            Date.now() + 20 * 60 * 1000 // 20 minutes
           );
           chatUpdate.chatCloseAt = closeAt;
           chatUpdate.closed = false;
@@ -289,41 +385,51 @@ async function handlePaymentConfirmation(
   delivery: Delivery,
   ref: FirebaseFirestore.DocumentReference
 ): Promise<void> {
+  const payment = delivery.payment ?? { senderConfirmed: false, driverConfirmed: false };
   if (
-    delivery.payment.senderConfirmed &&
-    delivery.payment.driverConfirmed &&
+    payment.senderConfirmed &&
+    payment.driverConfirmed &&
     delivery.status === "delivered"
   ) {
     console.log(
       `Both parties confirmed payment for delivery ${deliveryId}, completing...`
     );
 
-    const now = admin.firestore.Timestamp.now();
-    const completionEntry: StatusEntry = {
-      status: "completed_paid",
-      timestamp: now,
-      actor: "system",
-      note: "Both parties confirmed payment",
-    };
+    // Use transaction to atomically check status and transition — prevents
+    // double-increment if trigger fires twice for the same payment change.
+    await db.runTransaction(async (txn) => {
+      const freshDoc = await txn.get(ref);
+      const freshData = freshDoc.data();
+      if (!freshData || freshData.status !== "delivered") {
+        console.log(`Delivery ${deliveryId} already transitioned (status=${freshData?.status}), skipping`);
+        return;
+      }
 
-    await ref.update({
-      status: "completed_paid" as DeliveryStatus,
-      statusHistory: admin.firestore.FieldValue.arrayUnion(completionEntry),
-      updatedAt: now,
+      const now = admin.firestore.Timestamp.now();
+      const completionEntry: StatusEntry = {
+        status: "completed_paid",
+        timestamp: now,
+        actor: "system",
+        note: "Both parties confirmed payment",
+      };
+
+      txn.update(ref, {
+        status: "completed_paid" as DeliveryStatus,
+        statusHistory: admin.firestore.FieldValue.arrayUnion(completionEntry),
+        updatedAt: now,
+      });
+
+      // Update completed deliveries count for both users
+      if (freshData.senderId) {
+        txn.update(db.collection("users").doc(freshData.senderId), {
+          completedDeliveries: admin.firestore.FieldValue.increment(1),
+        });
+      }
+      if (freshData.driverId) {
+        txn.update(db.collection("users").doc(freshData.driverId), {
+          completedDeliveries: admin.firestore.FieldValue.increment(1),
+        });
+      }
     });
-
-    // Update completed deliveries count for both users
-    const batch = db.batch();
-    if (delivery.senderId) {
-      batch.update(db.collection("users").doc(delivery.senderId), {
-        completedDeliveries: admin.firestore.FieldValue.increment(1),
-      });
-    }
-    if (delivery.driverId) {
-      batch.update(db.collection("users").doc(delivery.driverId), {
-        completedDeliveries: admin.firestore.FieldValue.increment(1),
-      });
-    }
-    await batch.commit();
   }
 }

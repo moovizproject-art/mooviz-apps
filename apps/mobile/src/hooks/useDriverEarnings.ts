@@ -63,7 +63,7 @@ export function useDriverEarnings(userId?: string) {
             const data = doc.data();
             const completedAt = data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date(0);
             return {
-              price: data.suggestedPrice || data.price || 0,
+              price: data.price || data.suggestedPrice || 0,
               completedAt,
             };
           });

@@ -3,6 +3,7 @@ import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
+import { setAnalyticsUser, clearAnalyticsUser } from '../services/analytics';
 
 const SESSION_MAX_DAYS = 30;
 
@@ -26,6 +27,7 @@ interface AuthContextValue {
   currentUser: User | null;
   firebaseUser: FirebaseAuthTypes.User | null;
   isLoading: boolean;
+  isProfileComplete: boolean;
   login: (user: User) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: Partial<User>) => Promise<void>;
@@ -134,6 +136,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               createdAt: safeToDate(data?.createdAt) || new Date(),
               updatedAt: safeToDate(data?.updatedAt),
             });
+            // Set user identity for Analytics + Crashlytics
+            setAnalyticsUser(fbUser.uid, data?.role || 'sender').catch(() => {});
           } else {
             // User exists in Auth but not in Firestore — auto-create a minimal doc
             // This prevents users from being stuck after a failed registration
@@ -159,6 +163,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               driverUnlocked: false,
               gender: '',
               ageRange: '',
+              autoCreated: true, // Flag for admin to identify auto-created users
               // If phone already linked, stamp OTP so they don't get stuck at verification
               ...(fbUser.phoneNumber ? { lastOtpAt: firestore.FieldValue.serverTimestamp() } : {}),
               createdAt: firestore.FieldValue.serverTimestamp(),
@@ -236,6 +241,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
   const logout = useCallback(async (): Promise<void> => {
     try {
+      await clearAnalyticsUser().catch(() => {});
       await auth().signOut();
       // Terminate Firestore then clear cache to prevent stale data on next login
       try {
@@ -299,29 +305,33 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     const doc = await firestore().collection('users').doc(user.uid).get();
     if (doc.exists) {
       const data = doc.data();
-      // Full reload — handles both existing users (partial update) and new
-      // registrations where currentUser is still null after OTP verification.
-      setCurrentUser((prev) => {
-        const base = prev || {
-          uid: user.uid,
-          fullName: data?.fullName || '',
-          email: data?.email || user.email || '',
-          phone: data?.phone || user.phoneNumber || '',
-          city: data?.city || '',
-          role: data?.role || 'sender',
-          activeMode: data?.activeMode || 'client',
-          profilePhotoURL: data?.profilePhotoURL || '',
-          kycStatus: data?.kycStatus || 'pending',
-          rating: data?.rating || { average: 0, count: 0 },
-          completedDeliveries: data?.completedDeliveries || 0,
-          status: data?.status || 'active',
-          createdAt: safeToDate(data?.createdAt) || new Date(),
-        };
-        return {
-          ...base,
-          lastOtpAt: safeToDate(data?.lastOtpAt),
-          updatedAt: safeToDate(data?.updatedAt),
-        } as User;
+      // Full reload from Firestore — refreshes ALL fields
+      setCurrentUser({
+        uid: user.uid,
+        fullName: data?.fullName || user.displayName || '',
+        email: data?.email || user.email,
+        phone: data?.phone || user.phoneNumber,
+        profilePhotoURL: data?.profilePhotoURL || user.photoURL || null,
+        role: data?.role || 'sender',
+        activeMode: data?.activeMode || 'client',
+        driverAvailable: data?.driverAvailable || false,
+        driverUnlocked: data?.driverUnlocked || false,
+        city: data?.city || null,
+        kycStatus: data?.kycStatus || 'pending',
+        kycDocumentURL: data?.kycDocumentURL || null,
+        kycIdURL: data?.kycIdURL || null,
+        ratingAsDriver: data?.ratingAsDriver || { average: 0, count: 0 },
+        ratingAsSender: data?.ratingAsSender || { average: 0, count: 0 },
+        completedDeliveries: data?.completedDeliveries || 0,
+        status: data?.status || 'active',
+        fcmTokens: data?.fcmTokens || [],
+        location: data?.location || { lat: 0, lng: 0, geohash: '' },
+        gender: data?.gender || '',
+        ageRange: data?.ageRange || '',
+        migratedFrom: data?.migratedFrom,
+        lastOtpAt: safeToDate(data?.lastOtpAt),
+        createdAt: safeToDate(data?.createdAt) || new Date(),
+        updatedAt: safeToDate(data?.updatedAt),
       });
     }
   }, []);
@@ -337,10 +347,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     setCurrentUser((prev) => (prev ? { ...prev, ...data } : prev));
   }, [currentUser]);
 
+  // Profile is complete when the user has at least a name and phone number.
+  // Auto-created users (Auth without Firestore doc) will have empty values.
+  const isProfileComplete = !!(currentUser?.fullName && currentUser?.phone);
+
   const value: AuthContextValue = {
     currentUser,
     firebaseUser,
     isLoading,
+    isProfileComplete,
     login,
     logout,
     register,

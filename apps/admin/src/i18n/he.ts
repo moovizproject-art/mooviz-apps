@@ -130,6 +130,8 @@ const he: Record<string, string> = {
   'deliveries.cancelled': 'בוטל',
   'deliveries.city': 'עיר',
   'deliveries.cityPlaceholder': 'סינון לפי עיר',
+  'deliveries.region': 'אזור',
+  'deliveries.allRegions': 'כל האזורים',
   'deliveries.from': 'מתאריך',
   'deliveries.to': 'עד תאריך',
   'deliveries.clearFilters': 'נקה מסננים',

@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { isDriverAvailableNow } from "../utils/timeUtils";
 
 const db = admin.firestore();
 
@@ -11,6 +12,52 @@ const db = admin.firestore();
  * 5: ~4.9km x 4.9km
  * 6: ~1.2km x 0.6km
  */
+
+// Base32 character set for geohash encoding
+const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+
+/**
+ * Encode latitude/longitude into a geohash string.
+ */
+export function encodeGeohash(latitude: number, longitude: number, precision = 6): string {
+  let latRange = { min: -90, max: 90 };
+  let lonRange = { min: -180, max: 180 };
+  let hash = "";
+  let bit = 0;
+  let ch = 0;
+  let isEven = true;
+
+  while (hash.length < precision) {
+    if (isEven) {
+      const mid = (lonRange.min + lonRange.max) / 2;
+      if (longitude >= mid) {
+        ch |= 1 << (4 - bit);
+        lonRange.min = mid;
+      } else {
+        lonRange.max = mid;
+      }
+    } else {
+      const mid = (latRange.min + latRange.max) / 2;
+      if (latitude >= mid) {
+        ch |= 1 << (4 - bit);
+        latRange.min = mid;
+      } else {
+        latRange.max = mid;
+      }
+    }
+
+    isEven = !isEven;
+    bit++;
+
+    if (bit === 5) {
+      hash += BASE32[ch];
+      bit = 0;
+      ch = 0;
+    }
+  }
+
+  return hash;
+}
 
 /**
  * Determine the geohash precision to use based on a given radius in km.
@@ -76,12 +123,13 @@ export async function getNearbyDriverTokens(
   const precision = getPrecisionForRadius(radiusKm);
   const { lower, upper } = getGeohashRange(geohash, precision);
 
-  // Query drivers in the geohash range
+  // Query approved drivers in the geohash range
+  // Uses driverUnlocked (set when KYC is approved) instead of role,
+  // since all users register with role='sender' even after becoming drivers.
   const snapshot = await db
     .collection("users")
-    .where("role", "==", "driver")
+    .where("driverUnlocked", "==", true)
     .where("status", "==", "active")
-    .where("kycStatus", "==", "approved")
     .where("location.geohash", ">=", lower)
     .where("location.geohash", "<", upper)
     .get();
@@ -129,6 +177,106 @@ export async function getNearbyDriverTokens(
   }
 
   // Sort by distance (closest first)
+  drivers.sort((a, b) => a.distanceKm - b.distanceKm);
+
+  return drivers;
+}
+
+/**
+ * Extended nearby driver query that checks 3 locations per driver:
+ * 1. Live GPS location (existing behavior)
+ * 2. Home address from driverPrefs
+ * 3. Work address from driverPrefs
+ *
+ * Deduplicates by UID (closest match wins).
+ * Filters by schedule, quiet hours, and driverAvailable toggle.
+ */
+export async function getNearbyDriverTokensMultiLocation(
+  pickupGeohash: string,
+  radiusKm: number,
+  centerLat: number,
+  centerLng: number,
+  excludeUids?: string[]
+): Promise<NearbyDriver[]> {
+  const precision = getPrecisionForRadius(radiusKm);
+  const { lower, upper } = getGeohashRange(pickupGeohash, precision);
+  const excludeSet = new Set(excludeUids || []);
+
+  // Run 3 parallel queries: live location, home address, work address
+  const [liveSnap, homeSnap, workSnap] = await Promise.all([
+    db.collection("users")
+      .where("driverUnlocked", "==", true)
+      .where("status", "==", "active")
+      .where("location.geohash", ">=", lower)
+      .where("location.geohash", "<", upper)
+      .get(),
+    db.collection("users")
+      .where("driverUnlocked", "==", true)
+      .where("status", "==", "active")
+      .where("driverPrefs.homeAddress.geohash", ">=", lower)
+      .where("driverPrefs.homeAddress.geohash", "<", upper)
+      .get(),
+    db.collection("users")
+      .where("driverUnlocked", "==", true)
+      .where("status", "==", "active")
+      .where("driverPrefs.workAddress.geohash", ">=", lower)
+      .where("driverPrefs.workAddress.geohash", "<", upper)
+      .get(),
+  ]);
+
+  // Merge all results, deduplicate by UID (keep closest distance)
+  const driverMap = new Map<string, NearbyDriver>();
+
+  const processDoc = (
+    doc: FirebaseFirestore.QueryDocumentSnapshot,
+    locType: "live" | "home" | "work"
+  ) => {
+    const uid = doc.id;
+    if (excludeSet.has(uid)) return;
+
+    const data = doc.data();
+    const tokens = data.fcmTokens;
+    const fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
+    if (!fcmToken || typeof fcmToken !== "string" || fcmToken.length === 0) return;
+
+    // Check driverAvailable toggle
+    if (data.driverAvailable === false) return;
+
+    // Check schedule + quiet hours
+    const prefs = data.driverPrefs;
+    if (prefs && !isDriverAvailableNow(prefs)) return;
+
+    // Get coordinates based on location type
+    let driverLat: number | undefined;
+    let driverLng: number | undefined;
+
+    if (locType === "live") {
+      driverLat = data.location?.lat;
+      driverLng = data.location?.lng;
+    } else if (locType === "home") {
+      driverLat = prefs?.homeAddress?.lat;
+      driverLng = prefs?.homeAddress?.lng;
+    } else {
+      driverLat = prefs?.workAddress?.lat;
+      driverLng = prefs?.workAddress?.lng;
+    }
+
+    if (typeof driverLat !== "number" || typeof driverLng !== "number") return;
+
+    const distanceKm = haversineDistance(centerLat, centerLng, driverLat, driverLng);
+    if (distanceKm > radiusKm) return;
+
+    const existing = driverMap.get(uid);
+    if (!existing || distanceKm < existing.distanceKm) {
+      driverMap.set(uid, { uid, fcmToken, distanceKm });
+    }
+  };
+
+  for (const doc of liveSnap.docs) processDoc(doc, "live");
+  for (const doc of homeSnap.docs) processDoc(doc, "home");
+  for (const doc of workSnap.docs) processDoc(doc, "work");
+
+  const drivers = Array.from(driverMap.values());
   drivers.sort((a, b) => a.distanceKm - b.distanceKm);
 
   return drivers;

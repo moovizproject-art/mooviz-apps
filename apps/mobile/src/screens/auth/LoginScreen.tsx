@@ -45,6 +45,7 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -198,12 +199,12 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
           <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.surface }, passwordFocused && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
             <TextInput
               ref={passwordRef}
-              style={[styles.input, { color: colors.textPrimary }]}
+              style={[styles.input, { color: colors.textPrimary, paddingEnd: 48 }]}
               value={password}
               onChangeText={setPassword}
               placeholder={t('auth.password')}
               placeholderTextColor={colors.textTertiary}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoComplete="password"
               textAlign="right"
               editable={!isLoading}
@@ -212,6 +213,15 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
               returnKeyType="done"
               onSubmitEditing={handleLogin}
             />
+            <TouchableOpacity
+              style={styles.eyeToggle}
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.eyeIcon}>
+                {showPassword ? '👁' : '👁‍🗨'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
@@ -455,5 +465,16 @@ const styles = StyleSheet.create({
   },
   rememberText: {
     fontSize: 14,
+  },
+  eyeToggle: {
+    position: 'absolute',
+    end: 4,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  eyeIcon: {
+    fontSize: 20,
   },
 });

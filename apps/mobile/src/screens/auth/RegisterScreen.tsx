@@ -19,6 +19,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
 import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 const logo = require('../../assets/logo.png');
 
@@ -51,10 +52,13 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
   const [focusedField, setFocusedField] = useState<FormField | null>(null);
+  const [showPasswordFields, setShowPasswordFields] = useState<Record<string, boolean>>({});
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [ageRange, setAgeRange] = useState<string>('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  const [loadingVisible, setLoadingVisible] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -99,6 +103,8 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
+      setLoadingStep(0);
+      setLoadingVisible(true);
 
       const credential = await registerWithEmail(form.email, form.password);
 
@@ -110,12 +116,17 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
         ageRange: ageRange || undefined,
       });
 
+      setLoadingStep(1);
+      await new Promise(r => setTimeout(r, 600));
+      setLoadingVisible(false);
+
       navigation.navigate('OTPVerification', {
         phoneNumber: form.phone,
         verificationId: '',
         mode: 'register',
       });
     } catch (err: unknown) {
+      setLoadingVisible(false);
       const firebaseError = err as { code?: string };
       if (firebaseError.code) {
         carAlert.show('error', t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
@@ -125,6 +136,10 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const togglePasswordVisibility = (field: string) => {
+    setShowPasswordFields((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const renderInput = (
@@ -140,36 +155,51 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       returnKeyType?: 'next' | 'done';
       onSubmitEditing?: () => void;
     },
-  ) => (
-    <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.inputBg }, focusedField === field && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
-      <TextInput
-        ref={options?.ref}
-        style={[styles.input, { color: colors.textPrimary }]}
-        value={form[field]}
-        onChangeText={(v) => updateField(field, v)}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        secureTextEntry={options?.secureTextEntry}
-        keyboardType={options?.keyboardType || 'default'}
-        autoCapitalize={options?.autoCapitalize || 'sentences'}
-        textAlign="right"
-        editable={!isLoading}
-        onFocus={() => {
-          setFocusedField(field);
-        }}
-        onBlur={() => setFocusedField(null)}
-        returnKeyType={options?.returnKeyType || 'next'}
-        onSubmitEditing={options?.onSubmitEditing || (() => options?.nextRef?.current?.focus())}
-      />
-    </View>
-  );
+  ) => {
+    const isPassword = options?.secureTextEntry === true;
+    const isHidden = isPassword && !showPasswordFields[field];
+    return (
+      <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.inputBg }, focusedField === field && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
+        <TextInput
+          ref={options?.ref}
+          style={[styles.input, { color: colors.textPrimary }, isPassword && { paddingEnd: 48 }]}
+          value={form[field]}
+          onChangeText={(v) => updateField(field, v)}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textTertiary}
+          secureTextEntry={isHidden}
+          keyboardType={options?.keyboardType || 'default'}
+          autoCapitalize={options?.autoCapitalize || 'sentences'}
+          textAlign="right"
+          editable={!isLoading}
+          onFocus={() => {
+            setFocusedField(field);
+          }}
+          onBlur={() => setFocusedField(null)}
+          returnKeyType={options?.returnKeyType || 'next'}
+          onSubmitEditing={options?.onSubmitEditing || (() => options?.nextRef?.current?.focus())}
+        />
+        {isPassword && (
+          <TouchableOpacity
+            style={styles.eyeToggle}
+            onPress={() => togglePasswordVisibility(field)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.eyeIcon}>
+              {showPasswordFields[field] ? '👁' : '👁‍🗨'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   const scrollRef = useRef<ScrollView>(null);
 
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
     <ScrollView
@@ -214,6 +244,21 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           nextRef: confirmRef,
         })}
         {errors.password && <Text style={[styles.errorText, { color: colors.error }]}>{errors.password}</Text>}
+        {(focusedField === 'password' || form.password.length > 0) && (
+          <View style={styles.reqList}>
+            {([
+              { test: form.password.length >= 8, label: t('auth.reqMinLength') },
+              { test: /[A-Z]/.test(form.password), label: t('auth.reqUppercase') },
+              { test: /[a-z]/.test(form.password), label: t('auth.reqLowercase') },
+              { test: /[0-9]/.test(form.password), label: t('auth.reqNumber') },
+              { test: /[!@#$%^&*(),.?":{}|<>]/.test(form.password), label: t('auth.reqSpecial') },
+            ] as const).map((req) => (
+              <Text key={req.label} style={[styles.reqItem, { color: req.test ? '#4CAF50' : colors.textTertiary }]}>
+                {req.test ? '✓' : '✗'} {req.label}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Confirm password */}
@@ -340,6 +385,14 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       <View style={styles.keyboardSpacer} />
     </ScrollView>
     <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
+    <LoadingOverlay
+      visible={loadingVisible}
+      steps={['registering', 'almostDone']}
+      currentStep={loadingStep}
+      timeout={60000}
+      onTimeout={() => setLoadingVisible(false)}
+      onCancel={() => setLoadingVisible(false)}
+    />
     </KeyboardAvoidingView>
   );
 }
@@ -460,5 +513,24 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 14,
     flex: 1,
+  },
+  eyeToggle: {
+    position: 'absolute',
+    end: 4,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  eyeIcon: {
+    fontSize: 20,
+  },
+  reqList: {
+    marginTop: 6,
+    gap: 2,
+  },
+  reqItem: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

@@ -124,12 +124,13 @@ export function useChat(chatId: string): UseChatResult {
           createdAt: firestore.FieldValue.serverTimestamp(),
         });
 
-      // Update chat metadata with last message
+      // Update chat metadata with last message + mark sender as read
       // עדכון מטאדאטה של הצ׳אט עם ההודעה האחרונה
       await firestore().collection('chats').doc(input.chatId).update({
         lastMessage: input.text,
         lastMessageAt: firestore.FieldValue.serverTimestamp(),
         lastSenderId: input.senderId,
+        [`lastReadBy.${input.senderId}`]: firestore.FieldValue.serverTimestamp(),
       });
     },
     [],
@@ -163,6 +164,7 @@ export function useChat(chatId: string): UseChatResult {
         lastMessage: '[תמונה]', // [Image]
         lastMessageAt: firestore.FieldValue.serverTimestamp(),
         lastSenderId: input.senderId,
+        [`lastReadBy.${input.senderId}`]: firestore.FieldValue.serverTimestamp(),
       });
     },
     [],

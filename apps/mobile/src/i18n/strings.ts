@@ -23,6 +23,7 @@ export const strings = {
     retake: { he: 'צלם שוב', en: 'Retake' } as LocaleStrings,
     takePhoto: { he: 'צלם תמונה', en: 'Take photo' } as LocaleStrings,
     chooseFromGallery: { he: 'בחר מהגלריה', en: 'Choose from gallery' } as LocaleStrings,
+    selectImageSource: { he: 'בחר מקור תמונה', en: 'Select image source' } as LocaleStrings,
   },
 
   // ── Home Screen ──
@@ -178,6 +179,14 @@ export const strings = {
     acceptTerms: { he: 'אני מאשר/ת את', en: 'I accept the' } as LocaleStrings,
     termsOfService: { he: 'תנאי השימוש', en: 'Terms of Service' } as LocaleStrings,
     termsRequired: { he: 'יש לאשר את תנאי השימוש', en: 'You must accept the Terms of Service' } as LocaleStrings,
+    showPassword: { he: 'הצג', en: 'Show' } as LocaleStrings,
+    hidePassword: { he: 'הסתר', en: 'Hide' } as LocaleStrings,
+    passwordReq: { he: 'דרישות סיסמה', en: 'Password requirements' } as LocaleStrings,
+    reqMinLength: { he: 'לפחות 8 תווים', en: 'At least 8 characters' } as LocaleStrings,
+    reqUppercase: { he: 'אות גדולה באנגלית', en: 'Uppercase letter' } as LocaleStrings,
+    reqLowercase: { he: 'אות קטנה באנגלית', en: 'Lowercase letter' } as LocaleStrings,
+    reqNumber: { he: 'מספר', en: 'Number' } as LocaleStrings,
+    reqSpecial: { he: 'תו מיוחד (!@#$...)', en: 'Special character (!@#$...)' } as LocaleStrings,
     otpError: { he: 'שגיאה בשליחת קוד אימות', en: 'Error sending verification code' } as LocaleStrings,
     verifyEmail: { he: 'אימות כתובת אימייל', en: 'Verify your email' } as LocaleStrings,
     emailVerificationSubtitle: { he: 'שלחנו קישור אימות ל-{email}. בדקו את תיבת הדואר שלכם ולחצו על הקישור.', en: 'We sent a verification link to {email}. Check your inbox and tap the link.' } as LocaleStrings,
@@ -187,6 +196,16 @@ export const strings = {
     resendEmailVerification: { he: 'שלח אימייל אימות מחדש', en: 'Resend verification email' } as LocaleStrings,
     verifyPhone: { he: 'אימות מספר טלפון', en: 'Verify your phone' } as LocaleStrings,
     phoneVerificationSubtitle: { he: 'אמת את מספר הטלפון שלך כדי להשלים את ההתחברות', en: 'Verify your phone number to complete authentication' } as LocaleStrings,
+  },
+
+  // ── Complete Profile ──
+  completeProfile: {
+    title: { he: 'השלם את הפרופיל', en: 'Complete Your Profile' } as LocaleStrings,
+    subtitle: { he: 'צריכים כמה פרטים לפני שנתחיל', en: 'We need a few details before we begin' } as LocaleStrings,
+    fullNameRequired: { he: 'שם מלא נדרש', en: 'Full name is required' } as LocaleStrings,
+    phoneRequired: { he: 'מספר טלפון נדרש', en: 'Phone number is required' } as LocaleStrings,
+    invalidPhone: { he: 'מספר טלפון לא תקין', en: 'Invalid phone number' } as LocaleStrings,
+    save: { he: 'המשך', en: 'Continue' } as LocaleStrings,
   },
 
   // ── KYC ──
@@ -414,19 +433,19 @@ export const strings = {
   onboarding: {
     welcome: { he: 'ברוכים הבאים', en: 'Welcome' } as LocaleStrings,
     welcomeTagline: { he: 'הקהילה שמחברת בין שולחים לנהגים', en: 'The community connecting senders with drivers' } as LocaleStrings,
-    welcomeBullet1: { he: 'חברים עוזרים לחברים', en: 'Friends help friends' } as LocaleStrings,
+    welcomeBullet1: { he: 'מחברים בין אנשים', en: 'Connecting people' } as LocaleStrings,
     welcomeBullet2: { he: 'מהיר, בטוח ובמחיר הוגן', en: 'Fast, safe, and fairly priced' } as LocaleStrings,
     welcomeBullet3: { he: 'זמין בכל רגע, בכל מקום', en: 'Available anytime, anywhere' } as LocaleStrings,
     senderTitle: { he: 'שלח חבילה בקלות', en: 'Send a package easily' } as LocaleStrings,
     senderSubtitle: { he: 'פרסם משלוח ומצא נהג באזורך', en: 'Post a delivery and find a driver nearby' } as LocaleStrings,
     senderBullet1: { he: 'פרסם משלוח תוך שניות', en: 'Post a delivery in seconds' } as LocaleStrings,
     senderBullet2: { he: 'אתה קובע את המחיר', en: 'You choose the price' } as LocaleStrings,
-    senderBullet3: { he: 'עקבו אחרי המשלוח בזמן אמת', en: 'Track your delivery in real time' } as LocaleStrings,
+    senderBullet3: { he: 'עקוב אחרי המשלוח בזמן אמת', en: 'Track your delivery in real time' } as LocaleStrings,
     driverTitle: { he: 'תרוויח בדרך שלך', en: 'Earn on your way' } as LocaleStrings,
     driverSubtitle: { he: 'הפוך את הנסיעה שלך להכנסה', en: 'Turn your drive into income' } as LocaleStrings,
     driverBullet1: { he: 'מצא משלוחים בקרבתך', en: 'Find deliveries near you' } as LocaleStrings,
     driverBullet2: { he: 'עבוד לפי הזמנים שלך', en: 'Work on your schedule' } as LocaleStrings,
-    driverBullet3: { he: 'אתה קובע את צורת התשלום', en: 'You choose the payment method' } as LocaleStrings,
+    driverBullet3: { he: 'קבע את צורת התשלום', en: 'You choose the payment method' } as LocaleStrings,
     getStarted: { he: 'בואו נתחיל!', en: "Let's go!" } as LocaleStrings,
     getStartedSubtitle: { he: 'הצטרפו לקהילת MOOVIZ עוד היום', en: 'Join the MOOVIZ community today' } as LocaleStrings,
     next: { he: 'הבא', en: 'Next' } as LocaleStrings,
@@ -478,6 +497,28 @@ export const strings = {
     locationServiceUnavailable: { he: 'שירות מיקום לא זמין', en: 'Location service unavailable' } as LocaleStrings,
     currentLocationFailed: { he: 'לא ניתן לקבל מיקום נוכחי', en: 'Cannot get current location' } as LocaleStrings,
     cancelAfterPickup: { he: 'לא ניתן לבטל משלוח לאחר איסוף הפריט', en: 'Cannot cancel delivery after pickup' } as LocaleStrings,
+  },
+
+  // ── Loading Overlay ──
+  loading: {
+    uploadingImages: { he: 'מעלה תמונות...', en: 'Uploading images...' } as LocaleStrings,
+    creatingDelivery: { he: 'יוצר משלוח...', en: 'Creating delivery...' } as LocaleStrings,
+    almostDone: { he: 'כמעט סיימנו...', en: 'Almost done...' } as LocaleStrings,
+    confirmingPayment: { he: 'מאשר תשלום...', en: 'Confirming payment...' } as LocaleStrings,
+    uploadingProof: { he: 'מעלה הוכחה...', en: 'Uploading proof...' } as LocaleStrings,
+    sendingRequest: { he: 'שולח בקשה...', en: 'Sending request...' } as LocaleStrings,
+    registering: { he: 'יוצר חשבון...', en: 'Creating account...' } as LocaleStrings,
+    timeout: { he: 'הפעולה לוקחת יותר מדי זמן', en: 'This is taking too long' } as LocaleStrings,
+    timeoutRetry: { he: 'נסה שוב', en: 'Try again' } as LocaleStrings,
+    timeoutMessage: { he: 'משהו לא הלך כמו שצריך. נסה שוב או חזור מאוחר יותר.', en: 'Something went wrong. Try again or come back later.' } as LocaleStrings,
+    saving: { he: 'שומר...', en: 'Saving...' } as LocaleStrings,
+  },
+
+  // ── Address Autocomplete ──
+  addressAutocomplete: {
+    searchPlaceholder: { he: 'חפש כתובת...', en: 'Search address...' } as LocaleStrings,
+    noResults: { he: 'לא נמצאו תוצאות', en: 'No results found' } as LocaleStrings,
+    clearAddress: { he: 'נקה כתובת', en: 'Clear address' } as LocaleStrings,
   },
 
   // ── Time / Relative Dates ──

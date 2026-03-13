@@ -169,6 +169,7 @@ export function useDeliveryTimings(period: Period) {
 
 export interface MonthlyCount {
   month: string;
+  monthKey: string;
   count: number;
 }
 
@@ -197,6 +198,7 @@ export function useMonthlyDeliveries() {
 
       return Array.from(months.entries()).map(([key, count]) => ({
         month: format(new Date(key + '-01'), 'MMM yy', { locale: he }),
+        monthKey: key,
         count,
       }));
     },
@@ -239,7 +241,7 @@ export function useMonthlyCashflow() {
         const key = format(ts.toDate(), 'yyyy-MM');
         const entry = months.get(key);
         if (entry) {
-          entry.revenue += data.price ?? 0;
+          entry.revenue += data.price ?? data.suggestedPrice ?? 0;
           entry.count += 1;
         }
       });
