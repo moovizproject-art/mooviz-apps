@@ -28,6 +28,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
+import { useInAppReview } from '../../hooks/useInAppReview';
 import { ProofCamera } from '../../components/ProofCamera';
 import { uploadProofPhoto } from '../../services/storage';
 import { strings } from '../../i18n/strings';
@@ -63,6 +64,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const carAlert = useCarAlert();
   const { currentUser } = useAuth();
   const { expressInterest, confirmPayment } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
+  const { checkAndPromptReview } = useInAppReview();
 
   // Direct document listener — works for ANY delivery regardless of driverId
   const [delivery, setDelivery] = useState<Delivery | null>(null);
@@ -129,6 +131,17 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       }
     }).catch(() => {});
   }, [delivery?.senderId, delivery?.senderName]);
+
+  // Prompt "Rate us on store" after 1st and 5th completed delivery
+  useEffect(() => {
+    if (delivery?.status === 'completed_paid' && currentUser?.uid) {
+      // Fetch fresh completedDeliveries count from Firestore
+      firestore().collection('users').doc(currentUser.uid).get().then((snap) => {
+        const count = snap.data()?.completedDeliveries || 0;
+        checkAndPromptReview(count);
+      }).catch(() => {});
+    }
+  }, [delivery?.status, currentUser?.uid, checkAndPromptReview]);
 
   // Continue location tracking while viewing delivery details
   useDriverLocationTracking({

@@ -55,6 +55,7 @@ import { OTPScreen } from '../screens/auth/OTPScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { AddPhoneScreen } from '../screens/auth/AddPhoneScreen';
 import { CompleteProfileScreen } from '../screens/auth/CompleteProfileScreen';
+import { AcceptTermsScreen } from '../screens/auth/AcceptTermsScreen';
 
 // Sender screens
 import { HomeScreen } from '../screens/sender/HomeScreen';
@@ -107,6 +108,7 @@ export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
   EmailVerification: undefined;
   CompleteProfile: undefined;
+  AcceptTerms: undefined;
   PhoneVerification: undefined;
   PhoneOTP: { phoneNumber: string; verificationId: string; mode?: 'register' | 'login' | 'addPhone' };
   SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
@@ -397,6 +399,8 @@ export function RootNavigator(): React.JSX.Element {
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : !currentUser.fullName || !currentUser.phone ? (
         <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+      ) : currentUser.migratedFrom && !currentUser.acceptedTermsAt ? (
+        <Stack.Screen name="AcceptTerms" component={AcceptTermsScreen} />
       ) : currentUser.activeMode === 'driver' ? (
         <>
           <Stack.Screen name="DriverTabs" component={DriverTabs} options={{ title: t('common.back') }} />

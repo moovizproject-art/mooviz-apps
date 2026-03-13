@@ -9,6 +9,7 @@ import {
   Image,
   StatusBar,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -283,7 +284,20 @@ export function DriverKYCScreen(): React.JSX.Element {
                 {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
               </View>
               <Text style={[styles.termsText, { color: colors.textPrimary }]}>
-                {t('kyc.terms')}
+                {t('auth.acceptTerms')}{' '}
+                <Text
+                  style={{ color: colors.primary, fontWeight: '700' }}
+                  onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/terms')}
+                >
+                  {t('terms.termsOfService')}
+                </Text>
+                {' '}{t('common.and')}{' '}
+                <Text
+                  style={{ color: colors.primary, fontWeight: '700' }}
+                  onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/privacy')}
+                >
+                  {t('terms.privacyPolicy')}
+                </Text>
               </Text>
             </TouchableOpacity>
 

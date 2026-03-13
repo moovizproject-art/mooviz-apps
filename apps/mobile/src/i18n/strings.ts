@@ -24,6 +24,7 @@ export const strings = {
     takePhoto: { he: 'צלם תמונה', en: 'Take photo' } as LocaleStrings,
     chooseFromGallery: { he: 'בחר מהגלריה', en: 'Choose from gallery' } as LocaleStrings,
     selectImageSource: { he: 'בחר מקור תמונה', en: 'Select image source' } as LocaleStrings,
+    and: { he: 'ו', en: 'and' } as LocaleStrings,
   },
 
   // ── Home Screen ──
@@ -196,6 +197,16 @@ export const strings = {
     resendEmailVerification: { he: 'שלח אימייל אימות מחדש', en: 'Resend verification email' } as LocaleStrings,
     verifyPhone: { he: 'אימות מספר טלפון', en: 'Verify your phone' } as LocaleStrings,
     phoneVerificationSubtitle: { he: 'אמת את מספר הטלפון שלך כדי להשלים את ההתחברות', en: 'Verify your phone number to complete authentication' } as LocaleStrings,
+  },
+
+  // ── Terms & Privacy (AcceptTermsScreen) ──
+  terms: {
+    title: { he: 'תנאי שימוש ומדיניות פרטיות', en: 'Terms & Privacy Policy' } as LocaleStrings,
+    subtitle: { he: 'לפני שנמשיך, יש לקרוא ולאשר את תנאי השימוש ומדיניות הפרטיות שלנו', en: 'Before we continue, please read and accept our Terms of Service and Privacy Policy' } as LocaleStrings,
+    termsOfService: { he: 'תנאי שימוש', en: 'Terms of Service' } as LocaleStrings,
+    privacyPolicy: { he: 'מדיניות פרטיות', en: 'Privacy Policy' } as LocaleStrings,
+    acceptLabel: { he: 'קראתי ואני מסכים/ה לתנאי השימוש ומדיניות הפרטיות', en: 'I have read and agree to the Terms of Service and Privacy Policy' } as LocaleStrings,
+    continue: { he: 'המשך', en: 'Continue' } as LocaleStrings,
   },
 
   // ── Complete Profile ──

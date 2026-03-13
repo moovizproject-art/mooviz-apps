@@ -10,6 +10,7 @@ import {
   Platform,
   PermissionsAndroid,
   ActionSheetIOS,
+  Linking,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -464,6 +465,24 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Legal disclaimer */}
+        <Text style={[styles.legalDisclaimer, { color: colors.textTertiary }]}>
+          {t('auth.acceptTerms')}{' '}
+          <Text
+            style={{ color: colors.primary }}
+            onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/terms')}
+          >
+            {t('terms.termsOfService')}
+          </Text>
+          {' '}{t('common.and')}{' '}
+          <Text
+            style={{ color: colors.primary }}
+            onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/privacy')}
+          >
+            {t('terms.privacyPolicy')}
+          </Text>
+        </Text>
       </ScrollView>
 
       {/* Size info modal */}
@@ -737,6 +756,12 @@ const styles = StyleSheet.create({
   submitButtonText: {
     ...TYPOGRAPHY.button,
     fontWeight: '700',
+  },
+  legalDisclaimer: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
   },
   infoButton: {
     width: 40,

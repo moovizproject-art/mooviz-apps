@@ -4,5 +4,15 @@
     "dev": "mooviz-app-9b766",
     "staging": "mooviz-app-9b766",
     "production": "mooviz-prod"
-  }
+  },
+  "targets": {
+    "mooviz-app-9b766": {
+      "hosting": {
+        "app": [
+          "mooviz-app-9b766"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
