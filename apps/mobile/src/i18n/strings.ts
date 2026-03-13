@@ -23,6 +23,7 @@ export const strings = {
     retake: { he: 'צלם שוב', en: 'Retake' } as LocaleStrings,
     takePhoto: { he: 'צלם תמונה', en: 'Take photo' } as LocaleStrings,
     chooseFromGallery: { he: 'בחר מהגלריה', en: 'Choose from gallery' } as LocaleStrings,
+    selectImageSource: { he: 'בחר מקור תמונה', en: 'Select image source' } as LocaleStrings,
   },
 
   // ── Home Screen ──
@@ -195,6 +196,16 @@ export const strings = {
     resendEmailVerification: { he: 'שלח אימייל אימות מחדש', en: 'Resend verification email' } as LocaleStrings,
     verifyPhone: { he: 'אימות מספר טלפון', en: 'Verify your phone' } as LocaleStrings,
     phoneVerificationSubtitle: { he: 'אמת את מספר הטלפון שלך כדי להשלים את ההתחברות', en: 'Verify your phone number to complete authentication' } as LocaleStrings,
+  },
+
+  // ── Complete Profile ──
+  completeProfile: {
+    title: { he: 'השלם את הפרופיל', en: 'Complete Your Profile' } as LocaleStrings,
+    subtitle: { he: 'צריכים כמה פרטים לפני שנתחיל', en: 'We need a few details before we begin' } as LocaleStrings,
+    fullNameRequired: { he: 'שם מלא נדרש', en: 'Full name is required' } as LocaleStrings,
+    phoneRequired: { he: 'מספר טלפון נדרש', en: 'Phone number is required' } as LocaleStrings,
+    invalidPhone: { he: 'מספר טלפון לא תקין', en: 'Invalid phone number' } as LocaleStrings,
+    save: { he: 'המשך', en: 'Continue' } as LocaleStrings,
   },
 
   // ── KYC ──

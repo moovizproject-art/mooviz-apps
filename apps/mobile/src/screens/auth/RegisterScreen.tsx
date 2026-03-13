@@ -162,7 +162,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.inputBg }, focusedField === field && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
         <TextInput
           ref={options?.ref}
-          style={[styles.input, { color: colors.textPrimary }, isPassword && { paddingStart: 60 }]}
+          style={[styles.input, { color: colors.textPrimary }, isPassword && { paddingEnd: 48 }]}
           value={form[field]}
           onChangeText={(v) => updateField(field, v)}
           placeholder={placeholder}
@@ -185,8 +185,8 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
             onPress={() => togglePasswordVisibility(field)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={[styles.eyeToggleText, { color: colors.primary }]}>
-              {showPasswordFields[field] ? t('auth.hidePassword') : t('auth.showPassword')}
+            <Text style={styles.eyeIcon}>
+              {showPasswordFields[field] ? '👁' : '👁‍🗨'}
             </Text>
           </TouchableOpacity>
         )}
@@ -199,7 +199,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
     <ScrollView
@@ -516,15 +516,14 @@ const styles = StyleSheet.create({
   },
   eyeToggle: {
     position: 'absolute',
-    start: 8,
+    end: 4,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
-  eyeToggleText: {
-    fontSize: 13,
-    fontWeight: '600',
+  eyeIcon: {
+    fontSize: 20,
   },
   reqList: {
     marginTop: 6,

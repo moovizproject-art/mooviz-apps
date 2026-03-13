@@ -3,13 +3,25 @@
  * Registers the root component for bare React Native (non-Expo).
  */
 import { AppRegistry, Text, TextInput, LogBox } from 'react-native';
+import crashlytics from '@react-native-firebase/crashlytics';
 
 // Prevent Hermes from crashing (EXC_BREAKPOINT) on unhandled promise rejections.
 // Native Firebase errors can have properties that crash Hermes during Error.stack construction.
+// Also report JS errors to Crashlytics for remote crash monitoring.
 const originalHandler = global.ErrorUtils?.getGlobalHandler();
 global.ErrorUtils?.setGlobalHandler((error, isFatal) => {
   // Log but don't let Hermes try to construct a stack trace on native error objects
   console.error('[GlobalErrorHandler]', isFatal ? 'FATAL' : 'ERROR', error?.message || error);
+  // Report to Crashlytics
+  try {
+    if (error instanceof Error) {
+      crashlytics().recordError(error);
+    } else {
+      crashlytics().recordError(new Error(String(error?.message || error)));
+    }
+  } catch (_) {
+    // Crashlytics not yet initialized — ignore
+  }
   if (originalHandler) originalHandler(error, isFatal);
 });
 

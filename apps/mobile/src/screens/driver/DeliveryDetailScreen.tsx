@@ -202,7 +202,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       (pos) => {
         const distKm = haversineKm(
           pos.coords.latitude, pos.coords.longitude,
-          delivery?.pickup?.latitude ?? 0, delivery?.pickup?.longitude ?? 0,
+          delivery?.pickup?.lat ?? delivery?.pickup?.latitude ?? 0,
+          delivery?.pickup?.lng ?? delivery?.pickup?.longitude ?? 0,
         );
         const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} ${strings.commonExtra.meters.he}` : `${distKm.toFixed(1)} ${strings.commonExtra.km.he}`;
         carAlert.show('info', strings.driver.confirmPickup.he, strings.deliveryExtra.confirmPickupPrompt.he.replace('{dist}', distStr), [

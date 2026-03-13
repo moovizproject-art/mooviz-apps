@@ -37,8 +37,7 @@ export {
 
 export { sendBulkEmail } from "./callable/emailCallable";
 
-// ─── One-time Admin Fix (DELETE AFTER USE) ─────────────────────────
-export { purgeTestUsers } from "./callable/adminFixCallable";
+// purgeTestUsers removed — unauthenticated admin endpoint, security risk
 
 // ─── Scheduled Functions ────────────────────────────────────────────
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";

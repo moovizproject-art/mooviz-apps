@@ -6,11 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import storage from '@react-native-firebase/storage';
 import firestore from '@react-native-firebase/firestore';
-import { requestMediaLibraryPermission } from '../../utils/permissions';
+import { requestMediaLibraryPermission, requestCameraPermission } from '../../utils/permissions';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,6 +21,7 @@ import { AvatarCircle } from '../../components/AvatarCircle';
 import { TabHeader } from '../../components/TabHeader';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
+import { APP_VERSION } from '../../constants/config';
 
 /**
  * ProfileScreen — מסך פרופיל
@@ -27,9 +30,16 @@ import { CarAlert, useCarAlert } from '../../components/CarAlert';
 export function ProfileScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { currentUser, logout, updateProfile } = useAuth();
+  const { currentUser, logout, updateProfile, refreshUserDoc } = useAuth();
   const drawer = useSettingsDrawer();
   const carAlert = useCarAlert();
+
+  // Refresh user doc when screen gains focus (fixes stale data after background)
+  useFocusEffect(
+    useCallback(() => {
+      refreshUserDoc().catch(() => {});
+    }, [refreshUserDoc]),
+  );
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
@@ -70,27 +80,13 @@ export function ProfileScreen(): React.JSX.Element {
     }
   };
 
-  const handleChangePhoto = useCallback(async (): Promise<void> => {
-    const hasPermission = await requestMediaLibraryPermission();
-    if (!hasPermission) return;
-
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.7,
-      maxWidth: 512,
-      maxHeight: 512,
-    });
-
-    if (result.didCancel || !result.assets?.[0]?.uri) return;
+  const uploadProfilePhoto = useCallback(async (uri: string): Promise<void> => {
     if (!currentUser) return;
-
     setUploadingPhoto(true);
     try {
-      const uri = result.assets[0].uri;
       const ref = storage().ref(`users/${currentUser.uid}/profile.jpg`);
       await ref.putFile(uri, { contentType: 'image/jpeg' });
       const downloadUrl = await ref.getDownloadURL();
-      // Sync to Firestore so other users see the updated photo
       await firestore().collection('users').doc(currentUser.uid).update({
         profilePhotoURL: downloadUrl,
       });
@@ -103,6 +99,36 @@ export function ProfileScreen(): React.JSX.Element {
       setUploadingPhoto(false);
     }
   }, [currentUser, t, carAlert]);
+
+  const handleChangePhoto = useCallback((): void => {
+    const imageOpts = { mediaType: 'photo' as const, quality: 0.7 as const, maxWidth: 512, maxHeight: 512 };
+
+    Alert.alert(t('profile.changePhoto'), '', [
+      {
+        text: t('common.takePhoto'),
+        onPress: async () => {
+          const hasPerm = await requestCameraPermission();
+          if (!hasPerm) return;
+          const result = await launchCamera(imageOpts);
+          if (!result.didCancel && result.assets?.[0]?.uri) {
+            await uploadProfilePhoto(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: t('common.chooseFromGallery'),
+        onPress: async () => {
+          const hasPerm = await requestMediaLibraryPermission();
+          if (!hasPerm) return;
+          const result = await launchImageLibrary(imageOpts);
+          if (!result.didCancel && result.assets?.[0]?.uri) {
+            await uploadProfilePhoto(result.assets[0].uri);
+          }
+        },
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  }, [t, uploadProfilePhoto]);
 
   const handleChangePassword = async (): Promise<void> => {
     const email = currentUser?.email;
@@ -322,7 +348,7 @@ export function ProfileScreen(): React.JSX.Element {
         </TouchableOpacity>
 
         {/* Version */}
-        <Text style={[styles.versionText, { color: colors.textTertiary }]}>v0.9.8.5</Text>
+        <Text style={[styles.versionText, { color: colors.textTertiary }]}>v{APP_VERSION}</Text>
       </ScrollView>
 
       <SettingsDrawer visible={drawer.visible} onClose={drawer.close} animValue={drawer.animValue} />

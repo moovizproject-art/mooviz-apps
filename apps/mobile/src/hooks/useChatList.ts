@@ -138,7 +138,13 @@ export function useChatList(userId: string | undefined) {
               deliveryStatus: delivery?.status || '',
               itemDescription: delivery?.itemDesc || '',
               pickupDate: delivery?.pickupDate || '',
-              unreadCount: 0, // TODO: compute from unread messages
+              unreadCount: (() => {
+                if (data.lastSenderId === userId || data.lastSenderId === 'system' || !data.lastMessage) return 0;
+                if (data.closed) return 0;
+                const lastReadAt = data.lastReadBy?.[userId]?.toDate?.()?.getTime() ?? 0;
+                const lastMsgAt = data.lastMessageAt?.toDate?.()?.getTime() ?? 0;
+                return lastMsgAt > lastReadAt ? 1 : 0;
+              })()
             };
           });
 

@@ -45,12 +45,8 @@ export const onMessageCreate = onDocumentCreated(
       return;
     }
 
-    // Update the chat room with the last message info
-    await chatRoomDoc.ref.update({
-      lastMessage: message.type === "image" ? "[Image]" : (message.text ?? ""),
-      lastMessageAt: admin.firestore.Timestamp.now(),
-      lastSenderId: senderId,
-    });
+    // Note: chat metadata (lastMessage, lastSenderId) is already updated by the
+    // mobile client in useChat.ts sendMessage/sendImage. No need to duplicate here.
 
     // Get sender's name for the notification
     const senderDoc = await db.collection("users").doc(senderId).get();

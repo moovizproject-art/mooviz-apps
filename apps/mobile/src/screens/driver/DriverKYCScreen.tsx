@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   Image,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 
@@ -61,16 +62,30 @@ export function DriverKYCScreen(): React.JSX.Element {
     loadExisting();
   }, [uid]);
 
-  const pickImage = async (setter: (uri: string | null) => void): Promise<void> => {
-    const result: ImagePickerResponse = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.8,
-      maxWidth: 1920,
-      maxHeight: 1920,
-    });
-    if (!result.didCancel && result.assets?.[0]?.uri) {
-      setter(result.assets[0].uri);
-    }
+  const pickImage = (setter: (uri: string | null) => void): void => {
+    const imageOpts = { mediaType: 'photo' as const, quality: 0.8 as const, maxWidth: 1920, maxHeight: 1920 };
+
+    Alert.alert(t('common.selectImageSource'), '', [
+      {
+        text: t('common.takePhoto'),
+        onPress: async () => {
+          const result: ImagePickerResponse = await launchCamera(imageOpts);
+          if (!result.didCancel && result.assets?.[0]?.uri) {
+            setter(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: t('common.chooseFromGallery'),
+        onPress: async () => {
+          const result: ImagePickerResponse = await launchImageLibrary(imageOpts);
+          if (!result.didCancel && result.assets?.[0]?.uri) {
+            setter(result.assets[0].uri);
+          }
+        },
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const handleSubmit = async (): Promise<void> => {

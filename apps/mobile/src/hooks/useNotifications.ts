@@ -259,10 +259,10 @@ export function useNotifications(): UseNotificationsResult {
         const incomingChatId = data?.chatId;
         const activeChatId = getActiveChatId();
 
-        // Smart chat notification: if user is viewing the same chat, only play ding
+        // Smart chat notification: if user is viewing the same chat, suppress entirely
+        // (they already see messages appear in real-time via onSnapshot)
         if (notifEvent === 'new_chat_message' && incomingChatId && incomingChatId === activeChatId) {
-          console.log('[Notifications] Same chat active — ding only, no banner');
-          playSound('success');
+          console.log('[Notifications] Same chat active — suppressed');
           return;
         }
 
@@ -423,6 +423,11 @@ function handleNotificationNavigation(data?: Record<string, string>): void {
       if (deliveryId) {
         navigateFromNotification('SenderDeliveryDetail', { deliveryId });
       }
+      break;
+    case 'kyc_approved':
+    case 'kyc_rejected':
+      console.log('[Nav] KYC status notification:', event);
+      // No navigation needed — profile screen refreshes on focus
       break;
     default:
       console.log('[Nav] Unknown notification event:', event);

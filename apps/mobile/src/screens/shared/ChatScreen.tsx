@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { setActiveChatId } from '../../services/navigation';
@@ -58,15 +59,21 @@ export function ChatScreen(): React.JSX.Element {
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const insets = useSafeAreaInsets();
 
-  // Track active chatId for smart notification suppression
+  // Track active chatId for smart notification suppression + mark as read
   useFocusEffect(
     useCallback(() => {
       if (chatId) {
         setActiveChatId(chatId);
+        // Mark chat as read for this user
+        if (currentUser?.uid) {
+          firestore().collection('chats').doc(chatId).update({
+            [`lastReadBy.${currentUser.uid}`]: firestore.FieldValue.serverTimestamp(),
+          }).catch((err) => console.warn('[ChatScreen] markAsRead error:', err));
+        }
         return () => setActiveChatId(null);
       }
       return undefined;
-    }, [chatId]),
+    }, [chatId, currentUser?.uid]),
   );
 
   // Navigate to delivery detail from banner
@@ -228,7 +235,7 @@ export function ChatScreen(): React.JSX.Element {
   if (!chatId) {
     const renderThread = ({ item }: { item: ChatThread }) => {
       const isOwnLastMessage = item.lastSenderId === currentUser?.uid;
-      const isUnread = !isOwnLastMessage && !!item.lastMessage;
+      const isUnread = item.unreadCount > 0;
       const statusCfg = item.deliveryStatus ? getStatusConfig(item.deliveryStatus) : null;
       const hasRoute = item.pickupCity || item.destinationCity;
 

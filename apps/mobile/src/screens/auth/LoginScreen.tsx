@@ -199,7 +199,7 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
           <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.surface }, passwordFocused && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
             <TextInput
               ref={passwordRef}
-              style={[styles.input, { color: colors.textPrimary, paddingStart: 60 }]}
+              style={[styles.input, { color: colors.textPrimary, paddingEnd: 48 }]}
               value={password}
               onChangeText={setPassword}
               placeholder={t('auth.password')}
@@ -218,8 +218,8 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
               onPress={() => setShowPassword(!showPassword)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={[styles.eyeToggleText, { color: colors.primary }]}>
-                {showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+              <Text style={styles.eyeIcon}>
+                {showPassword ? '👁' : '👁‍🗨'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -468,14 +468,13 @@ const styles = StyleSheet.create({
   },
   eyeToggle: {
     position: 'absolute',
-    start: 8,
+    end: 4,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
-  eyeToggleText: {
-    fontSize: 13,
-    fontWeight: '600',
+  eyeIcon: {
+    fontSize: 20,
   },
 });

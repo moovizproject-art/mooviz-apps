@@ -227,7 +227,10 @@ export const onDeliveryUpdate = onDocumentUpdated(
     const before = change.before.data() as Delivery;
     const after = change.after.data() as Delivery;
 
-    // Normalize statusHistory if any entries have non-Timestamp values
+    // Normalize statusHistory if any entries have non-Timestamp values.
+    // We continue processing after normalization because the re-trigger from
+    // this write will have identical before/after for status and payment fields,
+    // so the guards below will correctly skip duplicate processing.
     const rawHistory = (after as any).statusHistory;
     if (Array.isArray(rawHistory) && rawHistory.some(
       (e: any) => e.timestamp && typeof e.timestamp === "string"
@@ -235,7 +238,6 @@ export const onDeliveryUpdate = onDocumentUpdated(
       await change.after.ref.update({
         statusHistory: normalizeStatusHistory(rawHistory),
       });
-      return; // Exit — this update will re-trigger with normalized data
     }
 
     // Detect status change
@@ -244,9 +246,11 @@ export const onDeliveryUpdate = onDocumentUpdated(
     }
 
     // Detect payment confirmation changes
+    const beforePayment = before.payment ?? { senderConfirmed: false, driverConfirmed: false };
+    const afterPayment = after.payment ?? { senderConfirmed: false, driverConfirmed: false };
     if (
-      before.payment.senderConfirmed !== after.payment.senderConfirmed ||
-      before.payment.driverConfirmed !== after.payment.driverConfirmed
+      beforePayment.senderConfirmed !== afterPayment.senderConfirmed ||
+      beforePayment.driverConfirmed !== afterPayment.driverConfirmed
     ) {
       await handlePaymentConfirmation(deliveryId, after, change.after.ref);
     }
@@ -319,12 +323,21 @@ async function handleStatusChange(
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             read: true,
           });
-        // Update chat metadata
+        // Update chat metadata — mark system messages as read by both participants
+        // so they don't trigger unread badges
+        const now = admin.firestore.Timestamp.now();
         const chatUpdate: Record<string, unknown> = {
           lastMessage: systemMsg,
-          lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastMessageAt: now,
           lastSenderId: "system",
         };
+        // Stamp lastReadBy for both parties so system messages don't show as unread
+        if (after.senderId) {
+          chatUpdate[`lastReadBy.${after.senderId}`] = now;
+        }
+        if (after.driverId) {
+          chatUpdate[`lastReadBy.${after.driverId}`] = now;
+        }
 
         // Set chat auto-close timer based on status:
         // - delivered: 90 minutes after delivery
@@ -372,41 +385,51 @@ async function handlePaymentConfirmation(
   delivery: Delivery,
   ref: FirebaseFirestore.DocumentReference
 ): Promise<void> {
+  const payment = delivery.payment ?? { senderConfirmed: false, driverConfirmed: false };
   if (
-    delivery.payment.senderConfirmed &&
-    delivery.payment.driverConfirmed &&
+    payment.senderConfirmed &&
+    payment.driverConfirmed &&
     delivery.status === "delivered"
   ) {
     console.log(
       `Both parties confirmed payment for delivery ${deliveryId}, completing...`
     );
 
-    const now = admin.firestore.Timestamp.now();
-    const completionEntry: StatusEntry = {
-      status: "completed_paid",
-      timestamp: now,
-      actor: "system",
-      note: "Both parties confirmed payment",
-    };
+    // Use transaction to atomically check status and transition — prevents
+    // double-increment if trigger fires twice for the same payment change.
+    await db.runTransaction(async (txn) => {
+      const freshDoc = await txn.get(ref);
+      const freshData = freshDoc.data();
+      if (!freshData || freshData.status !== "delivered") {
+        console.log(`Delivery ${deliveryId} already transitioned (status=${freshData?.status}), skipping`);
+        return;
+      }
 
-    await ref.update({
-      status: "completed_paid" as DeliveryStatus,
-      statusHistory: admin.firestore.FieldValue.arrayUnion(completionEntry),
-      updatedAt: now,
+      const now = admin.firestore.Timestamp.now();
+      const completionEntry: StatusEntry = {
+        status: "completed_paid",
+        timestamp: now,
+        actor: "system",
+        note: "Both parties confirmed payment",
+      };
+
+      txn.update(ref, {
+        status: "completed_paid" as DeliveryStatus,
+        statusHistory: admin.firestore.FieldValue.arrayUnion(completionEntry),
+        updatedAt: now,
+      });
+
+      // Update completed deliveries count for both users
+      if (freshData.senderId) {
+        txn.update(db.collection("users").doc(freshData.senderId), {
+          completedDeliveries: admin.firestore.FieldValue.increment(1),
+        });
+      }
+      if (freshData.driverId) {
+        txn.update(db.collection("users").doc(freshData.driverId), {
+          completedDeliveries: admin.firestore.FieldValue.increment(1),
+        });
+      }
     });
-
-    // Update completed deliveries count for both users
-    const batch = db.batch();
-    if (delivery.senderId) {
-      batch.update(db.collection("users").doc(delivery.senderId), {
-        completedDeliveries: admin.firestore.FieldValue.increment(1),
-      });
-    }
-    if (delivery.driverId) {
-      batch.update(db.collection("users").doc(delivery.driverId), {
-        completedDeliveries: admin.firestore.FieldValue.increment(1),
-      });
-    }
-    await batch.commit();
   }
 }
