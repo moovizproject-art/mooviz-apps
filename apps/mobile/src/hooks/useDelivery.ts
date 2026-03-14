@@ -68,6 +68,18 @@ export interface Delivery {
     paymentURL?: string;
   };
   createdAt?: Date | string;
+  interestedDrivers?: Array<{
+    uid: string;
+    name: string;
+    photoUrl: string | null;
+    rating: number;
+    completedDeliveries: number;
+    distanceKm: number;
+    expressedAt?: Date | string;
+    status: string;
+  }>;
+  selectedDriverId?: string | null;
+  selectionExpiresAt?: Date | string | null;
 }
 
 /** Get the effective price from a delivery (handles both old and new field names). */
@@ -132,6 +144,11 @@ interface UseDeliveryResult {
   withdrawInterest: (deliveryId: string) => Promise<void>;
   submitRating: (input: RatingInput) => Promise<void>;
   confirmPayment: (deliveryId: string, paymentPhotoURL?: string) => Promise<void>;
+  selectDriver: (deliveryId: string, driverUid: string) => Promise<void>;
+  confirmSelection: (deliveryId: string) => Promise<void>;
+  declineSelection: (deliveryId: string) => Promise<void>;
+  cancelSelectedDriver: (deliveryId: string) => Promise<void>;
+  withdrawFromInterest: (deliveryId: string) => Promise<void>;
 }
 
 /**
@@ -308,6 +325,56 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     [],
   );
 
+  const selectDriver = useCallback(async (deliveryId: string, driverUid: string) => {
+    try {
+      const fn = functions().httpsCallable('selectDriver');
+      await fn({ deliveryId, driverUid });
+    } catch (err) {
+      console.error('[useDelivery] selectDriver failed:', err);
+      throw new Error((err as any)?.message || 'Select driver failed');
+    }
+  }, []);
+
+  const confirmSelection = useCallback(async (deliveryId: string) => {
+    try {
+      const fn = functions().httpsCallable('confirmSelection');
+      await fn({ deliveryId });
+    } catch (err) {
+      console.error('[useDelivery] confirmSelection failed:', err);
+      throw new Error((err as any)?.message || 'Confirm selection failed');
+    }
+  }, []);
+
+  const declineSelection = useCallback(async (deliveryId: string) => {
+    try {
+      const fn = functions().httpsCallable('declineSelection');
+      await fn({ deliveryId });
+    } catch (err) {
+      console.error('[useDelivery] declineSelection failed:', err);
+      throw new Error((err as any)?.message || 'Decline selection failed');
+    }
+  }, []);
+
+  const cancelSelectedDriver = useCallback(async (deliveryId: string) => {
+    try {
+      const fn = functions().httpsCallable('cancelSelectedDriver');
+      await fn({ deliveryId });
+    } catch (err) {
+      console.error('[useDelivery] cancelSelectedDriver failed:', err);
+      throw new Error((err as any)?.message || 'Cancel selected driver failed');
+    }
+  }, []);
+
+  const withdrawFromInterest = useCallback(async (deliveryId: string) => {
+    try {
+      const fn = functions().httpsCallable('withdrawFromInterest');
+      await fn({ deliveryId });
+    } catch (err) {
+      console.error('[useDelivery] withdrawFromInterest failed:', err);
+      throw new Error((err as any)?.message || 'Withdraw from interest failed');
+    }
+  }, []);
+
   const confirmPayment = useCallback(async (deliveryId: string, paymentPhotoURL?: string) => {
     try {
       // All payment confirmations MUST go through Cloud Functions for server-side validation
@@ -330,6 +397,11 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     withdrawInterest,
     submitRating,
     confirmPayment,
+    selectDriver,
+    confirmSelection,
+    declineSelection,
+    cancelSelectedDriver,
+    withdrawFromInterest,
   };
 }
 
