@@ -50,3 +50,4 @@ export { sendBulkEmail } from "./callable/emailCallable";
 export { timeoutCleanup } from "./scheduled/timeoutCleanup";
 export { chatAutoClose } from "./scheduled/chatAutoClose";
 export { notifyExpansion } from "./scheduled/notifyExpansion";
+export { selectionTimeout } from "./scheduled/selectionTimeout";

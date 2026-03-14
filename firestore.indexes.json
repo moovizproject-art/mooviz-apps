@@ -158,6 +158,14 @@
         { "fieldPath": "notifyExpansionCount", "order": "ASCENDING" },
         { "fieldPath": "lastNotifyExpansion", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "deliveries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "selectionExpiresAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
