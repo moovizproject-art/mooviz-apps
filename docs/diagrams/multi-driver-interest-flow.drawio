@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron">
+  <diagram name="Multi-Driver Interest Flow" id="multi-driver-flow-1">
+    <mxGraphModel dx="1600" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1600" pageHeight="2000" math="0" shadow="0" defaultFontFamily="Arial">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SWIM LANE BACKGROUNDS                       -->
+        <!-- ═══════════════════════════════════════════ -->
+        <mxCell id="lane_sender" value=""
+          style="swimlane;startSize=0;fillColor=#E8F0FE;strokeColor=#1a73e8;opacity=30;rounded=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="20" y="80" width="420" height="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_selected" value=""
+          style="swimlane;startSize=0;fillColor=#E6F4EA;strokeColor=#22c55e;opacity=30;rounded=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="460" y="80" width="420" height="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_unselected" value=""
+          style="swimlane;startSize=0;fillColor=#F3F4F6;strokeColor=#6b7280;opacity=30;rounded=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="900" y="80" width="420" height="1320" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- TITLE                                       -->
+        <!-- ═══════════════════════════════════════════ -->
+        <mxCell id="title" value="MOOVIZ — תהליך מערכת ריבוי נהגים מעוניינים"
+          style="text;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=22;fontStyle=1;fontColor=#1e3a5f;"
+          vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="740" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- LANE HEADERS -->
+        <mxCell id="header_sender" value="שולח (Sender)"
+          style="text;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontStyle=1;fontColor=#FFFFFF;fillColor=#1a73e8;rounded=1;strokeColor=none;"
+          vertex="1" parent="1">
+          <mxGeometry x="80" y="90" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="header_selected" value="נהג נבחר (Selected Driver)"
+          style="text;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontStyle=1;fontColor=#FFFFFF;fillColor=#22c55e;rounded=1;strokeColor=none;"
+          vertex="1" parent="1">
+          <mxGeometry x="520" y="90" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="header_unselected" value="נהג לא נבחר (Other Driver)"
+          style="text;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontStyle=1;fontColor=#FFFFFF;fillColor=#6b7280;rounded=1;strokeColor=none;"
+          vertex="1" parent="1">
+          <mxGeometry x="960" y="90" width="300" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- ARROWS FIRST (Z-order: renders behind)      -->
+        <!-- ═══════════════════════════════════════════ -->
+
+        <!-- Sender flow -->
+        <mxCell id="a_s1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_create" target="s_status_new">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_status_new" target="s_drivers_arrive">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_drivers_arrive" target="s_view_list">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_view_list" target="s_tap_profile">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_tap_profile" target="s_select">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_select" target="s_wait_confirm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s7" value="אישר ✓" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#22c55e;fontFamily=Arial;fontSize=12;fontColor=#22c55e;" edge="1" parent="1" source="s_decision" target="s_waiting">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s8" value="דחה / תם זמן ✗" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EF4444;fontFamily=Arial;fontSize=12;fontColor=#EF4444;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="s_decision" target="s_strikethrough">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_s9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EF4444;dashed=1;" edge="1" parent="1" source="s_strikethrough" target="s_view_list">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="50" y="1040" />
+              <mxPoint x="50" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a_s6b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1a73e8;" edge="1" parent="1" source="s_wait_confirm" target="s_decision">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cancel after waiting -->
+        <mxCell id="a_s10" value="ביטול נהג (מו&quot;מ כושל)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EF4444;dashed=1;fontFamily=Arial;fontSize=11;fontColor=#EF4444;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="s_waiting" target="s_strikethrough">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="100" y="1180" />
+              <mxPoint x="100" y="1040" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Cross-lane: sender selects → driver gets notified -->
+        <mxCell id="a_cross1" value="🔔 השולח בחר בך!" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#F59E0B;dashed=1;fontFamily=Arial;fontSize=12;fontColor=#F59E0B;" edge="1" parent="1" source="s_select" target="d_notified">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Selected driver flow -->
+        <mxCell id="a_d1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#22c55e;" edge="1" parent="1" source="d_sees_feed" target="d_express">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_d2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#22c55e;" edge="1" parent="1" source="d_express" target="d_waiting">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_d3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#22c55e;" edge="1" parent="1" source="d_notified" target="d_confirm_decision">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_d4" value="מאשר ✓" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#22c55e;fontFamily=Arial;fontSize=12;fontColor=#22c55e;" edge="1" parent="1" source="d_confirm_decision" target="d_assigned">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_d5" value="דוחה ✗" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EF4444;fontFamily=Arial;fontSize=12;fontColor=#EF4444;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="d_confirm_decision" target="d_declined">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Unselected driver flow -->
+        <mxCell id="a_u1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6b7280;" edge="1" parent="1" source="u_sees_feed" target="u_express">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_u2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6b7280;" edge="1" parent="1" source="u_express" target="u_no_notification">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_u3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6b7280;" edge="1" parent="1" source="u_no_notification" target="u_outcome">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_u4" value="נבחר ע&quot;י השולח" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#22c55e;fontFamily=Arial;fontSize=12;fontColor=#22c55e;" edge="1" parent="1" source="u_outcome" target="u_gets_selected">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a_u5" value="נהג אחר נבחר" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6b7280;fontFamily=Arial;fontSize=12;fontColor=#6b7280;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="u_outcome" target="u_disappears">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SHAPES (renders in front of arrows)         -->
+        <!-- ═══════════════════════════════════════════ -->
+
+        <!-- ─── SENDER LANE ─── -->
+        <mxCell id="s_create" value="יוצר משלוח חדש"
+          style="ellipse;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=14;fillColor=#1a73e8;strokeColor=#0d47a1;fontColor=#FFFFFF;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="135" y="160" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_status_new" value="סטטוס: חדש (new)&lt;br&gt;מחכה לנהגים"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#DBEAFE;strokeColor=#1a73e8;fontColor=#1e3a5f;"
+          vertex="1" parent="1">
+          <mxGeometry x="135" y="260" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_drivers_arrive" value="נהגים מביעים עניין&lt;br&gt;(מצטברים ברשימה)"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#DBEAFE;strokeColor=#1a73e8;fontColor=#1e3a5f;"
+          vertex="1" parent="1">
+          <mxGeometry x="135" y="360" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_view_list" value="רואה רשימת נהגים&lt;br&gt;⭐ דירוג • 📦 משלוחים • 📍 מרחק"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#DBEAFE;strokeColor=#1a73e8;fontColor=#1e3a5f;"
+          vertex="1" parent="1">
+          <mxGeometry x="115" y="460" width="230" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_tap_profile" value="לוחץ על כרטיס נהג&lt;br&gt;→ רואה פרופיל + ביקורות"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#DBEAFE;strokeColor=#1a73e8;fontColor=#1e3a5f;"
+          vertex="1" parent="1">
+          <mxGeometry x="125" y="560" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_select" value="בוחר נהג"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=15;fillColor=#1a73e8;strokeColor=#0d47a1;fontColor=#FFFFFF;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="155" y="660" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_wait_confirm" value="⏱ ממתין לאישור הנהג&lt;br&gt;(15 דקות)"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#FEF3C7;strokeColor=#F59E0B;fontColor=#92400E;"
+          vertex="1" parent="1">
+          <mxGeometry x="130" y="760" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_decision" value="הנהג&lt;br&gt;אישר?"
+          style="rhombus;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#FEF3C7;strokeColor=#F59E0B;fontColor=#92400E;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="160" y="860" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_strikethrough" value="נהג מסומן בקו חוצה ✗&lt;br&gt;לא יכול לחזור&lt;br&gt;→ חזרה לרשימה"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#FEE2E2;strokeColor=#EF4444;fontColor=#991B1B;"
+          vertex="1" parent="1">
+          <mxGeometry x="115" y="1010" width="210" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s_waiting" value="✅ סטטוס: ממתין לאיסוף&lt;br&gt;(waiting)"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=14;fillColor=#D1FAE5;strokeColor=#22c55e;fontColor=#065F46;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="130" y="1155" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ─── SELECTED DRIVER LANE ─── -->
+        <mxCell id="d_sees_feed" value="רואה משלוח בפיד"
+          style="ellipse;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=14;fillColor=#22c55e;strokeColor=#15803d;fontColor=#FFFFFF;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="575" y="160" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_express" value="מביע עניין במשלוח&lt;br&gt;(expressInterest)"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#D1FAE5;strokeColor=#22c55e;fontColor=#065F46;"
+          vertex="1" parent="1">
+          <mxGeometry x="575" y="280" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_waiting" value="ממתין...&lt;br&gt;לא יודע אם ייבחר"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#F3F4F6;strokeColor=#9CA3AF;fontColor=#374151;"
+          vertex="1" parent="1">
+          <mxGeometry x="575" y="400" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_notified" value="🔔 קיבל התראה:&lt;br&gt;&quot;השולח בחר בך!&quot;"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#FEF3C7;strokeColor=#F59E0B;fontColor=#92400E;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="555" y="660" width="230" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_confirm_decision" value="מאשר תוך&lt;br&gt;15 דקות?"
+          style="rhombus;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#FEF3C7;strokeColor=#F59E0B;fontColor=#92400E;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="600" y="780" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_assigned" value="✅ משלוח שויך אליו&lt;br&gt;סטטוס: waiting"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=14;fillColor=#D1FAE5;strokeColor=#22c55e;fontColor=#065F46;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="575" y="940" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_declined" value="דחה / לא הגיב&lt;br&gt;→ מסומן בקו חוצה"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#FEE2E2;strokeColor=#EF4444;fontColor=#991B1B;"
+          vertex="1" parent="1">
+          <mxGeometry x="480" y="870" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ─── UNSELECTED DRIVER LANE ─── -->
+        <mxCell id="u_sees_feed" value="רואה משלוח בפיד"
+          style="ellipse;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=14;fillColor=#6b7280;strokeColor=#4B5563;fontColor=#FFFFFF;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="1015" y="160" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="u_express" value="מביע עניין במשלוח&lt;br&gt;(expressInterest)"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#F3F4F6;strokeColor=#6b7280;fontColor=#374151;"
+          vertex="1" parent="1">
+          <mxGeometry x="1015" y="280" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="u_no_notification" value="🔕 לא מקבל התראה&lt;br&gt;לא יודע שנהג אחר נבחר"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#F3F4F6;strokeColor=#6b7280;fontColor=#374151;"
+          vertex="1" parent="1">
+          <mxGeometry x="1000" y="420" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="u_outcome" value="מה קורה&lt;br&gt;בהמשך?"
+          style="rhombus;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=13;fillColor=#F3F4F6;strokeColor=#6b7280;fontColor=#374151;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="1040" y="560" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="u_gets_selected" value="🔔 מקבל התראה:&lt;br&gt;&quot;השולח בחר בך!&quot;&lt;br&gt;→ חוזר לתהליך אישור"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#D1FAE5;strokeColor=#22c55e;fontColor=#065F46;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="1010" y="720" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="u_disappears" value="המשלוח נעלם מהפיד&lt;br&gt;(שויך לנהג אחר)&lt;br&gt;ללא התראה"
+          style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontSize=12;fillColor=#F3F4F6;strokeColor=#9CA3AF;fontColor=#6b7280;"
+          vertex="1" parent="1">
+          <mxGeometry x="1210" y="580" width="180" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- LEGEND                                      -->
+        <!-- ═══════════════════════════════════════════ -->
+        <mxCell id="legend_title" value="מקרא"
+          style="text;html=1;align=right;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontStyle=1;fontColor=#374151;"
+          vertex="1" parent="1">
+          <mxGeometry x="1100" y="1100" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend1" value="→ תהליך רגיל"
+          style="text;html=1;align=right;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#1a73e8;"
+          vertex="1" parent="1">
+          <mxGeometry x="1080" y="1130" width="120" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend2" value="⤏ אישור / הצלחה"
+          style="text;html=1;align=right;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#22c55e;"
+          vertex="1" parent="1">
+          <mxGeometry x="1080" y="1155" width="120" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend3" value="⤏ דחייה / ביטול"
+          style="text;html=1;align=right;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#EF4444;"
+          vertex="1" parent="1">
+          <mxGeometry x="1080" y="1180" width="120" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend4" value="⤏ התראה (push)"
+          style="text;html=1;align=right;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#F59E0B;"
+          vertex="1" parent="1">
+          <mxGeometry x="1080" y="1205" width="120" height="25" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
