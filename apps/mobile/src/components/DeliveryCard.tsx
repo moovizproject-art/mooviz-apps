@@ -15,6 +15,11 @@ import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatRelativeDate } from '../utils/formatters';
 import { strings } from '../i18n/strings';
 
+interface RatingSummary {
+  rating: number;
+  comment?: string;
+}
+
 interface DeliveryData {
   id: string;
   status: string;
@@ -29,6 +34,10 @@ interface DeliveryData {
   createdAt?: Date | string;
   distance?: number;
   driverName?: string;
+  ratedBySender?: boolean;
+  ratedByDriver?: boolean;
+  senderRatingGiven?: RatingSummary;
+  driverRatingGiven?: RatingSummary;
 }
 
 interface DeliveryCardProps {
@@ -123,6 +132,38 @@ export function DeliveryCard({
               🚛 {delivery.driverName}
             </Text>
           ) : null}
+
+          {/* Ratings preview — visible when both parties rated */}
+          {delivery.ratedBySender && delivery.ratedByDriver && (
+            <View style={styles.ratingsPreview}>
+              {delivery.senderRatingGiven && (
+                <View style={styles.ratingPreviewRow}>
+                  <Text style={styles.ratingStarsSmall}>
+                    {'★'.repeat(delivery.senderRatingGiven.rating)}
+                    {'☆'.repeat(5 - delivery.senderRatingGiven.rating)}
+                  </Text>
+                  {delivery.senderRatingGiven.comment ? (
+                    <Text style={styles.ratingCommentPreview} numberOfLines={1}>
+                      {delivery.senderRatingGiven.comment}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+              {delivery.driverRatingGiven && (
+                <View style={styles.ratingPreviewRow}>
+                  <Text style={styles.ratingStarsSmall}>
+                    {'★'.repeat(delivery.driverRatingGiven.rating)}
+                    {'☆'.repeat(5 - delivery.driverRatingGiven.rating)}
+                  </Text>
+                  {delivery.driverRatingGiven.comment ? (
+                    <Text style={styles.ratingCommentPreview} numberOfLines={1}>
+                      {delivery.driverRatingGiven.comment}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Bottom: date + price + distance */}
           <View style={styles.bottomRow}>
@@ -248,6 +289,26 @@ const styles = StyleSheet.create({
     color: BRAND.textSecondary,
     marginTop: 2,
     marginBottom: 2,
+  },
+  ratingsPreview: {
+    marginTop: 4,
+    gap: 2,
+  },
+  ratingPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingStarsSmall: {
+    fontSize: 10,
+    color: '#FFB800',
+    letterSpacing: 1,
+  },
+  ratingCommentPreview: {
+    fontSize: 11,
+    color: BRAND.textSecondary,
+    fontStyle: 'italic',
+    flex: 1,
   },
   bottomRow: {
     flexDirection: 'row',

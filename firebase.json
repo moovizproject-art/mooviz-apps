@@ -1,32 +1,24 @@
 {
-  "hosting": [
-    {
-      "target": "admin",
-      "public": "apps/admin/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ]
-    },
-    {
-      "target": "app",
-      "public": "public",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "cleanUrls": true,
-      "headers": [
-        {
-          "source": "**",
-          "headers": [
-            { "key": "X-Content-Type-Options", "value": "nosniff" },
-            { "key": "X-Frame-Options", "value": "DENY" }
-          ]
-        }
-      ]
-    }
-  ],
+  "hosting": {
+    "public": "hosting-dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "X-Frame-Options", "value": "DENY" }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/admin/**",
+        "destination": "/admin/index.html"
+      }
+    ]
+  },
   "functions": {
     "source": "functions",
     "codebase": "default",

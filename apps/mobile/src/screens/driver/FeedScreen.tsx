@@ -42,6 +42,17 @@ import { AddressAutocomplete, GeoAddress } from '../../components/AddressAutocom
 
 const logo = require('../../assets/logo.png');
 
+/** Haversine distance in km between two lat/lng points */
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -58,7 +69,7 @@ const VEHICLE_ICONS = { bicycle: '\u{1F6B2}', bike: '\u{1F3CD}', car: '\u{1F697}
 const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: strings.driver.bicycle.he, bike: strings.driver.bike.he, car: strings.driver.car.he, truck: strings.driver.truck.he };
 const SIZE_OPTIONS = ['small', 'medium', 'large', 'xlarge'] as const;
 const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦', xlarge: '🚚' };
-const SIZE_LABELS_HE: Record<string, string> = { small: strings.driver.small.he, medium: strings.driver.medium.he, large: strings.driver.large.he, xlarge: 'אחר' };
+const SIZE_LABELS_HE: Record<string, string> = { small: strings.driver.small.he, medium: strings.driver.medium.he, large: strings.driver.large.he, xlarge: strings.form.sizeOther.he };
 
 const PREFS_KEY = '@driver_preferences';
 
@@ -236,10 +247,24 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     statusFilter: ['new', 'pending'],
     ...(nearLocation ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
   });
-  // Exclude own deliveries — driver shouldn't see packages they sent
+  // Exclude own deliveries & apply client-side Haversine distance filter
+  // (geohash range queries return a rectangular area, not a circle)
   const deliveries = useMemo(
-    () => rawDeliveries.filter((d) => d.senderId !== currentUser?.uid),
-    [rawDeliveries, currentUser?.uid],
+    () => rawDeliveries.filter((d) => {
+      // Exclude own deliveries
+      if (d.senderId === currentUser?.uid) return false;
+      // Client-side distance filter (geohash range is rectangular, not circular)
+      if (nearLocation && prefs.radiusKm) {
+        const pickupLat = d.pickup?.lat ?? d.pickup?.latitude;
+        const pickupLng = d.pickup?.lng ?? d.pickup?.longitude;
+        if (pickupLat != null && pickupLng != null) {
+          const dist = haversineDistance(nearLocation.latitude, nearLocation.longitude, pickupLat, pickupLng);
+          if (dist > prefs.radiusKm) return false;
+        }
+      }
+      return true;
+    }),
+    [rawDeliveries, currentUser?.uid, nearLocation, prefs.radiusKm],
   );
 
   // ── Latest chat message for current delivery ──
@@ -267,7 +292,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   }, [currentDelivery?.chatId]);
 
   // ── Earnings ──
-  const { earnings, isLoading: _earningsLoading } = useDriverEarnings(currentUser?.uid);
+  const { earnings, recentTransactions, isLoading: _earningsLoading } = useDriverEarnings(currentUser?.uid);
+  const [transactionsOpen, setTransactionsOpen] = useState(false);
 
   const handleDeliveryPress = useCallback(
     (deliveryId: string) => {
@@ -353,7 +379,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           <View style={styles.toggleLabelRow}>
             <View style={[styles.statusDot, { backgroundColor: prefs.isAvailable ? colors.success : colors.textTertiary }]} />
             <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-              {prefs.isAvailable ? t('driver.available') : 'לא זמין'}
+              {prefs.isAvailable ? t('driver.available') : t('driver.unavailable')}
             </Text>
           </View>
           <Switch
@@ -368,7 +394,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         {prefs.isAvailable && (
           <View style={{ marginTop: SPACING.sm }}>
             <View style={styles.sectionRow}>
-              <Text style={[styles.rangeLabel, { color: colors.textSecondary }]}>📏 טווח התראות</Text>
+              <Text style={[styles.rangeLabel, { color: colors.textSecondary }]}>📏 {t('commonExtra.notificationRange')}</Text>
               <Text style={[styles.sectionValue, { color: colors.primary }]}>{prefs.radiusKm} {t('driver.km')}</Text>
             </View>
             <View style={styles.sliderContainer}>
@@ -467,7 +493,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                   </Text>
                   <View style={[styles.currentDeliveryBadge, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[styles.currentDeliveryBadgeText, { color: colors.primary }]}>
-                      {currentDelivery.status === 'picked_up' ? 'נאסף' : currentDelivery.status === 'waiting' ? 'ממתין' : 'ממתין לאישור'}
+                      {currentDelivery.status === 'picked_up' ? t('status.pickedUp') : currentDelivery.status === 'waiting' ? t('status.waiting') : t('status.pending')}
                     </Text>
                   </View>
                 </View>
@@ -555,6 +581,52 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           </View>
         )}
       </View>
+
+      {/* ── Recent Transactions (collapsible) ── */}
+      {recentTransactions.length > 0 && (
+        <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: '#6366F1', borderStartWidth: 4, padding: SPACING.lg }]}>
+          <Pressable onPress={() => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setTransactionsOpen((prev) => !prev);
+          }} style={styles.sectionRow}>
+            <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+              📋 עסקאות אחרונות
+            </Text>
+            <View style={styles.collapseEndRow}>
+              <Text style={[styles.earningsQuickTotal, { color: '#6366F1' }]}>
+                {recentTransactions.length}
+              </Text>
+              <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                {transactionsOpen ? '▼' : '◀'}
+              </Text>
+            </View>
+          </Pressable>
+
+          {transactionsOpen && (
+            <View style={{ marginTop: SPACING.sm }}>
+              {recentTransactions.map((tx) => (
+                <Pressable
+                  key={tx.id}
+                  onPress={() => navigation.navigate('DriverDeliveryDetail', { deliveryId: tx.id })}
+                  style={[styles.transactionRow, { borderBottomColor: colors.border }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.transactionRoute, { color: colors.textPrimary }]} numberOfLines={1}>
+                      {tx.pickupCity} ← {tx.destinationCity}
+                    </Text>
+                    <Text style={[styles.transactionDate, { color: colors.textTertiary }]}>
+                      {tx.completedAt.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}
+                    </Text>
+                  </View>
+                  <Text style={[styles.transactionPrice, { color: colors.success }]}>
+                    {formatCurrency(tx.price)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* ── Advanced Settings (collapsible) ── */}
       <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 4, padding: SPACING.lg }]}>
@@ -1117,6 +1189,28 @@ const styles = StyleSheet.create({
   earningsDivider: {
     width: 1,
     height: 32,
+  },
+
+  // ── Transactions ──
+  transactionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  transactionRoute: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  transactionDate: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  transactionPrice: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 12,
   },
 
   // ── Square Buttons (vehicle / sizes) ──

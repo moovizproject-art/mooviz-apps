@@ -33,7 +33,7 @@ import {
   useMonthlyDeliveries,
   useMonthlyCashflow,
 } from '../hooks/useAnalytics';
-import { LineChart, Line, Area, AreaChart } from 'recharts';
+import { Area, AreaChart } from 'recharts';
 
 const STATUS_COLORS: Record<string, string> = {
   new: '#3B82F6',

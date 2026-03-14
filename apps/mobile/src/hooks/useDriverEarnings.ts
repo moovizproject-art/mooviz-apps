@@ -1,10 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import firestore from '@react-native-firebase/firestore';
 
-interface EarningsPeriod {
+export interface EarningsPeriod {
   total: number;
   count: number;
   avgPerDelivery: number;
+}
+
+export interface CompletedDelivery {
+  id: string;
+  price: number;
+  completedAt: Date;
+  pickupCity: string;
+  destinationCity: string;
 }
 
 interface DriverEarnings {
@@ -45,6 +53,7 @@ function computePeriod(deliveries: Array<{ price: number }>): EarningsPeriod {
 
 export function useDriverEarnings(userId?: string) {
   const [completedDeliveries, setCompletedDeliveries] = useState<Array<{ price: number; completedAt: Date }>>([]);
+  const [recentTransactions, setRecentTransactions] = useState<CompletedDelivery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -63,11 +72,17 @@ export function useDriverEarnings(userId?: string) {
             const data = doc.data();
             const completedAt = data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date(0);
             return {
+              id: doc.id,
               price: data.price || data.suggestedPrice || 0,
               completedAt,
+              pickupCity: data.pickup?.city || data.pickup?.address || '',
+              destinationCity: data.destination?.city || data.destination?.address || '',
             };
           });
+          // Sort newest first
+          items.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
           setCompletedDeliveries(items);
+          setRecentTransactions(items.slice(0, 10));
           setIsLoading(false);
         },
         (error) => {
@@ -105,5 +120,5 @@ export function useDriverEarnings(userId?: string) {
     };
   }, [completedDeliveries]);
 
-  return { earnings, isLoading };
+  return { earnings, recentTransactions, isLoading };
 }

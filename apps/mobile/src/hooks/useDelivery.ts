@@ -52,6 +52,11 @@ export interface Delivery {
   notes?: string;
   chatId?: string;
   rated?: boolean;
+  ratedBySender?: boolean;
+  ratedByDriver?: boolean;
+  ratingsVisibleAt?: Date | string | null;
+  senderRatingGiven?: { rating: number; comment?: string };
+  driverRatingGiven?: { rating: number; comment?: string };
   distance?: number;
   payment?: {
     senderConfirmed: boolean;
@@ -124,6 +129,7 @@ interface UseDeliveryResult {
   createDelivery: (input: CreateDeliveryInput) => Promise<string>;
   updateDeliveryStatus: (deliveryId: string, status: string) => Promise<void>;
   expressInterest: (deliveryId: string, driverId: string) => Promise<void>;
+  withdrawInterest: (deliveryId: string) => Promise<void>;
   submitRating: (input: RatingInput) => Promise<void>;
   confirmPayment: (deliveryId: string, paymentPhotoURL?: string) => Promise<void>;
 }
@@ -270,27 +276,30 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     [],
   );
 
+  const withdrawInterest = useCallback(
+    async (deliveryId: string): Promise<void> => {
+      try {
+        const fn = functions().httpsCallable('withdrawInterest');
+        await fn({ deliveryId });
+      } catch (err) {
+        console.error('[useDelivery] withdrawInterest failed:', err);
+        throw new Error((err as any)?.message || 'Withdraw interest failed');
+      }
+    },
+    [],
+  );
+
   const submitRating = useCallback(
     async (input: RatingInput): Promise<void> => {
       try {
-        const batch = firestore().batch();
-
-        // Create rating document
-        const ratingRef = firestore().collection('ratings').doc();
-        batch.set(ratingRef, {
+        // Route through Cloud Function for server-side validation + aggregate rating update
+        const fn = functions().httpsCallable('submitRating');
+        await fn({
           deliveryId: input.deliveryId,
-          fromUserId: auth().currentUser?.uid,
           targetUserId: input.targetUserId,
           rating: input.rating,
           comment: input.comment || null,
-          createdAt: firestore.FieldValue.serverTimestamp(),
         });
-
-        // Mark delivery as rated
-        const deliveryRef = firestore().collection('deliveries').doc(input.deliveryId);
-        batch.update(deliveryRef, { rated: true });
-
-        await batch.commit();
       } catch (err) {
         console.error('[useDelivery] submitRating failed:', err);
         throw new Error((err as any)?.message || 'Rating submission failed');
@@ -318,6 +327,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     createDelivery,
     updateDeliveryStatus,
     expressInterest,
+    withdrawInterest,
     submitRating,
     confirmPayment,
   };

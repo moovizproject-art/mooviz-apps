@@ -47,12 +47,12 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 /** Size emoji map */
-const SIZE_ICONS: Record<string, { icon: string; label: string }> = {
-  envelope: { icon: '✉️', label: 'קטן' },
-  small: { icon: '✉️', label: 'קטן' },
-  medium: { icon: '📦', label: 'בינוני' },
-  large: { icon: '📦📦', label: 'גדול' },
-  xlarge: { icon: '🚚', label: 'אחר' },
+const SIZE_ICONS: Record<string, { icon: string; labelKey: 'sizeSmall' | 'sizeMedium' | 'sizeLarge' | 'sizeOther' }> = {
+  envelope: { icon: '✉️', labelKey: 'sizeSmall' },
+  small: { icon: '✉️', labelKey: 'sizeSmall' },
+  medium: { icon: '📦', labelKey: 'sizeMedium' },
+  large: { icon: '📦📦', labelKey: 'sizeLarge' },
+  xlarge: { icon: '🚚', labelKey: 'sizeOther' },
 };
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DriverDeliveryDetail'>;
@@ -63,7 +63,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { t } = useI18n();
   const carAlert = useCarAlert();
   const { currentUser } = useAuth();
-  const { expressInterest, confirmPayment } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
+  const { expressInterest, withdrawInterest, confirmPayment } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const { checkAndPromptReview } = useInAppReview();
 
   // Direct document listener — works for ANY delivery regardless of driverId
@@ -101,6 +101,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               notes: d.notes,
               chatId: d.chatId,
               rated: d.rated,
+              ratedBySender: d.ratedBySender,
+              ratedByDriver: d.ratedByDriver,
+              senderRatingGiven: d.senderRatingGiven,
+              driverRatingGiven: d.driverRatingGiven,
               payment: d.payment,
               proof: d.proof,
               createdAt: d.createdAt?.toDate?.() || d.createdAt,
@@ -193,6 +197,27 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     setProofModalVisible(true);
   }, []);
 
+  const handleWithdrawInterest = (): void => {
+    carAlert.show('info', strings.driver.withdrawInterest.he, strings.driver.withdrawConfirm.he, [
+      { text: strings.common.cancel.he, style: 'cancel' },
+      {
+        text: strings.driver.withdrawInterest.he,
+        style: 'destructive',
+        onPress: async () => {
+          setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
+          try {
+            await withdrawInterest(deliveryId);
+            setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
+            carAlert.show('success', t('common.success'), strings.driver.withdrawSuccess.he);
+          } catch (err) {
+            setLoadingVisible(false);
+            carAlert.show('error', t('common.error'), strings.driver.withdrawError.he);
+          }
+        },
+      },
+    ]);
+  };
+
   const doExpressInterest = async (): Promise<void> => {
     setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
     try {
@@ -249,7 +274,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       { name: Platform.OS === 'ios' ? '🍎 Apple Maps' : '🗺️ Maps', url: fallbackUrl },
     ];
 
-    carAlert.show('info', 'נווט באמצעות', 'בחר אפליקציית ניווט', [
+    carAlert.show('info', t('driver.navigateVia'), t('driver.selectNavApp'), [
       ...navApps.map(app => ({
         text: app.name,
         onPress: () => {
@@ -257,7 +282,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           Linking.openURL(app.url).catch(() => Linking.openURL(fallbackUrl));
         },
       })),
-      { text: 'ביטול', style: 'cancel' as const },
+      { text: t('common.cancel'), style: 'cancel' as const },
     ]);
   }, [carAlert]);
 
@@ -287,9 +312,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   // Proof photos (pickup, delivery, payment)
   const proofImages: { url: string; label: string }[] = [];
-  if (delivery.proof?.pickupURL) proofImages.push({ url: delivery.proof.pickupURL, label: 'הוכחת איסוף' });
-  if (delivery.proof?.deliveryURL) proofImages.push({ url: delivery.proof.deliveryURL, label: 'הוכחת מסירה' });
-  if (delivery.proof?.paymentURL) proofImages.push({ url: delivery.proof.paymentURL, label: 'צילום תשלום' });
+  if (delivery.proof?.pickupURL) proofImages.push({ url: delivery.proof.pickupURL, label: t('deliveryExtra.pickupProof') });
+  if (delivery.proof?.deliveryURL) proofImages.push({ url: delivery.proof.deliveryURL, label: t('deliveryExtra.deliveryProof') });
+  if (delivery.proof?.paymentURL) proofImages.push({ url: delivery.proof.paymentURL, label: t('deliveryExtra.paymentProof') });
   const proofUrls = proofImages.map(p => p.url);
 
   return (
@@ -311,14 +336,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             </Text>
             <View style={styles.sizeRow}>
               <Text style={styles.sizeIcon}>{sizeInfo.icon}</Text>
-              <Text style={[styles.sizeLabel, { color: colors.textSecondary }]}>{sizeInfo.label}</Text>
+              <Text style={[styles.sizeLabel, { color: colors.textSecondary }]}>{t(`form.${sizeInfo.labelKey}`)}</Text>
             </View>
           </View>
           <View style={[styles.priceTag, { backgroundColor: '#E8F5E9' }]}>
             <Text style={styles.priceValue}>{formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}</Text>
             {delivery.status === 'completed_paid' && (
               <View style={styles.earningsBadge}>
-                <Text style={styles.earningsBadgeText}>✅ נוסף לרווחים</Text>
+                <Text style={styles.earningsBadgeText}>✅ {t('deliveryExtra.addedToEarnings')}</Text>
               </View>
             )}
           </View>
@@ -357,6 +382,16 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         {isAvailable && !isMyJob && (
           <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary }]} onPress={handleExpressInterest}>
             <Text style={styles.actionButtonText}>🚛 {t('driver.expressInterest')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Withdraw interest — driver cancels after expressing interest (pending status) */}
+        {isMyJob && delivery.status === 'pending' && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: '#E53935' }]}
+            onPress={handleWithdrawInterest}
+          >
+            <Text style={styles.actionButtonText}>{strings.driver.withdrawInterest.he}</Text>
           </TouchableOpacity>
         )}
 
@@ -425,17 +460,17 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       <View style={styles.navButtons}>
         <TouchableOpacity
           style={[styles.navBtn, { backgroundColor: colors.success }]}
-          onPress={() => openNavigation(pickupCoords.latitude, pickupCoords.longitude, delivery.pickup?.address || 'Pickup')}
+          onPress={() => openNavigation(pickupCoords.latitude, pickupCoords.longitude, delivery.pickup?.address || t('delivery.pickup'))}
         >
           <Text style={styles.navBtnIcon}>📍</Text>
-          <Text style={styles.navBtnText}>נווט לאיסוף</Text>
+          <Text style={styles.navBtnText}>{t('driver.navigateToPickup')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navBtn, { backgroundColor: colors.primary }]}
-          onPress={() => openNavigation(destCoords.latitude, destCoords.longitude, delivery.destination?.address || 'Destination')}
+          onPress={() => openNavigation(destCoords.latitude, destCoords.longitude, delivery.destination?.address || t('delivery.destination'))}
         >
           <Text style={styles.navBtnIcon}>🏁</Text>
-          <Text style={styles.navBtnText}>נווט ליעד</Text>
+          <Text style={styles.navBtnText}>{t('driver.navigateToDestination')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -446,7 +481,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           <View style={styles.senderInfo}>
             <Text style={[styles.senderName, { color: colors.textPrimary }]}>{delivery.senderName}</Text>
             <Text style={[styles.senderRating, { color: colors.textSecondary }]}>
-              {delivery.senderRating ? `⭐ ${delivery.senderRating.toFixed(1)}` : 'שולח חדש'}
+              {delivery.senderRating ? `⭐ ${delivery.senderRating.toFixed(1)}` : t('driver.newSender')}
             </Text>
           </View>
           {isMyJob && !!delivery.chatId && (
@@ -464,7 +499,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {mediaList.length > 0 && (
         <View>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            תמונות הפריט ({imageCount}/5{hasVideo ? ' + וידאו' : ''})
+            {t('deliveryExtra.itemPhotos')} ({imageCount}/5{hasVideo ? ` + ${t('deliveryExtra.video')}` : ''})
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaList}>
             {mediaList.map((url, i) => {
@@ -485,7 +520,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   {isVideo ? (
                     <View style={[styles.mediaThumb, { backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' }]}>
                       <Text style={{ fontSize: 28 }}>🎬</Text>
-                      <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>וידאו</Text>
+                      <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>{t('deliveryExtra.video')}</Text>
                     </View>
                   ) : (
                     <Image source={{ uri: url }} style={styles.mediaThumb} />
@@ -546,7 +581,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               }}
             >
               <Image source={{ uri: delivery.proof.paymentURL }} style={styles.paymentProofThumb} />
-              <Text style={[styles.paymentProofLabel, { color: colors.success }]}>צילום תשלום מהשולח</Text>
+              <Text style={[styles.paymentProofLabel, { color: colors.success }]}>{t('deliveryExtra.paymentProofFromSender')}</Text>
             </TouchableOpacity>
           )}
 
@@ -580,13 +615,56 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       )}
 
       {/* ── 8. Rate sender ── */}
-      {['delivered', 'completed_paid'].includes(delivery.status) && !delivery.rated && (
+      {['delivered', 'completed_paid'].includes(delivery.status) && !delivery.ratedByDriver && (
         <TouchableOpacity
           style={[styles.card, { backgroundColor: colors.accent, alignItems: 'center', paddingVertical: 16 }]}
           onPress={() => navigation.navigate('Rating', { deliveryId: delivery.id, targetUserId: delivery.senderId })}
         >
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{t('delivery.rateSender')}</Text>
         </TouchableOpacity>
+      )}
+
+      {/* ── 9. Ratings summary — visible when both parties rated ── */}
+      {delivery.ratedBySender && delivery.ratedByDriver && (
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>⭐ דירוגים</Text>
+
+          {/* Driver's rating (about sender) */}
+          {delivery.driverRatingGiven && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>
+                הדירוג שלך על השולח
+              </Text>
+              <Text style={styles.ratingStarsGold}>
+                {'★'.repeat(delivery.driverRatingGiven.rating)}
+                {'☆'.repeat(5 - delivery.driverRatingGiven.rating)}
+              </Text>
+              {delivery.driverRatingGiven.comment ? (
+                <Text style={[styles.ratingComment, { color: colors.textPrimary }]} numberOfLines={3}>
+                  &quot;{delivery.driverRatingGiven.comment}&quot;
+                </Text>
+              ) : null}
+            </View>
+          )}
+
+          {/* Sender's rating (about driver) */}
+          {delivery.senderRatingGiven && (
+            <View>
+              <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>
+                דירוג השולח עליך
+              </Text>
+              <Text style={styles.ratingStarsGold}>
+                {'★'.repeat(delivery.senderRatingGiven.rating)}
+                {'☆'.repeat(5 - delivery.senderRatingGiven.rating)}
+              </Text>
+              {delivery.senderRatingGiven.comment ? (
+                <Text style={[styles.ratingComment, { color: colors.textPrimary }]} numberOfLines={3}>
+                  &quot;{delivery.senderRatingGiven.comment}&quot;
+                </Text>
+              ) : null}
+            </View>
+          )}
+        </View>
       )}
 
     </ScrollView>
@@ -596,7 +674,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       visible={proofModalVisible}
       onCapture={handleProofCapture}
       onClose={() => setProofModalVisible(false)}
-      label={proofType === 'pickup' ? 'צלם הוכחת איסוף' : 'צלם הוכחת מסירה'}
+      label={proofType === 'pickup' ? t('driver.capturePickupProof') : t('driver.captureDeliveryProof')}
     />
     <ImageGalleryModal
       visible={galleryVisible}
@@ -922,5 +1000,26 @@ const styles = StyleSheet.create({
   chatButtonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  ratingLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  ratingStarsGold: {
+    fontSize: 18,
+    color: '#FFB800',
+    letterSpacing: 2,
+  },
+  ratingComment: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginTop: 4,
+    writingDirection: 'rtl',
   },
 });

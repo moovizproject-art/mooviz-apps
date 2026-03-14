@@ -40,11 +40,11 @@ import { strings } from '../../i18n/strings';
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 
 const TIMELINE_STEPS = [
-  { key: 'new', label: 'ממתין לנהג' },
-  { key: 'pending', label: 'נהג מעוניין' },
-  { key: 'waiting', label: 'אושר' },
-  { key: 'picked_up', label: 'נאסף' },
-  { key: 'delivered', label: 'נמסר' },
+  { key: 'new', labelKey: 'waitingForDriver' },
+  { key: 'pending', labelKey: 'driverInterested' },
+  { key: 'waiting', labelKey: 'approved' },
+  { key: 'picked_up', labelKey: 'pickedUp' },
+  { key: 'delivered', labelKey: 'delivered' },
 ] as const;
 
 /**
@@ -60,6 +60,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const delivery = getDeliveryById(deliveryId);
 
   const [driverProfile, setDriverProfile] = useState<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const paymentSectionY = useRef<number>(0);
+  const hasAutoScrolled = useRef(false);
   const staticMapRef = useRef<MapView>(null);
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
   const [mediaUploading, setMediaUploading] = useState(false);
@@ -159,6 +162,18 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     );
   }, [delivery?.id, mediaList]);
 
+  // Auto-scroll to payment section when delivery is picked_up/delivered (first access)
+  useEffect(() => {
+    if (!delivery || hasAutoScrolled.current) return;
+    const shouldScroll = ['picked_up', 'in_transit', 'delivered'].includes(delivery.status);
+    if (shouldScroll && paymentSectionY.current > 0) {
+      hasAutoScrolled.current = true;
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: paymentSectionY.current - 80, animated: true });
+      }, 500);
+    }
+  }, [delivery?.status]);
+
   if (isLoading || !delivery) {
     return <LoadingScreen />;
   }
@@ -183,7 +198,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const canCancel = ['new', 'pending', 'matched', 'waiting'].includes(delivery.status);
   const isPostPickup = ['picked_up', 'in_transit', 'delivered', 'completed_paid'].includes(delivery.status);
   const showPayment = delivery.status === 'delivered';
-  const showRate = ['delivered', 'completed_paid'].includes(delivery.status) && !delivery.rated;
+  const showRate = ['delivered', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender;
   const hasDriver = !!delivery.driverId;
   const driverName = driverProfile?.fullName || delivery.driverName || '';
   const driverPhoto = driverProfile?.profilePhotoURL || delivery.driverPhotoUrl;
@@ -210,6 +225,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -287,7 +303,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   ]}
                   numberOfLines={2}
                 >
-                  {step.label}
+                  {t(`status.${step.labelKey}`)}
                 </Text>
               </View>
             </React.Fragment>
@@ -303,13 +319,16 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         />
       )}
 
-      {/* ── 2c. Delivery Proof Section ── */}
+      {/* ── 2c. Delivery Proof Section (auto-scroll anchor) ── */}
       {(delivery.proof?.pickupURL || delivery.proof?.deliveryURL) && (() => {
         const proofImages: string[] = [];
         if (delivery.proof?.pickupURL) proofImages.push(delivery.proof.pickupURL);
         if (delivery.proof?.deliveryURL) proofImages.push(delivery.proof.deliveryURL);
         return (
-          <View style={[styles.proofCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[styles.proofCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onLayout={(e) => { paymentSectionY.current = e.nativeEvent.layout.y; }}
+          >
             <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{strings.deliveryExtra.deliveryProofs.he}</Text>
             <View style={styles.proofRow}>
               {delivery.proof?.pickupURL && (
@@ -346,7 +365,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* ── 2d. Payment Section (moved above map) ── */}
       {showPayment && (
-        <View style={[styles.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[styles.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onLayout={(e) => { paymentSectionY.current = e.nativeEvent.layout.y; }}
+        >
           <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>
             {t('payment.confirmTitle')}
           </Text>
@@ -729,6 +751,53 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           >
             <Text style={styles.rateBtnText}>{t('delivery.rateDriver')}</Text>
           </TouchableOpacity>
+        )}
+
+        {/* Ratings summary — visible when both parties rated */}
+        {delivery.ratedBySender && delivery.ratedByDriver && (
+          <View style={[styles.ratingsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.ratingsCardTitle, { color: colors.textPrimary }]}>⭐ דירוגים</Text>
+
+            {/* Sender's rating (about driver) */}
+            {delivery.senderRatingGiven && (
+              <View style={styles.ratingSummaryRow}>
+                <Text style={[styles.ratingSummaryLabel, { color: colors.textSecondary }]}>
+                  דירוג שלך על הנהג
+                </Text>
+                <View style={styles.ratingStarsRow}>
+                  <Text style={styles.ratingStarsGold}>
+                    {'★'.repeat(delivery.senderRatingGiven.rating)}
+                    {'☆'.repeat(5 - delivery.senderRatingGiven.rating)}
+                  </Text>
+                </View>
+                {delivery.senderRatingGiven.comment ? (
+                  <Text style={[styles.ratingSummaryComment, { color: colors.textPrimary }]} numberOfLines={2}>
+                    &quot;{delivery.senderRatingGiven.comment}&quot;
+                  </Text>
+                ) : null}
+              </View>
+            )}
+
+            {/* Driver's rating (about sender) */}
+            {delivery.driverRatingGiven && (
+              <View style={[styles.ratingSummaryRow, { marginTop: 12 }]}>
+                <Text style={[styles.ratingSummaryLabel, { color: colors.textSecondary }]}>
+                  דירוג הנהג עליך
+                </Text>
+                <View style={styles.ratingStarsRow}>
+                  <Text style={styles.ratingStarsGold}>
+                    {'★'.repeat(delivery.driverRatingGiven.rating)}
+                    {'☆'.repeat(5 - delivery.driverRatingGiven.rating)}
+                  </Text>
+                </View>
+                {delivery.driverRatingGiven.comment ? (
+                  <Text style={[styles.ratingSummaryComment, { color: colors.textPrimary }]} numberOfLines={2}>
+                    &quot;{delivery.driverRatingGiven.comment}&quot;
+                  </Text>
+                ) : null}
+              </View>
+            )}
+          </View>
         )}
       </View>
     </ScrollView>
@@ -1150,5 +1219,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  ratingsCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  ratingsCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  ratingSummaryRow: {
+    gap: 4,
+  },
+  ratingSummaryLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  ratingStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingStarsGold: {
+    fontSize: 18,
+    color: '#FFB800',
+    letterSpacing: 2,
+  },
+  ratingSummaryComment: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginTop: 2,
+    writingDirection: 'rtl',
   },
 });

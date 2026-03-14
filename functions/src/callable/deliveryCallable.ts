@@ -13,7 +13,7 @@ import {
   assertUserRole,
 } from "../validators/statusValidator";
 import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
-import { getNearbyDriverTokens, encodeGeohash } from "../services/geohashService";
+import { getNearbyDriverTokensMultiLocation, encodeGeohash } from "../services/geohashService";
 
 const db = admin.firestore();
 const GEOHASH_PRECISION = 7;
@@ -201,10 +201,11 @@ export const createDelivery = onCall(async (request) => {
   console.log(`createDelivery: ${deliveryId} created by ${uid}`);
 
   // --- Notify nearby drivers (fire-and-forget — don't block response) ---
+  // Uses multi-location matching: checks driver's live GPS, home address, and work address
   if (pickupGeohash) {
     const pickupCity = pickupRaw.city ?? "";
     const destCity = destRaw.city ?? "";
-    getNearbyDriverTokens(pickupGeohash, 15, pickupLat, pickupLng)
+    getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng)
       .then((nearbyDrivers) =>
         Promise.all(
           nearbyDrivers.map((driver) =>
@@ -221,7 +222,7 @@ export const createDelivery = onCall(async (request) => {
               }
             )
           )
-        ).then(() => console.log(`createDelivery: notified ${nearbyDrivers.length} nearby drivers`))
+        ).then(() => console.log(`createDelivery: notified ${nearbyDrivers.length} nearby drivers (multi-location)`))
       )
       .catch((err) => console.error("createDelivery: nearby driver notification failed:", err));
   }
@@ -646,4 +647,214 @@ export const declineDriver = onCall(async (request) => {
   }
 
   return { success: true, message: "Driver declined successfully" };
+});
+
+/**
+ * Driver withdraws their interest from a delivery.
+ * Transitions: pending -> new (resets driver assignment)
+ * Re-notifies nearby drivers about the available delivery.
+ */
+export const withdrawInterest = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { deliveryId } = request.data;
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+
+  // Verify the caller is the assigned driver
+  assertIsDriver(delivery.driverId, uid);
+
+  // Validate transition
+  assertValidTransition(delivery.status, "new", "driver", uid);
+
+  console.log(`withdrawInterest: driver ${uid} withdrawing from delivery ${deliveryId}`);
+
+  await updateDeliveryStatus(
+    ref,
+    "new",
+    uid,
+    "Driver withdrew interest",
+    {
+      driverId: null,
+      driverName: null,
+      driverPhotoUrl: null,
+      driverRating: null,
+    }
+  );
+
+  // Notify the sender
+  try {
+    await sendPushNotification(
+      delivery.senderId,
+      "הנהג ביטל את ההתעניינות",
+      "הנהג ביטל את ההתעניינות במשלוח שלך",
+      { event: "driver_withdrew", deliveryId }
+    );
+  } catch (notifErr: unknown) {
+    console.error("withdrawInterest: sender notification failed:", notifErr);
+  }
+
+  // Re-notify nearby drivers about the now-available delivery
+  const pickupGeohash = delivery.pickup?.geohash;
+  if (pickupGeohash) {
+    const pickupCity = delivery.pickup?.city ?? "";
+    const destCity = delivery.destination?.city ?? "";
+    getNearbyDriverTokensMultiLocation(pickupGeohash, 15, delivery.pickup?.lat, delivery.pickup?.lng, [uid])
+      .then((nearbyDrivers: import("../services/geohashService").NearbyDriver[]) =>
+        Promise.all(
+          nearbyDrivers.map((driver: import("../services/geohashService").NearbyDriver) =>
+            sendPushNotification(
+              driver.uid,
+              "משלוח חדש באזורך",
+              `משלוח מ-${pickupCity} ל-${destCity} - ${delivery.price} ₪`,
+              {
+                event: "new_listing_nearby",
+                deliveryId,
+                pickupCity,
+                destinationCity: destCity,
+                price: String(delivery.price ?? 0),
+              }
+            )
+          )
+        ).then(() => console.log(`withdrawInterest: notified ${nearbyDrivers.length} nearby drivers (multi-location)`))
+      )
+      .catch((err: unknown) => console.error("withdrawInterest: nearby driver notification failed:", err));
+  }
+
+  return { success: true };
+});
+
+/**
+ * Submit a rating for the other party after delivery.
+ * Validates caller is sender or driver, delivery is delivered/completed_paid,
+ * and the caller hasn't already rated. Uses a transaction for atomic aggregate updates.
+ */
+export const submitRating = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { deliveryId, rating, comment } = request.data;
+
+  // Validate rating value
+  if (typeof rating !== "number" || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
+    throw new HttpsError("invalid-argument", "Rating must be an integer between 1 and 5");
+  }
+
+  if (comment !== undefined && typeof comment !== "string") {
+    throw new HttpsError("invalid-argument", "Comment must be a string");
+  }
+
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+
+  // Validate delivery status
+  if (delivery.status !== "delivered" && delivery.status !== "completed_paid") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Ratings can only be submitted when delivery status is 'delivered' or 'completed_paid'"
+    );
+  }
+
+  // Determine caller's role in this delivery
+  const isSender = delivery.senderId === uid;
+  const isDriver = delivery.driverId === uid;
+
+  if (!isSender && !isDriver) {
+    throw new HttpsError(
+      "permission-denied",
+      "Only the sender or driver of this delivery can submit a rating"
+    );
+  }
+
+  // Check if already rated
+  if (isSender && delivery.ratedBySender) {
+    throw new HttpsError("already-exists", "Sender has already rated this delivery");
+  }
+  if (isDriver && delivery.ratedByDriver) {
+    throw new HttpsError("already-exists", "Driver has already rated this delivery");
+  }
+
+  const callerRole = isSender ? "sender" : "driver";
+  const targetUserId = isSender ? delivery.driverId! : delivery.senderId;
+  const now = admin.firestore.Timestamp.now();
+
+  // Determine which aggregate field to update on the target user
+  // Sender rates the driver -> update ratingAsDriver
+  // Driver rates the sender -> update ratingAsSender
+  const ratingField = isSender ? "ratingAsDriver" : "ratingAsSender";
+
+  // Check if the other party has already rated
+  const otherRated = isSender ? !!delivery.ratedByDriver : !!delivery.ratedBySender;
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+  const ratingsVisibleAt = otherRated
+    ? now
+    : admin.firestore.Timestamp.fromMillis(now.toMillis() + FIVE_DAYS_MS);
+
+  // Use a transaction to atomically update the target user's aggregate rating
+  await db.runTransaction(async (transaction) => {
+    const targetUserRef = db.collection("users").doc(targetUserId);
+    const targetUserDoc = await transaction.get(targetUserRef);
+
+    if (!targetUserDoc.exists) {
+      throw new HttpsError("not-found", `Target user ${targetUserId} not found`);
+    }
+
+    const targetUserData = targetUserDoc.data()!;
+    const currentRating = targetUserData[ratingField] ?? { average: 0, count: 0 };
+    const currentAvg: number = currentRating.average ?? 0;
+    const currentCount: number = currentRating.count ?? 0;
+
+    // Recalculate average
+    const newCount = currentCount + 1;
+    const newAverage = ((currentAvg * currentCount) + rating) / newCount;
+
+    // Update target user's aggregate rating
+    transaction.update(targetUserRef, {
+      [ratingField]: {
+        average: Math.round(newAverage * 100) / 100, // round to 2 decimal places
+        count: newCount,
+      },
+    });
+
+    // Create rating document
+    const ratingDocRef = db.collection("ratings").doc();
+    transaction.set(ratingDocRef, {
+      deliveryId,
+      fromUserId: uid,
+      targetUserId,
+      rating,
+      comment: comment ?? "",
+      role: callerRole,
+      createdAt: now,
+    });
+
+    // Update delivery document — include rating summary for card display
+    const deliveryUpdate: Record<string, unknown> = {
+      updatedAt: now,
+      ratingsVisibleAt,
+    };
+    // Store rating summary on delivery doc (for card/detail display without extra queries)
+    const ratingSummaryKey = isSender ? "senderRatingGiven" : "driverRatingGiven";
+    deliveryUpdate[ratingSummaryKey] = {
+      rating,
+      comment: (comment ?? "").slice(0, 100),
+    };
+    if (isSender) {
+      deliveryUpdate.ratedBySender = true;
+    } else {
+      deliveryUpdate.ratedByDriver = true;
+    }
+    // If both have now rated, update ratingsVisibleAt to now
+    if (otherRated) {
+      deliveryUpdate.ratingsVisibleAt = now;
+    }
+    transaction.update(ref, deliveryUpdate);
+  });
+
+  console.log(`submitRating: ${callerRole} ${uid} rated ${targetUserId} with ${rating} for delivery ${deliveryId}`);
+
+  return { success: true };
 });
