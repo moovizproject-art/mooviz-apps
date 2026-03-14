@@ -12,12 +12,19 @@ export { onMessageCreate } from "./triggers/chatTrigger";
 export {
   createDelivery,
   expressInterest,
+  selectDriver,
+  confirmSelection,
+  declineSelection,
+  cancelSelectedDriver,
+  withdrawFromInterest,
   approveDriver,
   declineDriver,
   confirmPickup,
   confirmDelivery,
   confirmPayment,
   cancelDelivery,
+  withdrawInterest,
+  submitRating,
 } from "./callable/deliveryCallable";
 
 export {

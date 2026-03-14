@@ -325,6 +325,253 @@ export const expressInterest = onCall(async (request) => {
 });
 
 /**
+ * Sender selects a driver from the interested list.
+ * Marks the driver as "selected" and sets a 15-minute confirmation window.
+ */
+export const selectDriver = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
+
+  const { deliveryId, driverUid } = request.data;
+  if (!deliveryId || !driverUid) throw new HttpsError("invalid-argument", "deliveryId and driverUid are required");
+
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+  if (delivery.senderId !== uid) throw new HttpsError("permission-denied", "Only the sender can select a driver");
+
+  const SELECTION_TIMEOUT_MS = 15 * 60 * 1000;
+
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const freshData = freshDoc.data()!;
+
+    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "Delivery must be in 'new' status");
+    if (freshData.selectedDriverId) throw new HttpsError("failed-precondition", "Another driver is already selected");
+
+    const interested: any[] = freshData.interestedDrivers || [];
+    const driverEntry = interested.find((d: any) => d.uid === driverUid && d.status === "interested");
+    if (!driverEntry) throw new HttpsError("not-found", "Driver not found in interested list or not available");
+
+    const updated = interested.map((d: any) => d.uid === driverUid ? { ...d, status: "selected" } : d);
+    const now = admin.firestore.Timestamp.now();
+
+    txn.update(ref, {
+      interestedDrivers: updated,
+      selectedDriverId: driverUid,
+      selectionExpiresAt: admin.firestore.Timestamp.fromMillis(now.toMillis() + SELECTION_TIMEOUT_MS),
+      updatedAt: now,
+    });
+  });
+
+  sendPushNotification(driverUid, "השולח בחר בך!", "אשר את המשלוח תוך 15 דקות", { event: "driver_selected", deliveryId })
+    .catch((err: unknown) => console.error("selectDriver notification failed:", err));
+
+  console.log(`selectDriver: sender ${uid} selected driver ${driverUid} for delivery ${deliveryId}`);
+  return { success: true };
+});
+
+/**
+ * Selected driver confirms the assignment.
+ * Transitions: new -> waiting. Creates a chat room.
+ */
+export const confirmSelection = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
+
+  const { deliveryId } = request.data;
+  if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
+
+  const { ref } = await getDeliveryOrThrow(deliveryId);
+
+  let senderId = "";
+  let driverName = "";
+
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const freshData = freshDoc.data()!;
+    senderId = freshData.senderId;
+
+    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "Delivery must be in 'new' status");
+    if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "You are not the selected driver");
+
+    const expiresAt = freshData.selectionExpiresAt;
+    if (expiresAt && expiresAt.toMillis() < Date.now()) throw new HttpsError("deadline-exceeded", "Selection has expired");
+
+    const interested: any[] = freshData.interestedDrivers || [];
+    const driverEntry = interested.find((d: any) => d.uid === uid);
+    driverName = driverEntry?.name || "";
+
+    const updatedInterested = interested.map((d: any) => d.uid === uid ? { ...d, status: "confirmed" } : d);
+    const now = admin.firestore.Timestamp.now();
+
+    // Create chat
+    const chatRef = db.collection("chats").doc();
+    txn.set(chatRef, {
+      deliveryId,
+      participants: [freshData.senderId, uid],
+      lastMessage: "",
+      lastMessageAt: now,
+      lastSenderId: "",
+      createdAt: now,
+      closed: false,
+    });
+
+    txn.update(ref, {
+      status: "waiting",
+      driverId: uid,
+      driverName: driverEntry?.name || "",
+      driverPhotoUrl: driverEntry?.photoUrl || null,
+      driverRating: driverEntry?.rating || 0,
+      interestedDrivers: updatedInterested,
+      selectedDriverId: null,
+      selectionExpiresAt: null,
+      chatId: chatRef.id,
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: "waiting",
+        timestamp: now,
+        actor: uid,
+        note: "Driver confirmed selection",
+      }),
+      updatedAt: now,
+    });
+  });
+
+  sendPushNotification(senderId, "הנהג אישר!", `המשלוח שויך ל-${driverName}`, { event: "driver_confirmed", deliveryId })
+    .catch((err: unknown) => console.error("confirmSelection notification failed:", err));
+
+  console.log(`confirmSelection: driver ${uid} confirmed for delivery ${deliveryId}`);
+  return { success: true };
+});
+
+/**
+ * Selected driver declines the assignment.
+ * Resets selectedDriverId so sender can choose another driver.
+ */
+export const declineSelection = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
+
+  const { deliveryId } = request.data;
+  if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
+
+  const { ref } = await getDeliveryOrThrow(deliveryId);
+  let senderId = "";
+
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const freshData = freshDoc.data()!;
+    senderId = freshData.senderId;
+
+    if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "You are not the selected driver");
+
+    const now = admin.firestore.Timestamp.now();
+    const interested: any[] = freshData.interestedDrivers || [];
+    const updated = interested.map((d: any) => d.uid === uid ? { ...d, status: "declined" } : d);
+
+    txn.update(ref, {
+      interestedDrivers: updated,
+      selectedDriverId: null,
+      selectionExpiresAt: null,
+      updatedAt: now,
+    });
+  });
+
+  sendPushNotification(senderId, "הנהג דחה", "בחר נהג אחר מהרשימה", { event: "driver_declined", deliveryId })
+    .catch((err: unknown) => console.error("declineSelection notification failed:", err));
+
+  console.log(`declineSelection: driver ${uid} declined for delivery ${deliveryId}`);
+  return { success: true };
+});
+
+/**
+ * Sender cancels a driver after the delivery entered 'waiting' status.
+ * Reverts delivery back to 'new' so other drivers can be selected.
+ */
+export const cancelSelectedDriver = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
+
+  const { deliveryId } = request.data;
+  if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
+
+  const { ref } = await getDeliveryOrThrow(deliveryId);
+  let cancelledDriverId = "";
+
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const freshData = freshDoc.data()!;
+
+    if (freshData.senderId !== uid) throw new HttpsError("permission-denied", "Only the sender can cancel");
+    if (freshData.status !== "waiting") throw new HttpsError("failed-precondition", "Delivery must be in 'waiting' status");
+    if (!freshData.driverId) throw new HttpsError("failed-precondition", "No driver assigned");
+
+    cancelledDriverId = freshData.driverId;
+    const now = admin.firestore.Timestamp.now();
+    const interested: any[] = freshData.interestedDrivers || [];
+    const updated = interested.map((d: any) => d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d);
+
+    txn.update(ref, {
+      status: "new",
+      driverId: null,
+      driverName: null,
+      driverPhotoUrl: null,
+      driverRating: null,
+      interestedDrivers: updated,
+      selectedDriverId: null,
+      selectionExpiresAt: null,
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: "new",
+        timestamp: now,
+        actor: uid,
+        note: "Sender cancelled selected driver, reverted to new",
+      }),
+      updatedAt: now,
+    });
+  });
+
+  sendPushNotification(cancelledDriverId, "השולח ביטל את הבחירה", "המשלוח הוחזר לרשימה", { event: "selection_cancelled", deliveryId })
+    .catch((err: unknown) => console.error("cancelSelectedDriver notification failed:", err));
+
+  console.log(`cancelSelectedDriver: sender ${uid} cancelled driver ${cancelledDriverId} for delivery ${deliveryId}`);
+  return { success: true };
+});
+
+/**
+ * Driver removes themselves from the interested list.
+ * Only allowed while their status is still "interested" (not selected/confirmed).
+ */
+export const withdrawFromInterest = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
+
+  const { deliveryId } = request.data;
+  if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
+
+  const { ref } = await getDeliveryOrThrow(deliveryId);
+
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const freshData = freshDoc.data()!;
+
+    const interested: any[] = freshData.interestedDrivers || [];
+    const entry = interested.find((d: any) => d.uid === uid);
+
+    if (!entry || entry.status !== "interested") {
+      throw new HttpsError("failed-precondition", "Not in interested list or already selected/declined");
+    }
+
+    const updated = interested.map((d: any) => d.uid === uid ? { ...d, status: "withdrawn" } : d);
+
+    txn.update(ref, {
+      interestedDrivers: updated,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+  });
+
+  console.log(`withdrawFromInterest: driver ${uid} withdrew from delivery ${deliveryId}`);
+  return { success: true };
+});
+
+/**
  * Sender approves a driver for a delivery.
  * Transitions: pending -> waiting
  * Creates a chat room between sender and driver.
