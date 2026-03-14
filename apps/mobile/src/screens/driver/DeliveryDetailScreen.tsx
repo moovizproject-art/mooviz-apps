@@ -33,6 +33,7 @@ import { ProofCamera } from '../../components/ProofCamera';
 import { uploadProofPhoto } from '../../services/storage';
 import { strings } from '../../i18n/strings';
 import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
+import { DriverConfirmBanner } from '../../components/DriverConfirmBanner';
 import Geolocation from 'react-native-geolocation-service';
 
 /** Haversine distance in km between two lat/lng points */
@@ -63,7 +64,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { t } = useI18n();
   const carAlert = useCarAlert();
   const { currentUser } = useAuth();
-  const { expressInterest, withdrawInterest, confirmPayment } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
+  const { expressInterest, withdrawInterest, confirmPayment, confirmSelection, declineSelection } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const { checkAndPromptReview } = useInAppReview();
 
   // Direct document listener — works for ANY delivery regardless of driverId
@@ -108,6 +109,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               payment: d.payment,
               proof: d.proof,
               createdAt: d.createdAt?.toDate?.() || d.createdAt,
+              selectedDriverId: d.selectedDriverId || null,
+              selectionExpiresAt: d.selectionExpiresAt || null,
+              interestedDrivers: d.interestedDrivers || [],
             });
           }
           setIsLoading(false);
@@ -161,6 +165,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [proofModalVisible, setProofModalVisible] = useState(false);
   const [proofType, setProofType] = useState<'pickup' | 'delivery'>('pickup');
   const [proofUploading, setProofUploading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
@@ -216,6 +221,31 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         },
       },
     ]);
+  };
+
+  const handleConfirmSelection = async () => {
+    try {
+      setConfirmLoading(true);
+      await confirmSelection(deliveryId);
+      carAlert.show('success', 'אושר!', 'המשלוח שויך אליך');
+    } catch (err) {
+      carAlert.show('error', t('common.error'), (err as Error).message);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleDeclineSelection = async () => {
+    try {
+      setConfirmLoading(true);
+      await declineSelection(deliveryId);
+      carAlert.show('info', 'דחית', 'המשלוח הוחזר לשולח');
+      navigation.goBack();
+    } catch (err) {
+      carAlert.show('error', t('common.error'), (err as Error).message);
+    } finally {
+      setConfirmLoading(false);
+    }
   };
 
   const doExpressInterest = async (): Promise<void> => {
@@ -292,6 +322,12 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   const isMyJob = delivery.driverId === currentUser?.uid;
   const isAvailable = delivery.status === 'new' || delivery.status === 'pending';
+  const alreadyInterested = ((delivery as any).interestedDrivers || []).some(
+    (d: any) => d.uid === currentUser?.uid && d.status !== 'withdrawn'
+  );
+  const myInterestStatus = ((delivery as any).interestedDrivers || []).find(
+    (d: any) => d.uid === currentUser?.uid
+  )?.status;
 
   const pickupCoords = {
     latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
@@ -377,12 +413,38 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
       </View>
 
+      {/* Driver Confirmation Banner — shown when sender selected this driver */}
+      {(delivery as any).selectedDriverId === currentUser?.uid && (delivery as any).selectionExpiresAt && (
+        <DriverConfirmBanner
+          deliveryId={deliveryId}
+          expiresAt={new Date((delivery as any).selectionExpiresAt.seconds * 1000)}
+          onConfirm={handleConfirmSelection}
+          onDecline={handleDeclineSelection}
+          isLoading={confirmLoading}
+        />
+      )}
+
       {/* ── Action buttons (above map for visibility) ── */}
       <View style={styles.actions}>
-        {isAvailable && !isMyJob && (
+        {isAvailable && !isMyJob && !alreadyInterested && (
           <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary }]} onPress={handleExpressInterest}>
             <Text style={styles.actionButtonText}>🚛 {t('driver.expressInterest')}</Text>
           </TouchableOpacity>
+        )}
+
+        {isAvailable && !isMyJob && alreadyInterested && myInterestStatus === 'interested' && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: '#E53935' }]}
+            onPress={handleWithdrawInterest}
+          >
+            <Text style={styles.actionButtonText}>{strings.driver.withdrawInterest.he}</Text>
+          </TouchableOpacity>
+        )}
+
+        {isAvailable && !isMyJob && alreadyInterested && myInterestStatus !== 'interested' && (
+          <View style={[styles.actionButton, { backgroundColor: '#9E9E9E' }]}>
+            <Text style={styles.actionButtonText}>הבעת עניין ✓</Text>
+          </View>
         )}
 
         {/* Withdraw interest — driver cancels after expressing interest (pending status) */}
