@@ -35,6 +35,8 @@ import { AvatarCircle } from '../../components/AvatarCircle';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { DriverApprovalCard } from '../../components/DriverApprovalCard';
+import { InterestedDriversList } from '../../components/InterestedDriversList';
+import { DriverProfileModal } from '../../components/DriverProfileModal';
 import { strings } from '../../i18n/strings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
@@ -56,7 +58,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
-  const { getDeliveryById, isLoading, confirmPayment } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
+  const { getDeliveryById, isLoading, confirmPayment, selectDriver, cancelSelectedDriver } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
   const delivery = getDeliveryById(deliveryId);
 
   const [driverProfile, setDriverProfile] = useState<any>(null);
@@ -76,6 +78,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [profileDriverUid, setProfileDriverUid] = useState<string | null>(null);
 
   const handleZoom = useCallback((factor: number) => {
     if (!mapRegion || !staticMapRef.current) return;
@@ -95,6 +99,32 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     });
     return unsub;
   }, [delivery?.driverId]);
+
+  const handleSelectDriver = async (driverUid: string) => {
+    try {
+      setLoadingVisible(true);
+      await selectDriver(delivery!.id, driverUid);
+      setProfileModalVisible(false);
+      carAlert.show('success', t('common.success'), 'הנהג נבחר, ממתין לאישור');
+    } catch (err) {
+      carAlert.show('error', t('common.error'), (err as Error).message);
+    } finally {
+      setLoadingVisible(false);
+    }
+  };
+
+  const handleViewProfile = (driverUid: string) => {
+    setProfileDriverUid(driverUid);
+    setProfileModalVisible(true);
+  };
+
+  const handleCancelSelection = async () => {
+    try {
+      await cancelSelectedDriver(delivery!.id);
+    } catch (err) {
+      carAlert.show('error', t('common.error'), (err as Error).message);
+    }
+  };
 
   const currentStepIndex = useMemo(() => {
     if (!delivery) return -1;
@@ -316,6 +346,18 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         <DriverApprovalCard
           driverId={delivery.driverId}
           deliveryId={delivery.id}
+        />
+      )}
+
+      {/* ── 2b2. Interested Drivers List — shown when status is 'new' and drivers have expressed interest ── */}
+      {delivery.status === 'new' && (delivery as any).interestedDrivers?.length > 0 && (
+        <InterestedDriversList
+          interestedDrivers={(delivery as any).interestedDrivers}
+          selectedDriverId={(delivery as any).selectedDriverId || null}
+          selectionExpiresAt={(delivery as any).selectionExpiresAt ? new Date((delivery as any).selectionExpiresAt.seconds * 1000) : null}
+          onSelect={handleSelectDriver}
+          onViewProfile={handleViewProfile}
+          onCancelSelection={handleCancelSelection}
         />
       )}
 
@@ -800,6 +842,25 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </View>
         )}
       </View>
+
+      {profileDriverUid && (() => {
+        const driver = (delivery as any).interestedDrivers?.find((d: any) => d.uid === profileDriverUid);
+        if (!driver) return null;
+        return (
+          <DriverProfileModal
+            visible={profileModalVisible}
+            onClose={() => { setProfileModalVisible(false); setProfileDriverUid(null); }}
+            driverUid={driver.uid}
+            driverName={driver.name}
+            driverPhotoUrl={driver.photoUrl}
+            driverRating={driver.rating}
+            driverCompletedDeliveries={driver.completedDeliveries}
+            driverDistanceKm={driver.distanceKm}
+            onSelect={() => handleSelectDriver(driver.uid)}
+            selectionPending={!!(delivery as any).selectedDriverId}
+          />
+        );
+      })()}
     </ScrollView>
   );
 }
