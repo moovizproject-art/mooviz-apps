@@ -232,65 +232,96 @@ export const createDelivery = onCall(async (request) => {
 
 /**
  * Driver expresses interest in a delivery.
- * Transitions: new -> pending
- * Denormalizes driver info onto the delivery document.
+ * Appends driver entry to interestedDrivers array (status stays 'new').
+ * Does NOT transition delivery status — sender selects a driver separately.
  */
 export const expressInterest = onCall(async (request) => {
   const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Authentication required");
-  }
+  if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
 
-  const { deliveryId } = request.data;
   const driverData = await assertUserRole(db, uid, "driver");
+  const { deliveryId } = request.data;
+  if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 
-  // Validate transition
-  assertValidTransition(delivery.status, "pending", "driver", uid);
-
-  // A driver cannot express interest in their own delivery
+  if (delivery.status !== "new") {
+    throw new HttpsError("failed-precondition", "Delivery must be in 'new' status");
+  }
   if (delivery.senderId === uid) {
-    throw new HttpsError(
-      "failed-precondition",
-      "You cannot express interest in your own delivery"
-    );
+    throw new HttpsError("permission-denied", "Cannot express interest in your own delivery");
   }
 
-  // Driver info (already fetched by assertUserRole)
-  const driverName = driverData?.nickname || driverData?.fullName || "";
-  const driverPhotoUrl = driverData?.profilePhotoURL || "";
-  const driverRating = driverData?.ratingAsDriver?.average ?? null;
+  // Transaction: atomic read-check-append
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const freshData = freshDoc.data()!;
+    const interested: any[] = freshData.interestedDrivers || [];
 
-  console.log(`expressInterest: driver ${uid} -> delivery ${deliveryId} (sender: ${delivery.senderId})`);
-
-  await updateDeliveryStatus(
-    ref,
-    "pending",
-    uid,
-    "Driver expressed interest",
-    {
-      driverId: uid,
-      driverName,
-      driverPhotoUrl,
-      driverRating,
+    if (interested.length >= 30) {
+      throw new HttpsError("resource-exhausted", "Maximum interested drivers reached");
     }
-  );
 
-  console.log(`expressInterest: status updated to pending, sending notification to sender ${delivery.senderId}`);
+    const existing = interested.find((d: any) => d.uid === uid);
+    if (existing) {
+      if (existing.status === "withdrawn") {
+        // Re-entry after withdrawal
+        const updated = interested.map((d: any) =>
+          d.uid === uid
+            ? { ...d, status: "interested", expressedAt: admin.firestore.Timestamp.now() }
+            : d
+        );
+        txn.update(ref, { interestedDrivers: updated, updatedAt: admin.firestore.Timestamp.now() });
+        return;
+      }
+      throw new HttpsError("already-exists", "Already expressed interest or previously rejected");
+    }
 
-  // Notify the sender
-  try {
-    await sendDeliveryNotification(deliveryId, "driver_interested", {
-      actorId: uid,
-      driverName,
+    // Compute distance from pickup
+    const pickupLat = freshData.pickup?.lat ?? freshData.pickup?.latitude;
+    const pickupLng = freshData.pickup?.lng ?? freshData.pickup?.longitude;
+    const driverLat = driverData.location?.lat;
+    const driverLng = driverData.location?.lng;
+    let distanceKm = 0;
+    if (pickupLat && pickupLng && driverLat && driverLng) {
+      const R = 6371;
+      const dLat = ((driverLat - pickupLat) * Math.PI) / 180;
+      const dLon = ((driverLng - pickupLng) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((pickupLat * Math.PI) / 180) *
+          Math.cos((driverLat * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+      distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    const entry = {
+      uid,
+      name: driverData.nickname || driverData.fullName || "",
+      photoUrl: driverData.profilePhotoURL || null,
+      rating: driverData.ratingAsDriver?.average ?? 0,
+      completedDeliveries: driverData.completedDeliveries ?? 0,
+      distanceKm: Math.round(distanceKm * 10) / 10,
+      expressedAt: admin.firestore.Timestamp.now(),
+      status: "interested",
+    };
+
+    txn.update(ref, {
+      interestedDrivers: [...interested, entry],
+      updatedAt: admin.firestore.Timestamp.now(),
     });
-    console.log(`expressInterest: notification sent successfully`);
-  } catch (notifErr: unknown) {
-    console.error(`expressInterest: notification failed:`, notifErr);
-  }
+  });
 
-  return { success: true, message: "Interest expressed successfully" };
+  // Fire-and-forget: notify sender
+  const driverName = driverData.nickname || driverData.fullName || "";
+  sendPushNotification(
+    delivery.senderId,
+    "נהג חדש מעוניין",
+    `${driverName} רוצה לאסוף את המשלוח שלך`,
+    { event: "driver_interested", deliveryId, driverName }
+  ).catch((err: unknown) => console.error("expressInterest notification failed:", err));
+
+  return { success: true };
 });
 
 /**
