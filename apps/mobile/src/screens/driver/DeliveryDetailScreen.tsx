@@ -34,6 +34,7 @@ import { uploadProofPhoto } from '../../services/storage';
 import { strings } from '../../i18n/strings';
 import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import { DriverConfirmBanner } from '../../components/DriverConfirmBanner';
+import { SenderProfileModal } from '../../components/SenderProfileModal';
 import Geolocation from 'react-native-geolocation-service';
 
 /** Haversine distance in km between two lat/lng points */
@@ -92,13 +93,16 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               status: d.status,
               pickup: d.pickup,
               destination: d.destination,
-              itemDescription: d.itemDescription || '',
+              item: d.item,
+              itemDescription: d.item?.description || d.itemDescription || '',
               itemSize: d.itemSize,
               photoUrl: d.photoUrl,
               mediaURLs: d.mediaURLs,
               price: d.price || d.suggestedPrice || 0,
               suggestedPrice: d.suggestedPrice || 0,
               scheduledDate: d.scheduledDate,
+              pickupDate: d.pickupDate,
+              timeRange: d.timeRange,
               notes: d.notes,
               chatId: d.chatId,
               rated: d.rated,
@@ -158,6 +162,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     activeDeliveryStatus: delivery?.status,
   });
 
+  const [senderProfileVisible, setSenderProfileVisible] = useState(false);
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
@@ -538,7 +543,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* ── 5. Sender Card ── */}
       <View style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
-        <View style={styles.senderRow}>
+        <TouchableOpacity style={styles.senderRow} activeOpacity={0.7} onPress={() => setSenderProfileVisible(true)}>
           <AvatarCircle name={delivery.senderName || ''} photoUrl={delivery.senderPhotoUrl} size={44} />
           <View style={styles.senderInfo}>
             <Text style={[styles.senderName, { color: colors.textPrimary }]}>{delivery.senderName}</Text>
@@ -554,7 +559,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               <Text style={styles.chatMiniBtnText}>💬</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* ── 6. Item Images Gallery ── */}
@@ -758,6 +763,15 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       timeout={60000}
       onTimeout={() => setLoadingVisible(false)}
       onCancel={() => setLoadingVisible(false)}
+    />
+    <SenderProfileModal
+      visible={senderProfileVisible}
+      onClose={() => setSenderProfileVisible(false)}
+      senderUid={delivery.senderId}
+      senderName={delivery.senderName || ''}
+      senderPhotoUrl={delivery.senderPhotoUrl || null}
+      senderRating={delivery.senderRating ?? 0}
+      senderCompletedDeliveries={0}
     />
     </>
   );
