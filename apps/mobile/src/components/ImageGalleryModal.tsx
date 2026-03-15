@@ -22,7 +22,8 @@ import Video from 'react-native-video';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function isVideoUrl(url: string): boolean {
-  const lower = url.toLowerCase();
+  // Strip query params before checking extension (Firebase Storage URLs have ?alt=media&token=...)
+  const lower = url.toLowerCase().split('?')[0];
   return lower.includes('video') || lower.endsWith('.mp4') || lower.endsWith('.mov');
 }
 

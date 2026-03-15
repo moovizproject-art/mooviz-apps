@@ -348,8 +348,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const mediaList: string[] = delivery.mediaURLs?.length
     ? delivery.mediaURLs
     : delivery.photoUrl ? [delivery.photoUrl] : [];
-  const imageCount = mediaList.filter(u => !u.toLowerCase().includes('video') && !u.toLowerCase().endsWith('.mp4')).length;
-  const hasVideo = mediaList.some(u => u.toLowerCase().includes('video') || u.toLowerCase().endsWith('.mp4'));
+  const isVideoUri = (u: string) => { const l = u.toLowerCase().split('?')[0]; return l.includes('video') || l.endsWith('.mp4') || l.endsWith('.mov'); };
+  const imageCount = mediaList.filter(u => !isVideoUri(u)).length;
+  const hasVideo = mediaList.some(isVideoUri);
 
   // Proof photos (pickup, delivery, payment)
   const proofImages: { url: string; label: string }[] = [];
@@ -570,7 +571,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaList}>
             {mediaList.map((url, i) => {
-              const isVideo = url.toLowerCase().includes('video') || url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov');
+              const isVideo = isVideoUri(url);
               return (
                 <TouchableOpacity
                   key={`${i}-${url}`}
