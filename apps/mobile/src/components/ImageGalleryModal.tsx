@@ -14,11 +14,10 @@ import {
   Dimensions,
   StatusBar,
   Platform,
+  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
-import Video from 'react-native-video';
-
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function isVideoUrl(url: string): boolean {
@@ -79,16 +78,14 @@ export function ImageGalleryModal({ visible, images, initialIndex = 0, onClose }
           renderItem={({ item }) => (
             <View style={styles.imageContainer}>
               {isVideoUrl(item) ? (
-                <View style={styles.videoContainer}>
-                  <Video
-                    source={{ uri: item }}
-                    style={styles.video}
-                    controls={true}
-                    paused={true}
-                    resizeMode="contain"
-                    onError={(e: any) => console.warn('[Video] Error:', e)}
-                  />
-                </View>
+                <TouchableOpacity
+                  style={styles.videoContainer}
+                  activeOpacity={0.8}
+                  onPress={() => Linking.openURL(item).catch((err) => console.warn('[Video] Cannot open:', err))}
+                >
+                  <Text style={styles.videoPlayIcon}>▶</Text>
+                  <Text style={styles.videoLabel}>לחץ להפעלת הווידאו</Text>
+                </TouchableOpacity>
               ) : (
                 <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
               )}
@@ -217,8 +214,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#000',
   },
-  video: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.7,
+  videoPlayIcon: {
+    fontSize: 72,
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  videoLabel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

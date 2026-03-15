@@ -1,5 +1,6 @@
 package com.mooviz.app
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,14 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "MoovizMobile"
+
+  /**
+   * Prevent react-native-screens fragment restoration crash.
+   * See: https://github.com/software-mansion/react-native-screens/issues/17
+   */
+  override fun onCreate(savedInstanceState: Bundle?) {
+      super.onCreate(null)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
