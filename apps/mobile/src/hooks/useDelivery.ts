@@ -193,7 +193,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
   const { data: rawData, isLoading, refresh } = useFirestore<Delivery>({
     collection: 'deliveries',
     where: whereClauses,
-    orderBy: needsCompoundQuery ? undefined : ['createdAt', 'desc'],
+    orderBy: needsCompoundQuery ? undefined : ['updatedAt', 'desc'],
     limit: 50,
     enabled: true,
   });
@@ -202,9 +202,14 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
   const data = useMemo(() => {
     if (!needsCompoundQuery) return rawData;
     return [...rawData].sort((a, b) => {
-      const aTime = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
-      const bTime = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
-      return bTime - aTime;
+      const getTime = (d: any) => {
+        const t = d.updatedAt || d.createdAt;
+        if (!t) return 0;
+        if (typeof t === 'object' && t.toDate) return t.toDate().getTime();
+        if (typeof t === 'object' && t._seconds) return t._seconds * 1000;
+        return new Date(t as string).getTime() || 0;
+      };
+      return getTime(b) - getTime(a);
     });
   }, [rawData, needsCompoundQuery]);
 
