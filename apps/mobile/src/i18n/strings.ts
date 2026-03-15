@@ -116,6 +116,13 @@ export const strings = {
     } as LocaleStrings,
     gotIt: { he: 'הבנתי', en: 'Got it' } as LocaleStrings,
     pickupTime: { he: 'שעת איסוף', en: 'Pickup time' } as LocaleStrings,
+    sizeOther: { he: 'אחר', en: 'Other' } as LocaleStrings,
+    sizeSmallHint: { he: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות', en: 'Up to 1 kg\n25×35 cm\nDocuments, keys' } as LocaleStrings,
+    sizeMediumHint: { he: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד', en: 'Up to 10 kg\n40×40×40 cm\nElectronics, clothing' } as LocaleStrings,
+    sizeLargeHint: { he: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל', en: 'Up to 30 kg\n60×60×60 cm\nSmall furniture, appliances' } as LocaleStrings,
+    sizeOtherHint: { he: 'מעל 30 ק"ג\nמעל 60 ס"מ\nרהיטים, מוצרי חשמל גדולים', en: 'Over 30 kg\nOver 60 cm\nFurniture, large appliances' } as LocaleStrings,
+    sizeGuide: { he: 'מדריך מידות', en: 'Size guide' } as LocaleStrings,
+    sizes: { he: 'מידות', en: 'Sizes' } as LocaleStrings,
   },
 
   // ── Auth ──
@@ -281,6 +288,7 @@ export const strings = {
     driverFound: { he: 'נהג נמצא', en: 'Driver found' } as LocaleStrings,
     size: { he: 'גודל:', en: 'Size:' } as LocaleStrings,
     newDriver: { he: 'חדש', en: 'New' } as LocaleStrings,
+    errorPrice: { he: 'יש להזין מחיר גדול מאפס', en: 'Price must be greater than zero' } as LocaleStrings,
   },
 
   // ── Tabs ──
@@ -322,6 +330,8 @@ export const strings = {
     addPhoto: { he: 'הוסף תמונה', en: 'Add photo' } as LocaleStrings,
     photoUpdated: { he: 'התמונה עודכנה בהצלחה', en: 'Photo updated successfully' } as LocaleStrings,
     photoError: { he: 'לא ניתן לעדכן תמונה', en: 'Cannot update photo' } as LocaleStrings,
+    nicknameLabel: { he: 'כינוי (נראה לנהגים/שולחים)', en: 'Nickname (visible to drivers/senders)' } as LocaleStrings,
+    nicknamePlaceholder: { he: 'הכינוי שלך', en: 'Your nickname' } as LocaleStrings,
   },
 
   // ── Driver ──
@@ -333,9 +343,9 @@ export const strings = {
     deliveriesInArea: { he: '{count} משלוחים באזורך', en: '{count} deliveries in your area' } as LocaleStrings,
     noDeliveriesNearby: { he: 'אין משלוחים זמינים באזורך', en: 'No deliveries available in your area' } as LocaleStrings,
     increaseRadius: { he: 'נסה להגדיל את רדיוס החיפוש', en: 'Try increasing the search radius' } as LocaleStrings,
-    expressInterest: { he: 'הבעת עניין', en: 'Express interest' } as LocaleStrings,
-    interestSent: { he: 'הבעת העניין נשלחה לשולח!', en: 'Interest expressed to sender!' } as LocaleStrings,
-    interestError: { he: 'לא ניתן לשלוח הבעת עניין. נסה שוב.', en: 'Cannot express interest. Try again.' } as LocaleStrings,
+    expressInterest: { he: 'אישור איסוף', en: 'Confirm pickup' } as LocaleStrings,
+    interestSent: { he: 'בקשת האיסוף נשלחה לשולח!', en: 'Pickup request sent to sender!' } as LocaleStrings,
+    interestError: { he: 'לא ניתן לשלוח בקשת איסוף. נסה שוב.', en: 'Cannot send pickup request. Try again.' } as LocaleStrings,
     myJobs: { he: 'העבודות שלי', en: 'My jobs' } as LocaleStrings,
     noActiveJobs: { he: 'אין עבודות פעילות', en: 'No active jobs' } as LocaleStrings,
     searchFeedHint: { he: 'חפש משלוחים זמינים בפיד', en: 'Search available deliveries in feed' } as LocaleStrings,
@@ -391,6 +401,18 @@ export const strings = {
     nearbyDeliveries: { he: 'משלוחים קרובים', en: 'Nearby deliveries' } as LocaleStrings,
     pickupConfirmed: { he: 'האיסוף אושר בהצלחה', en: 'Pickup confirmed successfully' } as LocaleStrings,
     deliveryConfirmed: { he: 'המסירה אושרה בהצלחה', en: 'Delivery confirmed successfully' } as LocaleStrings,
+    withdrawInterest: { he: 'ביטול התעניינות', en: 'Withdraw interest' } as LocaleStrings,
+    withdrawConfirm: { he: 'האם אתה בטוח שברצונך לבטל את ההתעניינות במשלוח זה?', en: 'Are you sure you want to withdraw your interest in this delivery?' } as LocaleStrings,
+    withdrawSuccess: { he: 'ההתעניינות בוטלה בהצלחה', en: 'Interest withdrawn successfully' } as LocaleStrings,
+    withdrawError: { he: 'שגיאה בביטול ההתעניינות', en: 'Error withdrawing interest' } as LocaleStrings,
+    unavailable: { he: 'לא זמין', en: 'Unavailable' } as LocaleStrings,
+    navigateVia: { he: 'נווט באמצעות', en: 'Navigate via' } as LocaleStrings,
+    selectNavApp: { he: 'בחר אפליקציית ניווט', en: 'Choose navigation app' } as LocaleStrings,
+    navigateToPickup: { he: 'נווט לאיסוף', en: 'Navigate to pickup' } as LocaleStrings,
+    navigateToDestination: { he: 'נווט ליעד', en: 'Navigate to destination' } as LocaleStrings,
+    newSender: { he: 'שולח חדש', en: 'New sender' } as LocaleStrings,
+    capturePickupProof: { he: 'צלם הוכחת איסוף', en: 'Capture pickup proof' } as LocaleStrings,
+    captureDeliveryProof: { he: 'צלם הוכחת מסירה', en: 'Capture delivery proof' } as LocaleStrings,
   },
 
   // ── Status ──
@@ -404,6 +426,10 @@ export const strings = {
     delivered: { he: 'נמסר', en: 'Delivered' } as LocaleStrings,
     cancelled: { he: 'בוטל', en: 'Cancelled' } as LocaleStrings,
     completedPaid: { he: 'הושלם ושולם', en: 'Completed & paid' } as LocaleStrings,
+    // Sender timeline labels (shorter form)
+    waitingForDriver: { he: 'ממתין לנהג', en: 'Waiting for driver' } as LocaleStrings,
+    driverInterested: { he: 'נהג מעוניין', en: 'Driver interested' } as LocaleStrings,
+    approved: { he: 'אושר', en: 'Approved' } as LocaleStrings,
   },
 
   // ── Rating ──
@@ -424,6 +450,16 @@ export const strings = {
     ok: { he: 'בסדר', en: 'OK' } as LocaleStrings,
     good: { he: 'טוב', en: 'Good' } as LocaleStrings,
     excellent: { he: 'מצוין!', en: 'Excellent!' } as LocaleStrings,
+    ratingSubmitted: { he: 'הדירוג נשלח בהצלחה', en: 'Rating submitted successfully' } as LocaleStrings,
+    alreadyRated: { he: 'כבר דירגת משלוח זה', en: 'You already rated this delivery' } as LocaleStrings,
+    ratingsHidden: { he: 'הדירוגים יוצגו לאחר שני הצדדים ידרגו או בעוד 5 ימים', en: 'Ratings will be shown after both sides rate or in 5 days' } as LocaleStrings,
+    noRatingsYet: { he: 'אין דירוגים עדיין', en: 'No ratings yet' } as LocaleStrings,
+    viewRatings: { he: 'צפה בדירוגים', en: 'View ratings' } as LocaleStrings,
+    ratingsHistory: { he: 'היסטוריית דירוגים', en: 'Ratings history' } as LocaleStrings,
+    asDriver: { he: 'כנהג', en: 'As driver' } as LocaleStrings,
+    asSender: { he: 'כשולח', en: 'As sender' } as LocaleStrings,
+    deliveryOn: { he: 'משלוח בתאריך', en: 'Delivery on' } as LocaleStrings,
+    fromTo: { he: 'מ-{from} ל-{to}', en: 'From {from} to {to}' } as LocaleStrings,
   },
 
   // ── Chat ──
@@ -571,6 +607,8 @@ export const strings = {
     total: { he: 'סה״כ', en: 'Total' } as LocaleStrings,
     distance: { he: 'מרחק', en: 'Distance' } as LocaleStrings,
     deliveryItem: { he: 'משלוח', en: 'Delivery' } as LocaleStrings,
+    developedBy: { he: 'פותח על ידי', en: 'Developed by' } as LocaleStrings,
+    notificationRange: { he: 'טווח התראות', en: 'Notification range' } as LocaleStrings,
   },
 
   // ── Delivery (additional) ──
@@ -596,6 +634,9 @@ export const strings = {
     video: { he: 'וידאו', en: 'Video' } as LocaleStrings,
     photo: { he: 'תמונה', en: 'Photo' } as LocaleStrings,
     cancelPrompt: { he: 'ביטול אפשרי רק לפני איסוף הפריט.\nלאחר איסוף לא ניתן לבטל.\n\nהאם אתה בטוח?', en: 'Cancellation is only possible before pickup.\nAfter pickup, cancellation is not allowed.\n\nAre you sure?' } as LocaleStrings,
+    paymentProof: { he: 'צילום תשלום', en: 'Payment proof' } as LocaleStrings,
+    paymentProofFromSender: { he: 'צילום תשלום מהשולח', en: 'Payment screenshot from sender' } as LocaleStrings,
+    addedToEarnings: { he: 'נוסף לרווחים', en: 'Added to earnings' } as LocaleStrings,
   },
 
   // ── Driver Onboarding Steps ──

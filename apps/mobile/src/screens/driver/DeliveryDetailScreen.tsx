@@ -448,7 +448,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
         {isAvailable && !isMyJob && alreadyInterested && myInterestStatus !== 'interested' && (
           <View style={[styles.actionButton, { backgroundColor: '#9E9E9E' }]}>
-            <Text style={styles.actionButtonText}>הבעת עניין ✓</Text>
+            <Text style={styles.actionButtonText}>אישור איסוף ✓</Text>
           </View>
         )}
 
