@@ -33,6 +33,7 @@ export function SenderProfileModal({
   const [totalReviews, setTotalReviews] = useState(0);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [memberSince, setMemberSince] = useState<string>('');
+  const [completedCount, setCompletedCount] = useState(senderCompletedDeliveries);
   const [ratingsModalVisible, setRatingsModalVisible] = useState(false);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export function SenderProfileModal({
         if (ts?.toDate) {
           setMemberSince(ts.toDate().toLocaleDateString('he-IL', { month: 'short', year: 'numeric' }));
         }
+        setCompletedCount(snap.data()?.completedDeliveries ?? 0);
       }
     }).catch(() => {});
   }, [visible, senderUid]);
@@ -98,7 +100,7 @@ export function SenderProfileModal({
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: '#1a73e8' }]}>{senderCompletedDeliveries}</Text>
+            <Text style={[styles.statValue, { color: '#1a73e8' }]}>{completedCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>משלוחים</Text>
           </View>
           {memberSince ? (

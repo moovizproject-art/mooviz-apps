@@ -64,7 +64,7 @@ export const LOCATION_DISTANCE_FILTER_IDLE = 200; // 200m for idle
 export const LOCATION_DISTANCE_FILTER_ACTIVE = 30; // 30m for active delivery
 
 /** App version */
-export const APP_VERSION = '0.9.9.4';
+export const APP_VERSION = '1.0.1';
 
 /** Deep link scheme */
 export const DEEP_LINK_SCHEME = 'mooviz://';

@@ -31,6 +31,7 @@
     "@react-navigation/bottom-tabs": "^6.5.11",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
+    "lottie-react-native": "^7.3.6",
     "ngeohash": "^0.6.3",
     "react": "18.2.0",
     "react-native": "0.75.5",

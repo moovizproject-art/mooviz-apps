@@ -39,8 +39,10 @@ import { requestLocationPermission, requestNotificationPermission } from '../../
 import { DriverOnboarding, shouldShowOnboarding } from '../../components/DriverOnboarding';
 import { strings } from '../../i18n/strings';
 import { AddressAutocomplete, GeoAddress } from '../../components/AddressAutocomplete';
+import LottieView from 'lottie-react-native';
 
 const logo = require('../../assets/logo.png');
+const radarAnimation = require('../../assets/animations/radar.lottie');
 
 /** Haversine distance in km between two lat/lng points */
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -432,33 +434,12 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
               </TouchableOpacity>
             ) : (
               <>
-                <View style={[styles.radarOuter, { width: RADAR_SIZE, height: RADAR_SIZE }]}>
-                  {RING_SIZES.map((size, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.radarRing,
-                        {
-                          width: size,
-                          height: size,
-                          borderRadius: size / 2,
-                          borderColor: radarColor,
-                          opacity: 0.3 + i * 0.1,
-                        },
-                      ]}
-                    />
-                  ))}
-                  <Animated.View
-                    style={[
-                      styles.sweepBeam,
-                      { transform: [{ rotate: sweepRotate }] },
-                    ]}
-                  >
-                    <View style={[styles.sweepLine, { backgroundColor: radarColor }]} />
-                    <View style={[styles.sweepGlow, { backgroundColor: radarColor }]} />
-                  </Animated.View>
-                  <View style={[styles.radarCenter, { backgroundColor: radarColor }]} />
-                </View>
+                <LottieView
+                  source={radarAnimation}
+                  autoPlay
+                  loop
+                  style={{ width: RADAR_SIZE, height: RADAR_SIZE }}
+                />
                 <TouchableOpacity
                   style={styles.radarMinimizeBtn}
                   onPress={() => setRadarMinimized(true)}

@@ -1,7 +1,7 @@
 /**
  * DeliveryCard - כרטיס משלוח
  * Compact delivery card for feeds and lists.
- * Shows item, route, status, driver, and price.
+ * Shows item, route, status, driver, date/time, and price.
  */
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
@@ -12,31 +12,40 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BRAND, BORDER_RADIUS, SPACING } from '../constants/design';
 import { StatusIndicator } from './StatusIndicator';
-import { formatCurrency, formatDate, formatRelativeDate } from '../utils/formatters';
-import { strings } from '../i18n/strings';
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 const TIME_RANGE_LABELS: Record<string, string> = {
-  morning: 'בוקר 08:00–12:00',
-  afternoon: 'צהריים 12:00–16:00',
-  evening: 'ערב 16:00–20:00',
-  night: 'לילה 20:00–24:00',
+  morning: 'בוקר 08–12',
+  afternoon: 'צהריים 12–16',
+  evening: 'ערב 16–20',
+  night: 'לילה 20–24',
 };
 
-function formatPickupDate(
-  pickupDate?: string | null | { toDate?: () => Date },
+function formatPickupInfo(
+  pickupDate?: string | null | { _seconds?: number; toDate?: () => Date; seconds?: number },
   scheduledDate?: string | null,
   timeRange?: string | null,
 ): string {
-  // Resolve to a raw value we can inspect
   const raw = pickupDate ?? scheduledDate;
 
-  // ASAP cases
-  if (!raw || raw === 'asap') return 'בהקדם';
+  // ASAP
+  if (!raw || raw === 'asap') {
+    const rangeLabel = timeRange ? TIME_RANGE_LABELS[timeRange] : null;
+    return rangeLabel ? `בהקדם • ${rangeLabel}` : 'בהקדם';
+  }
 
-  // Firestore Timestamp object
+  // Parse date from various formats
   let d: Date;
-  if (typeof raw === 'object' && typeof raw.toDate === 'function') {
-    d = raw.toDate();
+  if (typeof raw === 'object' && raw !== null) {
+    if (typeof (raw as any).toDate === 'function') {
+      d = (raw as any).toDate();
+    } else if ((raw as any)._seconds) {
+      d = new Date((raw as any)._seconds * 1000);
+    } else if ((raw as any).seconds) {
+      d = new Date((raw as any).seconds * 1000);
+    } else {
+      return 'בהקדם';
+    }
   } else if (typeof raw === 'string') {
     d = new Date(raw);
   } else {
@@ -67,7 +76,7 @@ interface DeliveryData {
   price?: number;
   suggestedPrice?: number;
   createdAt?: Date | string;
-  pickupDate?: string | null | { toDate?: () => Date };
+  pickupDate?: string | null | { _seconds?: number; toDate?: () => Date; seconds?: number };
   scheduledDate?: string | null;
   timeRange?: string | null;
   distance?: number;
@@ -105,6 +114,9 @@ export function DeliveryCard({
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 
+  const itemDesc = delivery.item?.description || delivery.itemDescription;
+  const pickupInfo = formatPickupInfo(delivery.pickupDate, delivery.scheduledDate, delivery.timeRange);
+
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -135,15 +147,11 @@ export function DeliveryCard({
 
         {/* Details */}
         <View style={styles.details}>
-          {/* Top row: status on end side */}
+          {/* Top row: item description + status */}
           <View style={styles.topRow}>
-            {(delivery.item?.description || delivery.itemDescription) ? (
-              <Text style={styles.itemText} numberOfLines={1}>
-                {delivery.item?.description || delivery.itemDescription}
-              </Text>
-            ) : (
-              <Text style={styles.itemText} numberOfLines={1}>{strings.commonExtra.deliveryItem.he}</Text>
-            )}
+            <Text style={styles.itemText} numberOfLines={1}>
+              {itemDesc || 'משלוח'}
+            </Text>
             <StatusIndicator status={delivery.status} size="sm" />
           </View>
 
@@ -152,35 +160,36 @@ export function DeliveryCard({
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.success }]} />
               <Text style={styles.addressText} numberOfLines={1}>
-                {delivery.pickup?.address || strings.commonExtra.noAddress.he}
+                {delivery.pickup?.address || '—'}
               </Text>
             </View>
             <View style={styles.routeLine} />
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.error }]} />
               <Text style={styles.addressText} numberOfLines={1}>
-                {delivery.destination?.address || strings.commonExtra.noAddress.he}
+                {delivery.destination?.address || '—'}
               </Text>
             </View>
           </View>
 
           {/* Driver name (if assigned) */}
           {delivery.driverName ? (
-            <Text style={styles.driverText} numberOfLines={1}>
+            <Text style={styles.infoText} numberOfLines={1}>
               🚛 {delivery.driverName}
             </Text>
           ) : null}
 
-          {/* Pickup date/time */}
-          <Text style={styles.dateText} numberOfLines={1}>
-            📅 {formatPickupDate(delivery.pickupDate, delivery.scheduledDate, delivery.timeRange)}
+          {/* Date + time range */}
+          <Text style={styles.infoText} numberOfLines={1}>
+            📅 {pickupInfo}
           </Text>
 
-          {/* Ratings preview — visible when both parties rated */}
-          {delivery.ratedBySender && delivery.ratedByDriver && (
+          {/* Ratings preview — visible when any rating exists */}
+          {(delivery.senderRatingGiven || delivery.driverRatingGiven) && (
             <View style={styles.ratingsPreview}>
               {delivery.senderRatingGiven && (
                 <View style={styles.ratingPreviewRow}>
+                  <Text style={styles.ratingRoleIcon}>📦</Text>
                   <Text style={styles.ratingStarsSmall}>
                     {'★'.repeat(delivery.senderRatingGiven.rating)}
                     {'☆'.repeat(5 - delivery.senderRatingGiven.rating)}
@@ -194,6 +203,7 @@ export function DeliveryCard({
               )}
               {delivery.driverRatingGiven && (
                 <View style={styles.ratingPreviewRow}>
+                  <Text style={styles.ratingRoleIcon}>🚗</Text>
                   <Text style={styles.ratingStarsSmall}>
                     {'★'.repeat(delivery.driverRatingGiven.rating)}
                     {'☆'.repeat(5 - delivery.driverRatingGiven.rating)}
@@ -208,25 +218,18 @@ export function DeliveryCard({
             </View>
           )}
 
-          {/* Bottom: date + price + distance */}
+          {/* Bottom: price + distance */}
           <View style={styles.bottomRow}>
-            {delivery.createdAt ? (
-              <Text style={styles.metaText}>
-                {formatRelativeDate(delivery.createdAt)}
+            {showDistance && delivery.distance != null ? (
+              <Text style={styles.distanceText}>
+                {delivery.distance.toFixed(1)} ק״מ
               </Text>
-            ) : null}
-            <View style={styles.bottomEnd}>
-              {showDistance && delivery.distance != null ? (
-                <Text style={styles.distanceText}>
-                  {delivery.distance.toFixed(1)} {strings.commonExtra.km.he}
-                </Text>
-              ) : null}
-              {(delivery.price ?? delivery.suggestedPrice) != null && (
-                <Text style={styles.price}>
-                  {formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}
-                </Text>
-              )}
-            </View>
+            ) : <View />}
+            {(delivery.price ?? delivery.suggestedPrice) != null && (
+              <Text style={styles.price}>
+                {formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -327,17 +330,10 @@ const styles = StyleSheet.create({
     color: BRAND.textPrimary,
     flex: 1,
   },
-  driverText: {
+  infoText: {
     fontSize: 12,
     color: BRAND.textSecondary,
     marginTop: 2,
-    marginBottom: 2,
-  },
-  dateText: {
-    fontSize: 12,
-    color: BRAND.textSecondary,
-    marginTop: 2,
-    marginBottom: 2,
   },
   ratingsPreview: {
     marginTop: 4,
@@ -347,6 +343,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  ratingRoleIcon: {
+    fontSize: 10,
   },
   ratingStarsSmall: {
     fontSize: 10,
@@ -364,15 +363,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 4,
-  },
-  bottomEnd: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  metaText: {
-    fontSize: 11,
-    color: BRAND.textSecondary,
   },
   price: {
     fontSize: 16,

@@ -15,9 +15,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { useI18n } from '../i18n/I18nContext';
 import { useTheme } from '../theme/ThemeContext';
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../theme/tokens';
+
+const radarAnimation = require('../assets/animations/radar.lottie');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -42,10 +45,6 @@ export function LoadingOverlay({
   const { t } = useI18n();
 
   const [timedOut, setTimedOut] = useState(false);
-
-  // Car translate animation
-  const carAnim = useRef(new Animated.Value(-120)).current;
-  const carLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Pulse animation for current step dot
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -81,37 +80,6 @@ export function LoadingOverlay({
       }
     };
   }, [visible, timeout, onTimeout]);
-
-  // ── Car animation ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!visible || timedOut) {
-      carLoopRef.current?.stop();
-      carAnim.setValue(-120);
-      return;
-    }
-
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(carAnim, {
-          toValue: 120,
-          duration: 2500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(carAnim, {
-          toValue: -120,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    carLoopRef.current = loop;
-    loop.start();
-
-    return () => {
-      loop.stop();
-    };
-  }, [visible, timedOut, carAnim]);
 
   // ── Pulse animation ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -188,13 +156,14 @@ export function LoadingOverlay({
           ) : (
             // ── Loading state ─────────────────────────────────────────────────
             <>
-              {/* Car animation track */}
-              <View style={styles.carTrack}>
-                <Animated.Text
-                  style={[styles.carEmoji, { transform: [{ translateX: carAnim }] }]}
-                >
-                  🚗
-                </Animated.Text>
+              {/* Radar Lottie animation */}
+              <View style={styles.lottieContainer}>
+                <LottieView
+                  source={radarAnimation}
+                  autoPlay
+                  loop
+                  style={styles.lottie}
+                />
               </View>
 
               {/* Current step label */}
@@ -280,16 +249,16 @@ const styles = StyleSheet.create({
   },
 
   // ── Loading state ────────────────────────────────────────────────────────────
-  carTrack: {
-    width: '100%',
-    height: 52,
-    justifyContent: 'center',
+  lottieContainer: {
+    width: 120,
+    height: 120,
     alignItems: 'center',
-    overflow: 'hidden',
+    justifyContent: 'center',
     marginBottom: SPACING.lg,
   },
-  carEmoji: {
-    fontSize: 36,
+  lottie: {
+    width: 120,
+    height: 120,
   },
   stepLabel: {
     ...TYPOGRAPHY.bodyBold,

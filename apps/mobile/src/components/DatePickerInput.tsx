@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Switch, ScrollView } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Switch,
+  Modal, FlatList, Pressable,
+} from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
-import { formatDate } from '../utils/formatters';
-
-const TIME_RANGES = [
-  '08:00-10:00', '10:00-12:00', '12:00-14:00',
-  '14:00-16:00', '16:00-18:00', '18:00-20:00', '20:00-22:00',
-];
 
 interface DatePickerInputProps {
   value: Date | null;
@@ -20,19 +16,65 @@ interface DatePickerInputProps {
   onTimeRangeChange?: (range: string | null) => void;
 }
 
+const TIME_RANGES = [
+  { key: 'morning', label: 'בוקר', hours: '08:00–12:00' },
+  { key: 'afternoon', label: 'צהריים', hours: '12:00–16:00' },
+  { key: 'evening', label: 'ערב', hours: '16:00–20:00' },
+  { key: 'night', label: 'לילה', hours: '20:00–24:00' },
+];
+
+/** Generate next 60 days */
+function generateDays(minDate: Date): Date[] {
+  const days: Date[] = [];
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(minDate);
+    d.setDate(d.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    days.push(d);
+  }
+  return days;
+}
+
+const HE_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+function formatDayLabel(date: Date): string {
+  const day = date.getDate();
+  const month = HE_MONTHS[date.getMonth()];
+  const weekDay = HE_DAYS[date.getDay()];
+  return `יום ${weekDay}, ${day} ${month}`;
+}
+
+function formatDateShort(date: Date): string {
+  const day = date.getDate();
+  const month = HE_MONTHS[date.getMonth()];
+  const weekDay = HE_DAYS[date.getDay()];
+  return `${weekDay}, ${day} ${month}`;
+}
+
 export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, minimumDate, timeRange, onTimeRangeChange }: DatePickerInputProps): React.JSX.Element {
-  const [showPicker, setShowPicker] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [tempDate, setTempDate] = useState<Date | null>(null);
   const { colors } = useTheme();
   const { t } = useI18n();
   const minDate = minimumDate || new Date();
 
-  const handleChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShowPicker(false);
-    if (selectedDate) onDateChange(selectedDate);
+  const days = React.useMemo(() => generateDays(minDate), [minDate.toDateString()]);
+
+  const openPicker = () => {
+    setTempDate(value || new Date());
+    setModalVisible(true);
+  };
+
+  const handleConfirm = () => {
+    if (!tempDate) return;
+    onDateChange(tempDate);
+    setModalVisible(false);
   };
 
   return (
     <View style={styles.container}>
+      {/* Header: label + ASAP toggle */}
       <View style={styles.asapRow}>
         <Text style={[styles.label, { color: colors.textPrimary }]}>
           {t('form.pickupDate')} *
@@ -54,57 +96,89 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
           />
         </View>
       </View>
+
       {!isAsap && (
         <>
+          {/* Date picker button */}
           <TouchableOpacity
             style={[styles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => setShowPicker(true)}
+            onPress={openPicker}
           >
             <Text style={[styles.pickerText, { color: value ? colors.textPrimary : colors.textSecondary }]}>
-              {value ? formatDate(value) : t('form.selectDate')}
+              {value ? formatDateShort(value) : t('form.selectDate')}
             </Text>
             <Text style={styles.icon}>📅</Text>
           </TouchableOpacity>
-          {onTimeRangeChange && (
-            <View style={styles.timeSection}>
-              <Text style={[styles.timeLabel, { color: colors.textPrimary }]}>
-                {t('form.pickupTime')}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeChipRow}>
-                {TIME_RANGES.map((range) => (
-                  <TouchableOpacity
-                    key={range}
-                    style={[
-                      styles.timeChip,
-                      { borderColor: colors.border, backgroundColor: colors.surface },
-                      timeRange === range && { backgroundColor: colors.primary, borderColor: colors.primary },
-                    ]}
-                    onPress={() => onTimeRangeChange(timeRange === range ? null : range)}
-                  >
-                    <Text style={[
-                      styles.timeChipText,
-                      { color: colors.textPrimary },
-                      timeRange === range && { color: '#FFFFFF' },
-                    ]}>
-                      {range}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+
+          {/* Time range chips */}
+          <Text style={[styles.rangeLabel, { color: colors.textPrimary }]}>
+            טווח שעות
+          </Text>
+          <View style={styles.rangeRow}>
+            {TIME_RANGES.map((range) => {
+              const isSelected = timeRange === range.key;
+              return (
+                <TouchableOpacity
+                  key={range.key}
+                  style={[
+                    styles.rangeChip,
+                    {
+                      backgroundColor: isSelected ? colors.primary : colors.surface,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => onTimeRangeChange?.(isSelected ? null : range.key)}
+                >
+                  <Text style={[styles.rangeChipLabel, { color: isSelected ? '#FFFFFF' : colors.textPrimary }]}>
+                    {range.label}
+                  </Text>
+                  <Text style={[styles.rangeChipHours, { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textSecondary }]}>
+                    {range.hours}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </>
       )}
-      {showPicker && (
-        <DateTimePicker
-          value={value || minDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          minimumDate={minDate}
-          onChange={handleChange}
-          locale="he-IL"
-        />
-      )}
+
+      {/* Date Picker Modal (date only, no time) */}
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
+        <Pressable style={styles.overlay} onPress={() => setModalVisible(false)}>
+          <Pressable style={[styles.sheet, { backgroundColor: colors.background }]} onPress={() => {}}>
+            <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={[styles.headerBtn, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('form.pickupDate')}</Text>
+              <TouchableOpacity onPress={handleConfirm}>
+                <Text style={[styles.headerBtn, { color: colors.primary, fontWeight: '700' }]}>{t('common.confirm')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={days}
+              keyExtractor={(d) => d.toISOString()}
+              style={styles.dayList}
+              renderItem={({ item }) => {
+                const isSelected = tempDate?.toDateString() === item.toDateString();
+                return (
+                  <TouchableOpacity
+                    style={[styles.dayRow, isSelected && { backgroundColor: colors.primary + '18' }]}
+                    onPress={() => setTempDate(item)}
+                  >
+                    <View style={[styles.dayDot, isSelected && { backgroundColor: colors.primary }]} />
+                    <Text style={[styles.dayText, { color: colors.textPrimary }, isSelected && { color: colors.primary, fontWeight: '700' }]}>
+                      {formatDayLabel(item)}
+                    </Text>
+                    {isSelected && <Text style={{ color: colors.primary, fontSize: 16 }}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -121,15 +195,29 @@ const styles = StyleSheet.create({
   },
   pickerText: { fontSize: 15 },
   icon: { fontSize: 18 },
-  timeSection: { marginTop: 12 },
-  timeLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
-  timeChipRow: { flexDirection: 'row' },
-  timeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginEnd: 8,
+  // Time range chips
+  rangeLabel: { fontSize: 13, fontWeight: '600', marginTop: 12, marginBottom: 8 },
+  rangeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  rangeChip: {
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1,
+    alignItems: 'center', minWidth: 75,
   },
-  timeChipText: { fontSize: 13, fontWeight: '600' },
+  rangeChipLabel: { fontSize: 13, fontWeight: '700' },
+  rangeChipHours: { fontSize: 11, marginTop: 2 },
+  // Modal
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '60%', overflow: 'hidden' },
+  sheetHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1,
+  },
+  headerBtn: { fontSize: 15 },
+  headerTitle: { fontSize: 17, fontWeight: '700' },
+  dayList: { maxHeight: 400 },
+  dayRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 20, paddingVertical: 14,
+  },
+  dayDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#DDD' },
+  dayText: { flex: 1, fontSize: 15 },
 });

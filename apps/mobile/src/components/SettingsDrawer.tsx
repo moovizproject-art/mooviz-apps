@@ -168,39 +168,27 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
             <View style={styles.socialRow}>
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => Linking.openURL('https://facebook.com/mooviz')}
+                onPress={() => Linking.openURL('https://www.facebook.com/people/Mooviz/100071652373071/?mibextid=LQQJ4d')}
               >
                 <Image source={socialFacebook} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => Linking.openURL('https://instagram.com/mooviz')}
+                onPress={() => Linking.openURL('https://www.instagram.com/mooviz_mooviz?igsh=MTd1OHdrZno1N3d5&utm_source=qr')}
               >
                 <Image source={socialInstagram} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => Linking.openURL('https://tiktok.com/@mooviz')}
+                onPress={() => Linking.openURL('https://www.tiktok.com/@mooviz5?_r=1&_t=ZS-94gi70T55hg')}
               >
                 <Image source={socialTiktok} style={styles.socialImage} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.socialButton, { backgroundColor: '#FF0000' }]}
-                onPress={() => Linking.openURL('https://youtube.com/@mooviz')}
+                onPress={() => Linking.openURL('https://www.youtube.com/@Mooviz-Project')}
               >
                 <Text style={styles.socialLetter}>▶</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#0A66C2' }]}
-                onPress={() => Linking.openURL('https://linkedin.com/company/mooviz')}
-              >
-                <Text style={styles.socialLetter}>in</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#1A73E8' }]}
-                onPress={() => Linking.openURL('https://mooviz.app')}
-              >
-                <Text style={styles.socialLetter}>W</Text>
               </TouchableOpacity>
             </View>
           </View>

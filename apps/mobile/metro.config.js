@@ -17,6 +17,8 @@ const config = {
     ],
     // Allow Metro to follow pnpm symlinks into .pnpm store
     unstable_enableSymlinks: true,
+    // Support .lottie files (dotLottie format)
+    assetExts: [...getDefaultConfig(projectRoot).resolver.assetExts, 'lottie'],
   },
 };
 

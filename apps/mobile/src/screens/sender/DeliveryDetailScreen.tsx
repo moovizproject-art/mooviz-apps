@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { uploadDeliveryMedia } from '../../services/storage';
 import { ImageGalleryModal } from '../../components/ImageGalleryModal';
@@ -286,7 +286,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.item')}</Text>
           <Text style={[styles.detailValue, { color: colors.textPrimary }]} numberOfLines={1}>
-            {delivery.itemDescription || '—'}
+            {delivery.item?.description || delivery.itemDescription || '—'}
           </Text>
         </View>
 
@@ -294,6 +294,20 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{t('delivery.priceLabel')}</Text>
           <Text style={[styles.priceValue, { color: colors.success }]}>
             {formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}
+          </Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>📅 מועד איסוף</Text>
+          <Text style={[styles.detailValue, { color: colors.textPrimary }]}>
+            {(() => {
+              const raw = (delivery as any).pickupDate ?? delivery.scheduledDate;
+              if (!raw || raw === 'asap') return 'בהקדם';
+              const d = raw?.toDate ? raw.toDate() : typeof raw === 'string' ? new Date(raw) : raw?._seconds ? new Date(raw._seconds * 1000) : null;
+              if (!d || isNaN(d.getTime())) return 'בהקדם';
+              return formatDate(d);
+            })()}
+            {(delivery as any).timeRange ? ` • ${{ morning: 'בוקר 08–12', afternoon: 'צהריים 12–16', evening: 'ערב 16–20', night: 'לילה 20–24' }[(delivery as any).timeRange] || ''}` : ''}
           </Text>
         </View>
       </View>

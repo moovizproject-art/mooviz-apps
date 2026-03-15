@@ -77,6 +77,8 @@ export async function registerWithEmail(
 ): Promise<FirebaseAuthTypes.UserCredential> {
   try {
     const credential = await auth().createUserWithEmailAndPassword(email, password);
+    // Set Hebrew language for Firebase email templates
+    auth().languageCode = 'he';
     await credential.user.sendEmailVerification();
     return credential;
   } catch (err: unknown) {
@@ -102,6 +104,7 @@ export async function signInWithEmail(
  * Send password reset email.
  */
 export async function sendPasswordReset(email: string): Promise<void> {
+  auth().languageCode = 'he';
   await auth().sendPasswordResetEmail(email);
 }
 
