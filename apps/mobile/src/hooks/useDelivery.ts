@@ -123,6 +123,7 @@ interface CreateDeliveryInput {
   mediaUris?: string[];
   suggestedPrice: number;
   scheduledDate: string | null;
+  timeRange?: string | null;
   notes: string;
 }
 
@@ -251,6 +252,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
           mediaURLs,
           suggestedPrice: input.suggestedPrice,
           scheduledDate: input.scheduledDate,
+          timeRange: input.timeRange ?? null,
           notes: input.notes,
         });
 

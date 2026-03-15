@@ -196,6 +196,10 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       carAlert.show('error', t('common.error'), t('delivery.errorDescription'));
       return;
     }
+    if (!form.suggestedPrice || parseFloat(form.suggestedPrice) <= 0) {
+      carAlert.show('error', t('common.error'), t('delivery.errorPrice'));
+      return;
+    }
 
     setLoadingVisible(true);
     setLoadingStep(0);
@@ -217,6 +221,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         mediaUris: form.mediaUris,
         suggestedPrice: parseFloat(form.suggestedPrice) || 0,
         scheduledDate: form.isAsap ? 'asap' : (form.scheduledDate ? form.scheduledDate.toISOString() : null),
+        timeRange: form.isAsap ? null : (form.timeRange ?? null),
         notes: form.notes,
       });
       setLoadingStep(2);
@@ -235,10 +240,10 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   };
 
   const sizeOptions: { value: DeliveryForm['itemSize']; label: string; icon: string; hint: string }[] = [
-    { value: 'small', label: 'קטן', icon: '✉️', hint: 'עד 1 ק"ג\n25×35 ס"מ\nמסמכים, מפתחות' },
-    { value: 'medium', label: 'בינוני', icon: '📦', hint: 'עד 10 ק"ג\n40×40×40 ס"מ\nמוצרי אלקטרוניקה, ביגוד' },
-    { value: 'large', label: 'גדול', icon: '📦📦', hint: 'עד 30 ק"ג\n60×60×60 ס"מ\nריהוט קטן, מכשירי חשמל' },
-    { value: 'xlarge', label: 'אחר', icon: '🚚', hint: 'מעל 30 ק"ג\nמעל 60 ס"מ\nרהיטים, מוצרי חשמל גדולים' },
+    { value: 'small', label: t('form.sizeSmall'), icon: '✉️', hint: t('form.sizeSmallHint') },
+    { value: 'medium', label: t('form.sizeMedium'), icon: '📦', hint: t('form.sizeMediumHint') },
+    { value: 'large', label: t('form.sizeLarge'), icon: '📦📦', hint: t('form.sizeLargeHint') },
+    { value: 'xlarge', label: t('form.sizeOther'), icon: '🚚', hint: t('form.sizeOtherHint') },
   ];
 
   const infoButton = (
@@ -322,7 +327,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
               {t('form.itemSize')}
             </Text>
             <TouchableOpacity onPress={() => setShowSizeInfo(true)}>
-              <Text style={[styles.sizeInfoBtn, { color: colors.primary }]}>ℹ️ מידות</Text>
+              <Text style={[styles.sizeInfoBtn, { color: colors.primary }]}>ℹ️ {t('form.sizes')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.sizeRow}>
@@ -490,7 +495,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
         <View style={styles.helpOverlay}>
           <View style={[styles.helpCard, { backgroundColor: colors.background }]}>
             <View style={[styles.helpHeader, { backgroundColor: colors.accent }]}>
-              <Text style={styles.helpHeaderTitle}>📏 מדריך מידות</Text>
+              <Text style={styles.helpHeaderTitle}>📏 {t('form.sizeGuide')}</Text>
             </View>
             <View style={styles.helpScrollContent}>
               {sizeOptions.map((opt) => (

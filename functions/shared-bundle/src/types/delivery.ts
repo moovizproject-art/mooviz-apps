@@ -42,6 +42,19 @@ export interface StatusEntry {
   note?: string;
 }
 
+export type InterestedDriverStatus = 'interested' | 'selected' | 'confirmed' | 'declined' | 'cancelled' | 'withdrawn';
+
+export interface InterestedDriver {
+  uid: string;
+  name: string;
+  photoUrl: string | null;
+  rating: number;
+  completedDeliveries: number;
+  distanceKm: number;
+  expressedAt: firestore.Timestamp;
+  status: InterestedDriverStatus;
+}
+
 export interface Delivery {
   id?: string;
   senderId: string;
@@ -59,14 +72,22 @@ export interface Delivery {
   item: DeliveryItem;
   price: number;
   pickupDate: firestore.Timestamp | "asap";
+  timeRange?: string | null;
   notes?: string;
   payment: PaymentConfirmation;
   proof: DeliveryProof;
   statusHistory: StatusEntry[];
+  rated?: boolean;
+  ratedBySender?: boolean;
+  ratedByDriver?: boolean;
+  ratingsVisibleAt?: firestore.Timestamp;
   cancelledBy?: string;
   timeoutAt: firestore.Timestamp;
   createdAt: firestore.Timestamp;
   updatedAt: firestore.Timestamp;
+  interestedDrivers?: InterestedDriver[];
+  selectedDriverId?: string | null;
+  selectionExpiresAt?: firestore.Timestamp | null;
 }
 
 export interface DeliveryCreateData {

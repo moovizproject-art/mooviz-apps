@@ -72,6 +72,7 @@ export interface Delivery {
   item: DeliveryItem;
   price: number;
   pickupDate: firestore.Timestamp | "asap";
+  timeRange?: string | null;
   notes?: string;
   payment: PaymentConfirmation;
   proof: DeliveryProof;

@@ -132,6 +132,13 @@ export const createDelivery = onCall(async (request) => {
     pickupDate = "asap";
   }
 
+  // --- Normalize timeRange ---
+  const VALID_TIME_RANGES = ["morning", "afternoon", "evening", "night"];
+  const timeRange: string | null =
+    typeof d.timeRange === "string" && VALID_TIME_RANGES.includes(d.timeRange)
+      ? d.timeRange
+      : null;
+
   // --- Compute geohash ---
   const pickupGeohash = encodeGeohash(pickupLat, pickupLng, GEOHASH_PRECISION);
   const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
@@ -177,6 +184,7 @@ export const createDelivery = onCall(async (request) => {
     mediaURLs,
     price,
     pickupDate,
+    timeRange,
     notes: d.notes ?? "",
     payment: { senderConfirmed: false, driverConfirmed: false },
     proof: {},

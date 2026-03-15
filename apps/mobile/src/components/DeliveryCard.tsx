@@ -12,8 +12,43 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BRAND, BORDER_RADIUS, SPACING } from '../constants/design';
 import { StatusIndicator } from './StatusIndicator';
-import { formatCurrency, formatRelativeDate } from '../utils/formatters';
+import { formatCurrency, formatDate, formatRelativeDate } from '../utils/formatters';
 import { strings } from '../i18n/strings';
+
+const TIME_RANGE_LABELS: Record<string, string> = {
+  morning: 'בוקר 08:00–12:00',
+  afternoon: 'צהריים 12:00–16:00',
+  evening: 'ערב 16:00–20:00',
+  night: 'לילה 20:00–24:00',
+};
+
+function formatPickupDate(
+  pickupDate?: string | null | { toDate?: () => Date },
+  scheduledDate?: string | null,
+  timeRange?: string | null,
+): string {
+  // Resolve to a raw value we can inspect
+  const raw = pickupDate ?? scheduledDate;
+
+  // ASAP cases
+  if (!raw || raw === 'asap') return 'בהקדם';
+
+  // Firestore Timestamp object
+  let d: Date;
+  if (typeof raw === 'object' && typeof raw.toDate === 'function') {
+    d = raw.toDate();
+  } else if (typeof raw === 'string') {
+    d = new Date(raw);
+  } else {
+    return 'בהקדם';
+  }
+
+  if (isNaN(d.getTime())) return 'בהקדם';
+
+  const formatted = formatDate(d);
+  const rangeLabel = timeRange ? TIME_RANGE_LABELS[timeRange] : null;
+  return rangeLabel ? `${formatted} • ${rangeLabel}` : formatted;
+}
 
 interface RatingSummary {
   rating: number;
@@ -32,6 +67,9 @@ interface DeliveryData {
   price?: number;
   suggestedPrice?: number;
   createdAt?: Date | string;
+  pickupDate?: string | null | { toDate?: () => Date };
+  scheduledDate?: string | null;
+  timeRange?: string | null;
   distance?: number;
   driverName?: string;
   ratedBySender?: boolean;
@@ -132,6 +170,11 @@ export function DeliveryCard({
               🚛 {delivery.driverName}
             </Text>
           ) : null}
+
+          {/* Pickup date/time */}
+          <Text style={styles.dateText} numberOfLines={1}>
+            📅 {formatPickupDate(delivery.pickupDate, delivery.scheduledDate, delivery.timeRange)}
+          </Text>
 
           {/* Ratings preview — visible when both parties rated */}
           {delivery.ratedBySender && delivery.ratedByDriver && (
@@ -285,6 +328,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   driverText: {
+    fontSize: 12,
+    color: BRAND.textSecondary,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  dateText: {
     fontSize: 12,
     color: BRAND.textSecondary,
     marginTop: 2,
