@@ -410,6 +410,12 @@ function handleNotificationNavigation(data?: Record<string, string>): void {
         navigateFromNotification('SenderDeliveryDetail', { deliveryId });
       }
       break;
+    case 'driver_selected':
+      if (deliveryId) {
+        console.log('[Nav] Navigate to driver delivery detail for confirmation:', deliveryId);
+        navigateFromNotification('DriverDeliveryDetail', { deliveryId });
+      }
+      break;
     case 'sender_approved':
     case 'delivery_picked_up':
     case 'delivery_delivered':

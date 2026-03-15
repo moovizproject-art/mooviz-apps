@@ -17,8 +17,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
-
-import Video, { ResizeMode } from 'react-native-video';
+import Video from 'react-native-video';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -79,14 +78,16 @@ export function ImageGalleryModal({ visible, images, initialIndex = 0, onClose }
           renderItem={({ item }) => (
             <View style={styles.imageContainer}>
               {isVideoUrl(item) ? (
-                <Video
-                  source={{ uri: item }}
-                  style={styles.video}
-                  resizeMode={ResizeMode.CONTAIN}
-                  controls
-                  paused={false}
-                  repeat={false}
-                />
+                <View style={styles.videoContainer}>
+                  <Video
+                    source={{ uri: item }}
+                    style={styles.video}
+                    controls={true}
+                    paused={true}
+                    resizeMode="contain"
+                    onError={(e: any) => console.warn('[Video] Error:', e)}
+                  />
+                </View>
               ) : (
                 <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
               )}
@@ -207,6 +208,13 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  videoContainer: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT * 0.7,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
   },
   video: {
     width: SCREEN_WIDTH,
