@@ -102,8 +102,10 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     paddingHorizontal: SPACING.lg,
+    paddingEnd: SPACING.lg + 8,
     paddingVertical: SPACING.md,
     minHeight: 48,
+    writingDirection: 'rtl',
   },
   toggleButton: {
     paddingHorizontal: SPACING.md,

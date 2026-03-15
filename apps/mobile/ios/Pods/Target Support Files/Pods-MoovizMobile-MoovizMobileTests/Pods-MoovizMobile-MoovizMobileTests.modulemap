@@ -1,0 +1,6 @@
+module Pods_MoovizMobile_MoovizMobileTests {
+  umbrella header "Pods-MoovizMobile-MoovizMobileTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

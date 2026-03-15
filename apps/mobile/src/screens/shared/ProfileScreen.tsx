@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { RatingsHistoryModal } from '../../components/RatingsHistoryModal';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import storage from '@react-native-firebase/storage';
@@ -49,6 +50,8 @@ export function ProfileScreen(): React.JSX.Element {
   const [editAgeRange, setEditAgeRange] = useState<string>(currentUser?.ageRange || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [ownPhotoUri, setOwnPhotoUri] = useState<string | null>(null);
+  const [ratingsModalVisible, setRatingsModalVisible] = useState(false);
+  const [ratingsModalMode, setRatingsModalMode] = useState<'sender' | 'driver'>('sender');
 
   // Load own profile photo on mount
   React.useEffect(() => {
@@ -187,49 +190,59 @@ export function ProfileScreen(): React.JSX.Element {
         </View>
 
         {/* Sender Ratings */}
-        <View style={[styles.ratingsSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>📦 {t('profile.senderRating')}</Text>
-          <View style={styles.ratingRow}>
-            <View style={styles.ratingItem}>
-              <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                {senderRating.average > 0 ? senderRating.average.toFixed(1) : '—'}
-              </Text>
-              <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.average')}</Text>
-            </View>
-            <View style={styles.ratingItem}>
-              <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                {currentUser?.completedDeliveries || 0}
-              </Text>
-              <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.deliveryCount')}</Text>
-            </View>
-            <View style={styles.ratingItem}>
-              <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                {senderRating.count || 0}
-              </Text>
-              <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.ratingsCount')}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Driver Ratings — only if applicable */}
-        {hasDriverRating && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => { setRatingsModalMode('sender'); setRatingsModalVisible(true); }}
+        >
           <View style={[styles.ratingsSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>🚗 {t('profile.driverRating')}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>📦 {t('profile.senderRating')}</Text>
             <View style={styles.ratingRow}>
               <View style={styles.ratingItem}>
                 <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                  {driverRating.average > 0 ? driverRating.average.toFixed(1) : '—'}
+                  {senderRating.average > 0 ? senderRating.average.toFixed(1) : '—'}
                 </Text>
                 <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.average')}</Text>
               </View>
               <View style={styles.ratingItem}>
                 <Text style={[styles.ratingValue, { color: colors.primary }]}>
-                  {driverRating.count || 0}
+                  {currentUser?.completedDeliveries || 0}
+                </Text>
+                <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.deliveryCount')}</Text>
+              </View>
+              <View style={styles.ratingItem}>
+                <Text style={[styles.ratingValue, { color: colors.primary }]}>
+                  {senderRating.count || 0}
                 </Text>
                 <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.ratingsCount')}</Text>
               </View>
             </View>
           </View>
+        </TouchableOpacity>
+
+        {/* Driver Ratings — only if applicable */}
+        {hasDriverRating && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => { setRatingsModalMode('driver'); setRatingsModalVisible(true); }}
+          >
+            <View style={[styles.ratingsSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>🚗 {t('profile.driverRating')}</Text>
+              <View style={styles.ratingRow}>
+                <View style={styles.ratingItem}>
+                  <Text style={[styles.ratingValue, { color: colors.primary }]}>
+                    {driverRating.average > 0 ? driverRating.average.toFixed(1) : '—'}
+                  </Text>
+                  <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.average')}</Text>
+                </View>
+                <View style={styles.ratingItem}>
+                  <Text style={[styles.ratingValue, { color: colors.primary }]}>
+                    {driverRating.count || 0}
+                  </Text>
+                  <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>{t('profile.ratingsCount')}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
         )}
 
         {/* Profile details / edit form */}
@@ -254,12 +267,12 @@ export function ProfileScreen(): React.JSX.Element {
                 />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>כינוי (נראה לנהגים/שולחים)</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{t('profile.nicknameLabel')}</Text>
                 <TextInput
                   style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
                   value={editNickname}
                   onChangeText={setEditNickname}
-                  placeholder="הכינוי שלך"
+                  placeholder={t('profile.nicknamePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                 />
               </View>
@@ -360,6 +373,14 @@ export function ProfileScreen(): React.JSX.Element {
         buttons={carAlert.buttons}
         onDismiss={carAlert.dismiss}
       />
+      {currentUser?.uid && (
+        <RatingsHistoryModal
+          visible={ratingsModalVisible}
+          onClose={() => setRatingsModalVisible(false)}
+          userId={currentUser.uid}
+          mode={ratingsModalMode}
+        />
+      )}
     </View>
   );
 }

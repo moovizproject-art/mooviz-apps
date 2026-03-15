@@ -6,7 +6,12 @@ export type NotificationEventType =
   | "delivery_delivered"
   | "payment_confirmed"
   | "delivery_cancelled"
-  | "new_chat_message";
+  | "new_chat_message"
+  | "driver_selected"
+  | "driver_confirmed"
+  | "driver_declined"
+  | "selection_cancelled"
+  | "selection_timeout";
 
 export interface NotificationTemplate {
   event: NotificationEventType;
@@ -92,6 +97,51 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationEventType, NotificationT
     bodyEn: "{{senderName}}: {{messagePreview}}",
     recipient: "both",
     dataKeys: ["deliveryId", "chatRoomId", "senderName", "messagePreview"],
+  },
+  driver_selected: {
+    event: "driver_selected",
+    titleHe: "השולח בחר בך!",
+    titleEn: "You Were Selected!",
+    bodyHe: "אשר את המשלוח תוך 15 דקות",
+    bodyEn: "Confirm the delivery within 15 minutes",
+    recipient: "driver",
+    dataKeys: ["deliveryId", "pickupCity", "destinationCity", "price"],
+  },
+  driver_confirmed: {
+    event: "driver_confirmed",
+    titleHe: "הנהג אישר!",
+    titleEn: "Driver Confirmed!",
+    bodyHe: "המשלוח שויך ל-{{driverName}}",
+    bodyEn: "The delivery has been assigned to {{driverName}}",
+    recipient: "sender",
+    dataKeys: ["deliveryId", "driverName", "driverId"],
+  },
+  driver_declined: {
+    event: "driver_declined",
+    titleHe: "הנהג דחה",
+    titleEn: "Driver Declined",
+    bodyHe: "בחר נהג אחר מהרשימה",
+    bodyEn: "Please select another driver from the list",
+    recipient: "sender",
+    dataKeys: ["deliveryId", "driverName"],
+  },
+  selection_cancelled: {
+    event: "selection_cancelled",
+    titleHe: "השולח ביטל את הבחירה",
+    titleEn: "Selection Cancelled",
+    bodyHe: "המשלוח הוחזר לרשימה",
+    bodyEn: "The delivery has been returned to the listing",
+    recipient: "driver",
+    dataKeys: ["deliveryId"],
+  },
+  selection_timeout: {
+    event: "selection_timeout",
+    titleHe: "הנהג לא הגיב בזמן",
+    titleEn: "Driver Did Not Respond",
+    bodyHe: "בחר נהג אחר מהרשימה",
+    bodyEn: "Please select another driver from the list",
+    recipient: "sender",
+    dataKeys: ["deliveryId", "driverName"],
   },
 };
 

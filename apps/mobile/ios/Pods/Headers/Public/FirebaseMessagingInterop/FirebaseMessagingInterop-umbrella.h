@@ -1,0 +1,1 @@
+../../../Target Support Files/FirebaseMessagingInterop/FirebaseMessagingInterop-umbrella.h

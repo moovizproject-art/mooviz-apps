@@ -1,0 +1,119 @@
+<h2>Driver Profile Modal — Sender View</h2>
+<p class="subtitle">What the sender sees when tapping a driver card. Which layout feels right?</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f8f9fa;">
+      <div style="font-family: system-ui; max-width: 340px; margin: 0 auto; direction: rtl; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1a73e8, #0d47a1); padding: 24px 16px 20px; text-align: center; position: relative;">
+          <div style="position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;">✕</div>
+          <div style="width: 64px; height: 64px; border-radius: 50%; background: #fff; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #1a73e8; border: 3px solid rgba(255,255,255,0.4);">מש</div>
+          <div style="color: #fff; font-size: 18px; font-weight: 700;">משה כהן</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 4px;">נהג פעיל מאז ינואר 2026</div>
+        </div>
+        <!-- Stats row -->
+        <div style="display: flex; justify-content: space-around; padding: 16px 12px; border-bottom: 1px solid #f0f0f0;">
+          <div style="text-align: center;">
+            <div style="font-size: 22px; font-weight: 800; color: #FFB800;">4.8</div>
+            <div style="font-size: 10px; color: #6b7280;">דירוג</div>
+          </div>
+          <div style="width: 1px; background: #e5e7eb;"></div>
+          <div style="text-align: center;">
+            <div style="font-size: 22px; font-weight: 800; color: #1a73e8;">42</div>
+            <div style="font-size: 10px; color: #6b7280;">משלוחים</div>
+          </div>
+          <div style="width: 1px; background: #e5e7eb;"></div>
+          <div style="text-align: center;">
+            <div style="font-size: 22px; font-weight: 800; color: #22c55e;">3.2</div>
+            <div style="font-size: 10px; color: #6b7280;">ק"מ ממך</div>
+          </div>
+        </div>
+        <!-- Recent reviews -->
+        <div style="padding: 12px 16px;">
+          <div style="font-size: 13px; font-weight: 700; color: #1e3a5f; margin-bottom: 10px;">ביקורות אחרונות</div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 12px; color: #FFB800;">★★★★★</span>
+              <span style="font-size: 10px; color: #9ca3af;">לפני 3 ימים</span>
+            </div>
+            <div style="font-size: 11px; color: #374151; margin-top: 4px; font-style: italic;">"נהג מצוין, הגיע בזמן והיה מאוד אדיב"</div>
+          </div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 12px; color: #FFB800;">★★★★☆</span>
+              <span style="font-size: 10px; color: #9ca3af;">לפני שבוע</span>
+            </div>
+            <div style="font-size: 11px; color: #374151; margin-top: 4px; font-style: italic;">"שירות טוב, מומלץ"</div>
+          </div>
+          <div style="text-align: center; padding: 4px;">
+            <span style="font-size: 11px; color: #3b82f6; font-weight: 600;">הצג את כל 28 הביקורות ←</span>
+          </div>
+        </div>
+        <!-- Select button -->
+        <div style="padding: 0 16px 16px;">
+          <button style="width: 100%; background: #22c55e; color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer;">✓ בחר נהג זה</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Full Modal with Reviews</h3>
+      <p>Page-sheet modal: branded header, 3-stat row (rating, deliveries, distance), 2 latest reviews preview with "show all" link, big green select button at bottom.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f8f9fa;">
+      <div style="font-family: system-ui; max-width: 340px; margin: 0 auto; direction: rtl; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+        <!-- Compact header -->
+        <div style="display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid #f0f0f0; position: relative;">
+          <div style="position: absolute; top: 12px; left: 12px; font-size: 18px; color: #9ca3af; cursor: pointer;">✕</div>
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0;">מש</div>
+          <div>
+            <div style="font-size: 16px; font-weight: 700; color: #1e3a5f;">משה כהן</div>
+            <div style="font-size: 12px; color: #6b7280;">⭐ 4.8 • 42 משלוחים • 3.2 ק"מ</div>
+          </div>
+        </div>
+        <!-- Rating breakdown -->
+        <div style="padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
+          <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px;">פירוט דירוג</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+            <span style="font-size: 10px; width: 12px;">5</span>
+            <div style="flex: 1; height: 6px; background: #f0f0f0; border-radius: 3px;"><div style="width: 72%; height: 100%; background: #FFB800; border-radius: 3px;"></div></div>
+            <span style="font-size: 10px; color: #9ca3af; width: 16px;">30</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+            <span style="font-size: 10px; width: 12px;">4</span>
+            <div style="flex: 1; height: 6px; background: #f0f0f0; border-radius: 3px;"><div style="width: 20%; height: 100%; background: #FFB800; border-radius: 3px;"></div></div>
+            <span style="font-size: 10px; color: #9ca3af; width: 16px;">8</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+            <span style="font-size: 10px; width: 12px;">3</span>
+            <div style="flex: 1; height: 6px; background: #f0f0f0; border-radius: 3px;"><div style="width: 5%; height: 100%; background: #FFB800; border-radius: 3px;"></div></div>
+            <span style="font-size: 10px; color: #9ca3af; width: 16px;">2</span>
+          </div>
+        </div>
+        <!-- Reviews list -->
+        <div style="padding: 12px 16px; max-height: 140px; overflow-y: auto;">
+          <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px;">ביקורות (28)</div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+            <div style="font-size: 10px; color: #FFB800;">★★★★★ <span style="color: #9ca3af; margin-right: 4px;">• לפני 3 ימים</span></div>
+            <div style="font-size: 11px; color: #374151; margin-top: 3px;">"נהג מצוין, הגיע בזמן"</div>
+          </div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+            <div style="font-size: 10px; color: #FFB800;">★★★★☆ <span style="color: #9ca3af; margin-right: 4px;">• לפני שבוע</span></div>
+            <div style="font-size: 11px; color: #374151; margin-top: 3px;">"שירות טוב, מומלץ"</div>
+          </div>
+        </div>
+        <!-- Select button -->
+        <div style="padding: 12px 16px;">
+          <button style="width: 100%; background: #22c55e; color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer;">✓ בחר נהג זה</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Compact with Rating Breakdown</h3>
+      <p>Compact header with inline stats, star-distribution bars (like App Store), scrollable reviews list, green select button. More data-dense, less visual flair.</p>
+    </div>
+  </div>
+</div>

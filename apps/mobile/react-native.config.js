@@ -8,4 +8,11 @@ module.exports = {
     android: {},
   },
   assets: ['./src/assets/fonts'],
+  dependencies: {
+    '@react-native-community/datetimepicker': {
+      platforms: {
+        android: null, // Disable broken autolinking — manually registered in MainApplication
+      },
+    },
+  },
 };

@@ -140,6 +140,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...TYPOGRAPHY.body,
     paddingVertical: 0,
+    paddingEnd: 8,
+    writingDirection: 'rtl',
   },
   inputText: {
     flex: 1,

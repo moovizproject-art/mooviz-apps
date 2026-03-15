@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"role.*=.*admin\" /Users/devninja/projects/MoovizProject/Repo/Mooviz/scripts/*.js 2>/dev/null | head -20)",
+      "Bash(grep -r \"import\\\\|from\" /Users/devninja/projects/MoovizProject/Repo/Mooviz/apps/admin/src/pages/*.tsx | grep -E \"\\(firebase-admin|undefined|missing\\)\" | head -10)",
+      "Bash(grep -r \"np59JHWkCveavp2ldfio5njBqvJ2\" /Users/devninja/projects/MoovizProject/Repo/Mooviz --include=\"*.ts\" --include=\"*.js\" --include=\"*.md\" 2>/dev/null | head -20)",
+      "Skill(fullstack-dev-skills:security-reviewer)",
+      "Bash(git add apps/mobile/src/services/auth.ts apps/mobile/src/screens/driver/FeedScreen.tsx && git commit -m \"$\\(cat <<'EOF'\nfix\\(mobile\\): add role field to registration, sync GPS location to Firestore\n\n- Add missing role: 'sender' to createUserDocument\\(\\) in auth.ts\n  \\(was only set in useAuth.register\\(\\), not in the service function\\)\n- Sync driver's device GPS location to Firestore on FeedScreen mount\n  so geohash-based nearby queries and notifications work correctly\n- Use static import for encodeGeohash instead of require\\(\\)\nEOF\n\\)\")",
+      "Bash(npx firebase deploy --only storage 2>&1 | tail -10)",
+      "Bash(npm run build 2>&1 | tail -5)",
+      "Bash(./gradlew assembleRelease 2>&1 | tail -30)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:45193/app-release.apk)",
+      "Bash(adb connect 192.168.10.3:45193 2>&1)",
+      "Bash(adb -s 192.168.10.3:45193 install -r /Users/devninja/projects/MoovizProject/Repo/Mooviz/apps/mobile/android/app/build/outputs/apk/release/app-release.apk 2>&1)",
+      "Bash(git push origin main 2>&1)",
+      "Bash(git checkout development 2>&1 && git merge main --no-edit 2>&1 && git push origin development 2>&1)",
+      "Bash(git checkout main 2>&1)",
+      "Bash(kill 39886 2>/dev/null; echo \"Server stopped\")",
+      "Bash(cd /Users/devninja/projects/MoovizProject/Repo/Mooviz/functions && npm run build 2>&1 | tail -5)"
+    ]
+  }
+}

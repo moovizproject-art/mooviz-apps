@@ -11,7 +11,7 @@ You interact with the KAL Solutions CRM Projects Extended REST API to manage tas
 
 | Key | Value |
 |-----|-------|
-| **Base URL** | `https://crm-app.kal-trade.com/projects_extended/projects_api` |
+| **Base URL** | `https://kalops.ai/projects_extended/projects_api` |
 | **MOOVIZ Project ID** | `1` |
 | **Auth** | `X-API-Key` + `X-API-Secret` headers |
 

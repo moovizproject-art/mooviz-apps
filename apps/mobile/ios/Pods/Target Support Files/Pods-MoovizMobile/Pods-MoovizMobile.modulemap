@@ -1,0 +1,6 @@
+module Pods_MoovizMobile {
+  umbrella header "Pods-MoovizMobile-umbrella.h"
+
+  export *
+  module * { export * }
+}

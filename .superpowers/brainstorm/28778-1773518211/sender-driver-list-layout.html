@@ -1,0 +1,113 @@
+<h2>Sender View — Interested Drivers List</h2>
+<p class="subtitle">Where should the list appear on the delivery detail screen? (RTL Hebrew layout)</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f8f9fa;">
+      <!-- Mockup A: Below timeline, above actions -->
+      <div style="font-family: system-ui; max-width: 360px; margin: 0 auto; direction: rtl;">
+        <div style="background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280; text-align: center;">📦 סיכום משלוח</div>
+          <div style="font-size: 10px; color: #9ca3af; text-align: center; margin-top: 4px;">ת"א → חיפה • 150 ₪</div>
+        </div>
+        <div style="background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280; text-align: center;">⏱ ציר זמן</div>
+          <div style="display: flex; justify-content: center; gap: 8px; margin-top: 6px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></div>
+            <div style="width: 24px; height: 2px; background: #e5e7eb; margin-top: 3px;"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #e5e7eb;"></div>
+            <div style="width: 24px; height: 2px; background: #e5e7eb; margin-top: 3px;"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #e5e7eb;"></div>
+          </div>
+        </div>
+        <div style="background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 2px solid #3b82f6;">
+          <div style="font-size: 12px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px;">🚗 נהגים מעוניינים (3)</div>
+          <!-- Driver 1 -->
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #f0f7ff; border-radius: 8px; margin-bottom: 6px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">מש</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 600;">משה כהן</div>
+              <div style="font-size: 10px; color: #6b7280;">⭐ 4.8 • 42 משלוחים • 3.2 ק"מ</div>
+            </div>
+            <button style="background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;">בחר</button>
+          </div>
+          <!-- Driver 2 -->
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #22c55e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">דנ</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 600;">דני לוי</div>
+              <div style="font-size: 10px; color: #6b7280;">⭐ 4.5 • 18 משלוחים • 5.1 ק"מ</div>
+            </div>
+            <button style="background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;">בחר</button>
+          </div>
+          <!-- Driver 3 -->
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #f8f9fa; border-radius: 8px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #f59e0b; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">יע</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 600;">יעל אברהם</div>
+              <div style="font-size: 10px; color: #6b7280;">⭐ 4.9 • 87 משלוחים • 8.0 ק"מ</div>
+            </div>
+            <button style="background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;">בחר</button>
+          </div>
+        </div>
+        <div style="background: #fff; border-radius: 12px; padding: 12px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280; text-align: center;">🗺 מפה + פעולות</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Inline Section (Below Timeline)</h3>
+      <p>Drivers list as a dedicated section in the scroll flow. Blue border highlights it. Each driver has a quick "Select" button + tappable for full profile.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f8f9fa;">
+      <!-- Mockup B: Bottom sheet / sticky panel -->
+      <div style="font-family: system-ui; max-width: 360px; margin: 0 auto; direction: rtl; position: relative; min-height: 380px;">
+        <div style="background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280; text-align: center;">📦 סיכום משלוח</div>
+          <div style="font-size: 10px; color: #9ca3af; text-align: center; margin-top: 4px;">ת"א → חיפה • 150 ₪</div>
+        </div>
+        <div style="background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280; text-align: center;">⏱ ציר זמן</div>
+        </div>
+        <div style="background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280; text-align: center;">🗺 מפה</div>
+        </div>
+        <!-- Bottom sheet -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 16px 16px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); padding: 12px 16px;">
+          <div style="width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 0 auto 10px;"></div>
+          <div style="font-size: 12px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px;">🚗 נהגים מעוניינים (3)</div>
+          <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;">
+            <!-- Mini driver card 1 -->
+            <div style="min-width: 120px; background: #f0f7ff; border-radius: 10px; padding: 10px; text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; margin: 0 auto 6px;">מש</div>
+              <div style="font-size: 11px; font-weight: 600;">משה כהן</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">⭐ 4.8 • 42</div>
+              <button style="background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 9px; font-weight: 700; margin-top: 6px; cursor: pointer;">בחר</button>
+            </div>
+            <!-- Mini driver card 2 -->
+            <div style="min-width: 120px; background: #f8f9fa; border-radius: 10px; padding: 10px; text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #22c55e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; margin: 0 auto 6px;">דנ</div>
+              <div style="font-size: 11px; font-weight: 600;">דני לוי</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">⭐ 4.5 • 18</div>
+              <button style="background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 9px; font-weight: 700; margin-top: 6px; cursor: pointer;">בחר</button>
+            </div>
+            <!-- Mini driver card 3 -->
+            <div style="min-width: 120px; background: #f8f9fa; border-radius: 10px; padding: 10px; text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #f59e0b; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; margin: 0 auto 6px;">יע</div>
+              <div style="font-size: 11px; font-weight: 600;">יעל אברהם</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">⭐ 4.9 • 87</div>
+              <button style="background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 9px; font-weight: 700; margin-top: 6px; cursor: pointer;">בחר</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Bottom Sheet (Horizontal Scroll)</h3>
+      <p>Sticky bottom panel with horizontal driver cards. Draggable up for full view. Always visible without scrolling. Compact but less detail per driver.</p>
+    </div>
+  </div>
+</div>

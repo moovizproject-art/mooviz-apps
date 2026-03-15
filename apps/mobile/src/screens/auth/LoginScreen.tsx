@@ -296,7 +296,7 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
         >
           <Text style={[styles.kalName, { color: colors.textSecondary }]}>KAL Solutions</Text>
           <Image source={kalIcon} style={styles.kalIcon} resizeMode="contain" />
-          <Text style={[styles.kalText, { color: colors.textSecondary }]}>Developed by</Text>
+          <Text style={[styles.kalText, { color: colors.textSecondary }]}>{t('commonExtra.developedBy')}</Text>
         </TouchableOpacity>
 
         <View style={styles.spacer} />
