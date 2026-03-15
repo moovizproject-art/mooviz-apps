@@ -78,12 +78,14 @@ export const notifyExpansion = onSchedule(
         }
 
         // Find new drivers in expanded radius (excluding already notified)
+        const itemSize = delivery.item?.size as string | undefined;
         const newDrivers = await getNearbyDriverTokensMultiLocation(
           pickupGeohash,
           newRadius,
           pickupLat,
           pickupLng,
-          alreadyNotified
+          alreadyNotified,
+          itemSize
         );
 
         if (newDrivers.length > 0) {

@@ -196,7 +196,8 @@ export async function getNearbyDriverTokensMultiLocation(
   radiusKm: number,
   centerLat: number,
   centerLng: number,
-  excludeUids?: string[]
+  excludeUids?: string[],
+  itemSize?: string
 ): Promise<NearbyDriver[]> {
   const precision = getPrecisionForRadius(radiusKm);
   const { lower, upper } = getGeohashRange(pickupGeohash, precision);
@@ -245,6 +246,12 @@ export async function getNearbyDriverTokensMultiLocation(
     // Check schedule + quiet hours
     const prefs = data.driverPrefs;
     if (prefs && !isDriverAvailableNow(prefs)) return;
+
+    // Filter by delivery size preference
+    if (itemSize) {
+      const sizes = prefs?.deliverySizes;
+      if (Array.isArray(sizes) && sizes.length > 0 && !sizes.includes(itemSize)) return;
+    }
 
     // Get coordinates based on location type
     let driverLat: number | undefined;

@@ -213,7 +213,7 @@ export const createDelivery = onCall(async (request) => {
   if (pickupGeohash) {
     const pickupCity = pickupRaw.city ?? "";
     const destCity = destRaw.city ?? "";
-    getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng)
+    getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng, undefined, itemSize || undefined)
       .then((nearbyDrivers) =>
         Promise.all(
           nearbyDrivers.map((driver) =>
@@ -254,10 +254,10 @@ export const expressInterest = onCall(async (request) => {
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 
   if (delivery.status !== "new") {
-    throw new HttpsError("failed-precondition", "Delivery must be in 'new' status");
+    throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס חדש");
   }
   if (delivery.senderId === uid) {
-    throw new HttpsError("permission-denied", "Cannot express interest in your own delivery");
+    throw new HttpsError("permission-denied", "לא ניתן להביע עניין במשלוח שלך");
   }
 
   // Transaction: atomic read-check-append
@@ -267,7 +267,7 @@ export const expressInterest = onCall(async (request) => {
     const interested: any[] = freshData.interestedDrivers || [];
 
     if (interested.length >= 30) {
-      throw new HttpsError("resource-exhausted", "Maximum interested drivers reached");
+      throw new HttpsError("resource-exhausted", "הגעת למקסימום נהגים מעוניינים");
     }
 
     const existing = interested.find((d: any) => d.uid === uid);
@@ -282,7 +282,7 @@ export const expressInterest = onCall(async (request) => {
         txn.update(ref, { interestedDrivers: updated, updatedAt: admin.firestore.Timestamp.now() });
         return;
       }
-      throw new HttpsError("already-exists", "Already expressed interest or previously rejected");
+      throw new HttpsError("already-exists", "כבר הבעת עניין או שנדחית בעבר");
     }
 
     // Compute distance from pickup
@@ -344,7 +344,7 @@ export const selectDriver = onCall(async (request) => {
   if (!deliveryId || !driverUid) throw new HttpsError("invalid-argument", "deliveryId and driverUid are required");
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
-  if (delivery.senderId !== uid) throw new HttpsError("permission-denied", "Only the sender can select a driver");
+  if (delivery.senderId !== uid) throw new HttpsError("permission-denied", "רק השולח יכול לבחור נהג");
 
   const SELECTION_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -352,12 +352,12 @@ export const selectDriver = onCall(async (request) => {
     const freshDoc = await txn.get(ref);
     const freshData = freshDoc.data()!;
 
-    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "Delivery must be in 'new' status");
-    if (freshData.selectedDriverId) throw new HttpsError("failed-precondition", "Another driver is already selected");
+    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס חדש");
+    if (freshData.selectedDriverId) throw new HttpsError("failed-precondition", "נהג אחר כבר נבחר, המתן או בטל");
 
     const interested: any[] = freshData.interestedDrivers || [];
     const driverEntry = interested.find((d: any) => d.uid === driverUid && d.status === "interested");
-    if (!driverEntry) throw new HttpsError("not-found", "Driver not found in interested list or not available");
+    if (!driverEntry) throw new HttpsError("not-found", "הנהג לא נמצא ברשימה או לא זמין");
 
     const updated = interested.map((d: any) => d.uid === driverUid ? { ...d, status: "selected" } : d);
     const now = admin.firestore.Timestamp.now();
@@ -398,11 +398,11 @@ export const confirmSelection = onCall(async (request) => {
     const freshData = freshDoc.data()!;
     senderId = freshData.senderId;
 
-    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "Delivery must be in 'new' status");
-    if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "You are not the selected driver");
+    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס חדש");
+    if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "אתה לא הנהג שנבחר");
 
     const expiresAt = freshData.selectionExpiresAt;
-    if (expiresAt && expiresAt.toMillis() < Date.now()) throw new HttpsError("deadline-exceeded", "Selection has expired");
+    if (expiresAt && expiresAt.toMillis() < Date.now()) throw new HttpsError("deadline-exceeded", "פג תוקף הבחירה");
 
     const interested: any[] = freshData.interestedDrivers || [];
     const driverEntry = interested.find((d: any) => d.uid === uid);
@@ -469,7 +469,7 @@ export const declineSelection = onCall(async (request) => {
     const freshData = freshDoc.data()!;
     senderId = freshData.senderId;
 
-    if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "You are not the selected driver");
+    if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "אתה לא הנהג שנבחר");
 
     const now = admin.firestore.Timestamp.now();
     const interested: any[] = freshData.interestedDrivers || [];
@@ -508,32 +508,49 @@ export const cancelSelectedDriver = onCall(async (request) => {
     const freshDoc = await txn.get(ref);
     const freshData = freshDoc.data()!;
 
-    if (freshData.senderId !== uid) throw new HttpsError("permission-denied", "Only the sender can cancel");
-    if (freshData.status !== "waiting") throw new HttpsError("failed-precondition", "Delivery must be in 'waiting' status");
-    if (!freshData.driverId) throw new HttpsError("failed-precondition", "No driver assigned");
+    if (freshData.senderId !== uid) throw new HttpsError("permission-denied", "רק השולח יכול לבטל");
 
-    cancelledDriverId = freshData.driverId;
     const now = admin.firestore.Timestamp.now();
     const interested: any[] = freshData.interestedDrivers || [];
-    const updated = interested.map((d: any) => d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d);
 
-    txn.update(ref, {
-      status: "new",
-      driverId: null,
-      driverName: null,
-      driverPhotoUrl: null,
-      driverRating: null,
-      interestedDrivers: updated,
-      selectedDriverId: null,
-      selectionExpiresAt: null,
-      statusHistory: admin.firestore.FieldValue.arrayUnion({
+    if (freshData.status === "new" && freshData.selectedDriverId) {
+      // Case 1: Cancel pending selection (driver hasn't confirmed yet)
+      cancelledDriverId = freshData.selectedDriverId;
+      const updated = interested.map((d: any) =>
+        d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
+      );
+      txn.update(ref, {
+        interestedDrivers: updated,
+        selectedDriverId: null,
+        selectionExpiresAt: null,
+        updatedAt: now,
+      });
+    } else if (freshData.status === "waiting" && freshData.driverId) {
+      // Case 2: Cancel confirmed driver (revert waiting → new)
+      cancelledDriverId = freshData.driverId;
+      const updated = interested.map((d: any) =>
+        d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
+      );
+      txn.update(ref, {
         status: "new",
-        timestamp: now,
-        actor: uid,
-        note: "Sender cancelled selected driver, reverted to new",
-      }),
-      updatedAt: now,
-    });
+        driverId: null,
+        driverName: null,
+        driverPhotoUrl: null,
+        driverRating: null,
+        interestedDrivers: updated,
+        selectedDriverId: null,
+        selectionExpiresAt: null,
+        statusHistory: admin.firestore.FieldValue.arrayUnion({
+          status: "new",
+          timestamp: now,
+          actor: uid,
+          note: "Sender cancelled selected driver, reverted to new",
+        }),
+        updatedAt: now,
+      });
+    } else {
+      throw new HttpsError("failed-precondition", "אין בחירה ממתינה או נהג משויך לביטול");
+    }
   });
 
   sendPushNotification(cancelledDriverId, "השולח ביטל את הבחירה", "המשלוח הוחזר לרשימה", { event: "selection_cancelled", deliveryId })
@@ -564,7 +581,7 @@ export const withdrawFromInterest = onCall(async (request) => {
     const entry = interested.find((d: any) => d.uid === uid);
 
     if (!entry || entry.status !== "interested") {
-      throw new HttpsError("failed-precondition", "Not in interested list or already selected/declined");
+      throw new HttpsError("failed-precondition", "לא נמצא ברשימה או כבר נבחר/נדחה");
     }
 
     const updated = interested.map((d: any) => d.uid === uid ? { ...d, status: "withdrawn" } : d);

@@ -159,11 +159,14 @@ export const onDeliveryCreate = onDocumentCreated(
       const notifiedDriverUids: string[] = [];
 
       if (pickupGeohash && pickupLat && pickupLng) {
+        const itemSize = (data as any).item?.size as string | undefined;
         const nearbyDrivers = await getNearbyDriverTokensMultiLocation(
           pickupGeohash,
           initialRadius,
           pickupLat,
-          pickupLng
+          pickupLng,
+          undefined,
+          itemSize
         );
 
         const pickupCity = (pickup?.city ?? "") as string;
