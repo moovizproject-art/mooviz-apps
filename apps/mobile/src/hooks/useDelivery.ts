@@ -150,6 +150,7 @@ interface UseDeliveryResult {
   declineSelection: (deliveryId: string) => Promise<void>;
   cancelSelectedDriver: (deliveryId: string) => Promise<void>;
   withdrawFromInterest: (deliveryId: string) => Promise<void>;
+  cancelDelivery: (deliveryId: string, reason?: string) => Promise<void>;
 }
 
 /**
@@ -382,6 +383,16 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     }
   }, []);
 
+  const cancelDelivery = useCallback(async (deliveryId: string, reason?: string) => {
+    try {
+      const fn = functions().httpsCallable('cancelDelivery');
+      await fn({ deliveryId, reason });
+    } catch (err) {
+      console.error('[useDelivery] cancelDelivery failed:', err);
+      throw new Error((err as any)?.message || 'Cancel delivery failed');
+    }
+  }, []);
+
   const confirmPayment = useCallback(async (deliveryId: string, paymentPhotoURL?: string) => {
     try {
       // All payment confirmations MUST go through Cloud Functions for server-side validation
@@ -409,6 +420,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     declineSelection,
     cancelSelectedDriver,
     withdrawFromInterest,
+    cancelDelivery,
   };
 }
 

@@ -497,7 +497,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
             <View style={[styles.helpHeader, { backgroundColor: colors.accent }]}>
               <Text style={styles.helpHeaderTitle}>📏 {t('form.sizeGuide')}</Text>
             </View>
-            <View style={styles.helpScrollContent}>
+            <ScrollView style={styles.helpScroll} contentContainerStyle={styles.helpScrollContent}>
               {sizeOptions.map((opt) => (
                 <View key={opt.value} style={[styles.sizeInfoRow, { borderBottomColor: colors.border }]}>
                   <Text style={styles.sizeInfoIcon}>{opt.icon}</Text>
@@ -507,7 +507,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
                   </View>
                 </View>
               ))}
-            </View>
+            </ScrollView>
             <TouchableOpacity
               style={[styles.helpButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowSizeInfo(false)}

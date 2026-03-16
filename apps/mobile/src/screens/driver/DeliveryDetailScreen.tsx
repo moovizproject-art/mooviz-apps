@@ -65,7 +65,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { t } = useI18n();
   const carAlert = useCarAlert();
   const { currentUser } = useAuth();
-  const { expressInterest, withdrawInterest, confirmPayment, confirmSelection, declineSelection } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
+  const { expressInterest, withdrawInterest, confirmPayment, confirmSelection, declineSelection, cancelDelivery } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const { checkAndPromptReview } = useInAppReview();
 
   // Direct document listener — works for ANY delivery regardless of driverId
@@ -251,6 +251,28 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     } finally {
       setConfirmLoading(false);
     }
+  };
+
+  const handleCancelDelivery = (): void => {
+    carAlert.show('info', strings.common.cancel.he, strings.driver.cancelConfirm?.he || 'האם אתה בטוח שברצונך לבטל את האיסוף?', [
+      { text: strings.common.cancel.he, style: 'cancel' },
+      {
+        text: strings.common.confirm.he,
+        style: 'destructive',
+        onPress: async () => {
+          setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
+          try {
+            await cancelDelivery(deliveryId);
+            setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
+            carAlert.show('success', t('common.success'), 'המשלוח בוטל בהצלחה');
+            navigation.goBack();
+          } catch (err) {
+            setLoadingVisible(false);
+            carAlert.show('error', t('common.error'), (err as Error).message || 'שגיאה בביטול המשלוח');
+          }
+        },
+      },
+    ]);
   };
 
   const doExpressInterest = async (): Promise<void> => {
@@ -474,6 +496,16 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             ) : (
               <Text style={styles.actionButtonText}>📸 {t('driver.confirmPickup')}</Text>
             )}
+          </TouchableOpacity>
+        )}
+
+        {/* Cancel delivery — driver can cancel before pickup (waiting/matched only, pending uses withdraw) */}
+        {isMyJob && ['waiting', 'matched'].includes(delivery.status) && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: '#E53935' }]}
+            onPress={handleCancelDelivery}
+          >
+            <Text style={styles.actionButtonText}>❌ ביטול משלוח</Text>
           </TouchableOpacity>
         )}
 

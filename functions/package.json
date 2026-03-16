@@ -1,6 +1,6 @@
 {
   "name": "@mooviz/functions",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Firebase Cloud Functions for MOOVIZ delivery platform",
   "main": "dist/index.js",
   "scripts": {

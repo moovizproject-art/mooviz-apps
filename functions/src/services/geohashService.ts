@@ -182,14 +182,26 @@ export async function getNearbyDriverTokens(
   return drivers;
 }
 
+/** Max radius a driver can set in app preferences (slider max) */
+const MAX_DRIVER_RADIUS_KM = 50;
+
+/** Default radius when driver has no preference set */
+const DEFAULT_DRIVER_RADIUS_KM = 10;
+
 /**
  * Extended nearby driver query that checks 3 locations per driver:
- * 1. Live GPS location (existing behavior)
+ * 1. Live GPS location
  * 2. Home address from driverPrefs
  * 3. Work address from driverPrefs
  *
+ * Uses the DRIVER's own radiusKm preference as the effective distance threshold.
+ * Example: driver sets radar to 20km, delivery is 10km from their home → notified.
+ *
+ * The geohash query uses the max possible driver radius (50km) to ensure
+ * we don't miss drivers who set a large radius preference.
+ *
  * Deduplicates by UID (closest match wins).
- * Filters by schedule, quiet hours, and driverAvailable toggle.
+ * Filters by schedule, quiet hours, size preference, and driverAvailable toggle.
  */
 export async function getNearbyDriverTokensMultiLocation(
   pickupGeohash: string,
@@ -199,7 +211,10 @@ export async function getNearbyDriverTokensMultiLocation(
   excludeUids?: string[],
   itemSize?: string
 ): Promise<NearbyDriver[]> {
-  const precision = getPrecisionForRadius(radiusKm);
+  // Use the wider of delivery radius vs max driver radius for the geohash query,
+  // so we capture all drivers who might be within their own preferred radius.
+  const queryRadius = Math.max(radiusKm, MAX_DRIVER_RADIUS_KM);
+  const precision = getPrecisionForRadius(queryRadius);
   const { lower, upper } = getGeohashRange(pickupGeohash, precision);
   const excludeSet = new Set(excludeUids || []);
 
@@ -241,16 +256,32 @@ export async function getNearbyDriverTokensMultiLocation(
     if (!fcmToken || typeof fcmToken !== "string" || fcmToken.length === 0) return;
 
     // Check driverAvailable toggle
-    if (data.driverAvailable === false) return;
+    if (data.driverAvailable === false) {
+      console.log(`[geohash] Skipping driver ${uid} (${locType}): driverAvailable=false`);
+      return;
+    }
 
     // Check schedule + quiet hours
     const prefs = data.driverPrefs;
-    if (prefs && !isDriverAvailableNow(prefs)) return;
+    if (prefs && !isDriverAvailableNow(prefs)) {
+      console.log(`[geohash] Skipping driver ${uid} (${locType}): schedule/quiet hours`);
+      return;
+    }
 
-    // Filter by delivery size preference
+    // Filter by delivery size preference (case-insensitive)
     if (itemSize) {
       const sizes = prefs?.deliverySizes;
-      if (Array.isArray(sizes) && sizes.length > 0 && !sizes.includes(itemSize)) return;
+      if (Array.isArray(sizes) && sizes.length > 0) {
+        const normalizedItem = itemSize.toLowerCase();
+        const match = sizes.some((s: string) => s.toLowerCase() === normalizedItem);
+        if (!match) {
+          console.log(
+            `[geohash] Skipping driver ${uid} (${locType}): size mismatch — ` +
+            `delivery="${itemSize}", driver accepts=${JSON.stringify(sizes)}`
+          );
+          return;
+        }
+      }
     }
 
     // Get coordinates based on location type
@@ -271,7 +302,21 @@ export async function getNearbyDriverTokensMultiLocation(
     if (typeof driverLat !== "number" || typeof driverLng !== "number") return;
 
     const distanceKm = haversineDistance(centerLat, centerLng, driverLat, driverLng);
-    if (distanceKm > radiusKm) return;
+
+    // Use the larger of: delivery's notification radius OR driver's own radar radius.
+    // This ensures a driver with 30km radar gets notified for a delivery 25km away,
+    // even if the delivery's expansion is still at 15km.
+    const driverRadiusKm: number = prefs?.radiusKm ?? DEFAULT_DRIVER_RADIUS_KM;
+    const effectiveRadius = Math.max(radiusKm, driverRadiusKm);
+
+    if (distanceKm > effectiveRadius) {
+      console.log(
+        `[geohash] Skipping driver ${uid} (${locType}): ` +
+        `distance=${distanceKm.toFixed(1)}km > effective=${effectiveRadius}km ` +
+        `(delivery=${radiusKm}km, driver=${driverRadiusKm}km)`
+      );
+      return;
+    }
 
     const existing = driverMap.get(uid);
     if (!existing || distanceKm < existing.distanceKm) {
@@ -285,6 +330,12 @@ export async function getNearbyDriverTokensMultiLocation(
 
   const drivers = Array.from(driverMap.values());
   drivers.sort((a, b) => a.distanceKm - b.distanceKm);
+
+  console.log(
+    `[geohash] Multi-location query: deliveryRadius=${radiusKm}km, queryRadius=${queryRadius}km, ` +
+    `candidates: live=${liveSnap.size} home=${homeSnap.size} work=${workSnap.size}, ` +
+    `matched=${drivers.length}${itemSize ? ` (itemSize=${itemSize})` : ""}`
+  );
 
   return drivers;
 }
