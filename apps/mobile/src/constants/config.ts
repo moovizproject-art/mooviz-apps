@@ -4,6 +4,8 @@
  * ערכי תצורה כלל-אפליקטיביים
  */
 
+import Config from 'react-native-config';
+
 /** Maximum delivery search radius in kilometers */
 // רדיוס חיפוש מקסימלי בקילומטרים
 export const MAX_DELIVERY_RADIUS_KM = 50;
@@ -72,9 +74,9 @@ export const DEEP_LINK_SCHEME = 'mooviz://';
 /** Support email */
 export const SUPPORT_EMAIL = 'support@mooviz.app';
 
-/** Google Maps API key — client-side key (restricted by API + app fingerprint in GCP Console) */
-// Also set in android/app/build.gradle manifestPlaceholders for native Maps SDK
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyASJMulop0DTV45RGzzrREnxSYhMx4qRrU';
+/** Google Maps API key — loaded from .env via react-native-config */
+// Also read in android/app/build.gradle for native Maps SDK manifest placeholder
+export const GOOGLE_MAPS_API_KEY = Config.GOOGLE_MAPS_API_KEY ?? '';
 
 /** Default map region — Israel center (Tel Aviv) */
 // אזור מפה ברירת מחדל — מרכז ישראל (תל אביב)

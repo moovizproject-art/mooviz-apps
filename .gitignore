@@ -37,6 +37,11 @@ ui-debug.log
 .env.staging
 .env.prod
 .env.crm-api
+apps/admin/.env.production
+apps/admin/.env.local
+
+# Build output — contains baked-in keys from env
+hosting-dist/
 
 # IDE
 .vscode/
