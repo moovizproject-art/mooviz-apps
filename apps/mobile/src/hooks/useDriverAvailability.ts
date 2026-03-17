@@ -189,8 +189,10 @@ export function useDriverAvailability(userId: string | undefined): DriverAvailab
     }
   }, [userId, isAvailable, startLocationWatch, stopLocationWatch]);
 
-  // Cleanup on unmount — stop watching and set unavailable
-  // ניקוי בעת הסרה — הפסקת מעקב ועדכון חוסר זמינות
+  // Cleanup on unmount — stop location watch but keep driverAvailable persisted.
+  // driverAvailable is a persistent preference, NOT a session flag.
+  // Drivers should still receive notifications even when the app is closed.
+  // ניקוי בעת הסרה — הפסקת מעקב מיקום בלבד, זמינות נשמרת
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -199,17 +201,6 @@ export function useDriverAvailability(userId: string | undefined): DriverAvailab
       if (watchIdRef.current !== null) {
         Geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
-      }
-
-      // Best-effort: set unavailable on unmount
-      if (userId) {
-        firestore()
-          .collection('users')
-          .doc(userId)
-          .update({ driverAvailable: false })
-          .catch(() => {
-            // Ignore errors during cleanup
-          });
       }
     };
   }, [userId]);

@@ -1,87 +1,77 @@
 # MOOVIZ — Session Continuation Guide
-> Last updated: 2026-03-11 | Sprint 3 (M3) IN PROGRESS
+> Last updated: 2026-03-16 | Sprint 3 (M3) COMPLETE | v1.0.3
 
 ## Current State
 
-### Branch: `main` (merged from `feature/optimization-qa-round1`)
-### Last commit: `f3dec81` — QA Round 1 complete
+### Branch: `main`
+### APK: `apps/mobile/android/app/build/outputs/apk/release/mooviz-1.0.3.apk` (81MB)
+### Functions: Deployed to `mooviz-app-9b766` (dev) — 33 functions
 
 ---
 
-## What Was Done (March 10-11) — QA Round 1
+## What Was Done (March 16) — v1.0.3 Bug Fixes
 
-### Mobile App Fixes
-1. **ForgotPasswordScreen** — Logo added, security message
-2. **Accent color** — Changed to #FF9800 across app
-3. **LoginScreen** — Remember Me checkbox (30-day session), field spacing, car centering
-4. **RegisterScreen** — ToS checkbox, gender field, age range chips, saved to Firestore
-5. **CreateDeliveryScreen** — Size guide modal (accent color + "מדריך מידות"), field reorder (notes after media), centered add-media icons, time range picker chips
-6. **DriverOnboarding** — 6th step (💳 direct payment info)
-7. **SettingsDrawer** — YouTube, LinkedIn, Website social links
-8. **ChatScreen** — Car icon on system messages, 12h auto-close banner
+### 1. Firebase Config — Was Pointing to Production
+- `google-services.json` had `mooviz-prod` → switched back to `mooviz-app-9b766` (dev)
+- This caused "user not exist" errors and phone auth failures
+- `apps/admin/.env.production` has prod config — leave it for later
 
-### Chat Auto-Close System (12 hours)
-- `functions/src/scheduled/chatAutoClose.ts` — Hourly cron, closes chats 12h after delivery
-- `functions/src/triggers/deliveryTrigger.ts` — Sets `chatCloseAt` on completion, immediate close on cancel
-- `functions/src/triggers/chatTrigger.ts` — Blocks messages on closed chats (server-side deletion)
-- `apps/mobile/src/hooks/useChat.ts` — Real-time `isClosed` listener
-- `apps/mobile/src/screens/shared/ChatScreen.tsx` — Closed banner replaces input bar
-- `functions/src/callable/deliveryCallable.ts` — New chats get `closed: false`
+### 2. Nearby Driver Notifications — 3 Bugs Fixed
+- **Missing expansion fields**: `createDelivery` callable now sets `notifiedDrivers`, `notifyRadius`, `notifyExpansionCount`, `lastNotifyExpansion` on new deliveries
+- **Firestore index error**: `notifyExpansion` had two inequality filters on different fields. Fixed to single inequality (`lastNotifyExpansion`) + JS filter for `notifyExpansionCount`
+- **driverAvailable always false**: `useDriverAvailability` hook reset `driverAvailable=false` on every unmount. Fixed: unmount only stops location watch, availability persists as a preference
 
-### Admin Dashboard Enhancements
-- **PeriodFilter** — 7d/30d/90d/quarter/year/all on ALL stats, charts, tables
-- **User breakdown** — 4 cards: senders/drivers × registered/active (active = last 30 days)
-- **Regional distribution** — Horizontal bar chart (גוש דן, חיפה, ירושלים, נגב, גליל, השרון)
-- **Delivery timings** — Table: post→approval, approval→pickup, pickup→delivery, total by region
-- **Monthly deliveries** — Bar chart, last 12 months
-- **Monthly cashflow** — Area chart, revenue per month (completed deliveries)
-- **Drill-down** — Click user cards→users page, pie slices→deliveries, regional bars→filtered view
-- **CSV export on EVERYTHING** — Dashboard charts, users, deliveries, all chats, per-chat messages
-- **ChatsPage** — Image rendering, system messages, per-chat + all-chats CSV export
+### 3. Size Matching — Capacity-Based
+- **Server** (`geohashService.ts`): driver accepting "large" now matches small/medium/large deliveries
+- **UI** (`FeedScreen.tsx`): checking "large" auto-checks small + medium + large. Manual uncheck only removes that one size
+- Size hierarchy: small < medium < large < xlarge
 
-### Deployments
-- 25 Cloud Functions deployed (incl. new `chatAutoClose`)
-- Admin: https://mooviz-app-9b766.web.app
-- Release APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` (76MB)
-- QA summary PDF: `docs/qa-round1-summary.pdf`
+### 4. Version Bump
+- `build.gradle`: versionCode 103, versionName "1.0.3"
+- `config.ts`: APP_VERSION = '1.0.3' (was stuck at 1.0.1)
+
+### 5. Firestore Data Fixes
+- All 5 unlocked drivers set to `driverAvailable=true`
+- Delivery `nWraDR0uMixrcBGWxz5m` given expansion tracking fields
+
+### Verified Working
+- Expansion ran: radius 15→20km, 2 drivers notified (push sent confirmed in logs)
+- Geohash proximity: Tel Aviv addresses matched correctly (8 live, 6 home, 1 work candidates)
+
+---
+
+## Files Changed (NOT YET COMMITTED)
+| File | Change |
+|------|--------|
+| `apps/mobile/android/app/google-services.json` | Dev project (gitignored) |
+| `apps/mobile/src/constants/config.ts` | APP_VERSION 1.0.3 |
+| `apps/mobile/android/app/build.gradle` | versionCode 103, versionName 1.0.3 |
+| `apps/mobile/src/hooks/useDriverAvailability.ts` | Removed unmount driverAvailable=false reset |
+| `apps/mobile/src/screens/driver/FeedScreen.tsx` | Size auto-fill on check |
+| `functions/src/callable/deliveryCallable.ts` | Expansion tracking fields + record notified drivers |
+| `functions/src/services/geohashService.ts` | Capacity-based size matching |
+| `functions/src/scheduled/notifyExpansion.ts` | Single inequality query fix |
+| `firestore.indexes.json` | Simplified expansion index (2-field) |
 
 ---
 
 ## Next Session Tasks
 
-### Priority 1: Remaining M3 Items
-- [ ] Glide migration image fetcher (`scripts/fix-glide-migration.ts` ready but not executed)
-  - Downloads profile photos, KYC docs, item photos from Glide URLs → Firebase Storage
-  - Resets all migrated users to sender role + pending KYC
-  - Fixes chat participant names
-- [ ] KAL Solutions "Developed by" attribution (footer/splash)
-- [ ] Ratings & reviews system
-- [ ] E2E testing on physical devices
+### Priority 1: Testing & Verification
+- [ ] Install v1.0.3 APK and test phone auth (should work with dev config)
+- [ ] Test notification flow end-to-end: create delivery → driver gets push
+- [ ] Verify size filter UI behavior (auto-check smaller sizes)
+- [ ] Commit all v1.0.3 changes
 
-### Priority 2: CRM Sprint Tasks
-- 141: Navigation deep links
-- 159: Interstitial ad infrastructure
-- 160: Analytics events
-
-### Priority 3: Admin Polish
-- [ ] Custom domain setup for admin (DNS → Firebase Hosting)
-- [ ] Admin DrillDown drawer (Task 9 from dashboard plan — deferred)
-- [ ] Deliveries page: read `?status=` and `?region=` query params from drill-down navigation
+### Priority 2: Remaining Backlog → M4
+- [ ] P0/P1 bug triage (#165) — pre-release
+- [ ] Production config (#168-169) — prod Firebase project + signing keys
+- [ ] Store submissions (#170-172) — App Store + Play Store
+- [ ] Handover (#173) — client documentation
+- [ ] Interstitial ads (#159) — post-launch
+- [ ] Analytics events (#160) — post-launch
 
 ---
-
-## Key Files Changed in QA Round 1
-| File | What |
-|------|------|
-| `apps/admin/src/hooks/useAnalytics.ts` | User breakdown, regional, timings, monthly charts hooks |
-| `apps/admin/src/hooks/useStats.ts` | Period-filtered stats + status distribution |
-| `apps/admin/src/pages/DashboardPage.tsx` | Full dashboard with all charts + drill-down |
-| `apps/admin/src/components/CsvExport.tsx` | Reusable CSV export with BOM |
-| `apps/admin/src/components/PeriodFilter.tsx` | Period selector component |
-| `apps/admin/src/constants/regions.ts` | Israel city→region mapping |
-| `functions/src/scheduled/chatAutoClose.ts` | Hourly cron for chat closure |
-| `docs/qa-round1-summary.html` | Client-facing summary (Hebrew) |
-| `docs/qa-round1-summary.pdf` | PDF version |
 
 ## Environment Quick Start
 ```bash
@@ -90,7 +80,7 @@ cd apps/mobile && node ../../node_modules/react-native/cli.js start --reset-cach
 
 # Android build + install
 cd apps/mobile/android && ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/release/mooviz-1.0.3.apk
 
 # Admin dev
 cd apps/admin && npm run dev -- --port 5002

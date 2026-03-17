@@ -41,48 +41,23 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const autoSentRef = useRef(false);
 
-  // Auto-send OTP: check Firebase Auth phone first (re-verification), then Firestore (first time)
+  // Pre-fill phone from Firebase Auth or Firestore (but do NOT auto-send OTP)
   useEffect(() => {
     const fbUser = auth().currentUser;
-    if (!fbUser || autoSentRef.current) return;
-    console.log('[AddPhoneScreen] Mount — uid:', fbUser.uid, 'hasPhone:', !!fbUser.phoneNumber);
-
-    const autoSend = async (phoneNumber: string) => {
-      autoSentRef.current = true;
-      setPhone(phoneNumber);
-      try {
-        setIsLoading(true);
-        console.log('[AddPhoneScreen] Sending OTP to phone (redacted)');
-        const verificationId = await sendPhoneOTP(phoneNumber);
-        console.log('[AddPhoneScreen] Got verificationId:', verificationId?.substring(0, 20) + '...');
-        const otpParams = { phoneNumber, verificationId, mode: 'addPhone' as const };
-        navigation.navigate('PhoneOTP', otpParams);
-      } catch (err: unknown) {
-        const firebaseError = err as { code?: string; message?: string };
-        if (firebaseError.code) {
-          setError(mapFirebaseAuthError(firebaseError.code));
-        } else {
-          setError(firebaseError.message || t('auth.otpError'));
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!fbUser) return;
 
     // If phone already linked in Firebase Auth (2FA re-verification)
     if (fbUser.phoneNumber) {
-      autoSend(fbUser.phoneNumber);
+      setPhone(fbUser.phoneNumber);
       return;
     }
 
     // Otherwise check Firestore for saved phone (first-time linking)
     firestore().collection('users').doc(fbUser.uid).get().then((doc) => {
       const savedPhone = doc.data()?.phone;
-      console.log('[AddPhoneScreen] Firestore phone found:', !!savedPhone);
       if (savedPhone && validatePhone(savedPhone)) {
-        autoSend(savedPhone);
+        setPhone(savedPhone);
       }
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

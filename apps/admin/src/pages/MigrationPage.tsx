@@ -77,6 +77,35 @@ function generateId(): string {
   return doc(collection(db, '_')).id;
 }
 
+// -- Geohash Encoding (inline, matches functions/src/services/geohashService.ts) --
+const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+
+function encodeGeohash(latitude: number, longitude: number, precision = 7): string {
+  if (!latitude || !longitude || latitude === 0 || longitude === 0) return '';
+  let latRange = { min: -90, max: 90 };
+  let lonRange = { min: -180, max: 180 };
+  let hash = '';
+  let bit = 0;
+  let ch = 0;
+  let isEven = true;
+
+  while (hash.length < precision) {
+    if (isEven) {
+      const mid = (lonRange.min + lonRange.max) / 2;
+      if (longitude >= mid) { ch |= 1 << (4 - bit); lonRange.min = mid; }
+      else { lonRange.max = mid; }
+    } else {
+      const mid = (latRange.min + latRange.max) / 2;
+      if (latitude >= mid) { ch |= 1 << (4 - bit); latRange.min = mid; }
+      else { latRange.max = mid; }
+    }
+    isEven = !isEven;
+    bit++;
+    if (bit === 5) { hash += BASE32[ch]; bit = 0; ch = 0; }
+  }
+  return hash;
+}
+
 // -- Types --------------------------------------------------------------------
 interface MigrationLog {
   type: 'info' | 'success' | 'error' | 'warn';
@@ -182,6 +211,7 @@ export default function MigrationPage() {
             city: '',
             profilePhotoURL: row['ProfilePhoto'] || '',
             kycDocumentURL: row['DriverLicensePhoto'] || '',
+            kycIdURL: null,
             kycStatus: 'pending',
             ratingAsDriver: { average: 0, count: 0 },
             ratingAsSender: { average: 0, count: 0 },
@@ -192,8 +222,7 @@ export default function MigrationPage() {
             activeMode: isDriver ? 'driver' : 'client',
             driverAvailable: false,
             driverUnlocked: isDriver,
-            role: isDriver ? 'driver' : 'sender',
-            passwordSetUp: false,
+            role: 'sender' as const, // All migrated users start as sender — driver requires KYC approval
             migratedFrom: 'glide',
             createdAt: now,
             updatedAt: now,
@@ -243,23 +272,35 @@ export default function MigrationPage() {
           const scheduledDate = row['ScheduledPickup']?.trim();
 
           try {
+            // Parse coordinates for geohash computation
+            const pickupLat = parseFloat(row['PickupLat']?.trim() || '0') || 0;
+            const pickupLng = parseFloat(row['PickupLng']?.trim() || '0') || 0;
+            const destLat = parseFloat(row['DropoffLat']?.trim() || '0') || 0;
+            const destLng = parseFloat(row['DropoffLng']?.trim() || '0') || 0;
+
             await addDoc(collection(db, 'deliveries'), {
               senderId,
+              senderName: '', // Will be backfilled by fix script or trigger
+              senderPhotoUrl: null,
+              senderRating: null,
               driverId: driverId || null,
+              driverName: null,
+              driverPhotoUrl: null,
+              driverRating: null,
               status,
               pickup: {
                 address: row['PickupAddress']?.trim() || '',
                 city: '',
-                lat: 0,
-                lng: 0,
-                geohash: '',
+                lat: pickupLat,
+                lng: pickupLng,
+                geohash: encodeGeohash(pickupLat, pickupLng),
               },
               destination: {
                 address: row['DropoffAddress']?.trim() || '',
                 city: '',
-                lat: 0,
-                lng: 0,
-                geohash: '',
+                lat: destLat,
+                lng: destLng,
+                geohash: encodeGeohash(destLat, destLng),
               },
               item: {
                 description: row['ItemDescription']?.trim() || '',
@@ -267,8 +308,10 @@ export default function MigrationPage() {
                 size: mapItemSize(row['Item Size']?.trim() || ''),
                 photoURL: row['ItemPhoto']?.trim() || '',
               },
+              mediaURLs: [],
               price: parseFloat(row['Price']?.trim() || '0') || 0,
               pickupDate: scheduledDate ? Timestamp.fromDate(new Date(scheduledDate)) : 'asap',
+              timeRange: null,
               notes: '',
               payment: {
                 senderConfirmed: status === 'completed_paid',
@@ -281,6 +324,12 @@ export default function MigrationPage() {
                 actor: 'migration',
                 note: 'Imported from Glide',
               }],
+              interestedDrivers: [],
+              selectedDriverId: null,
+              selectionExpiresAt: null,
+              ratedBySender: status === 'completed_paid' ? false : null,
+              ratedByDriver: status === 'completed_paid' ? false : null,
+              ratingsVisibleAt: null,
               migratedFrom: 'glide',
               glideId,
               timeoutAt: now,
@@ -336,7 +385,9 @@ export default function MigrationPage() {
             continue;
           }
 
-          const deliveryId = deliveryQuery.docs[0].id;
+          const deliveryDoc = deliveryQuery.docs[0];
+          const deliveryId = deliveryDoc.id;
+          const deliveryData = deliveryDoc.data();
           const chatRef = doc(db, 'chats', deliveryId);
 
           // Get participants
@@ -350,7 +401,10 @@ export default function MigrationPage() {
           );
           const lastMsg = sortedMsgs[sortedMsgs.length - 1];
 
-          // Create chat document
+          // Determine if chat should be closed (completed/cancelled deliveries)
+          const isClosed = ['completed_paid', 'cancelled'].includes(deliveryData?.status || '');
+
+          // Create chat document — matches current model with auto-close fields
           await setDoc(chatRef, {
             deliveryId,
             participants: participantUids,
@@ -359,6 +413,9 @@ export default function MigrationPage() {
               ? Timestamp.fromDate(new Date(lastMsg['SentAt']))
               : Timestamp.now(),
             lastSenderId: emailToDocId.get(lastMsg['Comment User']?.trim().toLowerCase() || '') || '',
+            closed: isClosed,
+            chatCloseAt: isClosed ? Timestamp.now() : null,
+            closedAt: isClosed ? Timestamp.now() : null,
             migratedFrom: 'glide',
             createdAt: Timestamp.now(),
           });
@@ -373,6 +430,7 @@ export default function MigrationPage() {
 
             const msgRef = doc(collection(db, 'chats', deliveryId, 'messages'));
             batch.set(msgRef, {
+              chatId: deliveryId,
               senderId,
               text: msg['MessageContent'] || '',
               type: 'text',

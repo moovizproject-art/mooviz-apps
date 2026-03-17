@@ -268,16 +268,19 @@ export async function getNearbyDriverTokensMultiLocation(
       return;
     }
 
-    // Filter by delivery size preference (case-insensitive)
+    // Filter by delivery size preference — capacity-based.
+    // A driver who accepts "large" can also handle "small" and "medium".
+    // Size hierarchy: small < medium < large < xlarge
     if (itemSize) {
       const sizes = prefs?.deliverySizes;
       if (Array.isArray(sizes) && sizes.length > 0) {
-        const normalizedItem = itemSize.toLowerCase();
-        const match = sizes.some((s: string) => s.toLowerCase() === normalizedItem);
-        if (!match) {
+        const sizeRank: Record<string, number> = { small: 1, medium: 2, large: 3, xlarge: 4 };
+        const itemRank = sizeRank[itemSize.toLowerCase()] ?? 0;
+        const maxDriverRank = Math.max(...sizes.map((s: string) => sizeRank[s.toLowerCase()] ?? 0));
+        if (itemRank > maxDriverRank) {
           console.log(
             `[geohash] Skipping driver ${uid} (${locType}): size mismatch — ` +
-            `delivery="${itemSize}", driver accepts=${JSON.stringify(sizes)}`
+            `delivery="${itemSize}" too large for driver max=${JSON.stringify(sizes)}`
           );
           return;
         }

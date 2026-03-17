@@ -27,7 +27,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
-import { useDelivery } from '../../hooks/useDelivery';
+import { useDelivery, Delivery } from '../../hooks/useDelivery';
 import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import { useDriverEarnings } from '../../hooks/useDriverEarnings';
 import { DeliveryCard } from '../../components/DeliveryCard';
@@ -104,7 +104,7 @@ const DEFAULT_PREFS: DriverPreferences = {
   nickname: '',
   radiusKm: 10,
   isAvailable: true,
-  deliverySizes: { small: true, medium: true, large: true, xlarge: true },
+  deliverySizes: { small: true, medium: false, large: false, xlarge: false },
   vehicleType: 'car',
   homeAddress: null,
   workAddress: null,
@@ -154,6 +154,11 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const [earningsTab, setEarningsTab] = useState<string>('thisWeek');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [radarMinimized, setRadarMinimized] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [nearMeOpen, setNearMeOpen] = useState(true);
+  const [nearHomeOpen, setNearHomeOpen] = useState(true);
+  const [nearWorkOpen, setNearWorkOpen] = useState(true);
 
   useEffect(() => {
     AsyncStorage.getItem(PREFS_KEY).then((val) => {
@@ -204,6 +209,10 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             updatedAt: firestore.FieldValue.serverTimestamp(),
           },
         });
+        // Brief "saved" flash
+        setSavedFlash(true);
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = setTimeout(() => setSavedFlash(false), 2000);
       } catch (err) {
         console.warn('[FeedScreen] Prefs sync error:', err);
       }
@@ -243,31 +252,113 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     [location?.latitude, location?.longitude],
   );
 
-  // When location unavailable, show all pending deliveries (no geo filter)
-  const { deliveries: rawDeliveries, isLoading, refresh: _refresh } = useDelivery({
+  // ── Multi-location feed: current location + home + work ──
+  // Query with current GPS location
+  const { deliveries: rawNearMe, isLoading: loadingNearMe, refresh: _refresh } = useDelivery({
     role: 'driver',
     statusFilter: ['new', 'pending'],
     ...(nearLocation ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
   });
-  // Exclude own deliveries & apply client-side Haversine distance filter
-  // (geohash range queries return a rectangular area, not a circle)
-  const deliveries = useMemo(
-    () => rawDeliveries.filter((d) => {
-      // Exclude own deliveries
-      if (d.senderId === currentUser?.uid) return false;
-      // Client-side distance filter (geohash range is rectangular, not circular)
-      if (nearLocation && prefs.radiusKm) {
-        const pickupLat = d.pickup?.lat ?? d.pickup?.latitude;
-        const pickupLng = d.pickup?.lng ?? d.pickup?.longitude;
-        if (pickupLat != null && pickupLng != null) {
-          const dist = haversineDistance(nearLocation.latitude, nearLocation.longitude, pickupLat, pickupLng);
-          if (dist > prefs.radiusKm) return false;
-        }
-      }
-      return true;
-    }),
-    [rawDeliveries, currentUser?.uid, nearLocation, prefs.radiusKm],
+  // Query near home address
+  const homeLocation = useMemo(
+    () => prefs.homeAddress ? { latitude: prefs.homeAddress.lat, longitude: prefs.homeAddress.lng } : undefined,
+    [prefs.homeAddress?.lat, prefs.homeAddress?.lng],
   );
+  const { deliveries: rawNearHome, isLoading: loadingHome } = useDelivery({
+    role: 'driver',
+    statusFilter: ['new', 'pending'],
+    ...(homeLocation ? { nearLocation: homeLocation, radiusKm: prefs.radiusKm } : {}),
+  });
+  // Query near work address
+  const workLocation = useMemo(
+    () => prefs.workAddress ? { latitude: prefs.workAddress.lat, longitude: prefs.workAddress.lng } : undefined,
+    [prefs.workAddress?.lat, prefs.workAddress?.lng],
+  );
+  const { deliveries: rawNearWork, isLoading: loadingWork } = useDelivery({
+    role: 'driver',
+    statusFilter: ['new', 'pending'],
+    ...(workLocation ? { nearLocation: workLocation, radiusKm: prefs.radiusKm } : {}),
+  });
+
+  const isLoading = loadingNearMe || (homeLocation ? loadingHome : false) || (workLocation ? loadingWork : false);
+
+  /** Size rank for capacity-based matching (same logic as server-side geohashService) */
+  const SIZE_RANK: Record<string, number> = { small: 1, medium: 2, large: 3, xlarge: 4 };
+
+  /** Max size rank the driver can carry based on their deliverySizes prefs */
+  const maxDriverSizeRank = useMemo(() => {
+    const enabled = Object.entries(prefs.deliverySizes)
+      .filter(([_, v]) => v)
+      .map(([k]) => SIZE_RANK[k] ?? 0);
+    return enabled.length > 0 ? Math.max(...enabled) : 1; // default: small only
+  }, [prefs.deliverySizes]);
+
+  /** Filter & compute distance from a reference point, also filter by package size */
+  const filterWithDistance = useCallback((
+    raw: Delivery[],
+    refLat: number,
+    refLng: number,
+    radiusKm: number,
+  ): (Delivery & { _distKm: number })[] => {
+    return raw
+      .filter((d) => {
+        if (d.senderId === currentUser?.uid) return false;
+        // Size filter: skip deliveries too large for this driver
+        const itemSize = d.itemSize || d.item?.size;
+        if (itemSize) {
+          const itemRank = SIZE_RANK[itemSize.toLowerCase()] ?? 0;
+          if (itemRank > maxDriverSizeRank) return false;
+        }
+        return true;
+      })
+      .map((d) => {
+        const pLat = d.pickup?.lat ?? d.pickup?.latitude;
+        const pLng = d.pickup?.lng ?? d.pickup?.longitude;
+        if (pLat == null || pLng == null) return null;
+        const dist = haversineDistance(refLat, refLng, pLat, pLng);
+        if (dist > radiusKm) return null;
+        return { ...d, _distKm: dist };
+      })
+      .filter(Boolean) as (Delivery & { _distKm: number })[];
+  }, [currentUser?.uid, maxDriverSizeRank]);
+
+  // Near Me deliveries
+  const nearMeDeliveries = useMemo(
+    () => nearLocation
+      ? filterWithDistance(rawNearMe, nearLocation.latitude, nearLocation.longitude, prefs.radiusKm)
+          .sort((a, b) => a._distKm - b._distKm)
+      : rawNearMe.filter((d) => {
+          if (d.senderId === currentUser?.uid) return false;
+          const itemSize = d.itemSize || d.item?.size;
+          if (itemSize && (SIZE_RANK[itemSize.toLowerCase()] ?? 0) > maxDriverSizeRank) return false;
+          return true;
+        }).map((d) => ({ ...d, _distKm: 0 })),
+    [rawNearMe, nearLocation, prefs.radiusKm, filterWithDistance, currentUser?.uid, maxDriverSizeRank],
+  );
+  // Near Home deliveries (exclude already in nearMe)
+  const nearMeIds = useMemo(() => new Set(nearMeDeliveries.map((d) => d.id)), [nearMeDeliveries]);
+  const nearHomeDeliveries = useMemo(
+    () => homeLocation
+      ? filterWithDistance(rawNearHome, homeLocation.latitude, homeLocation.longitude, prefs.radiusKm)
+          .filter((d) => !nearMeIds.has(d.id))
+          .sort((a, b) => a._distKm - b._distKm)
+      : [],
+    [rawNearHome, homeLocation, prefs.radiusKm, filterWithDistance, nearMeIds],
+  );
+  // Near Work deliveries (exclude already in nearMe + nearHome)
+  const nearHomeIds = useMemo(() => new Set(nearHomeDeliveries.map((d) => d.id)), [nearHomeDeliveries]);
+  const nearWorkDeliveries = useMemo(
+    () => workLocation
+      ? filterWithDistance(rawNearWork, workLocation.latitude, workLocation.longitude, prefs.radiusKm)
+          .filter((d) => !nearMeIds.has(d.id) && !nearHomeIds.has(d.id))
+          .sort((a, b) => a._distKm - b._distKm)
+      : [],
+    [rawNearWork, workLocation, prefs.radiusKm, filterWithDistance, nearMeIds, nearHomeIds],
+  );
+
+  // Combined count for header
+  const totalDeliveries = nearMeDeliveries.length + nearHomeDeliveries.length + nearWorkDeliveries.length;
+
 
   // ── Latest chat message for current delivery ──
   const [lastChatMessage, setLastChatMessage] = useState<string>('');
@@ -633,12 +724,23 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                   return (
                     <Pressable
                       key={size}
-                      onPress={() =>
-                        updatePref('deliverySizes', {
-                          ...prefs.deliverySizes,
-                          [size]: !prefs.deliverySizes[size],
-                        })
-                      }
+                      onPress={() => {
+                        const isChecking = !prefs.deliverySizes[size];
+                        if (isChecking) {
+                          // Auto-check all sizes up to this one
+                          const sizeOrder = ['small', 'medium', 'large', 'xlarge'];
+                          const idx = sizeOrder.indexOf(size);
+                          const filled: Record<string, boolean> = { ...prefs.deliverySizes };
+                          for (let i = 0; i <= idx; i++) filled[sizeOrder[i]] = true;
+                          updatePref('deliverySizes', filled);
+                        } else {
+                          // Manual uncheck — only uncheck this one
+                          updatePref('deliverySizes', {
+                            ...prefs.deliverySizes,
+                            [size]: false,
+                          });
+                        }
+                      }}
                       style={[
                         styles.squareButton,
                         {
@@ -802,6 +904,9 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                 placeholder={t('driver.addressPlaceholder')}
               />
               <Text style={[styles.addressHint, { color: colors.textTertiary }]}>{t('driver.addressHint')}</Text>
+              {savedFlash && prefs.homeAddress && (
+                <Text style={styles.savedFlash}>✓ נשמר</Text>
+              )}
             </View>
 
             {/* ── Nickname Card ── */}
@@ -829,6 +934,9 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                   </TouchableOpacity>
                 )}
               </View>
+              {savedFlash && prefs.nickname.length > 0 && (
+                <Text style={styles.savedFlash}>✓ נשמר</Text>
+              )}
             </View>
           </View>
         )}
@@ -848,9 +956,9 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         <Text style={[styles.deliveriesTitle, { color: colors.textPrimary }]}>
           📍 {t('driver.nearbyDeliveries')}
         </Text>
-        {!isLoading && deliveries.length > 0 && (
+        {!isLoading && totalDeliveries > 0 && (
           <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>
-            ({deliveries.length})
+            ({totalDeliveries})
           </Text>
         )}
       </View>
@@ -866,30 +974,123 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       >
         {renderHeader()}
 
-        {/* Delivery cards */}
         {/* Location warning banner (non-blocking) */}
-        {locationError && deliveries.length === 0 && (
+        {locationError && totalDeliveries === 0 && (
           <View style={[styles.locationBanner, { backgroundColor: '#FFF3E0', borderColor: '#FFB74D' }]}>
             <Text style={{ fontSize: 14, color: '#E65100' }}>📍 {t('driver.locationWarning')}</Text>
           </View>
         )}
 
-        {(isLoading || locationLoading) && deliveries.length === 0 ? (
+        {(isLoading || locationLoading) && totalDeliveries === 0 ? (
           <View style={styles.skeletonContainer}>
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
           </View>
-        ) : deliveries.length > 0 ? (
-          deliveries.map((item) => (
-            <View key={item.id} style={styles.cardWrapper}>
-              <DeliveryCard
-                delivery={item}
-                onPress={() => handleDeliveryPress(item.id)}
-                showDistance
-              />
-            </View>
-          ))
+        ) : totalDeliveries > 0 ? (
+          <>
+            {/* ── Near Me Section ── */}
+            {nearMeDeliveries.length > 0 && (
+              <View style={styles.feedSection}>
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setNearMeOpen((v) => !v);
+                  }}
+                  style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={styles.feedSectionTitleRow}>
+                    <Text style={[styles.feedSectionIcon]}>📍</Text>
+                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>המיקום שלי</Text>
+                    <View style={[styles.feedSectionBadge, { backgroundColor: colors.primary + '20' }]}>
+                      <Text style={[styles.feedSectionBadgeText, { color: colors.primary }]}>{nearMeDeliveries.length}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                    {nearMeOpen ? '▼' : '◀'}
+                  </Text>
+                </Pressable>
+                {nearMeOpen && nearMeDeliveries.map((item) => (
+                  <View key={item.id} style={styles.cardWrapper}>
+                    <DeliveryCard
+                      delivery={item}
+                      onPress={() => handleDeliveryPress(item.id)}
+                      showDistance
+                      distanceLabel={`${item._distKm.toFixed(1)} ק״מ`}
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* ── Near Home Section ── */}
+            {nearHomeDeliveries.length > 0 && (
+              <View style={styles.feedSection}>
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setNearHomeOpen((v) => !v);
+                  }}
+                  style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={styles.feedSectionTitleRow}>
+                    <Text style={[styles.feedSectionIcon]}>🏠</Text>
+                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>ליד הבית</Text>
+                    <View style={[styles.feedSectionBadge, { backgroundColor: '#4CAF50' + '20' }]}>
+                      <Text style={[styles.feedSectionBadgeText, { color: '#4CAF50' }]}>{nearHomeDeliveries.length}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                    {nearHomeOpen ? '▼' : '◀'}
+                  </Text>
+                </Pressable>
+                {nearHomeOpen && nearHomeDeliveries.map((item) => (
+                  <View key={item.id} style={styles.cardWrapper}>
+                    <DeliveryCard
+                      delivery={item}
+                      onPress={() => handleDeliveryPress(item.id)}
+                      showDistance
+                      distanceLabel={`${item._distKm.toFixed(1)} ק״מ מהבית`}
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* ── Near Work Section ── */}
+            {nearWorkDeliveries.length > 0 && (
+              <View style={styles.feedSection}>
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setNearWorkOpen((v) => !v);
+                  }}
+                  style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={styles.feedSectionTitleRow}>
+                    <Text style={[styles.feedSectionIcon]}>💼</Text>
+                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>ליד העבודה</Text>
+                    <View style={[styles.feedSectionBadge, { backgroundColor: '#FF9800' + '20' }]}>
+                      <Text style={[styles.feedSectionBadgeText, { color: '#FF9800' }]}>{nearWorkDeliveries.length}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                    {nearWorkOpen ? '▼' : '◀'}
+                  </Text>
+                </Pressable>
+                {nearWorkOpen && nearWorkDeliveries.map((item) => (
+                  <View key={item.id} style={styles.cardWrapper}>
+                    <DeliveryCard
+                      delivery={item}
+                      onPress={() => handleDeliveryPress(item.id)}
+                      showDistance
+                      distanceLabel={`${item._distKm.toFixed(1)} ק״מ מהעבודה`}
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
         ) : (
           <EmptyState
             icon="search"
@@ -1345,6 +1546,13 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     marginTop: SPACING.xs,
   },
+  savedFlash: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#16a34a',
+    marginTop: SPACING.xs,
+    textAlign: 'left',
+  },
 
   // ── Schedule ──
   scheduleGrid: {
@@ -1393,6 +1601,41 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     paddingHorizontal: SPACING.xxl,
+  },
+  feedSection: {
+    marginBottom: SPACING.sm,
+  },
+  feedSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.sm,
+    marginHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    marginBottom: SPACING.xs,
+  },
+  feedSectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  feedSectionIcon: {
+    fontSize: 18,
+  },
+  feedSectionTitle: {
+    ...TYPOGRAPHY.bodyBold,
+  },
+  feedSectionBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginStart: 4,
+  },
+  feedSectionBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   skeletonContainer: {
     gap: SPACING.md,

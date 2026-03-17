@@ -171,7 +171,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "notifyExpansionCount", "order": "ASCENDING" },
         { "fieldPath": "lastNotifyExpansion", "order": "ASCENDING" }
       ]
     },

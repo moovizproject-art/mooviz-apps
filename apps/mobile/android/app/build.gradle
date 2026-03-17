@@ -80,8 +80,8 @@ android {
         applicationId "com.mooviz.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 102
-        versionName "1.0.2"
+        versionCode 105
+        versionName "1.0.5"
         manifestPlaceholders = [GOOGLE_MAPS_API_KEY: "AIzaSyASJMulop0DTV45RGzzrREnxSYhMx4qRrU"]
     }
     signingConfigs {

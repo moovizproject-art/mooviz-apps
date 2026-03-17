@@ -40,23 +40,30 @@ export const notifyExpansion = onSchedule(
 
     console.log(`[notifyExpansion] Running at ${now.toDate().toISOString()}`);
 
-    // Find deliveries eligible for expansion
+    // Find deliveries eligible for expansion.
+    // Uses single inequality (lastNotifyExpansion) to avoid multi-inequality index requirement.
+    // notifyExpansionCount is filtered in code below.
     const snapshot = await db
       .collection("deliveries")
       .where("status", "==", "new")
-      .where("notifyExpansionCount", "<", MAX_EXPANSIONS)
       .where("lastNotifyExpansion", "<=", twoMinAgo)
       .limit(50)
       .get();
 
-    if (snapshot.empty) {
+    // Filter out deliveries that already reached max expansions
+    const eligibleDocs = snapshot.docs.filter((doc) => {
+      const count = doc.data().notifyExpansionCount ?? 0;
+      return count < MAX_EXPANSIONS;
+    });
+
+    if (eligibleDocs.length === 0) {
       console.log("[notifyExpansion] No deliveries to expand");
       return;
     }
 
-    console.log(`[notifyExpansion] Found ${snapshot.size} deliveries to expand`);
+    console.log(`[notifyExpansion] Found ${eligibleDocs.length} deliveries to expand`);
 
-    for (const doc of snapshot.docs) {
+    for (const doc of eligibleDocs) {
       try {
         const delivery = doc.data();
         const deliveryId = doc.id;

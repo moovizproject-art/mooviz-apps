@@ -2,8 +2,13 @@
 /**
  * Glide -> Firebase Migration Script
  * Imports users and shipments from Glide CSV exports to Firebase.
+ * Updated to match current data model (Sprint 3 / M3).
  *
  * Usage: npx ts-node scripts/migrate-glide-data.ts [--dry-run] [--users-only] [--shipments-only]
+ *
+ * Environment:
+ *   GOOGLE_APPLICATION_CREDENTIALS=path/to/key.json
+ *   FIREBASE_STORAGE_BUCKET=mooviz-app-9b766.appspot.com (or mooviz-prod.firebasestorage.app)
  */
 
 import * as admin from 'firebase-admin';
@@ -17,13 +22,44 @@ if (!serviceAccount) {
   process.exit(1);
 }
 
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'mooviz-app-9b766.appspot.com';
+
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
-  storageBucket: 'mooviz-app-9b766.appspot.com',
+  storageBucket,
 });
 
 const db = admin.firestore();
 const auth = admin.auth();
+
+// -- Geohash Encoding (inline, matches functions/src/services/geohashService.ts) --
+const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+
+function encodeGeohash(latitude: number, longitude: number, precision = 7): string {
+  if (!latitude || !longitude || latitude === 0 || longitude === 0) return '';
+  let latRange = { min: -90, max: 90 };
+  let lonRange = { min: -180, max: 180 };
+  let hash = '';
+  let bit = 0;
+  let ch = 0;
+  let isEven = true;
+
+  while (hash.length < precision) {
+    if (isEven) {
+      const mid = (lonRange.min + lonRange.max) / 2;
+      if (longitude >= mid) { ch |= 1 << (4 - bit); lonRange.min = mid; }
+      else { lonRange.max = mid; }
+    } else {
+      const mid = (latRange.min + latRange.max) / 2;
+      if (latitude >= mid) { ch |= 1 << (4 - bit); latRange.min = mid; }
+      else { latRange.max = mid; }
+    }
+    isEven = !isEven;
+    bit++;
+    if (bit === 5) { hash += BASE32[ch]; bit = 0; ch = 0; }
+  }
+  return hash;
+}
 
 // -- CSV Parsing (simple, no external deps) -----------------------------------
 function parseCSV(filePath: string): Record<string, string>[] {
@@ -113,7 +149,16 @@ interface MigrationStats {
   errors: string[];
 }
 
-async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
+/** Stores uid → { fullName, profilePhotoURL, ratingAsSender } for denormalization */
+interface UserInfo {
+  uid: string;
+  fullName: string;
+  profilePhotoURL: string;
+  ratingAsSender: number;
+  ratingAsDriver: number;
+}
+
+async function migrateUsers(dryRun: boolean): Promise<{ emailToUid: Map<string, string>; userInfoMap: Map<string, UserInfo> }> {
   console.log('\n=== Migrating Users ===');
 
   const csvPath = path.resolve(__dirname, '../Docs/client/DB/5c3136.User Registrations.csv');
@@ -133,6 +178,7 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
   console.log(`Found ${registrations.length} registrations, ${driverEmails.size} drivers`);
 
   const emailToUid = new Map<string, string>();
+  const userInfoMap = new Map<string, UserInfo>();
   const stats: MigrationStats = {
     usersProcessed: 0,
     usersCreated: 0,
@@ -164,6 +210,20 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
         uid = existingUser.uid;
         console.log(`  [SKIP] ${email} already exists (uid: ${uid})`);
         emailToUid.set(email, uid);
+
+        // Still need user info for denormalization — fetch from Firestore
+        const existingDoc = await db.collection('users').doc(uid).get();
+        if (existingDoc.exists) {
+          const d = existingDoc.data()!;
+          userInfoMap.set(uid, {
+            uid,
+            fullName: d.fullName || name || '',
+            profilePhotoURL: d.profilePhotoURL || '',
+            ratingAsSender: d.ratingAsSender?.average || 0,
+            ratingAsDriver: d.ratingAsDriver?.average || 0,
+          });
+        }
+
         stats.usersSkipped++;
         continue;
       } catch {
@@ -184,8 +244,9 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
         uid = authUser.uid;
 
         const isDriver = driverEmails.has(email) || role === 'Driver';
+        const now = admin.firestore.Timestamp.now();
 
-        // Create Firestore user document
+        // Create Firestore user document — matches current userCallable.ts structure
         await db.collection('users').doc(uid).set({
           uid,
           fullName: name || '',
@@ -194,6 +255,7 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
           city: '',
           profilePhotoURL: row['ProfilePhoto'] || '',
           kycDocumentURL: row['DriverLicensePhoto'] || '',
+          kycIdURL: null,
           kycStatus: 'pending' as const,
           ratingAsDriver: { average: 0, count: 0 },
           ratingAsSender: { average: 0, count: 0 },
@@ -204,17 +266,23 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
           activeMode: isDriver ? 'driver' : 'client',
           driverAvailable: false,
           driverUnlocked: isDriver,
-          role: isDriver ? 'driver' : 'sender',
-          passwordSetUp: false,
+          role: 'sender' as const, // All migrated users start as sender — driver requires KYC approval
           migratedFrom: 'glide',
-          createdAt: admin.firestore.Timestamp.now(),
-          updatedAt: admin.firestore.Timestamp.now(),
+          createdAt: now,
+          updatedAt: now,
         });
 
-        console.log(`  [OK] Created: ${email} (${name}) ${isDriver ? '[DRIVER]' : ''}`);
+        console.log(`  [OK] Created: ${email} (${name}) ${isDriver ? '[driver-eligible]' : ''}`);
       }
 
       emailToUid.set(email, uid);
+      userInfoMap.set(uid, {
+        uid,
+        fullName: name || '',
+        profilePhotoURL: row['ProfilePhoto'] || '',
+        ratingAsSender: 0,
+        ratingAsDriver: 0,
+      });
       stats.usersCreated++;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -228,11 +296,15 @@ async function migrateUsers(dryRun: boolean): Promise<Map<string, string>> {
     console.log('Errors:');
     stats.errors.forEach(e => console.log(`  ${e}`));
   }
-  return emailToUid;
+  return { emailToUid, userInfoMap };
 }
 
 // -- Shipment Migration -------------------------------------------------------
-async function migrateShipments(emailToUid: Map<string, string>, dryRun: boolean): Promise<void> {
+async function migrateShipments(
+  emailToUid: Map<string, string>,
+  userInfoMap: Map<string, UserInfo>,
+  dryRun: boolean,
+): Promise<void> {
   console.log('\n=== Migrating Shipments ===');
 
   const csvPath = path.resolve(__dirname, '../Docs/client/DB/e4d133.Shipments.csv');
@@ -268,23 +340,39 @@ async function migrateShipments(emailToUid: Map<string, string>, dryRun: boolean
       const now = admin.firestore.Timestamp.now();
       const scheduledDate = row['ScheduledPickup']?.trim();
 
+      // Parse coordinates for geohash computation
+      const pickupLat = parseFloat(row['PickupLat']?.trim() || '0') || 0;
+      const pickupLng = parseFloat(row['PickupLng']?.trim() || '0') || 0;
+      const destLat = parseFloat(row['DropoffLat']?.trim() || '0') || 0;
+      const destLng = parseFloat(row['DropoffLng']?.trim() || '0') || 0;
+
+      // Denormalize sender info
+      const senderInfo = userInfoMap.get(senderId);
+      const driverInfo = driverId ? userInfoMap.get(driverId) : null;
+
       await db.collection('deliveries').add({
         senderId,
+        senderName: senderInfo?.fullName || '',
+        senderPhotoUrl: senderInfo?.profilePhotoURL || null,
+        senderRating: senderInfo?.ratingAsSender ?? null,
         driverId: driverId || null,
+        driverName: driverInfo?.fullName || null,
+        driverPhotoUrl: driverInfo?.profilePhotoURL || null,
+        driverRating: driverInfo?.ratingAsDriver || null,
         status,
         pickup: {
           address: row['PickupAddress']?.trim() || '',
           city: '',
-          lat: 0,
-          lng: 0,
-          geohash: '',
+          lat: pickupLat,
+          lng: pickupLng,
+          geohash: encodeGeohash(pickupLat, pickupLng),
         },
         destination: {
           address: row['DropoffAddress']?.trim() || '',
           city: '',
-          lat: 0,
-          lng: 0,
-          geohash: '',
+          lat: destLat,
+          lng: destLng,
+          geohash: encodeGeohash(destLat, destLng),
         },
         item: {
           description: row['ItemDescription']?.trim() || '',
@@ -292,8 +380,10 @@ async function migrateShipments(emailToUid: Map<string, string>, dryRun: boolean
           size: mapItemSize(row['Item Size']?.trim() || ''),
           photoURL: row['ItemPhoto']?.trim() || '',
         },
+        mediaURLs: [],
         price: parseFloat(row['Price']?.trim() || '0') || 0,
         pickupDate: scheduledDate ? admin.firestore.Timestamp.fromDate(new Date(scheduledDate)) : 'asap',
+        timeRange: null,
         notes: '',
         payment: { senderConfirmed: status === 'completed_paid', driverConfirmed: status === 'completed_paid' },
         proof: {},
@@ -303,6 +393,12 @@ async function migrateShipments(emailToUid: Map<string, string>, dryRun: boolean
           actor: 'migration',
           note: 'Imported from Glide',
         }],
+        interestedDrivers: [],
+        selectedDriverId: null,
+        selectionExpiresAt: null,
+        ratedBySender: status === 'completed_paid' ? false : null,
+        ratedByDriver: status === 'completed_paid' ? false : null,
+        ratingsVisibleAt: null,
         migratedFrom: 'glide',
         glideId,
         timeoutAt: now,
@@ -365,7 +461,9 @@ async function migrateMessages(emailToUid: Map<string, string>, dryRun: boolean)
       continue;
     }
 
-    const deliveryId = deliveryQuery.docs[0].id;
+    const deliveryDoc = deliveryQuery.docs[0];
+    const deliveryId = deliveryDoc.id;
+    const deliveryData = deliveryDoc.data();
     const chatRef = db.collection('chats').doc(deliveryId);
 
     // Get participants from first message
@@ -375,12 +473,16 @@ async function migrateMessages(emailToUid: Map<string, string>, dryRun: boolean)
       .map((email: string) => emailToUid.get(email) || '')
       .filter(Boolean);
 
-    // Create chat document
+    // Sort messages by date
     const sortedMsgs = msgs.sort((a, b) =>
       new Date(a['SentAt'] || 0).getTime() - new Date(b['SentAt'] || 0).getTime()
     );
     const lastMsg = sortedMsgs[sortedMsgs.length - 1];
 
+    // Determine if chat should be closed (completed/cancelled deliveries)
+    const isClosed = ['completed_paid', 'cancelled'].includes(deliveryData.status);
+
+    // Create chat document — matches current chat model with auto-close fields
     await chatRef.set({
       deliveryId,
       participants: participantUids,
@@ -389,6 +491,9 @@ async function migrateMessages(emailToUid: Map<string, string>, dryRun: boolean)
         ? admin.firestore.Timestamp.fromDate(new Date(lastMsg['SentAt']))
         : admin.firestore.Timestamp.now(),
       lastSenderId: emailToUid.get(lastMsg['Comment User']?.trim().toLowerCase() || '') || '',
+      closed: isClosed,
+      chatCloseAt: isClosed ? admin.firestore.Timestamp.now() : null,
+      closedAt: isClosed ? admin.firestore.Timestamp.now() : null,
       migratedFrom: 'glide',
       createdAt: admin.firestore.Timestamp.now(),
     });
@@ -403,6 +508,7 @@ async function migrateMessages(emailToUid: Map<string, string>, dryRun: boolean)
 
       const msgRef = chatRef.collection('messages').doc();
       batch.set(msgRef, {
+        chatId: deliveryId,
         senderId,
         text: msg['MessageContent'] || '',
         type: 'text',
@@ -441,22 +547,24 @@ async function main(): Promise<void> {
   console.log('========================================');
   console.log('  MOOVIZ -- Glide to Firebase Migration');
   console.log('========================================');
+  console.log(`  Storage bucket: ${storageBucket}`);
 
   if (dryRun) {
     console.log('DRY RUN MODE -- no data will be written');
   }
 
   let emailToUid: Map<string, string>;
+  let userInfoMap: Map<string, UserInfo>;
 
   if (shipmentsOnly) {
     // Still need user mapping for sender/driver lookup
-    emailToUid = await migrateUsers(dryRun);
-    await migrateShipments(emailToUid, dryRun);
+    ({ emailToUid, userInfoMap } = await migrateUsers(dryRun));
+    await migrateShipments(emailToUid, userInfoMap, dryRun);
   } else if (usersOnly) {
-    emailToUid = await migrateUsers(dryRun);
+    ({ emailToUid } = await migrateUsers(dryRun));
   } else {
-    emailToUid = await migrateUsers(dryRun);
-    await migrateShipments(emailToUid, dryRun);
+    ({ emailToUid, userInfoMap } = await migrateUsers(dryRun));
+    await migrateShipments(emailToUid, userInfoMap, dryRun);
     await migrateMessages(emailToUid, dryRun);
   }
 

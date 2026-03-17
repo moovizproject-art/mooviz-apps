@@ -198,6 +198,11 @@ export const createDelivery = onCall(async (request) => {
     ],
     interestedDrivers: [],
     timeoutAt,
+    // Expansion tracking — required by notifyExpansion scheduled function
+    notifiedDrivers: [],
+    notifyRadius: 15,
+    notifyExpansionCount: 0,
+    lastNotifyExpansion: now,
     createdAt: now,
     updatedAt: now,
   };
@@ -214,8 +219,8 @@ export const createDelivery = onCall(async (request) => {
     const pickupCity = pickupRaw.city ?? "";
     const destCity = destRaw.city ?? "";
     getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng, undefined, itemSize || undefined)
-      .then((nearbyDrivers) =>
-        Promise.all(
+      .then(async (nearbyDrivers) => {
+        await Promise.all(
           nearbyDrivers.map((driver) =>
             sendPushNotification(
               driver.uid,
@@ -230,8 +235,15 @@ export const createDelivery = onCall(async (request) => {
               }
             )
           )
-        ).then(() => console.log(`createDelivery: notified ${nearbyDrivers.length} nearby drivers (multi-location)`))
-      )
+        );
+        // Record notified drivers so expansion function skips them
+        if (nearbyDrivers.length > 0) {
+          await docRef.update({
+            notifiedDrivers: nearbyDrivers.map((d) => d.uid),
+          });
+        }
+        console.log(`createDelivery: notified ${nearbyDrivers.length} nearby drivers (multi-location)`);
+      })
       .catch((err) => console.error("createDelivery: nearby driver notification failed:", err));
   }
 

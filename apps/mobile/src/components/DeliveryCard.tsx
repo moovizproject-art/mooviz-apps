@@ -14,6 +14,19 @@ import { BRAND, BORDER_RADIUS, SPACING } from '../constants/design';
 import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
+const SIZE_LABELS_HE: Record<string, string> = {
+  small: 'מעטפה',
+  medium: 'חבילה',
+  large: 'חבילה גדולה',
+  xlarge: 'משטח/ארגז',
+};
+const SIZE_ICONS: Record<string, string> = {
+  small: '✉️',
+  medium: '📦',
+  large: '📦',
+  xlarge: '🚚',
+};
+
 const TIME_RANGE_LABELS: Record<string, string> = {
   morning: 'בוקר 08–12',
   afternoon: 'צהריים 12–16',
@@ -69,8 +82,9 @@ interface DeliveryData {
   status: string;
   pickup?: { address: string };
   destination?: { address: string };
-  item?: { description: string };
+  item?: { description: string; size?: string };
   itemDescription?: string;
+  itemSize?: string;
   photoUrl?: string;
   mediaURLs?: string[];
   price?: number;
@@ -91,6 +105,8 @@ interface DeliveryCardProps {
   delivery: DeliveryData;
   onPress: () => void;
   showDistance?: boolean;
+  /** Override default distance text (e.g. "3.2 ק״מ מהבית") */
+  distanceLabel?: string;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -99,6 +115,7 @@ export function DeliveryCard({
   delivery,
   onPress,
   showDistance = false,
+  distanceLabel,
 }: DeliveryCardProps): React.JSX.Element {
   const scale = useSharedValue(1);
 
@@ -116,6 +133,9 @@ export function DeliveryCard({
 
   const itemDesc = delivery.item?.description || delivery.itemDescription;
   const pickupInfo = formatPickupInfo(delivery.pickupDate, delivery.scheduledDate, delivery.timeRange);
+  const sizeKey = delivery.itemSize || delivery.item?.size || 'small';
+  const sizeLabel = SIZE_LABELS_HE[sizeKey] ?? SIZE_LABELS_HE.small;
+  const sizeIcon = SIZE_ICONS[sizeKey] ?? SIZE_ICONS.small;
 
   return (
     <AnimatedPressable
@@ -184,6 +204,11 @@ export function DeliveryCard({
             📅 {pickupInfo}
           </Text>
 
+          {/* Package size badge */}
+          <View style={styles.sizeBadge}>
+            <Text style={styles.sizeBadgeText}>{sizeIcon} {sizeLabel}</Text>
+          </View>
+
           {/* Ratings preview — visible when any rating exists */}
           {(delivery.senderRatingGiven || delivery.driverRatingGiven) && (
             <View style={styles.ratingsPreview}>
@@ -220,7 +245,9 @@ export function DeliveryCard({
 
           {/* Bottom: price + distance */}
           <View style={styles.bottomRow}>
-            {showDistance && delivery.distance != null ? (
+            {distanceLabel ? (
+              <Text style={styles.distanceText}>{distanceLabel}</Text>
+            ) : showDistance && delivery.distance != null ? (
               <Text style={styles.distanceText}>
                 {delivery.distance.toFixed(1)} ק״מ
               </Text>
@@ -334,6 +361,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: BRAND.textSecondary,
     marginTop: 2,
+  },
+  sizeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: BRAND.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 3,
+  },
+  sizeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: BRAND.textPrimary,
   },
   ratingsPreview: {
     marginTop: 4,

@@ -4,6 +4,10 @@
  * Downloads images from Glide storage URLs and uploads to Firebase Storage.
  *
  * Usage: npx ts-node scripts/migrate-images.ts [--dry-run]
+ *
+ * Environment:
+ *   GOOGLE_APPLICATION_CREDENTIALS=path/to/key.json
+ *   FIREBASE_STORAGE_BUCKET=mooviz-app-9b766.appspot.com (or mooviz-prod.firebasestorage.app)
  */
 
 import * as admin from 'firebase-admin';
@@ -13,9 +17,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'mooviz-app-9b766.appspot.com';
+
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
-  storageBucket: 'mooviz-app-9b766.appspot.com',
+  storageBucket,
 });
 
 const db = admin.firestore();
@@ -47,8 +53,25 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
   });
 }
 
+function detectContentType(filePath: string): string {
+  try {
+    const buffer = fs.readFileSync(filePath, { flag: 'r' });
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8) return 'image/jpeg';
+    if (buffer[0] === 0x89 && buffer[1] === 0x50) return 'image/png';
+    if (buffer[0] === 0x47 && buffer[1] === 0x49) return 'image/gif';
+    if (buffer[0] === 0x52 && buffer[1] === 0x49) return 'image/webp';
+  } catch {
+    // fallback
+  }
+  if (filePath.includes('.png')) return 'image/png';
+  if (filePath.includes('.gif')) return 'image/gif';
+  if (filePath.includes('.webp')) return 'image/webp';
+  return 'image/jpeg';
+}
+
 async function migrateImages(dryRun: boolean): Promise<void> {
-  console.log('=== Image Migration ===\n');
+  console.log('=== Image Migration ===');
+  console.log(`  Storage bucket: ${storageBucket}\n`);
 
   // Get all migrated users with profile photos or KYC docs
   const users = await db.collection('users')
@@ -68,13 +91,13 @@ async function migrateImages(dryRun: boolean): Promise<void> {
 
     // Migrate profile photo
     if (data.profilePhotoURL && data.profilePhotoURL.startsWith('http')) {
-      const isGlideUrl = data.profilePhotoURL.includes('glide-prod') ||
-                          data.profilePhotoURL.includes('pexels') ||
-                          data.profilePhotoURL.includes('storage.googleapis.com');
+      // Only migrate external URLs (not already in Firebase Storage)
+      const isExternalUrl = !data.profilePhotoURL.includes('firebasestorage.googleapis.com') &&
+                            !data.profilePhotoURL.includes(`storage.googleapis.com/${bucket.name}`);
 
-      if (isGlideUrl) {
+      if (isExternalUrl) {
         const tmpPath = path.join(tmpDir, `profile_${uid}.jpg`);
-        const storagePath = `profiles/${uid}/profile.jpg`;
+        const storagePath = `users/${uid}/profile.jpg`;
 
         if (dryRun) {
           console.log(`  [DRY] Would migrate profile photo for ${data.email}`);
@@ -82,9 +105,10 @@ async function migrateImages(dryRun: boolean): Promise<void> {
         } else {
           try {
             await downloadFile(data.profilePhotoURL, tmpPath);
+            const contentType = detectContentType(tmpPath);
             await bucket.upload(tmpPath, {
               destination: storagePath,
-              metadata: { contentType: 'image/jpeg' },
+              metadata: { contentType },
             });
 
             const [url] = await bucket.file(storagePath).getSignedUrl({
@@ -109,31 +133,47 @@ async function migrateImages(dryRun: boolean): Promise<void> {
 
     // Migrate KYC document
     if (data.kycDocumentURL && data.kycDocumentURL.startsWith('http')) {
-      const tmpPath = path.join(tmpDir, `kyc_${uid}.jpg`);
-      const storagePath = `kyc/${uid}/license.jpg`;
+      const isExternalKyc = !data.kycDocumentURL.includes('firebasestorage.googleapis.com') &&
+                            !data.kycDocumentURL.includes(`storage.googleapis.com/${bucket.name}`);
 
-      if (dryRun) {
-        console.log(`  [DRY] Would migrate KYC doc for ${data.email}`);
-        migrated++;
-      } else {
-        try {
-          await downloadFile(data.kycDocumentURL, tmpPath);
-          await bucket.upload(tmpPath, {
-            destination: storagePath,
-            metadata: { contentType: 'image/jpeg' },
-          });
+      if (isExternalKyc) {
+        const tmpPath = path.join(tmpDir, `kyc_${uid}.jpg`);
+        const storagePath = `kyc/${uid}/license.jpg`;
 
-          await doc.ref.update({ kycDocumentURL: storagePath });
-          fs.unlinkSync(tmpPath);
+        if (dryRun) {
+          console.log(`  [DRY] Would migrate KYC doc for ${data.email}`);
           migrated++;
-          console.log(`  [OK] KYC doc: ${data.email}`);
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : String(error);
-          console.log(`  [ERR] KYC doc ${data.email}: ${message}`);
-          errors++;
+        } else {
+          try {
+            await downloadFile(data.kycDocumentURL, tmpPath);
+            const contentType = detectContentType(tmpPath);
+            await bucket.upload(tmpPath, {
+              destination: storagePath,
+              metadata: { contentType },
+            });
+
+            const [url] = await bucket.file(storagePath).getSignedUrl({
+              action: 'read',
+              expires: '2030-01-01',
+            });
+
+            await doc.ref.update({ kycDocumentURL: url });
+            fs.unlinkSync(tmpPath);
+            migrated++;
+            console.log(`  [OK] KYC doc: ${data.email}`);
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.log(`  [ERR] KYC doc ${data.email}: ${message}`);
+            errors++;
+          }
         }
+      } else {
+        skipped++;
       }
     }
+
+    // Rate limit
+    await new Promise(r => setTimeout(r, 300));
   }
 
   // Migrate delivery item photos
@@ -145,28 +185,39 @@ async function migrateImages(dryRun: boolean): Promise<void> {
     const data = doc.data();
     const photoURL = data.item?.photoURL as string | undefined;
 
-    if (photoURL && photoURL.startsWith('http') && photoURL.includes('storage.googleapis.com')) {
-      const tmpPath = path.join(tmpDir, `item_${doc.id}.jpg`);
-      const storagePath = `deliveries/${doc.id}/item.jpg`;
+    if (photoURL && photoURL.startsWith('http')) {
+      const isExternal = !photoURL.includes('firebasestorage.googleapis.com') &&
+                         !photoURL.includes(`storage.googleapis.com/${bucket.name}`);
 
-      if (dryRun) {
-        console.log(`  [DRY] Would migrate item photo for delivery ${doc.id}`);
-        migrated++;
-      } else {
-        try {
-          await downloadFile(photoURL, tmpPath);
-          await bucket.upload(tmpPath, {
-            destination: storagePath,
-            metadata: { contentType: 'image/jpeg' },
-          });
+      if (isExternal) {
+        const tmpPath = path.join(tmpDir, `item_${doc.id}.jpg`);
+        const storagePath = `deliveries/${data.senderId || doc.id}/item_${doc.id}.jpg`;
 
-          await doc.ref.update({ 'item.photoURL': storagePath });
-          fs.unlinkSync(tmpPath);
+        if (dryRun) {
+          console.log(`  [DRY] Would migrate item photo for delivery ${doc.id}`);
           migrated++;
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : String(error);
-          console.log(`  [ERR] Item photo ${doc.id}: ${message}`);
-          errors++;
+        } else {
+          try {
+            await downloadFile(photoURL, tmpPath);
+            const contentType = detectContentType(tmpPath);
+            await bucket.upload(tmpPath, {
+              destination: storagePath,
+              metadata: { contentType },
+            });
+
+            const [url] = await bucket.file(storagePath).getSignedUrl({
+              action: 'read',
+              expires: '2030-01-01',
+            });
+
+            await doc.ref.update({ 'item.photoURL': url });
+            fs.unlinkSync(tmpPath);
+            migrated++;
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.log(`  [ERR] Item photo ${doc.id}: ${message}`);
+            errors++;
+          }
         }
       }
     }
@@ -181,8 +232,11 @@ async function migrateImages(dryRun: boolean): Promise<void> {
 }
 
 const dryRun = process.argv.includes('--dry-run');
+console.log('==========================================');
+console.log('  MOOVIZ — Image Migration Script');
+console.log('==========================================');
 migrateImages(dryRun).then(() => {
-  console.log('\nImage migration complete!');
+  console.log('\n✅ Image migration complete!');
   process.exit(0);
 }).catch((error) => {
   console.error('Image migration failed:', error);
