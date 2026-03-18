@@ -95,7 +95,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               destination: d.destination,
               item: d.item,
               itemDescription: d.item?.description || d.itemDescription || '',
-              itemSize: d.itemSize,
+              itemSize: d.itemSize || d.item?.size,
               photoUrl: d.photoUrl,
               mediaURLs: d.mediaURLs,
               price: d.price || d.suggestedPrice || 0,
@@ -364,7 +364,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     latitude: delivery.destination?.latitude || delivery.destination?.lat || 32.0853,
     longitude: delivery.destination?.longitude || delivery.destination?.lng || 34.7818,
   };
-  const sizeInfo = SIZE_ICONS[delivery.itemSize || ''] || SIZE_ICONS.medium;
+  const sizeInfo = SIZE_ICONS[delivery.itemSize || ''] || SIZE_ICONS.small;
 
   // Media
   const mediaList: string[] = delivery.mediaURLs?.length
@@ -392,21 +392,21 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       </View>
 
       {/* ── 2. Item Summary Card ── */}
-      <View style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.itemHeader}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.itemTitle, { color: colors.textPrimary }]} numberOfLines={2}>
               {delivery.itemDescription || strings.commonExtra.deliveryItem.he}
             </Text>
-            <View style={styles.sizeRow}>
+            <View style={[styles.sizeRow, { backgroundColor: colors.surfaceElevated }]}>
               <Text style={styles.sizeIcon}>{sizeInfo.icon}</Text>
               <Text style={[styles.sizeLabel, { color: colors.textSecondary }]}>{t(`form.${sizeInfo.labelKey}`)}</Text>
             </View>
           </View>
-          <View style={[styles.priceTag, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={styles.priceValue}>{formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}</Text>
+          <View style={[styles.priceTag, { backgroundColor: colors.successBg }]}>
+            <Text style={[styles.priceValue, { color: colors.success }]}>{formatCurrency(delivery.price ?? delivery.suggestedPrice ?? 0)}</Text>
             {delivery.status === 'completed_paid' && (
-              <View style={styles.earningsBadge}>
+              <View style={[styles.earningsBadge, { backgroundColor: colors.success }]}>
                 <Text style={styles.earningsBadgeText}>✅ {t('deliveryExtra.addedToEarnings')}</Text>
               </View>
             )}
@@ -415,7 +415,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
         {/* Notes */}
         {delivery.notes ? (
-          <View style={[styles.notesBox, { backgroundColor: '#FFF8E1' }]}>
+          <View style={[styles.notesBox, { backgroundColor: colors.warningBg }]}>
             <Text style={styles.notesIcon}>📝</Text>
             <Text style={[styles.notesText, { color: colors.textSecondary }]}>{delivery.notes}</Text>
           </View>
@@ -423,7 +423,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       </View>
 
       {/* ── 3. Route Card ── */}
-      <View style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.routePoint}>
           <View style={[styles.routeDot, { backgroundColor: colors.success }]} />
           <View style={styles.routeInfo}>
@@ -431,7 +431,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             <Text style={[styles.routeAddress, { color: colors.textPrimary }]}>{delivery.pickup?.address || '—'}</Text>
           </View>
         </View>
-        <View style={styles.routeLine} />
+        <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
         <View style={styles.routePoint}>
           <View style={[styles.routeDot, { backgroundColor: colors.error }]} />
           <View style={styles.routeInfo}>
@@ -525,7 +525,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
         {isMyJob && !!delivery.chatId && (
           <TouchableOpacity
-            style={[styles.chatButton, { borderColor: colors.primary }]}
+            style={[styles.chatButton, { borderColor: colors.primary, backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('ChatRoom', { chatId: delivery.chatId!, recipientName: delivery.senderName || '' })}
           >
             <Text style={[styles.chatButtonText, { color: colors.primary }]}>💬 {t('driver.chatWithSender')}</Text>
@@ -575,7 +575,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       </View>
 
       {/* ── 5. Sender Card ── */}
-      <View style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <TouchableOpacity style={styles.senderRow} activeOpacity={0.7} onPress={() => setSenderProfileVisible(true)}>
           <AvatarCircle name={delivery.senderName || ''} photoUrl={delivery.senderPhotoUrl} size={44} />
           <View style={styles.senderInfo}>
@@ -618,9 +618,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   }}
                 >
                   {isVideo ? (
-                    <View style={[styles.mediaThumb, { backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' }]}>
+                    <View style={[styles.mediaThumb, { backgroundColor: colors.surfaceElevated, justifyContent: 'center', alignItems: 'center' }]}>
                       <Text style={{ fontSize: 28 }}>🎬</Text>
-                      <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>{t('deliveryExtra.video')}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 4 }}>{t('deliveryExtra.video')}</Text>
                     </View>
                   ) : (
                     <Image source={{ uri: url }} style={styles.mediaThumb} />
@@ -634,7 +634,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* ── 6b. Proof Photos ── */}
       {proofImages.length > 0 && (
-        <View style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{`📸 ${strings.deliveryExtra.deliveryProofs.he}`}</Text>
           <View style={styles.proofRow}>
             {proofImages.map((proof, i) => (
@@ -654,7 +654,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* ── 7. Payment confirmation ── */}
       {(delivery.status === 'delivered' || delivery.status === 'completed_paid') && (
-        <View style={[styles.card, { backgroundColor: '#FFFFFF', borderStartColor: '#4CAF50', borderStartWidth: 3 }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.success, borderStartWidth: 3 }]}>
           <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>{t('payment.confirmTitle')}</Text>
 
           <View style={styles.confirmRow}>

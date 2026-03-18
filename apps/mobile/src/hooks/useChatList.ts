@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import firestore from '@react-native-firebase/firestore';
 
 export interface ChatThread {
@@ -24,12 +24,17 @@ export interface ChatThread {
 /**
  * useChatList — רשימת צ׳אטים
  * Real-time listener for the current user's chat threads.
- * Enriches each thread with recipient photo and delivery context.
+ * Uses cached user/delivery data to avoid N+1 queries on every update.
+ * Falls back to denormalized fields on the chat doc when available.
  */
 export function useChatList(userId: string | undefined) {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Persist caches across listener firings to avoid re-fetching known users/deliveries
+  const userCache = useRef(new Map<string, { name: string; photo: string | null }>());
+  const deliveryCache = useRef(new Map<string, { status: string; pickupCity: string; destCity: string; itemDesc: string; pickupDate: string }>());
 
   useEffect(() => {
     if (!userId) {
@@ -50,78 +55,74 @@ export function useChatList(userId: string | undefined) {
             return;
           }
 
-          // Collect unique other-participant UIDs and delivery IDs
-          const otherUids = new Set<string>();
-          const deliveryIds = new Set<string>();
+          // Collect UIDs and delivery IDs NOT already in cache
+          const missingUids: string[] = [];
+          const missingDeliveryIds: string[] = [];
           docs.forEach((doc) => {
             const data = doc.data();
             (data.participants as string[]).forEach((p) => {
-              if (p !== userId) otherUids.add(p);
+              if (p !== userId && !userCache.current.has(p)) missingUids.push(p);
             });
-            if (data.deliveryId) deliveryIds.add(data.deliveryId);
+            if (data.deliveryId && !deliveryCache.current.has(data.deliveryId)) {
+              missingDeliveryIds.push(data.deliveryId);
+            }
           });
 
-          // Fetch user profiles (name + photo)
-          const userMap = new Map<string, { name: string; photo: string | null }>();
-          await Promise.all(
-            Array.from(otherUids).map((uid) =>
-              firestore().collection('users').doc(uid).get()
-                .then((uDoc) => {
-                  if (uDoc.exists) {
-                    const d = uDoc.data()!;
-                    userMap.set(uid, {
-                      name: d.fullName || '',
-                      photo: d.profilePhotoURL || null,
-                    });
-                  }
-                })
-                .catch((err) => {
-                  const code = (err as any)?.code;
-                  if (code === 'permission-denied') {
-                    console.warn(`[useChatList] Permission denied fetching user ${uid}`);
-                  } else {
-                    console.warn(`[useChatList] User ${uid} fetch error:`, err);
-                  }
-                }),
-            ),
-          );
-
-          // Fetch delivery info (status + cities)
-          const deliveryMap = new Map<string, { status: string; pickupCity: string; destCity: string; itemDesc: string; pickupDate: string }>();
-          console.log('[useChatList] Fetching deliveries:', Array.from(deliveryIds));
-          await Promise.all(
-            Array.from(deliveryIds).map((dId) =>
-              firestore().collection('deliveries').doc(dId).get()
-                .then((dDoc) => {
-                  if (dDoc.exists) {
-                    const d = dDoc.data()!;
-                    let dateStr = 'ASAP';
-                    if (d.pickupDate && d.pickupDate !== 'asap') {
-                      const date = d.pickupDate?.toDate ? d.pickupDate.toDate() : new Date(d.pickupDate);
-                      dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+          // Fetch only missing users
+          if (missingUids.length > 0) {
+            await Promise.all(
+              missingUids.map((uid) =>
+                firestore().collection('users').doc(uid).get()
+                  .then((uDoc) => {
+                    if (uDoc.exists) {
+                      const d = uDoc.data()!;
+                      userCache.current.set(uid, {
+                        name: d.fullName || '',
+                        photo: d.profilePhotoURL || null,
+                      });
                     }
-                    const itemDesc = d.itemDescription || d.item?.description || '';
-                    console.log(`[useChatList] Delivery ${dId}: status=${d.status}, item=${itemDesc}, date=${dateStr}`);
-                    deliveryMap.set(dId, {
-                      status: d.status || 'new',
-                      pickupCity: d.pickup?.city || d.pickup?.address || '',
-                      destCity: d.destination?.city || d.destination?.address || '',
-                      itemDesc,
-                      pickupDate: dateStr,
-                    });
-                  } else {
-                    console.warn(`[useChatList] Delivery ${dId} not found`);
-                  }
-                })
-                .catch((err) => console.warn(`[useChatList] Delivery ${dId} fetch error:`, err)),
-            ),
-          );
+                  })
+                  .catch(() => {}),
+              ),
+            );
+          }
+
+          // Fetch only missing deliveries
+          if (missingDeliveryIds.length > 0) {
+            await Promise.all(
+              missingDeliveryIds.map((dId) =>
+                firestore().collection('deliveries').doc(dId).get()
+                  .then((dDoc) => {
+                    if (dDoc.exists) {
+                      const d = dDoc.data()!;
+                      let dateStr = 'ASAP';
+                      if (d.pickupDate && d.pickupDate !== 'asap') {
+                        const date = d.pickupDate?.toDate ? d.pickupDate.toDate() : new Date(d.pickupDate);
+                        dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+                      }
+                      deliveryCache.current.set(dId, {
+                        status: d.status || 'new',
+                        pickupCity: d.pickup?.city || d.pickup?.address || '',
+                        destCity: d.destination?.city || d.destination?.address || '',
+                        itemDesc: d.itemDescription || d.item?.description || '',
+                        pickupDate: dateStr,
+                      });
+                    }
+                  })
+                  .catch(() => {}),
+              ),
+            );
+          }
 
           const chatThreads: ChatThread[] = docs.map((doc) => {
             const data = doc.data();
             const recipientId = (data.participants as string[]).find((p) => p !== userId) || '';
-            const user = userMap.get(recipientId);
-            const delivery = deliveryMap.get(data.deliveryId || '');
+            const user = userCache.current.get(recipientId);
+            const delivery = deliveryCache.current.get(data.deliveryId || '');
+
+            // Use denormalized fields on chat doc as fallback
+            const recipientName = user?.name || data.senderName || data.driverName || recipientId.slice(0, 8);
+            const recipientPhoto = user?.photo || null;
 
             return {
               id: doc.id,
@@ -131,8 +132,8 @@ export function useChatList(userId: string | undefined) {
               lastMessageAt: data.lastMessageAt?.toDate() || new Date(),
               lastSenderId: data.lastSenderId || '',
               recipientId,
-              recipientName: user?.name || recipientId.slice(0, 8),
-              recipientPhotoUrl: user?.photo || null,
+              recipientName,
+              recipientPhotoUrl: recipientPhoto,
               pickupCity: delivery?.pickupCity || '',
               destinationCity: delivery?.destCity || '',
               deliveryStatus: delivery?.status || '',

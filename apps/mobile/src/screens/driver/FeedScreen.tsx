@@ -159,22 +159,43 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const [nearMeOpen, setNearMeOpen] = useState(true);
   const [nearHomeOpen, setNearHomeOpen] = useState(true);
   const [nearWorkOpen, setNearWorkOpen] = useState(true);
+  type SortMode = 'distance' | 'time' | 'price';
+  const [sortMode, setSortMode] = useState<SortMode>('distance');
 
   useEffect(() => {
-    AsyncStorage.getItem(PREFS_KEY).then((val) => {
+    AsyncStorage.getItem(PREFS_KEY).then(async (val) => {
+      let saved: Partial<DriverPreferences> = {};
       if (val) {
         try {
-          const saved = JSON.parse(val);
+          saved = JSON.parse(val);
           // Migrate old string addresses to null (user must re-enter with autocomplete)
-          if (typeof saved.homeAddress === 'string') {
-            saved.homeAddress = null;
-          }
-          if (typeof saved.workAddress === 'string') {
-            saved.workAddress = null;
-          }
-          setPrefs({ ...DEFAULT_PREFS, ...saved });
+          if (typeof saved.homeAddress === 'string') saved.homeAddress = null;
+          if (typeof saved.workAddress === 'string') saved.workAddress = null;
         } catch {}
       }
+      // Always sync addresses from Firestore — local cache may be stale
+      if (currentUser?.uid) {
+        try {
+          const doc = await firestore().collection('users').doc(currentUser.uid).get();
+          const dp = doc.data()?.driverPrefs;
+          console.log('[FeedScreen] Firestore driverPrefs:', JSON.stringify({ home: dp?.homeAddress?.address, work: dp?.workAddress?.address, uid: currentUser.uid }));
+          if (dp) {
+            if (dp.homeAddress?.lat) saved.homeAddress = dp.homeAddress;
+            if (dp.workAddress?.lat) saved.workAddress = dp.workAddress;
+            if (dp.radiusKm) saved.radiusKm = dp.radiusKm;
+            if (dp.deliverySizes && Array.isArray(dp.deliverySizes)) {
+              const sizes: Record<string, boolean> = { small: false, medium: false, large: false, xlarge: false };
+              dp.deliverySizes.forEach((s: string) => { sizes[s] = true; });
+              saved.deliverySizes = sizes;
+            }
+          }
+        } catch (err) {
+          console.warn('[FeedScreen] Firestore prefs sync error:', err);
+        }
+      }
+      const merged = { ...DEFAULT_PREFS, ...saved };
+      setPrefs(merged);
+      AsyncStorage.setItem(PREFS_KEY, JSON.stringify(merged));
       setPrefsLoaded(true);
     });
     // Show onboarding on first visit
@@ -184,7 +205,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         setAdvancedOpen(true); // Expand for first-timers
       }
     });
-  }, []);
+  }, [currentUser?.uid]);
 
   // ── Sync prefs to Firestore (debounced 2s) ──
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -322,42 +343,81 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       .filter(Boolean) as (Delivery & { _distKm: number })[];
   }, [currentUser?.uid, maxDriverSizeRank]);
 
-  // Near Me deliveries
+  /** Sort deliveries by current sortMode */
+  const sortDeliveries = useCallback((items: (Delivery & { _distKm: number })[]) => {
+    return [...items].sort((a, b) => {
+      switch (sortMode) {
+        case 'price':
+          return (b.price ?? b.suggestedPrice ?? 0) - (a.price ?? a.suggestedPrice ?? 0);
+        case 'time': {
+          // ASAP first, then by scheduled date
+          const isAsapA = !a.pickupDate || a.pickupDate === 'asap';
+          const isAsapB = !b.pickupDate || b.pickupDate === 'asap';
+          if (isAsapA && !isAsapB) return -1;
+          if (!isAsapA && isAsapB) return 1;
+          if (isAsapA && isAsapB) {
+            // Both ASAP — sort by createdAt (older first)
+            const tA = (a.createdAt as any)?._seconds ?? (a.createdAt as any)?.seconds ?? 0;
+            const tB = (b.createdAt as any)?._seconds ?? (b.createdAt as any)?.seconds ?? 0;
+            return tA - tB;
+          }
+          // Both scheduled — sort by pickupDate ascending
+          const getPickupTime = (d: any) => {
+            const pd = d.pickupDate;
+            if (!pd || pd === 'asap') return 0;
+            if (typeof pd === 'object' && pd._seconds) return pd._seconds;
+            if (typeof pd === 'object' && pd.seconds) return pd.seconds;
+            if (typeof pd === 'object' && pd.toDate) return pd.toDate().getTime() / 1000;
+            if (typeof pd === 'string') return new Date(pd).getTime() / 1000;
+            return 0;
+          };
+          return getPickupTime(a) - getPickupTime(b);
+        }
+        case 'distance':
+        default:
+          return a._distKm - b._distKm;
+      }
+    });
+  }, [sortMode]);
+
+  // Near Me deliveries — only when GPS location is available
   const nearMeDeliveries = useMemo(
-    () => nearLocation
-      ? filterWithDistance(rawNearMe, nearLocation.latitude, nearLocation.longitude, prefs.radiusKm)
-          .sort((a, b) => a._distKm - b._distKm)
-      : rawNearMe.filter((d) => {
-          if (d.senderId === currentUser?.uid) return false;
-          const itemSize = d.itemSize || d.item?.size;
-          if (itemSize && (SIZE_RANK[itemSize.toLowerCase()] ?? 0) > maxDriverSizeRank) return false;
-          return true;
-        }).map((d) => ({ ...d, _distKm: 0 })),
-    [rawNearMe, nearLocation, prefs.radiusKm, filterWithDistance, currentUser?.uid, maxDriverSizeRank],
+    () => {
+      if (!nearLocation) return []; // No GPS → show nothing in "Near Me", let home/work sections handle it
+      const filtered = filterWithDistance(rawNearMe, nearLocation.latitude, nearLocation.longitude, prefs.radiusKm);
+      return sortDeliveries(filtered);
+    },
+    [rawNearMe, nearLocation, prefs.radiusKm, filterWithDistance, sortDeliveries],
   );
   // Near Home deliveries (exclude already in nearMe)
   const nearMeIds = useMemo(() => new Set(nearMeDeliveries.map((d) => d.id)), [nearMeDeliveries]);
   const nearHomeDeliveries = useMemo(
-    () => homeLocation
-      ? filterWithDistance(rawNearHome, homeLocation.latitude, homeLocation.longitude, prefs.radiusKm)
-          .filter((d) => !nearMeIds.has(d.id))
-          .sort((a, b) => a._distKm - b._distKm)
-      : [],
-    [rawNearHome, homeLocation, prefs.radiusKm, filterWithDistance, nearMeIds],
+    () => {
+      if (!homeLocation) return [];
+      const filtered = filterWithDistance(rawNearHome, homeLocation.latitude, homeLocation.longitude, prefs.radiusKm)
+        .filter((d) => !nearMeIds.has(d.id));
+      return sortDeliveries(filtered);
+    },
+    [rawNearHome, homeLocation, prefs.radiusKm, filterWithDistance, nearMeIds, sortDeliveries],
   );
   // Near Work deliveries (exclude already in nearMe + nearHome)
   const nearHomeIds = useMemo(() => new Set(nearHomeDeliveries.map((d) => d.id)), [nearHomeDeliveries]);
   const nearWorkDeliveries = useMemo(
-    () => workLocation
-      ? filterWithDistance(rawNearWork, workLocation.latitude, workLocation.longitude, prefs.radiusKm)
-          .filter((d) => !nearMeIds.has(d.id) && !nearHomeIds.has(d.id))
-          .sort((a, b) => a._distKm - b._distKm)
-      : [],
-    [rawNearWork, workLocation, prefs.radiusKm, filterWithDistance, nearMeIds, nearHomeIds],
+    () => {
+      if (!workLocation) return [];
+      const filtered = filterWithDistance(rawNearWork, workLocation.latitude, workLocation.longitude, prefs.radiusKm)
+        .filter((d) => !nearMeIds.has(d.id) && !nearHomeIds.has(d.id));
+      return sortDeliveries(filtered);
+    },
+    [rawNearWork, workLocation, prefs.radiusKm, filterWithDistance, nearMeIds, nearHomeIds, sortDeliveries],
   );
 
   // Combined count for header
   const totalDeliveries = nearMeDeliveries.length + nearHomeDeliveries.length + nearWorkDeliveries.length;
+  // Debug: log section counts
+  useEffect(() => {
+    console.log(`[FeedScreen] Sections — nearMe:${nearMeDeliveries.length} home:${nearHomeDeliveries.length} work:${nearWorkDeliveries.length} total:${totalDeliveries} homeAddr:${!!prefs.homeAddress} workAddr:${!!prefs.workAddress} rawHome:${rawNearHome.length} rawWork:${rawNearWork.length}`);
+  }, [nearMeDeliveries.length, nearHomeDeliveries.length, nearWorkDeliveries.length, prefs.homeAddress, prefs.workAddress]);
 
 
   // ── Latest chat message for current delivery ──
@@ -992,24 +1052,34 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Near Me Section ── */}
             {nearMeDeliveries.length > 0 && (
               <View style={styles.feedSection}>
-                <Pressable
-                  onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setNearMeOpen((v) => !v);
-                  }}
-                  style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                >
-                  <View style={styles.feedSectionTitleRow}>
+                <View style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Pressable
+                    onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setNearMeOpen((v) => !v); }}
+                    style={styles.feedSectionTitleRow}
+                  >
                     <Text style={[styles.feedSectionIcon]}>📍</Text>
                     <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>המיקום שלי</Text>
                     <View style={[styles.feedSectionBadge, { backgroundColor: colors.primary + '20' }]}>
                       <Text style={[styles.feedSectionBadgeText, { color: colors.primary }]}>{nearMeDeliveries.length}</Text>
                     </View>
+                  </Pressable>
+                  <View style={styles.sortIcons}>
+                    {([
+                      { mode: 'distance' as SortMode, label: '📏' },
+                      { mode: 'time' as SortMode, label: '🕐' },
+                      { mode: 'price' as SortMode, label: '💰' },
+                    ]).map(({ mode, label }) => (
+                      <Pressable key={mode} onPress={() => setSortMode(mode)} style={[styles.sortIcon, { borderWidth: 1.5, borderColor: sortMode === mode ? colors.primary : 'transparent', backgroundColor: sortMode === mode ? colors.primary + '15' : 'transparent' }]}>
+                        <Text style={{ fontSize: 14 }}>{label}</Text>
+                      </Pressable>
+                    ))}
                   </View>
-                  <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
-                    {nearMeOpen ? '▼' : '◀'}
-                  </Text>
-                </Pressable>
+                  <Pressable onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setNearMeOpen((v) => !v); }}>
+                    <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                      {nearMeOpen ? '▼' : '◀'}
+                    </Text>
+                  </Pressable>
+                </View>
                 {nearMeOpen && nearMeDeliveries.map((item) => (
                   <View key={item.id} style={styles.cardWrapper}>
                     <DeliveryCard
@@ -1026,24 +1096,34 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Near Home Section ── */}
             {nearHomeDeliveries.length > 0 && (
               <View style={styles.feedSection}>
-                <Pressable
-                  onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setNearHomeOpen((v) => !v);
-                  }}
-                  style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                >
-                  <View style={styles.feedSectionTitleRow}>
+                <View style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Pressable
+                    onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setNearHomeOpen((v) => !v); }}
+                    style={styles.feedSectionTitleRow}
+                  >
                     <Text style={[styles.feedSectionIcon]}>🏠</Text>
                     <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>ליד הבית</Text>
                     <View style={[styles.feedSectionBadge, { backgroundColor: '#4CAF50' + '20' }]}>
                       <Text style={[styles.feedSectionBadgeText, { color: '#4CAF50' }]}>{nearHomeDeliveries.length}</Text>
                     </View>
+                  </Pressable>
+                  <View style={styles.sortIcons}>
+                    {([
+                      { mode: 'distance' as SortMode, label: '📏' },
+                      { mode: 'time' as SortMode, label: '🕐' },
+                      { mode: 'price' as SortMode, label: '💰' },
+                    ]).map(({ mode, label }) => (
+                      <Pressable key={mode} onPress={() => setSortMode(mode)} style={[styles.sortIcon, { borderWidth: 1.5, borderColor: sortMode === mode ? colors.primary : 'transparent', backgroundColor: sortMode === mode ? colors.primary + '15' : 'transparent' }]}>
+                        <Text style={{ fontSize: 14 }}>{label}</Text>
+                      </Pressable>
+                    ))}
                   </View>
-                  <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
-                    {nearHomeOpen ? '▼' : '◀'}
-                  </Text>
-                </Pressable>
+                  <Pressable onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setNearHomeOpen((v) => !v); }}>
+                    <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                      {nearHomeOpen ? '▼' : '◀'}
+                    </Text>
+                  </Pressable>
+                </View>
                 {nearHomeOpen && nearHomeDeliveries.map((item) => (
                   <View key={item.id} style={styles.cardWrapper}>
                     <DeliveryCard
@@ -1060,24 +1140,34 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Near Work Section ── */}
             {nearWorkDeliveries.length > 0 && (
               <View style={styles.feedSection}>
-                <Pressable
-                  onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setNearWorkOpen((v) => !v);
-                  }}
-                  style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                >
-                  <View style={styles.feedSectionTitleRow}>
+                <View style={[styles.feedSectionHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Pressable
+                    onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setNearWorkOpen((v) => !v); }}
+                    style={styles.feedSectionTitleRow}
+                  >
                     <Text style={[styles.feedSectionIcon]}>💼</Text>
                     <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>ליד העבודה</Text>
                     <View style={[styles.feedSectionBadge, { backgroundColor: '#FF9800' + '20' }]}>
                       <Text style={[styles.feedSectionBadgeText, { color: '#FF9800' }]}>{nearWorkDeliveries.length}</Text>
                     </View>
+                  </Pressable>
+                  <View style={styles.sortIcons}>
+                    {([
+                      { mode: 'distance' as SortMode, label: '📏' },
+                      { mode: 'time' as SortMode, label: '🕐' },
+                      { mode: 'price' as SortMode, label: '💰' },
+                    ]).map(({ mode, label }) => (
+                      <Pressable key={mode} onPress={() => setSortMode(mode)} style={[styles.sortIcon, { borderWidth: 1.5, borderColor: sortMode === mode ? colors.primary : 'transparent', backgroundColor: sortMode === mode ? colors.primary + '15' : 'transparent' }]}>
+                        <Text style={{ fontSize: 14 }}>{label}</Text>
+                      </Pressable>
+                    ))}
                   </View>
-                  <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
-                    {nearWorkOpen ? '▼' : '◀'}
-                  </Text>
-                </Pressable>
+                  <Pressable onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setNearWorkOpen((v) => !v); }}>
+                    <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
+                      {nearWorkOpen ? '▼' : '◀'}
+                    </Text>
+                  </Pressable>
+                </View>
                 {nearWorkOpen && nearWorkDeliveries.map((item) => (
                   <View key={item.id} style={styles.cardWrapper}>
                     <DeliveryCard
@@ -1602,6 +1692,17 @@ const styles = StyleSheet.create({
   cardWrapper: {
     paddingHorizontal: SPACING.xxl,
   },
+  sortIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginEnd: 8,
+  },
+  sortIcon: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
   feedSection: {
     marginBottom: SPACING.sm,
   },
@@ -1620,6 +1721,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
+    flex: 1,
   },
   feedSectionIcon: {
     fontSize: 18,

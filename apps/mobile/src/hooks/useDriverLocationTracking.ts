@@ -29,6 +29,9 @@ export type TrackingMode = 'off' | 'idle' | 'active';
 /** Delivery statuses that indicate the driver is actively on a job */
 const ACTIVE_DELIVERY_STATUSES = ['waiting', 'picked_up'];
 
+/** Minimum interval between Firestore location writes in active mode (ms) */
+const ACTIVE_SYNC_THROTTLE_MS = 30_000;
+
 interface UseDriverLocationTrackingOptions {
   /** Current user's UID */
   userId: string | undefined;
@@ -73,6 +76,8 @@ export function useDriverLocationTracking(
   const watchIdRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
+  /** Timestamp of last Firestore sync — used to throttle active-mode writes */
+  const lastSyncTimeRef = useRef<number>(0);
 
   // Determine tracking mode
   const trackingMode: TrackingMode = (() => {
@@ -87,6 +92,10 @@ export function useDriverLocationTracking(
   const syncToFirestore = useCallback(
     async (lat: number, lng: number) => {
       if (!userId) return;
+      // Throttle: skip if last sync was less than 30s ago
+      const now = Date.now();
+      if (now - lastSyncTimeRef.current < ACTIVE_SYNC_THROTTLE_MS) return;
+      lastSyncTimeRef.current = now;
       try {
         const geohash = encodeGeohash(lat, lng, GEOHASH_PRECISION);
         await firestore().collection('users').doc(userId).update({

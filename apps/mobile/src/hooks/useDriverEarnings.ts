@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import firestore from '@react-native-firebase/firestore';
 
 export interface EarningsPeriod {
@@ -56,43 +56,44 @@ export function useDriverEarnings(userId?: string) {
   const [recentTransactions, setRecentTransactions] = useState<CompletedDelivery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchEarnings = useCallback(async () => {
     if (!userId) {
       setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    try {
+      const snapshot = await firestore()
+        .collection('deliveries')
+        .where('driverId', '==', userId)
+        .where('status', '==', 'completed_paid')
+        .orderBy('updatedAt', 'desc')
+        .limit(200)
+        .get();
 
-    const unsubscribe = firestore()
-      .collection('deliveries')
-      .where('driverId', '==', userId)
-      .where('status', '==', 'completed_paid')
-      .onSnapshot(
-        (snapshot) => {
-          const items = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            const completedAt = data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date(0);
-            return {
-              id: doc.id,
-              price: data.price || data.suggestedPrice || 0,
-              completedAt,
-              pickupCity: data.pickup?.city || data.pickup?.address || '',
-              destinationCity: data.destination?.city || data.destination?.address || '',
-            };
-          });
-          // Sort newest first
-          items.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
-          setCompletedDeliveries(items);
-          setRecentTransactions(items.slice(0, 10));
-          setIsLoading(false);
-        },
-        (error) => {
-          console.warn('[useDriverEarnings] Error:', error);
-          setIsLoading(false);
-        },
-      );
-
-    return () => unsubscribe();
+      const items = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const completedAt = data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date(0);
+        return {
+          id: doc.id,
+          price: data.price || data.suggestedPrice || 0,
+          completedAt,
+          pickupCity: data.pickup?.city || data.pickup?.address || '',
+          destinationCity: data.destination?.city || data.destination?.address || '',
+        };
+      });
+      setCompletedDeliveries(items);
+      setRecentTransactions(items.slice(0, 10));
+    } catch (error) {
+      console.warn('[useDriverEarnings] Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    fetchEarnings();
+  }, [fetchEarnings]);
 
   const earnings: DriverEarnings = useMemo(() => {
     const now = new Date();
@@ -120,5 +121,5 @@ export function useDriverEarnings(userId?: string) {
     };
   }, [completedDeliveries]);
 
-  return { earnings, recentTransactions, isLoading };
+  return { earnings, recentTransactions, isLoading, refresh: fetchEarnings };
 }

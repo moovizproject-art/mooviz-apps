@@ -228,7 +228,10 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       await new Promise(r => setTimeout(r, 800));
       setLoadingVisible(false);
       carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
-        { text: t('common.confirm'), onPress: () => navigation.goBack() },
+        { text: t('common.confirm'), onPress: () => {
+          // Navigate to MyDeliveries list to prevent re-submitting
+          navigation.getParent()?.navigate('MyDeliveries');
+        }},
       ]);
     } catch (e: any) {
       setLoadingVisible(false);

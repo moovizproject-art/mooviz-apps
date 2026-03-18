@@ -143,6 +143,23 @@ export const createDelivery = onCall(async (request) => {
   const pickupGeohash = encodeGeohash(pickupLat, pickupLng, GEOHASH_PRECISION);
   const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
 
+  // --- Duplicate delivery check ---
+  // Reject if sender already has an active delivery with same pickup+destination geohash
+  const recentDupes = await db.collection("deliveries")
+    .where("senderId", "==", uid)
+    .where("status", "in", ["new", "pending", "waiting"])
+    .where("pickup.geohash", "==", pickupGeohash)
+    .where("destination.geohash", "==", destGeohash)
+    .limit(1)
+    .get();
+
+  if (!recentDupes.empty) {
+    throw new HttpsError(
+      "already-exists",
+      "יש לך כבר משלוח פעיל לאותו יעד. בטל אותו קודם או המתן לסיומו."
+    );
+  }
+
   // --- Sender info (already fetched by assertUserRole) ---
   const senderName = senderData?.nickname || senderData?.fullName || "";
   const senderPhotoUrl = senderData?.profilePhotoURL || "";

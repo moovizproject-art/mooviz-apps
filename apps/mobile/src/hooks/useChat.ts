@@ -111,27 +111,35 @@ export function useChat(chatId: string): UseChatResult {
     async (input: SendMessageInput): Promise<void> => {
       if (!input.chatId) return;
 
-      await firestore()
+      const batch = firestore().batch();
+
+      // Create a new doc ref with auto-generated ID for the message
+      const messageRef = firestore()
         .collection('chats')
         .doc(input.chatId)
         .collection('messages')
-        .add({
-          chatId: input.chatId,
-          senderId: input.senderId,
-          text: input.text,
-          type: input.type,
-          read: false,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-        });
+        .doc();
+
+      batch.set(messageRef, {
+        chatId: input.chatId,
+        senderId: input.senderId,
+        text: input.text,
+        type: input.type,
+        read: false,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      });
 
       // Update chat metadata with last message + mark sender as read
       // עדכון מטאדאטה של הצ׳אט עם ההודעה האחרונה
-      await firestore().collection('chats').doc(input.chatId).update({
+      const chatRef = firestore().collection('chats').doc(input.chatId);
+      batch.update(chatRef, {
         lastMessage: input.text,
         lastMessageAt: firestore.FieldValue.serverTimestamp(),
         lastSenderId: input.senderId,
         [`lastReadBy.${input.senderId}`]: firestore.FieldValue.serverTimestamp(),
       });
+
+      await batch.commit();
     },
     [],
   );
@@ -146,26 +154,34 @@ export function useChat(chatId: string): UseChatResult {
         `chats/${input.chatId}/${Date.now()}.jpg`,
       );
 
-      await firestore()
+      const batch = firestore().batch();
+
+      // Create a new doc ref with auto-generated ID for the image message
+      const messageRef = firestore()
         .collection('chats')
         .doc(input.chatId)
         .collection('messages')
-        .add({
-          chatId: input.chatId,
-          senderId: input.senderId,
-          text: '',
-          type: 'image',
-          imageUrl,
-          read: false,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-        });
+        .doc();
 
-      await firestore().collection('chats').doc(input.chatId).update({
+      batch.set(messageRef, {
+        chatId: input.chatId,
+        senderId: input.senderId,
+        text: '',
+        type: 'image',
+        imageUrl,
+        read: false,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      });
+
+      const chatRef = firestore().collection('chats').doc(input.chatId);
+      batch.update(chatRef, {
         lastMessage: '[תמונה]', // [Image]
         lastMessageAt: firestore.FieldValue.serverTimestamp(),
         lastSenderId: input.senderId,
         [`lastReadBy.${input.senderId}`]: firestore.FieldValue.serverTimestamp(),
       });
+
+      await batch.commit();
     },
     [],
   );

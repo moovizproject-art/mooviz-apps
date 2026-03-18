@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import { getDistanceKm } from '../utils/mapHelpers';
 
@@ -57,51 +57,53 @@ export function useSenderExpenses(userId?: string) {
   const [completedDeliveries, setCompletedDeliveries] = useState<DeliveryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchExpenses = useCallback(async () => {
     if (!userId) {
       setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    try {
+      const snapshot = await firestore()
+        .collection('deliveries')
+        .where('senderId', '==', userId)
+        .where('status', 'in', ['delivered', 'completed_paid'])
+        .orderBy('updatedAt', 'desc')
+        .limit(200)
+        .get();
 
-    const unsubscribe = firestore()
-      .collection('deliveries')
-      .where('senderId', '==', userId)
-      .where('status', 'in', ['delivered', 'completed_paid'])
-      .onSnapshot(
-        (snapshot) => {
-          const items = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            const completedAt = data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date(0);
-            let distanceKm = 0;
-            const pickupLat = data.pickup?.lat ?? data.pickup?.latitude;
-            const pickupLng = data.pickup?.lng ?? data.pickup?.longitude;
-            const destLat = data.destination?.lat ?? data.destination?.latitude;
-            const destLng = data.destination?.lng ?? data.destination?.longitude;
-            if (pickupLat && pickupLng && destLat && destLng) {
-              distanceKm = getDistanceKm(
-                { latitude: pickupLat, longitude: pickupLng },
-                { latitude: destLat, longitude: destLng },
-              );
-            }
-            // Use nullish coalescing (??) not || to handle price=0 correctly
-            const price = Number(data.price ?? data.suggestedPrice ?? 0);
-            return {
-              price: isNaN(price) ? 0 : price,
-              completedAt,
-              distanceKm,
-            };
-          });
-          setCompletedDeliveries(items);
-          setIsLoading(false);
-        },
-        (error) => {
-          console.warn('[useSenderExpenses] Error:', error);
-          setIsLoading(false);
-        },
-      );
-
-    return () => unsubscribe();
+      const items = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const completedAt = data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date(0);
+        let distanceKm = 0;
+        const pickupLat = data.pickup?.lat ?? data.pickup?.latitude;
+        const pickupLng = data.pickup?.lng ?? data.pickup?.longitude;
+        const destLat = data.destination?.lat ?? data.destination?.latitude;
+        const destLng = data.destination?.lng ?? data.destination?.longitude;
+        if (pickupLat && pickupLng && destLat && destLng) {
+          distanceKm = getDistanceKm(
+            { latitude: pickupLat, longitude: pickupLng },
+            { latitude: destLat, longitude: destLng },
+          );
+        }
+        const price = Number(data.price ?? data.suggestedPrice ?? 0);
+        return {
+          price: isNaN(price) ? 0 : price,
+          completedAt,
+          distanceKm,
+        };
+      });
+      setCompletedDeliveries(items);
+    } catch (error) {
+      console.warn('[useSenderExpenses] Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    fetchExpenses();
+  }, [fetchExpenses]);
 
   const expenses: SenderExpenses = useMemo(() => {
     const now = new Date();
@@ -123,5 +125,5 @@ export function useSenderExpenses(userId?: string) {
     };
   }, [completedDeliveries]);
 
-  return { expenses, isLoading };
+  return { expenses, isLoading, refresh: fetchExpenses };
 }

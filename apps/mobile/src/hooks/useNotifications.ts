@@ -72,22 +72,22 @@ interface UseNotificationsResult {
 
 /** Create Android notification channels (required for Android 8+) */
 async function ensureAndroidChannels(): Promise<string> {
-  // Main channel — must match backend channelId in notificationService.ts
+  // Main channel — uses custom Mooviz sound
   await notifee.createChannel({
     id: 'mooviz_deliveries',
     name: strings.notifications.deliveriesAndAlerts.he,
     description: strings.notifications.deliveriesAndAlertsDesc.he,
     importance: AndroidImportance.HIGH,
-    sound: 'default',
+    sound: 'success',
     vibration: true,
   });
 
-  // Chat channel
+  // Chat channel — uses question sound
   await notifee.createChannel({
     id: 'mooviz_chat',
     name: strings.notifications.chatMessages.he,
     importance: AndroidImportance.HIGH,
-    sound: 'default',
+    sound: 'question',
   });
 
   return 'mooviz_deliveries';
@@ -417,17 +417,22 @@ function handleNotificationNavigation(data?: Record<string, string>): void {
       }
       break;
     case 'sender_approved':
+      // Driver gets notified that sender approved them
+      if (deliveryId) {
+        console.log('[Nav] Navigate to driver delivery (sender approved):', deliveryId);
+        navigateFromNotification('DriverDeliveryDetail', { deliveryId });
+      }
+      break;
     case 'delivery_picked_up':
     case 'delivery_delivered':
     case 'delivery_cancelled':
-      if (deliveryId) {
-        console.log('[Nav] Navigate to delivery:', deliveryId);
-        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
-      }
-      break;
     case 'payment_confirmed':
       if (deliveryId) {
-        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+        console.log('[Nav] Navigate to delivery:', deliveryId);
+        // Route to correct screen based on user role
+        const role = data.recipientRole;
+        const screen = role === 'driver' ? 'DriverDeliveryDetail' : 'SenderDeliveryDetail';
+        navigateFromNotification(screen, { deliveryId });
       }
       break;
     case 'kyc_approved':

@@ -120,7 +120,7 @@ export function useDriverAvailability(userId: string | undefined): DriverAvailab
         console.error('[useDriverAvailability] Geolocation error:', error);
       },
       {
-        enableHighAccuracy: true,
+        enableHighAccuracy: false,
         distanceFilter: DISTANCE_FILTER_METERS,
         interval: LOCATION_UPDATE_INTERVAL_MS,
         fastestInterval: LOCATION_UPDATE_INTERVAL_MS / 2,

@@ -15,19 +15,28 @@ export async function sendPushNotification(
   userId: string,
   title: string,
   body: string,
-  data?: Record<string, string>
+  data?: Record<string, string>,
+  sound?: string,
+  fcmTokens?: string | string[]
 ): Promise<boolean> {
   let fcmToken: string | undefined;
   try {
-    const userDoc = await db.collection("users").doc(userId).get();
-    if (!userDoc.exists) {
-      console.warn(`sendPushNotification: user ${userId} not found`);
-      return false;
-    }
+    if (fcmTokens) {
+      // Use caller-provided tokens, skip Firestore read
+      const tokens = fcmTokens;
+      fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
+    } else {
+      // Fallback: read from Firestore
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (!userDoc.exists) {
+        console.warn(`sendPushNotification: user ${userId} not found`);
+        return false;
+      }
 
-    const userData = userDoc.data();
-    const tokens = userData?.fcmTokens;
-    fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
+      const userData = userDoc.data();
+      const tokens = userData?.fcmTokens;
+      fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
+    }
 
     if (!fcmToken || typeof fcmToken !== "string") {
       console.warn(`sendPushNotification: no FCM token for user ${userId}`);
@@ -45,13 +54,13 @@ export async function sendPushNotification(
         priority: "high",
         notification: {
           channelId: "mooviz_deliveries",
-          sound: "default",
+          sound: sound ?? "success",
         },
       },
       apns: {
         payload: {
           aps: {
-            sound: "default",
+            sound: sound ? `${sound}.mp3` : "default",
             badge: 1,
           },
         },
@@ -84,7 +93,8 @@ export async function sendPushNotification(
 export async function sendDeliveryNotification(
   deliveryId: string,
   event: NotificationEventType,
-  extraData?: Record<string, string>
+  extraData?: Record<string, string>,
+  deliveryData?: FirebaseFirestore.DocumentData
 ): Promise<void> {
   const template = NOTIFICATION_TEMPLATES[event];
   if (!template) {
@@ -92,13 +102,19 @@ export async function sendDeliveryNotification(
     return;
   }
 
-  const deliveryDoc = await db.collection("deliveries").doc(deliveryId).get();
-  if (!deliveryDoc.exists) {
-    console.error(`Delivery ${deliveryId} not found for notification`);
-    return;
+  let delivery: FirebaseFirestore.DocumentData;
+  if (deliveryData) {
+    // Use caller-provided delivery data, skip Firestore read
+    delivery = deliveryData;
+  } else {
+    // Fallback: read from Firestore
+    const deliveryDoc = await db.collection("deliveries").doc(deliveryId).get();
+    if (!deliveryDoc.exists) {
+      console.error(`Delivery ${deliveryId} not found for notification`);
+      return;
+    }
+    delivery = deliveryDoc.data()!;
   }
-
-  const delivery = deliveryDoc.data()!;
   const senderId: string = delivery.senderId;
   const driverId: string | undefined = delivery.driverId;
 
@@ -141,6 +157,15 @@ export async function sendDeliveryNotification(
     ),
   };
 
+  // Add recipientRole so the client routes to the correct detail screen
+  const recipientRoleMap: Record<string, string> = {};
+  if (template.recipient === "sender" || template.recipient === "both") {
+    recipientRoleMap[senderId] = "sender";
+  }
+  if ((template.recipient === "driver" || template.recipient === "both") && driverId) {
+    recipientRoleMap[driverId] = "driver";
+  }
+
   // Determine recipients and send
   const recipients: string[] = [];
 
@@ -159,9 +184,22 @@ export async function sendDeliveryNotification(
 
   console.log(`sendDeliveryNotification: event=${event}, recipients=[${filteredRecipients.join(",")}], actorId=${actorId}, title="${title}"`);
 
+  // Map event to custom sound file (must exist in Android res/raw/ without extension)
+  const EVENT_SOUNDS: Record<string, string> = {
+    new_listing_nearby: "new_delivery",
+    driver_interested: "driver_interested",
+    payment_confirmed: "payment",
+    sender_approved: "success",
+    delivery_picked_up: "success",
+    delivery_delivered: "success",
+    delivery_cancelled: "error",
+    new_chat_message: "question",
+  };
+  const soundName = EVENT_SOUNDS[event] ?? "success";
+
   const results = await Promise.all(
     filteredRecipients.map((userId) =>
-      sendPushNotification(userId, title, body, notificationData)
+      sendPushNotification(userId, title, body, { ...notificationData, recipientRole: recipientRoleMap[userId] || "sender" }, soundName)
     )
   );
 

@@ -1,101 +1,63 @@
 # MOOVIZ — Session Continuation Guide
-> Last updated: 2026-03-16 | Sprint 3 (M3) COMPLETE | v1.0.3
+> Last updated: 2026-03-18 | Sprint 3 (M3) COMPLETE | v1.0.6
 
 ## Current State
+- **Version**: v1.0.6 (APK built, NOT committed)
+- **Branch**: `main`
+- **Functions**: Deployed with custom sounds + recipientRole
+- **Firestore**: 67 deliveries fixed (itemSize), duplicate deleted, indexes deployed
 
-### Branch: `main`
-### APK: `apps/mobile/android/app/build/outputs/apk/release/mooviz-1.0.3.apk` (81MB)
-### Functions: Deployed to `mooviz-app-9b766` (dev) — 33 functions
+## Completed This Session (March 18)
+1. ✅ Package size display fix (card ↔ detail mismatch)
+2. ✅ Duplicate delivery prevention (server + client)
+3. ✅ Sort filters (📏🕐💰) in driver feed section headers
+4. ✅ Home/Work address sections in driver feed
+5. ✅ Dark mode — DeliveryCard, SkeletonLoader, DeliveryDetailScreen
+6. ✅ Smart card status (🚗 car logo + count, ממתין לתשובה)
+7. ✅ Sender attention section (🔔 bold unread border)
+8. ✅ Custom Mooviz sounds per notification event (6 sounds mapped)
+9. ✅ Deep link routing (sender vs driver screens, recipientRole)
+10. ✅ AddressAutocomplete shows saved addresses on load
+11. ✅ react-native-config native module fix
+12. ✅ Firestore composite index (status + updatedAt)
+13. ✅ 38 mock deliveries created (Tel Aviv + Caesarea)
+14. ✅ v1.0.6 APK built (release signed)
+15. ✅ Cloud Functions deployed
+16. ✅ Gamma presentation: QA Round 5
 
----
+## NOT Committed Yet
+All changes from this session are uncommitted. Files changed:
+- `apps/mobile/src/constants/config.ts` — safe Config import, v1.0.6
+- `apps/mobile/src/components/DeliveryCard.tsx` — dark mode, car logo, isUnread, driver count
+- `apps/mobile/src/components/SkeletonLoader.tsx` — dark mode
+- `apps/mobile/src/components/AddressAutocomplete.tsx` — show saved address on mount
+- `apps/mobile/src/screens/driver/FeedScreen.tsx` — sort filters, address sync, near me fix
+- `apps/mobile/src/screens/driver/DeliveryDetailScreen.tsx` — dark mode, itemSize fix
+- `apps/mobile/src/screens/sender/CreateDeliveryScreen.tsx` — navigate to list after create
+- `apps/mobile/src/screens/sender/MyDeliveriesScreen.tsx` — attention section, unread border
+- `apps/mobile/src/hooks/useNotifications.ts` — custom sounds, recipientRole routing
+- `apps/mobile/android/app/build.gradle` — v1.0.6, .env path fix, react-native-config dep
+- `apps/mobile/android/settings.gradle` — react-native-config include
+- `apps/mobile/android/app/src/main/java/.../MainApplication.kt` — RNCConfigPackage registration
+- `functions/src/services/notificationService.ts` — custom sounds, recipientRole
+- `functions/src/callable/deliveryCallable.ts` — duplicate delivery check
+- `firestore.indexes.json` — status + updatedAt index
 
-## What Was Done (March 16) — v1.0.3 Bug Fixes
+## Next Steps
+1. **Commit all changes** — `feat(mobile): v1.0.6 — sort filters, dark mode, smart notifications`
+2. **QA Round 5** — test all items from the Gamma presentation checklist
+3. **Client feedback** — share APK + Gamma link, collect feedback
+4. **Sender MyDeliveries sort** — by pickupDate then createdAt (designed but not coded)
+5. **Push notification testing** — verify custom sounds on physical device
+6. **Production config** — prod Firebase project + signing keys (M4)
+7. **Store submissions** — App Store + Play Store (M4)
 
-### 1. Firebase Config — Was Pointing to Production
-- `google-services.json` had `mooviz-prod` → switched back to `mooviz-app-9b766` (dev)
-- This caused "user not exist" errors and phone auth failures
-- `apps/admin/.env.production` has prod config — leave it for later
+## Key Links
+- **APK**: `apps/mobile/android/app/build/outputs/apk/release/mooviz-1.0.6.apk`
+- **Gamma QA5**: https://gamma.app/generations/bsUOvqpgU21GGFPKfdFmk
+- **Previous Gamma**: https://gamma.app/docs/5sa43bwsln1syw5
 
-### 2. Nearby Driver Notifications — 3 Bugs Fixed
-- **Missing expansion fields**: `createDelivery` callable now sets `notifiedDrivers`, `notifyRadius`, `notifyExpansionCount`, `lastNotifyExpansion` on new deliveries
-- **Firestore index error**: `notifyExpansion` had two inequality filters on different fields. Fixed to single inequality (`lastNotifyExpansion`) + JS filter for `notifyExpansionCount`
-- **driverAvailable always false**: `useDriverAvailability` hook reset `driverAvailable=false` on every unmount. Fixed: unmount only stops location watch, availability persists as a preference
-
-### 3. Size Matching — Capacity-Based
-- **Server** (`geohashService.ts`): driver accepting "large" now matches small/medium/large deliveries
-- **UI** (`FeedScreen.tsx`): checking "large" auto-checks small + medium + large. Manual uncheck only removes that one size
-- Size hierarchy: small < medium < large < xlarge
-
-### 4. Version Bump
-- `build.gradle`: versionCode 103, versionName "1.0.3"
-- `config.ts`: APP_VERSION = '1.0.3' (was stuck at 1.0.1)
-
-### 5. Firestore Data Fixes
-- All 5 unlocked drivers set to `driverAvailable=true`
-- Delivery `nWraDR0uMixrcBGWxz5m` given expansion tracking fields
-
-### Verified Working
-- Expansion ran: radius 15→20km, 2 drivers notified (push sent confirmed in logs)
-- Geohash proximity: Tel Aviv addresses matched correctly (8 live, 6 home, 1 work candidates)
-
----
-
-## Files Changed (NOT YET COMMITTED)
-| File | Change |
-|------|--------|
-| `apps/mobile/android/app/google-services.json` | Dev project (gitignored) |
-| `apps/mobile/src/constants/config.ts` | APP_VERSION 1.0.3 |
-| `apps/mobile/android/app/build.gradle` | versionCode 103, versionName 1.0.3 |
-| `apps/mobile/src/hooks/useDriverAvailability.ts` | Removed unmount driverAvailable=false reset |
-| `apps/mobile/src/screens/driver/FeedScreen.tsx` | Size auto-fill on check |
-| `functions/src/callable/deliveryCallable.ts` | Expansion tracking fields + record notified drivers |
-| `functions/src/services/geohashService.ts` | Capacity-based size matching |
-| `functions/src/scheduled/notifyExpansion.ts` | Single inequality query fix |
-| `firestore.indexes.json` | Simplified expansion index (2-field) |
-
----
-
-## Next Session Tasks
-
-### Priority 1: Testing & Verification
-- [ ] Install v1.0.3 APK and test phone auth (should work with dev config)
-- [ ] Test notification flow end-to-end: create delivery → driver gets push
-- [ ] Verify size filter UI behavior (auto-check smaller sizes)
-- [ ] Commit all v1.0.3 changes
-
-### Priority 2: Remaining Backlog → M4
-- [ ] P0/P1 bug triage (#165) — pre-release
-- [ ] Production config (#168-169) — prod Firebase project + signing keys
-- [ ] Store submissions (#170-172) — App Store + Play Store
-- [ ] Handover (#173) — client documentation
-- [ ] Interstitial ads (#159) — post-launch
-- [ ] Analytics events (#160) — post-launch
-
----
-
-## Environment Quick Start
-```bash
-# Start Metro (from apps/mobile/)
-cd apps/mobile && node ../../node_modules/react-native/cli.js start --reset-cache
-
-# Android build + install
-cd apps/mobile/android && ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/mooviz-1.0.3.apk
-
-# Admin dev
-cd apps/admin && npm run dev -- --port 5002
-
-# Deploy functions
-cd functions && npm run build && firebase deploy --only functions
-
-# Deploy admin
-cd apps/admin && node ../../node_modules/.pnpm/vite@5.4.21_@types+node@25.3.3_terser@5.46.0/node_modules/vite/bin/vite.js build
-firebase deploy --only hosting
-```
-
-## User Preferences
-- **NO** `Co-Authored-By: Claude` in git commits
-- Client should not see AI attribution
-- Hebrew RTL is primary language
-- Use Gamma for PDF generation
-- Sounds OFF by default
+## Device Info
+- Emulator: Pixel_9_Pro_API_35 (emulator-5554)
+- Physical: 10.100.102.26 (port changes each connection)
+- Physical device has release APK v1.0.5 — needs update to v1.0.6

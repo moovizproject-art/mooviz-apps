@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -96,11 +96,18 @@ export function AddressAutocomplete({
   const { colors } = useTheme();
   const { t } = useI18n();
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(value?.address ?? '');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync query text when value changes externally (e.g. Firestore sync)
+  useEffect(() => {
+    if (value?.address && query !== value.address) {
+      setQuery(value.address);
+    }
+  }, [value?.address]);
 
   // ── Autocomplete ──
 

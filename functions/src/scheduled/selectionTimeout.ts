@@ -6,7 +6,7 @@ const db = admin.firestore();
 
 export const selectionTimeout = onSchedule(
   {
-    schedule: "every 1 minutes",
+    schedule: "every 5 minutes",
     timeZone: "Asia/Jerusalem",
     retryCount: 1,
   },

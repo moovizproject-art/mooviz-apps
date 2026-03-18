@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -51,12 +51,34 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
     { key: 'cancelled', label: t('delivery.cancelled') },
   ];
 
+  // Track which cards the user has opened (to show unread bold border)
+  const seenIds = useRef<Set<string>>(new Set());
+
   const handleDeliveryPress = useCallback(
     (deliveryId: string) => {
+      seenIds.current.add(deliveryId);
       navigation.navigate('SenderDeliveryDetail', { deliveryId });
     },
     [navigation],
   );
+
+  // Split active deliveries: "needs attention" (drivers interested/confirmed) vs "regular"
+  const { attentionDeliveries, regularDeliveries } = useMemo(() => {
+    if (activeTab !== 'active') return { attentionDeliveries: [], regularDeliveries: deliveries };
+    const attention: typeof deliveries = [];
+    const regular: typeof deliveries = [];
+    for (const d of deliveries) {
+      const hasDrivers = (d as any).interestedDrivers?.some(
+        (dr: any) => dr.status === 'interested' || dr.status === 'confirmed'
+      );
+      if (hasDrivers) {
+        attention.push(d);
+      } else {
+        regular.push(d);
+      }
+    }
+    return { attentionDeliveries: attention, regularDeliveries: regular };
+  }, [deliveries, activeTab]);
 
   const emptyMessages: Record<TabKey, { message: string; submessage: string }> = {
     active: {
@@ -102,13 +124,35 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
         </View>
       </View>
 
-      {/* Delivery list */}
+      {/* Delivery list — all tabs use FlatList data for virtualization */}
       <FlatList
-        data={deliveries}
+        data={activeTab === 'active'
+          ? [...attentionDeliveries, ...regularDeliveries]
+          : deliveries}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <DeliveryCard delivery={item} onPress={() => handleDeliveryPress(item.id)} />
-        )}
+        renderItem={({ item }) => {
+          const isAttention = activeTab === 'active' && attentionDeliveries.includes(item);
+          return (
+            <View style={isAttention ? styles.attentionCard : undefined}>
+              <DeliveryCard
+                delivery={item}
+                onPress={() => handleDeliveryPress(item.id)}
+                isUnread={isAttention && !seenIds.current.has(item.id)}
+              />
+            </View>
+          );
+        }}
+        ListHeaderComponent={activeTab === 'active' ? (
+          <View>
+            {attentionDeliveries.length > 0 && (
+              <View style={[styles.attentionHeader, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
+                <Text style={[styles.attentionTitle, { color: colors.primary }]}>
+                  🔔 נהגים מחכים לתשובה ({attentionDeliveries.length})
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : undefined}
         ListEmptyComponent={
           <EmptyState
             icon="package"
@@ -179,11 +223,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   listContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingBottom: 24,
   },
   emptyList: {
     flex: 1,
     justifyContent: 'center',
+  },
+  attentionSection: {
+    marginBottom: 12,
+  },
+  attentionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  attentionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  attentionCard: {
+    marginBottom: 8,
+  },
+  regularHeader: {
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  regularTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'right',
   },
 });

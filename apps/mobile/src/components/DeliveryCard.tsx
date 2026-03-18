@@ -11,6 +11,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { BRAND, BORDER_RADIUS, SPACING } from '../constants/design';
+import { useTheme } from '../theme/ThemeContext';
 import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -95,6 +96,7 @@ interface DeliveryData {
   timeRange?: string | null;
   distance?: number;
   driverName?: string;
+  interestedDrivers?: { uid: string; status?: string }[];
   ratedBySender?: boolean;
   ratedByDriver?: boolean;
   senderRatingGiven?: RatingSummary;
@@ -107,16 +109,20 @@ interface DeliveryCardProps {
   showDistance?: boolean;
   /** Override default distance text (e.g. "3.2 ק״מ מהבית") */
   distanceLabel?: string;
+  /** Show bold border for unread/new notifications */
+  isUnread?: boolean;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function DeliveryCard({
+export const DeliveryCard = React.memo(function DeliveryCard({
   delivery,
   onPress,
   showDistance = false,
   distanceLabel,
+  isUnread = false,
 }: DeliveryCardProps): React.JSX.Element {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -142,7 +148,7 @@ export function DeliveryCard({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[styles.card, animatedStyle]}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: isUnread ? colors.primary : colors.border, borderWidth: isUnread ? 2.5 : 1 }, animatedStyle]}
     >
       <View style={styles.content}>
         {/* Thumbnail */}
@@ -159,7 +165,7 @@ export function DeliveryCard({
               )}
             </View>
           ) : (
-            <View style={[styles.thumb, styles.thumbPlaceholder]}>
+            <View style={[styles.thumb, styles.thumbPlaceholder, { backgroundColor: colors.border }]}>
               <Text style={styles.thumbIcon}>{'\u{1F4E6}'}</Text>
             </View>
           );
@@ -169,24 +175,49 @@ export function DeliveryCard({
         <View style={styles.details}>
           {/* Top row: item description + status */}
           <View style={styles.topRow}>
-            <Text style={styles.itemText} numberOfLines={1}>
+            <Text style={[styles.itemText, { color: colors.textPrimary }]} numberOfLines={1}>
               {itemDesc || 'משלוח'}
             </Text>
-            <StatusIndicator status={delivery.status} size="sm" />
+            <View style={styles.statusArea}>
+              {(() => {
+                const drivers = delivery.interestedDrivers?.filter(
+                  (d) => d.status === 'interested' || d.status === 'confirmed'
+                ) ?? [];
+                const hasDrivers = drivers.length > 0;
+                const isWaiting = delivery.status === 'pending' || delivery.status === 'new';
+                return (
+                  <>
+                    {hasDrivers && isWaiting ? (
+                      <View style={[styles.waitingBadge, { backgroundColor: '#FFF3E0' }]}>
+                        <Text style={styles.waitingText}>🕐 ממתין לתשובה</Text>
+                      </View>
+                    ) : (
+                      <StatusIndicator status={delivery.status} size="sm" />
+                    )}
+                    {hasDrivers && (
+                      <View style={[styles.driverCountBadge, { backgroundColor: colors.primary + '15' }]}>
+                        <Image source={require('../assets/car.png')} style={styles.carIcon} />
+                        <Text style={[styles.driverCountText, { color: colors.primary }]}>{drivers.length}</Text>
+                      </View>
+                    )}
+                  </>
+                );
+              })()}
+            </View>
           </View>
 
           {/* Route */}
           <View style={styles.routeSection}>
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.success }]} />
-              <Text style={styles.addressText} numberOfLines={1}>
+              <Text style={[styles.addressText, { color: colors.textPrimary }]} numberOfLines={1}>
                 {delivery.pickup?.address || '—'}
               </Text>
             </View>
-            <View style={styles.routeLine} />
+            <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
             <View style={styles.routeRow}>
               <View style={[styles.dot, { backgroundColor: BRAND.error }]} />
-              <Text style={styles.addressText} numberOfLines={1}>
+              <Text style={[styles.addressText, { color: colors.textPrimary }]} numberOfLines={1}>
                 {delivery.destination?.address || '—'}
               </Text>
             </View>
@@ -194,19 +225,19 @@ export function DeliveryCard({
 
           {/* Driver name (if assigned) */}
           {delivery.driverName ? (
-            <Text style={styles.infoText} numberOfLines={1}>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
               🚛 {delivery.driverName}
             </Text>
           ) : null}
 
           {/* Date + time range */}
-          <Text style={styles.infoText} numberOfLines={1}>
+          <Text style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
             📅 {pickupInfo}
           </Text>
 
           {/* Package size badge */}
-          <View style={styles.sizeBadge}>
-            <Text style={styles.sizeBadgeText}>{sizeIcon} {sizeLabel}</Text>
+          <View style={[styles.sizeBadge, { backgroundColor: colors.border }]}>
+            <Text style={[styles.sizeBadgeText, { color: colors.textPrimary }]}>{sizeIcon} {sizeLabel}</Text>
           </View>
 
           {/* Ratings preview — visible when any rating exists */}
@@ -220,7 +251,7 @@ export function DeliveryCard({
                     {'☆'.repeat(5 - delivery.senderRatingGiven.rating)}
                   </Text>
                   {delivery.senderRatingGiven.comment ? (
-                    <Text style={styles.ratingCommentPreview} numberOfLines={1}>
+                    <Text style={[styles.ratingCommentPreview, { color: colors.textSecondary }]} numberOfLines={1}>
                       {delivery.senderRatingGiven.comment}
                     </Text>
                   ) : null}
@@ -234,7 +265,7 @@ export function DeliveryCard({
                     {'☆'.repeat(5 - delivery.driverRatingGiven.rating)}
                   </Text>
                   {delivery.driverRatingGiven.comment ? (
-                    <Text style={styles.ratingCommentPreview} numberOfLines={1}>
+                    <Text style={[styles.ratingCommentPreview, { color: colors.textSecondary }]} numberOfLines={1}>
                       {delivery.driverRatingGiven.comment}
                     </Text>
                   ) : null}
@@ -262,7 +293,7 @@ export function DeliveryCard({
       </View>
     </AnimatedPressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -397,6 +428,40 @@ const styles = StyleSheet.create({
     color: BRAND.textSecondary,
     fontStyle: 'italic',
     flex: 1,
+  },
+  statusArea: {
+    alignItems: 'flex-end',
+    gap: 3,
+  },
+  driverCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  carIcon: {
+    width: 18,
+    height: 18,
+    marginEnd: 4,
+    resizeMode: 'contain',
+    transform: [{ scaleX: -1 }],
+  },
+  driverCountText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  waitingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  waitingText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#E65100',
   },
   bottomRow: {
     flexDirection: 'row',

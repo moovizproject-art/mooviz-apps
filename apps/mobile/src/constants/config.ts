@@ -4,7 +4,24 @@
  * ערכי תצורה כלל-אפליקטיביים
  */
 
-import Config from 'react-native-config';
+import { NativeModules } from 'react-native';
+
+// Read env vars from react-native-config native module
+// The native module bakes .env values into the APK at build time via dotenv.gradle
+const NativeConfig = NativeModules.RNCConfigModule;
+let Config: Record<string, string | undefined> = {};
+if (NativeConfig) {
+  try {
+    const result = NativeConfig.getConfig?.();
+    // getConfig() returns { config: { KEY: value } } — unwrap the nested object
+    Config = result?.config ?? result ?? {};
+  } catch {
+    Config = {};
+  }
+}
+if (!Config.GOOGLE_MAPS_API_KEY) {
+  console.warn('[config] react-native-config returned empty — native module:', !!NativeConfig, 'raw:', JSON.stringify(Config));
+}
 
 /** Maximum delivery search radius in kilometers */
 // רדיוס חיפוש מקסימלי בקילומטרים
@@ -63,10 +80,10 @@ export const LOCATION_ACTIVE_INTERVAL_MS = 1 * 60 * 1000; // 1 minute
 
 /** Minimum distance change to trigger update (meters) */
 export const LOCATION_DISTANCE_FILTER_IDLE = 200; // 200m for idle
-export const LOCATION_DISTANCE_FILTER_ACTIVE = 30; // 30m for active delivery
+export const LOCATION_DISTANCE_FILTER_ACTIVE = 50; // 50m for active delivery
 
 /** App version */
-export const APP_VERSION = '1.0.5';
+export const APP_VERSION = '1.0.7';
 
 /** Deep link scheme */
 export const DEEP_LINK_SCHEME = 'mooviz://';

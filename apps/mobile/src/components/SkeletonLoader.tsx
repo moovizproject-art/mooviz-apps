@@ -13,6 +13,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { BORDER_RADIUS, BRAND } from '../constants/design';
+import { useTheme } from '../theme/ThemeContext';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -27,6 +28,7 @@ export function SkeletonLoader({
   borderRadius = BORDER_RADIUS.sm,
   style,
 }: SkeletonLoaderProps): React.JSX.Element {
+  const { colors } = useTheme();
   const opacity = useSharedValue(0.3);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function SkeletonLoader({
     <Animated.View
       style={[
         styles.skeleton,
-        { width, height, borderRadius } as ViewStyle,
+        { width, height, borderRadius, backgroundColor: colors.border } as ViewStyle,
         animatedStyle,
         style,
       ]}
@@ -55,8 +57,9 @@ export function SkeletonLoader({
 
 /** Skeleton card placeholder for delivery feed loading state */
 export function SkeletonCard(): React.JSX.Element {
+  const { colors } = useTheme();
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.cardRow}>
         <SkeletonLoader width={80} height={20} borderRadius={BORDER_RADIUS.sm} />
         <SkeletonLoader width={60} height={20} borderRadius={BORDER_RADIUS.sm} />

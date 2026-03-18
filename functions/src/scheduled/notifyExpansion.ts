@@ -12,30 +12,30 @@ const EXPANSION_STEP_KM = 5;
 const MAX_EXPANSIONS = 10;
 
 /**
- * Scheduled function that runs every 2 minutes.
+ * Scheduled function that runs every 5 minutes.
  * For each 'new' delivery that hasn't maxed out expansions,
  * expands the notification radius by 5km and notifies new drivers
  * who weren't already notified.
  *
  * Timeline (starting from 15km default):
  *   0:00 → 15km (initial, set by deliveryTrigger)
- *   0:02 → 20km
- *   0:04 → 25km
+ *   0:05 → 20km
+ *   0:10 → 25km
  *   ...
- *   0:20 → 65km (final, expansion #10)
+ *   0:50 → 65km (final, expansion #10)
  *
  * Stops when: delivery leaves 'new' status OR 10 expansions reached.
  */
 export const notifyExpansion = onSchedule(
   {
-    schedule: "every 2 minutes",
+    schedule: "every 5 minutes",
     timeZone: "Asia/Jerusalem",
     retryCount: 1,
   },
   async () => {
     const now = admin.firestore.Timestamp.now();
-    const twoMinAgo = admin.firestore.Timestamp.fromMillis(
-      now.toMillis() - 2 * 60 * 1000
+    const fiveMinAgo = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() - 5 * 60 * 1000
     );
 
     console.log(`[notifyExpansion] Running at ${now.toDate().toISOString()}`);
@@ -46,7 +46,7 @@ export const notifyExpansion = onSchedule(
     const snapshot = await db
       .collection("deliveries")
       .where("status", "==", "new")
-      .where("lastNotifyExpansion", "<=", twoMinAgo)
+      .where("lastNotifyExpansion", "<=", fiveMinAgo)
       .limit(50)
       .get();
 
