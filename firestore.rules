@@ -37,17 +37,17 @@ service cloud.firestore {
     }
 
     // Allowed fields for delivery sender updates
+    // NOTE: status, driverId, interestedDrivers REMOVED — must go through Cloud Functions
     function allowedSenderDeliveryFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['status', 'driverId', 'interestedDrivers',
-                  'payment', 'cancelledBy', 'updatedAt', 'proof']);
+        .hasOnly(['payment', 'cancelledBy', 'updatedAt', 'proof', 'mediaURLs', 'photoUrl']);
     }
 
     // Allowed fields for delivery driver updates
+    // NOTE: status, interestedDrivers REMOVED — must go through Cloud Functions
     function allowedDriverDeliveryFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['status', 'interestedDrivers', 'payment',
-                  'proof', 'updatedAt']);
+        .hasOnly(['payment', 'proof', 'updatedAt']);
     }
 
     // Restrict role to sender/driver only (no admin self-promotion)
@@ -105,11 +105,8 @@ service cloud.firestore {
         && resource.data.driverId == request.auth.uid
         && allowedDriverDeliveryFields();
 
-      // Any authenticated user can express interest on new deliveries
-      allow update: if isAuthenticated()
-        && resource.data.status == 'new'
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['interestedDrivers', 'updatedAt']);
+      // Interest expression goes through Cloud Functions (expressInterest callable)
+      // Direct client writes to interestedDrivers are blocked
 
       // Admins can read/write all
       allow read: if isAdmin();
@@ -129,8 +126,11 @@ service cloud.firestore {
       allow list: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 
-      allow write: if isAuthenticated()
-        && request.auth.uid in resource.data.participants;
+      // Participants can only update message-related fields
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['lastMessage', 'lastMessageAt', 'lastSenderId', 'lastReadBy', 'updatedAt']);
 
       allow create: if isAuthenticated()
         && request.auth.uid in request.resource.data.participants;
@@ -153,7 +153,7 @@ service cloud.firestore {
     match /ratings/{ratingId} {
       allow create: if isAuthenticated()
         && request.resource.data.fromUserId == request.auth.uid;
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow update, delete: if isAdmin();
     }
 
@@ -179,6 +179,19 @@ service cloud.firestore {
     match /config/{configId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
+    }
+
+    // ───────────────────────────────────────────────
+    // Rate limit collections — Cloud Functions only
+    // ───────────────────────────────────────────────
+    match /rateLimits_otp/{docId} {
+      allow read, write: if false;
+    }
+    match /rateLimits_login/{docId} {
+      allow read, write: if false;
+    }
+    match /rateLimits_email/{docId} {
+      allow read, write: if false;
     }
   }
 }

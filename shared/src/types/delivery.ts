@@ -1,4 +1,4 @@
-import { firestore } from "firebase-admin";
+import { Timestamp } from "./timestamp";
 
 export type DeliveryStatus =
   | "new"
@@ -37,7 +37,7 @@ export interface DeliveryProof {
 
 export interface StatusEntry {
   status: DeliveryStatus;
-  timestamp: firestore.Timestamp;
+  timestamp: Timestamp;
   actor: string;
   note?: string;
 }
@@ -51,7 +51,7 @@ export interface InterestedDriver {
   rating: number;
   completedDeliveries: number;
   distanceKm: number;
-  expressedAt: firestore.Timestamp;
+  expressedAt: Timestamp;
   status: InterestedDriverStatus;
 }
 
@@ -71,7 +71,7 @@ export interface Delivery {
   destination: GeoPoint;
   item: DeliveryItem;
   price: number;
-  pickupDate: firestore.Timestamp | "asap";
+  pickupDate: Timestamp | "asap";
   timeRange?: string | null;
   notes?: string;
   payment: PaymentConfirmation;
@@ -80,14 +80,14 @@ export interface Delivery {
   rated?: boolean;
   ratedBySender?: boolean;
   ratedByDriver?: boolean;
-  ratingsVisibleAt?: firestore.Timestamp;
+  ratingsVisibleAt?: Timestamp;
   cancelledBy?: string;
-  timeoutAt: firestore.Timestamp;
-  createdAt: firestore.Timestamp;
-  updatedAt: firestore.Timestamp;
+  timeoutAt: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
   interestedDrivers?: InterestedDriver[];
   selectedDriverId?: string | null;
-  selectionExpiresAt?: firestore.Timestamp | null;
+  selectionExpiresAt?: Timestamp | null;
 }
 
 export interface DeliveryCreateData {
@@ -95,6 +95,6 @@ export interface DeliveryCreateData {
   destination: GeoPoint;
   item: DeliveryItem;
   price: number;
-  pickupDate: firestore.Timestamp | "asap";
+  pickupDate: Timestamp | "asap";
   notes?: string;
 }

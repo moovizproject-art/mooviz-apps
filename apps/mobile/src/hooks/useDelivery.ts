@@ -1,6 +1,4 @@
 import { useCallback, useMemo } from 'react';
-import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
 
 import { useFirestore } from './useFirestore';
@@ -271,18 +269,16 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     [],
   );
 
+  /**
+   * @deprecated Direct status writes removed for security.
+   * Use the specific callable for each transition:
+   * confirmPickup, confirmDelivery, confirmPayment, cancelDelivery, etc.
+   */
   const updateDeliveryStatus = useCallback(
-    async (deliveryId: string, status: string): Promise<void> => {
-      try {
-        await firestore().collection('deliveries').doc(deliveryId).update({
-          status,
-          [`statusHistory.${status}`]: firestore.FieldValue.serverTimestamp(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
-      } catch (err) {
-        console.error('[useDelivery] updateDeliveryStatus failed:', err);
-        throw new Error((err as any)?.message || 'Status update failed');
-      }
+    async (_deliveryId: string, _status: string): Promise<void> => {
+      throw new Error(
+        'Direct status updates are not allowed. Use the appropriate callable function (confirmPickup, confirmDelivery, confirmPayment, cancelDelivery, etc.)',
+      );
     },
     [],
   );

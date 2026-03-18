@@ -19,32 +19,42 @@ export async function sendPushNotification(
   sound?: string,
   fcmTokens?: string | string[]
 ): Promise<boolean> {
-  let fcmToken: string | undefined;
   try {
+    // Resolve tokens from caller or Firestore
+    let tokens: string[] = [];
+
     if (fcmTokens) {
-      // Use caller-provided tokens, skip Firestore read
-      const tokens = fcmTokens;
-      fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
+      tokens = Array.isArray(fcmTokens) ? fcmTokens : [fcmTokens];
     } else {
-      // Fallback: read from Firestore
       const userDoc = await db.collection("users").doc(userId).get();
       if (!userDoc.exists) {
         console.warn(`sendPushNotification: user ${userId} not found`);
         return false;
       }
-
       const userData = userDoc.data();
-      const tokens = userData?.fcmTokens;
-      fcmToken = Array.isArray(tokens) ? tokens[tokens.length - 1] : tokens;
+      const raw = userData?.fcmTokens;
+      if (Array.isArray(raw)) {
+        tokens = raw.filter((t: unknown) => typeof t === "string" && t.length > 0);
+      } else if (typeof raw === "string" && raw.length > 0) {
+        tokens = [raw];
+      }
+      // Backward compat: also check legacy single `fcmToken` field
+      const legacy = userData?.fcmToken;
+      if (typeof legacy === "string" && legacy.length > 0 && !tokens.includes(legacy)) {
+        tokens.push(legacy);
+      }
     }
 
-    if (!fcmToken || typeof fcmToken !== "string") {
-      console.warn(`sendPushNotification: no FCM token for user ${userId}`);
+    // Deduplicate
+    tokens = tokens.filter((t, i) => tokens.indexOf(t) === i);
+
+    if (tokens.length === 0) {
+      console.warn(`sendPushNotification: no FCM tokens for user ${userId}`);
       return false;
     }
 
-    const message: admin.messaging.Message = {
-      token: fcmToken,
+    const multicastMessage: admin.messaging.MulticastMessage = {
+      tokens,
       notification: {
         title,
         body,
@@ -67,21 +77,37 @@ export async function sendPushNotification(
       },
     };
 
-    await messaging.send(message);
-    console.log(`Push notification sent to user ${userId}`);
-    return true;
-  } catch (error: unknown) {
-    const err = error as { code?: string };
-    // If the token is invalid, clear it from the user document
-    if (
-      err.code === "messaging/invalid-registration-token" ||
-      err.code === "messaging/registration-token-not-registered"
-    ) {
-      console.warn(`Invalid FCM token for user ${userId}, clearing token`);
-      await db.collection("users").doc(userId).update({ fcmTokens: admin.firestore.FieldValue.arrayRemove(fcmToken) });
-    } else {
-      console.error(`Failed to send push notification to user ${userId}:`, error);
+    const response = await messaging.sendEachForMulticast(multicastMessage);
+    console.log(`Push notification sent to user ${userId}: ${response.successCount}/${tokens.length} succeeded`);
+
+    // Clean up invalid tokens
+    if (response.failureCount > 0) {
+      const invalidTokens: string[] = [];
+      response.responses.forEach((resp, idx) => {
+        if (resp.error) {
+          const code = resp.error.code;
+          if (
+            code === "messaging/invalid-registration-token" ||
+            code === "messaging/registration-token-not-registered"
+          ) {
+            invalidTokens.push(tokens[idx]);
+          } else {
+            console.warn(`FCM error for user ${userId}, token index ${idx}: ${code} — ${resp.error.message}`);
+          }
+        }
+      });
+
+      if (invalidTokens.length > 0) {
+        console.warn(`Removing ${invalidTokens.length} invalid FCM token(s) for user ${userId}`);
+        await db.collection("users").doc(userId).update({
+          fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens),
+        });
+      }
     }
+
+    return response.successCount > 0;
+  } catch (error: unknown) {
+    console.error(`Failed to send push notification to user ${userId}:`, error);
     return false;
   }
 }

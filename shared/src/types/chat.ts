@@ -1,4 +1,4 @@
-import { firestore } from "firebase-admin";
+import { Timestamp } from "./timestamp";
 
 export type ChatMessageType = "text" | "image" | "system";
 
@@ -8,7 +8,7 @@ export interface ChatMessage {
   text?: string;
   imageURL?: string;
   type: ChatMessageType;
-  createdAt: firestore.Timestamp;
+  createdAt: Timestamp;
 }
 
 export interface ChatRoom {
@@ -16,6 +16,6 @@ export interface ChatRoom {
   deliveryId: string;
   participants: string[];
   lastMessage?: string;
-  lastMessageAt?: firestore.Timestamp;
-  createdAt: firestore.Timestamp;
+  lastMessageAt?: Timestamp;
+  createdAt: Timestamp;
 }

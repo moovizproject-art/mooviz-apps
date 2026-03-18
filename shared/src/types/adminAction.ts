@@ -1,4 +1,4 @@
-import { firestore } from "firebase-admin";
+import { Timestamp } from "./timestamp";
 
 export type AdminActionType =
   | "suspend_user"
@@ -20,7 +20,7 @@ export interface AdminAction {
   targetReportId?: string;
   reason: string;
   metadata?: Record<string, unknown>;
-  createdAt: firestore.Timestamp;
+  createdAt: Timestamp;
 }
 
 export interface AdminActionCreateData {

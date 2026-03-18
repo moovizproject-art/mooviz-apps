@@ -100,7 +100,7 @@ export async function assertUserRole(
   // activeMode 'client' maps to 'sender' role
   const effectiveRole = activeMode === "driver" ? "driver" : role;
   const isDualModeDriver =
-    requiredRole === "driver" && userData.driverUnlocked === true;
+    requiredRole === "driver" && userData.driverUnlocked === true && activeMode === "driver";
 
   if (effectiveRole !== requiredRole && !isDualModeDriver) {
     throw new HttpsError(

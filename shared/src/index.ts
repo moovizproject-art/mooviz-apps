@@ -1,4 +1,5 @@
 // Types
+export * from "./types/timestamp";
 export * from "./types/user";
 export * from "./types/delivery";
 export * from "./types/chat";

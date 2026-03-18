@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
-import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ErrorBoundary, withErrorBoundary } from '../components/ErrorBoundary';
 
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
@@ -163,11 +163,11 @@ function AuthStack(): React.JSX.Element {
         animation: 'slide_from_left', // RTL-aware
       }}
     >
-      <AuthStackNav.Screen name="Login" component={LoginScreen} />
-      <AuthStackNav.Screen name="Register" component={RegisterScreen} />
-      <AuthStackNav.Screen name="OTPVerification" component={OTPScreen} />
-      <AuthStackNav.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <AuthStackNav.Screen name="AddPhone" component={AddPhoneScreen} />
+      <AuthStackNav.Screen name="Login" component={withErrorBoundary(LoginScreen, 'Login')} />
+      <AuthStackNav.Screen name="Register" component={withErrorBoundary(RegisterScreen, 'Register')} />
+      <AuthStackNav.Screen name="OTPVerification" component={withErrorBoundary(OTPScreen, 'OTPVerification')} />
+      <AuthStackNav.Screen name="ForgotPassword" component={withErrorBoundary(ForgotPasswordScreen, 'ForgotPassword')} />
+      <AuthStackNav.Screen name="AddPhone" component={withErrorBoundary(AddPhoneScreen, 'AddPhone')} />
     </AuthStackNav.Navigator>
   );
 }
@@ -189,7 +189,7 @@ function SenderTabs(): React.JSX.Element {
     >
       <SenderTab.Screen
         name="Home"
-        component={HomeScreen}
+        component={withErrorBoundary(HomeScreen, 'Home')}
         options={{
           tabBarLabel: t('tabs.home'),
           tabBarIcon: ({ color }) => <HomeIcon color={color} />,
@@ -197,7 +197,7 @@ function SenderTabs(): React.JSX.Element {
       />
       <SenderTab.Screen
         name="MyDeliveries"
-        component={MyDeliveriesScreen}
+        component={withErrorBoundary(MyDeliveriesScreen, 'MyDeliveries')}
         options={{
           tabBarLabel: t('tabs.deliveries'),
           tabBarIcon: ({ color }) => <PackageIcon color={color} />,
@@ -205,7 +205,7 @@ function SenderTabs(): React.JSX.Element {
       />
       <SenderTab.Screen
         name="Chat"
-        component={ChatScreen}
+        component={withErrorBoundary(ChatScreen, 'SenderChat')}
         options={{
           tabBarLabel: t('tabs.chat'),
           tabBarIcon: ({ color }) => <ChatIcon color={color} />,
@@ -214,7 +214,7 @@ function SenderTabs(): React.JSX.Element {
       />
       <SenderTab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={withErrorBoundary(ProfileScreen, 'SenderProfile')}
         options={{
           tabBarLabel: t('tabs.profile'),
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
@@ -241,7 +241,7 @@ function DriverTabs(): React.JSX.Element {
     >
       <DriverTab.Screen
         name="Feed"
-        component={FeedScreen}
+        component={withErrorBoundary(FeedScreen, 'Feed')}
         options={{
           tabBarLabel: t('tabs.deliveries'),
           tabBarIcon: ({ color }) => <TruckIcon color={color} />,
@@ -249,7 +249,7 @@ function DriverTabs(): React.JSX.Element {
       />
       <DriverTab.Screen
         name="MyJobs"
-        component={MyJobsScreen}
+        component={withErrorBoundary(MyJobsScreen, 'MyJobs')}
         options={{
           tabBarLabel: t('driver.myJobs'),
           tabBarIcon: ({ color }) => <ClipboardIcon color={color} />,
@@ -257,7 +257,7 @@ function DriverTabs(): React.JSX.Element {
       />
       <DriverTab.Screen
         name="Chat"
-        component={ChatScreen}
+        component={withErrorBoundary(ChatScreen, 'DriverChat')}
         options={{
           tabBarLabel: t('tabs.chat'),
           tabBarIcon: ({ color }) => <ChatIcon color={color} />,
@@ -266,7 +266,7 @@ function DriverTabs(): React.JSX.Element {
       />
       <DriverTab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={withErrorBoundary(ProfileScreen, 'DriverProfile')}
         options={{
           tabBarLabel: t('tabs.profile'),
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
@@ -389,29 +389,29 @@ export function RootNavigator(): React.JSX.Element {
       {!firebaseUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : needsEmailVerification ? (
-        <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
+        <Stack.Screen name="EmailVerification" component={withErrorBoundary(EmailVerificationScreen, 'EmailVerification')} />
       ) : needsPhoneVerification ? (
         <>
-          <Stack.Screen name="PhoneVerification" component={AddPhoneScreen} />
-          <Stack.Screen name="PhoneOTP" component={OTPScreen} />
+          <Stack.Screen name="PhoneVerification" component={withErrorBoundary(AddPhoneScreen, 'PhoneVerification')} />
+          <Stack.Screen name="PhoneOTP" component={withErrorBoundary(OTPScreen, 'PhoneOTP')} />
         </>
       ) : !currentUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
       ) : !currentUser.fullName || !currentUser.phone ? (
-        <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+        <Stack.Screen name="CompleteProfile" component={withErrorBoundary(CompleteProfileScreen, 'CompleteProfile')} />
       ) : currentUser.migratedFrom && !currentUser.acceptedTermsAt ? (
-        <Stack.Screen name="AcceptTerms" component={AcceptTermsScreen} />
+        <Stack.Screen name="AcceptTerms" component={withErrorBoundary(AcceptTermsScreen, 'AcceptTerms')} />
       ) : currentUser.activeMode === 'driver' ? (
         <>
           <Stack.Screen name="DriverTabs" component={DriverTabs} options={{ title: t('common.back') }} />
           <Stack.Screen
             name="DriverDeliveryDetail"
-            component={DriverDeliveryDetail}
+            component={withErrorBoundary(DriverDeliveryDetail, 'DriverDeliveryDetail')}
             options={{ headerShown: true, title: t('delivery.deliveryDetails') }}
           />
           <Stack.Screen
             name="ChatRoom"
-            component={ChatScreen}
+            component={withErrorBoundary(ChatScreen, 'DriverChatRoom')}
             options={{
               headerShown: true,
               title: '',
@@ -420,12 +420,12 @@ export function RootNavigator(): React.JSX.Element {
           />
           <Stack.Screen
             name="Rating"
-            component={RatingScreen}
+            component={withErrorBoundary(RatingScreen, 'DriverRating')}
             options={{ headerShown: true, title: t('profile.rating') }}
           />
           <Stack.Screen
             name="FullScreenMap"
-            component={FullScreenMapScreen}
+            component={withErrorBoundary(FullScreenMapScreen, 'DriverFullScreenMap')}
             options={{ headerShown: false, animation: 'fade' }}
           />
         </>
@@ -434,22 +434,22 @@ export function RootNavigator(): React.JSX.Element {
           <Stack.Screen name="SenderTabs" component={SenderTabs} options={{ title: t('common.back') }} />
           <Stack.Screen
             name="DriverKYC"
-            component={DriverKYCScreen}
+            component={withErrorBoundary(DriverKYCScreen, 'DriverKYC')}
             options={{ headerShown: false }}
           />
           <Stack.Screen
             name="CreateDelivery"
-            component={CreateDeliveryScreen}
+            component={withErrorBoundary(CreateDeliveryScreen, 'CreateDelivery')}
             options={{ headerShown: false }}
           />
           <Stack.Screen
             name="SenderDeliveryDetail"
-            component={SenderDeliveryDetail}
+            component={withErrorBoundary(SenderDeliveryDetail, 'SenderDeliveryDetail')}
             options={{ headerShown: true, title: t('delivery.deliveryDetails') }}
           />
           <Stack.Screen
             name="ChatRoom"
-            component={ChatScreen}
+            component={withErrorBoundary(ChatScreen, 'SenderChatRoom')}
             options={{
               headerShown: true,
               title: '',
@@ -458,12 +458,12 @@ export function RootNavigator(): React.JSX.Element {
           />
           <Stack.Screen
             name="Rating"
-            component={RatingScreen}
+            component={withErrorBoundary(RatingScreen, 'SenderRating')}
             options={{ headerShown: true, title: t('profile.rating') }}
           />
           <Stack.Screen
             name="FullScreenMap"
-            component={FullScreenMapScreen}
+            component={withErrorBoundary(FullScreenMapScreen, 'SenderFullScreenMap')}
             options={{ headerShown: false, animation: 'fade' }}
           />
         </>

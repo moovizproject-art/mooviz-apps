@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOOVIZ Full Project Audit — March 18, 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #0A0A0A;
+      --surface-1: #111111;
+      --surface-2: #1A1A1A;
+      --surface-3: #242424;
+      --surface-4: #2E2E2E;
+      --text-primary: #FAFAFA;
+      --text-secondary: #A0A0A0;
+      --text-muted: #606060;
+      --accent: #C8A75A;
+      --accent-light: #E2C97E;
+      --accent-dark: #9A7C35;
+      --success: #22C55E;
+      --warning: #F59E0B;
+      --error: #EF4444;
+      --info: #3B82F6;
+      --critical: #DC2626;
+      --high: #EA580C;
+      --medium: #D97706;
+      --low: #65A30D;
+      --pad: 48px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--black);
+      color: var(--text-primary);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    @media print {
+      html, body { background: var(--black); }
+      .page { box-shadow: none !important; margin: 0 !important; }
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      position: relative;
+      overflow: hidden;
+      background: var(--surface-1);
+      page-break-after: always;
+      margin: 0 auto 32px;
+      padding: var(--pad);
+    }
+
+    .page::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-dark), var(--accent), var(--accent-light), var(--accent));
+      z-index: 10;
+    }
+
+    .page-num {
+      position: absolute;
+      bottom: 24px; right: var(--pad);
+      font-size: 10px; font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .page-footer {
+      position: absolute;
+      bottom: 24px; left: var(--pad);
+      font-size: 9px; font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .page-logo {
+      position: absolute;
+      top: 20px; right: var(--pad);
+      display: flex; align-items: center; gap: 6px;
+      z-index: 10;
+    }
+    .page-logo .k {
+      width: 24px; height: 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; color: var(--black);
+    }
+
+    /* Typography */
+    .cover-title { font-size: 42px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
+    .cover-subtitle { font-size: 18px; font-weight: 400; color: var(--text-secondary); margin-top: 12px; }
+
+    h2 { font-size: 22px; font-weight: 700; margin-bottom: 16px; line-height: 1.2; }
+    h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); }
+    h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+
+    .label {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--accent); margin-bottom: 8px;
+    }
+
+    p, li { font-size: 11.5px; line-height: 1.65; color: var(--text-secondary); }
+    li { margin-bottom: 3px; }
+    ul { padding-left: 16px; }
+
+    .small { font-size: 10px; color: var(--text-muted); }
+
+    /* Cards */
+    .card {
+      background: var(--surface-2);
+      border: 1px solid var(--surface-4);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    .card-sm {
+      background: var(--surface-2);
+      border: 1px solid var(--surface-4);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      font-size: 9px; font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .tag-critical { background: rgba(220,38,38,0.2); color: #F87171; border: 1px solid rgba(220,38,38,0.4); }
+    .tag-high { background: rgba(234,88,12,0.2); color: #FB923C; border: 1px solid rgba(234,88,12,0.4); }
+    .tag-medium { background: rgba(217,119,6,0.2); color: #FBBF24; border: 1px solid rgba(217,119,6,0.4); }
+    .tag-low { background: rgba(101,163,13,0.2); color: #A3E635; border: 1px solid rgba(101,163,13,0.4); }
+    .tag-done { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+    .tag-gold { background: rgba(200,167,90,0.15); color: var(--accent); border: 1px solid rgba(200,167,90,0.35); }
+    .tag-info { background: rgba(59,130,246,0.15); color: #60A5FA; border: 1px solid rgba(59,130,246,0.3); }
+
+    /* Divider */
+    .divider { width: 40px; height: 3px; background: linear-gradient(90deg, var(--accent), transparent); border-radius: 2px; margin: 10px 0; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { text-align: left; font-weight: 600; color: var(--text-muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; padding: 6px 10px; border-bottom: 1px solid var(--surface-4); }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--surface-3); color: var(--text-secondary); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+
+    /* Stats */
+    .stat-num { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Progress bar */
+    .progress-bar { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+
+    /* Finding row */
+    .finding { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--surface-3); }
+    .finding:last-child { border-bottom: none; }
+    .finding-id { font-size: 10px; font-weight: 700; color: var(--text-muted); min-width: 30px; padding-top: 1px; }
+    .finding-text { flex: 1; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+    .finding-text strong { color: var(--text-primary); font-weight: 600; }
+
+    /* Score ring */
+    .score-ring {
+      width: 80px; height: 80px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 800;
+    }
+
+    .mt-sm { margin-top: 8px; }
+    .mt-md { margin-top: 16px; }
+    .mb-sm { margin-bottom: 8px; }
+    .mb-md { margin-bottom: 16px; }
+    .text-accent { color: var(--accent); }
+    .text-error { color: var(--error); }
+    .text-success { color: var(--success); }
+    .text-warning { color: var(--warning); }
+    .text-primary { color: var(--text-primary); }
+    .fw-700 { font-weight: 700; }
+    .fw-800 { font-weight: 800; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ PAGE 1: COVER ═══════════════════════════════════════════ -->
+<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: radial-gradient(ellipse at 50% 40%, #1a1a1a 0%, #0a0a0a 70%);">
+  <div style="margin-bottom: 40px;">
+    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 0 60px rgba(200,167,90,0.3);">
+      <span style="font-size: 36px; font-weight: 900; color: var(--black);">M</span>
+    </div>
+    <div class="cover-title">Full Project Audit</div>
+    <div class="cover-subtitle">MOOVIZ — Real-Time Community Delivery Platform</div>
+    <div class="divider" style="margin: 20px auto;"></div>
+    <p style="font-size: 12px; color: var(--text-muted);">
+      Security &bull; Performance &bull; Architecture &bull; SOW Alignment &bull; Migration &bull; Market Fit
+    </p>
+  </div>
+
+  <div style="position: absolute; bottom: 60px; display: flex; gap: 40px; align-items: center;">
+    <div style="text-align: center;">
+      <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">Date</div>
+      <div style="font-size: 13px; font-weight: 600; margin-top: 4px;">March 18, 2026</div>
+    </div>
+    <div style="width: 1px; height: 30px; background: var(--surface-4);"></div>
+    <div style="text-align: center;">
+      <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">Version</div>
+      <div style="font-size: 13px; font-weight: 600; margin-top: 4px;">v1.0.7</div>
+    </div>
+    <div style="width: 1px; height: 30px; background: var(--surface-4);"></div>
+    <div style="text-align: center;">
+      <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">Prepared By</div>
+      <div style="font-size: 13px; font-weight: 600; margin-top: 4px;">KAL Solutions Group</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 2: EXECUTIVE SUMMARY ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Executive Summary</div>
+  <h2>Audit Overview</h2>
+  <div class="divider"></div>
+
+  <p class="mb-md">Comprehensive E2E audit of the Mooviz platform across 6 dimensions. The codebase delivers strong core functionality (delivery lifecycle, push notifications, GPS, proof photos, chat, ratings) with an overall SOW completion of <strong class="text-primary">78%</strong>. Critical security and performance issues were identified and 11 of 12 performance fixes were implemented in the same session.</p>
+
+  <div class="grid-3 mb-md">
+    <div class="card" style="text-align: center;">
+      <div class="stat-num text-error">5</div>
+      <div class="stat-label">Critical Security</div>
+    </div>
+    <div class="card" style="text-align: center;">
+      <div class="stat-num text-warning">78%</div>
+      <div class="stat-label">SOW Completion</div>
+    </div>
+    <div class="card" style="text-align: center;">
+      <div class="stat-num text-success">11/12</div>
+      <div class="stat-label">Perf Fixes Done</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4>Audit Areas &amp; Grades</h4>
+      <table>
+        <tr><td><strong class="text-primary">Security</strong></td><td><span class="tag tag-critical">C</span></td><td>5 CRITICAL, 8 HIGH</td></tr>
+        <tr><td><strong class="text-primary">Performance</strong></td><td><span class="tag tag-high">C+</span></td><td>3 CRITICAL, 8 HIGH</td></tr>
+        <tr><td><strong class="text-primary">Architecture</strong></td><td><span class="tag tag-medium">B</span></td><td>6 HIGH</td></tr>
+        <tr><td><strong class="text-primary">SOW Alignment</strong></td><td><span class="tag tag-medium">B-</span></td><td>7 P0 gaps</td></tr>
+        <tr><td><strong class="text-primary">Migration Scripts</strong></td><td><span class="tag tag-high">C+</span></td><td>3 CRITICAL, 6 HIGH</td></tr>
+        <tr><td><strong class="text-primary">Market Fit</strong></td><td><span class="tag tag-medium">5/10</span></td><td>3 existential risks</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h4>Total Findings by Severity</h4>
+      <div style="margin-top: 12px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span class="tag tag-critical">CRITICAL</span>
+          <span style="font-size: 20px; font-weight: 800; color: #F87171;">16</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 80%; background: var(--error);"></div></div>
+        <div style="display: flex; justify-content: space-between; margin: 10px 0 8px;">
+          <span class="tag tag-high">HIGH</span>
+          <span style="font-size: 20px; font-weight: 800; color: #FB923C;">28</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 100%; background: var(--high);"></div></div>
+        <div style="display: flex; justify-content: space-between; margin: 10px 0 8px;">
+          <span class="tag tag-medium">MEDIUM</span>
+          <span style="font-size: 20px; font-weight: 800; color: #FBBF24;">27</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 96%; background: var(--medium);"></div></div>
+        <div style="display: flex; justify-content: space-between; margin: 10px 0 8px;">
+          <span class="tag tag-low">LOW</span>
+          <span style="font-size: 20px; font-weight: 800; color: #A3E635;">18</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 64%; background: var(--low);"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">02 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 3: SECURITY AUDIT ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Security Audit</div>
+  <h2>5 Critical + 8 High Severity Findings</h2>
+  <div class="divider"></div>
+
+  <h3 style="color: var(--error);">Critical Findings</h3>
+  <div class="card" style="border-left: 3px solid var(--error);">
+    <div class="finding">
+      <div class="finding-id">S1</div>
+      <div class="finding-text"><strong>Client writes <code>status</code> directly via Firestore rules</strong> — bypasses Cloud Functions state machine. A malicious client can set any status (e.g., jump new → completed_paid).</div>
+      <span class="tag tag-critical">CRITICAL</span>
+    </div>
+    <div class="finding">
+      <div class="finding-id">S2</div>
+      <div class="finding-text"><strong>Client writes <code>driverId</code></strong> — any sender can assign arbitrary users as drivers without consent.</div>
+      <span class="tag tag-critical">CRITICAL</span>
+    </div>
+    <div class="finding">
+      <div class="finding-id">S3</div>
+      <div class="finding-text"><strong>Client writes <code>interestedDrivers</code> array</strong> — no validation on structure. Fake driver entries can be injected.</div>
+      <span class="tag tag-critical">CRITICAL</span>
+    </div>
+    <div class="finding">
+      <div class="finding-id">S4</div>
+      <div class="finding-text"><strong><code>purgeTestUsers</code> is unauthenticated HTTP endpoint</strong> — anyone can enumerate and delete all users.</div>
+      <span class="tag tag-critical">CRITICAL</span>
+    </div>
+    <div class="finding">
+      <div class="finding-id">S5</div>
+      <div class="finding-text"><strong>13+ direct Firestore writes from mobile screens</strong> — status transitions, payment, proof fields written without server validation.</div>
+      <span class="tag tag-critical">CRITICAL</span>
+    </div>
+  </div>
+
+  <h3 style="color: var(--high); margin-top: 14px;">High Severity Findings</h3>
+  <div class="card" style="border-left: 3px solid var(--high); font-size: 11px;">
+    <table>
+      <tr><td style="width:35px; font-weight:700; color:var(--text-muted);">S6</td><td><strong class="text-primary">KYC not enforced</strong> — <code>assertDriverApproved</code> defined but never called. Pending/rejected drivers can operate.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S7</td><td><strong class="text-primary">Role check too permissive</strong> — sender with <code>driverUnlocked</code> bypasses <code>activeMode</code> check.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S8</td><td><strong class="text-primary">Dual delivery creation paths</strong> — direct Firestore + Cloud Function. Direct path skips validation.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S9</td><td><strong class="text-primary">Ratings world-readable</strong> — <code>allow read: if true</code> exposes user IDs to unauthenticated users.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S10</td><td><strong class="text-primary">No rate limiting on email callable</strong> — bulk email function has no throttle.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S11</td><td><strong class="text-primary">User IDs in Cloud Function logs</strong> — violates "no PII in logs" policy.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S12</td><td><strong class="text-primary">Chat rules allow any field modification</strong> — participants can overwrite <code>closed</code>, <code>participants</code>, etc.</td></tr>
+      <tr><td style="font-weight:700; color:var(--text-muted);">S13</td><td><strong class="text-primary">API keys in git history</strong> — <code>google-services.json</code> was previously committed. Keys should be rotated.</td></tr>
+    </table>
+  </div>
+
+  <div class="card mt-sm" style="background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.2);">
+    <h4 style="color: var(--error);">Priority Fix: Remove from Firestore Rules</h4>
+    <p>Remove <code>status</code>, <code>driverId</code>, <code>interestedDrivers</code> from <code>allowedSenderDeliveryFields</code> and <code>allowedDriverDeliveryFields</code>. This closes S1 + S2 + S3 simultaneously. Delete <code>purgeTestUsers</code> endpoint (S4).</p>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">03 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 4: PERFORMANCE AUDIT ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Performance Audit</div>
+  <h2>11 of 12 Issues Fixed This Session</h2>
+  <div class="divider"></div>
+
+  <div class="grid-2 mb-md">
+    <div>
+      <h3>Sprint 1 — Mobile UI + Queries</h3>
+      <div class="card">
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>React.memo on DeliveryCard</strong> — prevents re-renders when list updates</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>MyDeliveriesScreen FlatList</strong> — active tab now virtualized (was .map())</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>Earnings/Expenses listeners</strong> — onSnapshot → get() with limit(200)</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>ChatList N+1 queries</strong> — cached user/delivery lookups via useRef</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-info" style="min-width: 40px; text-align:center;">DEFER</span>
+          <div class="finding-text"><strong>Sender detail doc listener</strong> — medium priority, needs useDelivery refactor</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>Sprint 2 — Backend + Battery</h3>
+      <div class="card">
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>Notification redundant reads</strong> — optional cached params skip Firestore re-reads</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>Scheduled functions</strong> — notifyExpansion 2→5min, selectionTimeout 1→5min</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>Location tracking throttle</strong> — 30s write throttle, 50m distance filter</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>Idle GPS accuracy</strong> — enableHighAccuracy: false for availability toggle</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-done" style="min-width: 40px; text-align:center;">FIXED</span>
+          <div class="finding-text"><strong>Chat batch writes</strong> — message + metadata in single atomic batch</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Remaining Performance Items (Not Fixed)</h3>
+  <div class="card" style="border-left: 3px solid var(--medium);">
+    <table>
+      <tr><td style="width:80px;"><span class="tag tag-high">HIGH</span></td><td><strong class="text-primary">FeedScreen uses ScrollView</strong> — kept due to collapsible section UX. React.memo mitigates re-render cost.</td></tr>
+      <tr><td><span class="tag tag-high">HIGH</span></td><td><strong class="text-primary">All 25+ Cloud Functions in single index.ts</strong> — cold start impact. Future: dynamic imports.</td></tr>
+      <tr><td><span class="tag tag-high">HIGH</span></td><td><strong class="text-primary">Duplicate location tracking hooks</strong> — useDriverAvailability + useDriverLocationTracking can run simultaneously.</td></tr>
+      <tr><td><span class="tag tag-medium">MEDIUM</span></td><td><strong class="text-primary">Image thumbnails without caching</strong> — should use react-native-fast-image.</td></tr>
+      <tr><td><span class="tag tag-medium">MEDIUM</span></td><td><strong class="text-primary">Missing composite index for duplicate delivery check</strong> — 4-field query may need explicit index.</td></tr>
+    </table>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">04 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 5: SOW ALIGNMENT ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">SOW &amp; Plan Alignment</div>
+  <h2>Feature Completeness — 78% Overall</h2>
+  <div class="divider"></div>
+
+  <div class="grid-2 mb-md">
+    <div class="card" style="text-align: center;">
+      <div class="score-ring" style="margin: 0 auto; border: 4px solid var(--accent); color: var(--accent);">78%</div>
+      <div class="stat-label mt-sm">Overall SOW Completion</div>
+    </div>
+    <div class="card">
+      <h4>Milestone Status</h4>
+      <table>
+        <tr><td><strong class="text-primary">M0</strong> Setup</td><td><span class="tag tag-done">100%</span></td></tr>
+        <tr><td><strong class="text-primary">M1</strong> Auth + Data</td><td><span class="tag tag-done">100%</span></td></tr>
+        <tr><td><strong class="text-primary">M2</strong> Delivery + Chat</td><td><span class="tag tag-medium">95%</span></td></tr>
+        <tr><td><strong class="text-primary">M3</strong> Ratings + Polish</td><td><span class="tag tag-medium">90%</span></td></tr>
+        <tr><td><strong class="text-primary">M4</strong> Production + Store</td><td><span class="tag tag-critical">25%</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>Feature Scorecard</h3>
+  <div class="card">
+    <table>
+      <thead><tr><th>Feature</th><th>Status</th><th>Score</th></tr></thead>
+      <tbody>
+        <tr><td><strong class="text-primary">Auth (OTP + Email)</strong></td><td>Done</td><td><span class="tag tag-done">85%</span></td></tr>
+        <tr><td><strong class="text-primary">Delivery CRUD</strong></td><td>Missing edit/delete</td><td><span class="tag tag-medium">80%</span></td></tr>
+        <tr><td><strong class="text-primary">Driver Feed + Proximity</strong></td><td>Done</td><td><span class="tag tag-done">95%</span></td></tr>
+        <tr><td><strong class="text-primary">Push Notifications (8/8)</strong></td><td>All implemented</td><td><span class="tag tag-done">100%</span></td></tr>
+        <tr><td><strong class="text-primary">Chat System</strong></td><td>Done + auto-close</td><td><span class="tag tag-done">90%</span></td></tr>
+        <tr><td><strong class="text-primary">Rating System</strong></td><td>Done</td><td><span class="tag tag-done">90%</span></td></tr>
+        <tr><td><strong class="text-primary">Proof Photos</strong></td><td>All 3 types</td><td><span class="tag tag-done">100%</span></td></tr>
+        <tr><td><strong class="text-primary">Cancellation Flow</strong></td><td>No return-to-feed</td><td><span class="tag tag-medium">85%</span></td></tr>
+        <tr><td><strong class="text-primary">Payment Confirmation</strong></td><td style="color: var(--error);">No deep links</td><td><span class="tag tag-high">70%</span></td></tr>
+        <tr><td><strong class="text-primary">Admin Panel</strong></td><td>Done + extras</td><td><span class="tag tag-done">85%</span></td></tr>
+        <tr><td><strong class="text-primary">Analytics Events</strong></td><td>Partial</td><td><span class="tag tag-critical">40%</span></td></tr>
+        <tr><td><strong class="text-primary">Interstitial Ads</strong></td><td style="color: var(--error);">Not built</td><td><span class="tag tag-critical">0%</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="color: var(--error); margin-top: 10px;">P0 Gaps Blocking Launch</h3>
+  <div class="card" style="border-left: 3px solid var(--error);">
+    <ul>
+      <li><strong class="text-primary">Payment deep links</strong> (Bit/PayBox/bank transfer) — SOW 5.10, not implemented</li>
+      <li><strong class="text-primary">Edit/delete delivery</strong> — SOW 5.2, no callable functions</li>
+      <li><strong class="text-primary">Privacy policy screen</strong> — required for App Store + Play Store</li>
+      <li><strong class="text-primary">Production Firebase project</strong> — billing pending</li>
+      <li><strong class="text-primary">iOS build + store submissions</strong> — M4, not started</li>
+    </ul>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">05 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 6: ARCHITECTURE ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Architecture Review</div>
+  <h2>Structure, Types, Quality &amp; Scalability</h2>
+  <div class="divider"></div>
+
+  <div class="grid-2 mb-md">
+    <div>
+      <h3>Type Safety Issues</h3>
+      <div class="card" style="border-left: 3px solid var(--high);">
+        <div class="finding">
+          <span class="tag tag-high">HIGH</span>
+          <div class="finding-text"><strong>Delivery type defined 4x</strong> — shared/, types/index.ts, services/deliveries.ts, hooks/useDelivery.ts — all with different field shapes</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-high">HIGH</span>
+          <div class="finding-text"><strong>Mobile can't import @mooviz/shared</strong> — shared pkg depends on firebase-admin (server SDK)</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-medium">MEDIUM</span>
+          <div class="finding-text"><strong>52 <code>any</code> type occurrences</strong> across 20 files. 17 in deliveryCallable.ts alone</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-medium">MEDIUM</span>
+          <div class="finding-text"><strong>Dual field naming</strong> — HLD: price/item.description vs Mobile: suggestedPrice/itemDescription</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>Code Quality</h3>
+      <div class="card" style="border-left: 3px solid var(--medium);">
+        <div class="finding">
+          <span class="tag tag-high">HIGH</span>
+          <div class="finding-text"><strong>services/deliveries.ts is dead code</strong> — superseded by useDelivery hook but still importable</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-high">HIGH</span>
+          <div class="finding-text"><strong>Near-zero test coverage</strong> — 1 test file (auth.test.ts) in entire mobile app</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-medium">MEDIUM</span>
+          <div class="finding-text"><strong>ErrorBoundary only at root</strong> — CLAUDE.md says "every screen wrapped". Crash in one screen takes down navigator</div>
+        </div>
+        <div class="finding">
+          <span class="tag tag-medium">MEDIUM</span>
+          <div class="finding-text"><strong>FCM sends to last token only</strong> — multi-device users miss notifications. Should use sendEachForMulticast</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Scalability Concerns</h3>
+  <div class="card">
+    <table>
+      <thead><tr><th>Area</th><th>Concern</th><th>Risk Level</th></tr></thead>
+      <tbody>
+        <tr><td><strong class="text-primary">Geohash queries</strong></td><td>Single-range approach misses neighboring cells at boundaries</td><td><span class="tag tag-medium">MEDIUM</span></td></tr>
+        <tr><td><strong class="text-primary">interestedDrivers array</strong></td><td>30 entries max on delivery doc. Write amplification on each update</td><td><span class="tag tag-medium">MEDIUM</span></td></tr>
+        <tr><td><strong class="text-primary">notifiedDrivers array</strong></td><td>Unbounded, no cap. Could grow large in urban areas</td><td><span class="tag tag-medium">MEDIUM</span></td></tr>
+        <tr><td><strong class="text-primary">Notification fan-out</strong></td><td>3 parallel queries per delivery creation. 300 reads/hour at 100 deliveries</td><td><span class="tag tag-low">LOW</span></td></tr>
+        <tr><td><strong class="text-primary">Chat subcollections</strong></td><td>Well-designed. Bounded by delivery lifecycle. No concern</td><td><span class="tag tag-done">OK</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card mt-sm" style="background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.2);">
+    <h4 style="color: var(--info);">Top Fix: Remove firebase-admin from shared/</h4>
+    <p>Extract platform-agnostic type layer (use plain <code>number</code> for timestamps). This unblocks mobile from importing shared types/validators and eliminates the 4-way Delivery type duplication.</p>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">06 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 7: MIGRATION SCRIPTS ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Migration Scripts Review</div>
+  <h2>Glide → Firestore Data Migration</h2>
+  <div class="divider"></div>
+
+  <p class="mb-md">6 scripts reviewed: <code>migrate-glide-data.ts</code>, <code>fix-glide-migration.ts</code>, <code>migrate-images.ts</code>, <code>validate-migration.ts</code>, <code>fix-itemsize.ts</code>, <code>fix-stuck-deliveries.ts</code></p>
+
+  <h3 style="color: var(--error);">Critical Findings</h3>
+  <div class="card" style="border-left: 3px solid var(--error);">
+    <div class="finding">
+      <span class="tag tag-critical">C1</span>
+      <div class="finding-text"><strong>Field name mismatch</strong> — Migration writes <code>item.description</code> / <code>item.size</code> but app expects <code>itemDescription</code> / <code>itemSize</code>. Runtime fallbacks mask this. Firestore indexes on <code>itemSize</code> miss migrated records.</div>
+    </div>
+    <div class="finding">
+      <span class="tag tag-critical">C2</span>
+      <div class="finding-text"><strong>Missing expansion fields</strong> — <code>notifiedDrivers</code>, <code>notifyRadius</code>, <code>notifyExpansionCount</code>, <code>lastNotifyExpansion</code> not set. Migrated "new" deliveries won't be picked up by notifyExpansion scheduler.</div>
+    </div>
+    <div class="finding">
+      <span class="tag tag-critical">C3</span>
+      <div class="finding-text"><strong>Coordinate field mismatch</strong> — Migration writes <code>lat</code>/<code>lng</code> but app expects <code>latitude</code>/<code>longitude</code>. Map screens and distance calculations may fail.</div>
+    </div>
+  </div>
+
+  <h3 style="color: var(--high); margin-top: 14px;">High Severity Findings</h3>
+  <div class="card" style="border-left: 3px solid var(--high);">
+    <table>
+      <tr><td style="width:35px;"><strong>H1</strong></td><td><strong class="text-primary">No idempotency guard</strong> — <code>migrateShipments</code> uses <code>.add()</code>. Re-running creates duplicate deliveries. No <code>glideId</code> check.</td></tr>
+      <tr><td><strong>H2</strong></td><td><strong class="text-primary">statusHistory format mismatch</strong> — Migration writes array; app writes map (<code>statusHistory.${status}: timestamp</code>).</td></tr>
+      <tr><td><strong>H3</strong></td><td><strong class="text-primary">Message migration creates duplicates</strong> — subcollection <code>add()</code> on re-run.</td></tr>
+      <tr><td><strong>H4</strong></td><td><strong class="text-primary">Hardcoded credential paths</strong> — Scripts reference specific user's <code>~/.config/</code> directory.</td></tr>
+      <tr><td><strong>H5</strong></td><td><strong class="text-primary">Signed URLs expire 2030</strong> — Stored in Firestore, will break in 4 years.</td></tr>
+      <tr><td><strong>H6</strong></td><td><strong class="text-primary">Default status fallback is completed_paid</strong> — Unrecognized Hebrew status silently maps to terminal state.</td></tr>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 14px;">Medium &amp; Low Findings</h3>
+  <div class="card">
+    <table>
+      <tr><td style="width:70px;"><span class="tag tag-medium">MEDIUM</span></td><td>Empty <code>proof</code> object — completed Glide deliveries lose proof photos</td></tr>
+      <tr><td><span class="tag tag-medium">MEDIUM</span></td><td><code>fix-itemsize.ts</code> batch exceeds 500-op Firestore limit for large datasets</td></tr>
+      <tr><td><span class="tag tag-medium">MEDIUM</span></td><td><code>makePublic()</code> failure silently swallowed — returns 403 URL</td></tr>
+      <tr><td><span class="tag tag-low">LOW</span></td><td>CSV parser doesn't handle UTF-8 BOM from Windows Excel exports</td></tr>
+      <tr><td><span class="tag tag-low">LOW</span></td><td><code>city</code> field always empty on migrated deliveries</td></tr>
+      <tr><td><span class="tag tag-low">LOW</span></td><td><code>timeoutAt</code> set to current time = immediately timed out</td></tr>
+    </table>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">07 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 8: MARKET FIT ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Market Fit Analysis</div>
+  <h2>MVP Readiness — 5/10</h2>
+  <div class="divider"></div>
+
+  <div class="grid-2 mb-md">
+    <div>
+      <h3>MVP Readiness Scores</h3>
+      <div class="card">
+        <table>
+          <thead><tr><th>Dimension</th><th>Score</th></tr></thead>
+          <tbody>
+            <tr><td><strong class="text-primary">Core delivery flow</strong></td><td><span style="font-size: 18px; font-weight: 800; color: var(--success);">7/10</span></td></tr>
+            <tr><td><strong class="text-primary">Trust &amp; safety</strong></td><td><span style="font-size: 18px; font-weight: 800; color: var(--warning);">6/10</span></td></tr>
+            <tr><td><strong class="text-primary">Payment experience</strong></td><td><span style="font-size: 18px; font-weight: 800; color: var(--error);">3/10</span></td></tr>
+            <tr><td><strong class="text-primary">Driver acquisition</strong></td><td><span style="font-size: 18px; font-weight: 800; color: var(--error);">4/10</span></td></tr>
+            <tr><td><strong class="text-primary">Sender acquisition</strong></td><td><span style="font-size: 18px; font-weight: 800; color: var(--warning);">5/10</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <h3>Competitive Position</h3>
+      <div class="card">
+        <table>
+          <thead><tr><th>Feature</th><th>Mooviz</th><th>Competitors</th></tr></thead>
+          <tbody>
+            <tr><td>Pricing</td><td>Sender sets</td><td>Platform sets</td></tr>
+            <tr><td>Payment</td><td style="color: var(--error);">External</td><td style="color: var(--success);">In-app</td></tr>
+            <tr><td>ETA</td><td style="color: var(--error);">None</td><td style="color: var(--success);">Yes</td></tr>
+            <tr><td>Insurance</td><td style="color: var(--error);">No</td><td style="color: var(--success);">Yes</td></tr>
+            <tr><td>Driver choice</td><td style="color: var(--success);">Sender picks</td><td>Auto-assign</td></tr>
+            <tr><td>Commission</td><td style="color: var(--success);">0%</td><td>15-30%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color: var(--error);">Existential Risks</h3>
+  <div class="grid-3">
+    <div class="card" style="border-top: 3px solid var(--error);">
+      <h4 style="color: var(--error);">Zero Monetization</h4>
+      <p>No platform fee, no commission, no revenue path. The price goes directly from sender to driver via external apps. Interstitial ads are the only planned revenue — not yet implemented.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--error);">
+      <h4 style="color: var(--error);">Payment Friction</h4>
+      <p>4-6 extra steps vs competitors. External Bit/PayBox deep links, manual confirmation by both parties, screenshot upload. This will be the #1 user complaint.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--error);">
+      <h4 style="color: var(--error);">Cold-Start Problem</h4>
+      <p>Chicken-and-egg: need drivers in every area for senders to get responses. No referral program, no driver incentives, no guaranteed earnings. Geographic density is critical.</p>
+    </div>
+  </div>
+
+  <div class="card mt-md" style="background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2);">
+    <h4 style="color: var(--success);">Strengths</h4>
+    <div class="grid-2" style="margin-top: 8px;">
+      <ul>
+        <li>Multi-driver interest system (sender picks their driver)</li>
+        <li>Proof photos for pickup, delivery, and payment</li>
+        <li>Bidirectional ratings with comments</li>
+      </ul>
+      <ul>
+        <li>Custom notification sounds per event (6 mapped)</li>
+        <li>Hebrew-first RTL with full i18n framework</li>
+        <li>0% commission — attractive for price-sensitive market</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card mt-sm" style="background: rgba(200,167,90,0.08); border-color: rgba(200,167,90,0.2);">
+    <h4 style="color: var(--accent);">Recommendation</h4>
+    <p>Ready for <strong class="text-primary">closed beta</strong> with a tight-knit community (neighborhood group, Facebook community) where trust exists. <strong class="text-error">Not ready for broad market launch</strong> without addressing payment, monetization, and growth mechanics.</p>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">08 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 9: STATE MACHINE + DATA MODEL ═══════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Data Model &amp; State Machine</div>
+  <h2>Schema Alignment &amp; Transition Audit</h2>
+  <div class="divider"></div>
+
+  <div class="grid-2 mb-md">
+    <div>
+      <h3>Delivery Status State Machine</h3>
+      <div class="card" style="font-family: monospace; font-size: 11px; line-height: 2; color: var(--text-secondary);">
+        <span style="color: var(--success);">NEW</span> → <span style="color: var(--info);">PENDING</span> → <span style="color: var(--warning);">WAITING</span> → <span style="color: #60A5FA;">PICKED_UP</span> → <span style="color: #A78BFA;">DELIVERED</span> → <span style="color: var(--success);">COMPLETED_PAID</span><br>
+        <span style="color: var(--success);">NEW</span> → <span style="color: var(--error);">CANCELLED</span><br>
+        <span style="color: var(--info);">PENDING</span> → <span style="color: var(--success);">NEW</span> (driver cancels / 72h timeout)<br>
+        <span style="color: var(--info);">PENDING</span> → <span style="color: var(--error);">CANCELLED</span><br>
+        <span style="color: var(--warning);">WAITING</span> → <span style="color: var(--error);">CANCELLED</span> (pre-pickup)<br>
+        <span style="color: #60A5FA;">PICKED_UP</span> → <span class="text-error">NO cancellation allowed</span>
+      </div>
+      <div class="card mt-sm">
+        <h4>Deviations from SOW</h4>
+        <ul>
+          <li><strong class="text-primary">Timeout 24h vs 72h</strong> — code uses 24h, SOW says 72h</li>
+          <li><strong class="text-primary">Cancel doesn't return to feed</strong> — SOW says listing returns as "new", code sets terminal "cancelled"</li>
+          <li><strong class="text-primary">Extra transitions</strong> — new→waiting (multi-driver bypass), waiting→new (cancel selection)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <h3>Data Model Alignment</h3>
+      <div class="card">
+        <h4>Users Collection</h4>
+        <table>
+          <tr><td style="color:var(--success);">&#10003;</td><td>Core fields match HLD</td></tr>
+          <tr><td style="color:var(--warning);">~</td><td>rating split to ratingAsDriver/ratingAsSender (better)</td></tr>
+          <tr><td style="color:var(--warning);">~</td><td>fcmToken → fcmTokens array (better)</td></tr>
+          <tr><td style="color:var(--error);">&#10007;</td><td>Missing: termsAcceptedAt, completedTrips</td></tr>
+          <tr><td style="color:var(--info);">+</td><td>Extra: driverUnlocked, activeMode, driverPrefs</td></tr>
+        </table>
+      </div>
+      <div class="card mt-sm">
+        <h4>Deliveries Collection</h4>
+        <table>
+          <tr><td style="color:var(--success);">&#10003;</td><td>All HLD fields present</td></tr>
+          <tr><td style="color:var(--warning);">~</td><td>Status names shortened (pending vs pending_approval)</td></tr>
+          <tr><td style="color:var(--info);">+</td><td>Extra: interestedDrivers[], selectedDriverId, selectionExpiresAt, mediaURLs, notifyRadius</td></tr>
+          <tr><td style="color:var(--warning);">~</td><td>Chat keyed by chatId not deliveryId</td></tr>
+        </table>
+      </div>
+      <div class="card mt-sm">
+        <h4>Other Collections</h4>
+        <table>
+          <tr><td style="color:var(--success);">&#10003;</td><td>chats + messages subcollection</td></tr>
+          <tr><td style="color:var(--success);">&#10003;</td><td>ratings — implemented with moderation</td></tr>
+          <tr><td style="color:var(--success);">&#10003;</td><td>reports — 5 categories</td></tr>
+          <tr><td style="color:var(--success);">&#10003;</td><td>adminActions — audit trail</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">09 / 10</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAGE 10: RECOMMENDATIONS ═══════════════════════════════════════════ -->
+<div class="page" style="display: flex; flex-direction: column;">
+  <div class="page-logo"><div class="k">K</div></div>
+  <div class="label">Recommended Fix Priority</div>
+  <h2>4-Week Action Plan</h2>
+  <div class="divider"></div>
+
+  <div style="flex: 1;">
+    <div class="grid-2 mb-md">
+      <div class="card" style="border-top: 3px solid var(--error);">
+        <h4 style="color: var(--error);">Week 1 — Security (CRITICAL)</h4>
+        <ul>
+          <li>Remove status/driverId/interestedDrivers from Firestore rules</li>
+          <li>Delete purgeTestUsers endpoint</li>
+          <li>Delete direct Firestore writes in mobile screens</li>
+          <li>Delete dead services/deliveries.ts</li>
+          <li>Call assertDriverApproved in driver callables</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--warning);">
+        <h4 style="color: var(--warning);">Week 2 — SOW Gaps (P0)</h4>
+        <ul>
+          <li>Payment deep links (Bit/PayBox/bank)</li>
+          <li>updateDelivery + deleteDelivery callables</li>
+          <li>Privacy policy screen</li>
+          <li>Fix migration field name mismatches</li>
+          <li>Commit all code + update next-session.md</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card" style="border-top: 3px solid var(--info);">
+        <h4 style="color: var(--info);">Week 3 — Production Config (M4)</h4>
+        <ul>
+          <li>Production Firebase project + billing</li>
+          <li>iOS build + TestFlight</li>
+          <li>Play Store internal testing track</li>
+          <li>Remove firebase-admin from shared/</li>
+          <li>Per-screen ErrorBoundary wrappers</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--success);">
+        <h4 style="color: var(--success);">Week 4 — Store Submissions (M4)</h4>
+        <ul>
+          <li>App Store submission + review</li>
+          <li>Play Store production release</li>
+          <li>Client handover documentation</li>
+          <li>Analytics events (SOW Annex C)</li>
+          <li>Final QA round on production config</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card mt-md" style="background: var(--surface-2); text-align: center; padding: 24px;">
+      <div class="grid-4">
+        <div>
+          <div class="stat-num" style="color: var(--error);">16</div>
+          <div class="stat-label">Critical Issues</div>
+        </div>
+        <div>
+          <div class="stat-num" style="color: var(--warning);">28</div>
+          <div class="stat-label">High Issues</div>
+        </div>
+        <div>
+          <div class="stat-num" style="color: var(--success);">11</div>
+          <div class="stat-label">Perf Fixes Done</div>
+        </div>
+        <div>
+          <div class="stat-num" style="color: var(--accent);">4 wks</div>
+          <div class="stat-label">To Production</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; padding: 20px 0; border-top: 1px solid var(--surface-4);">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;">
+      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+        <span style="font-weight: 900; font-size: 16px; color: var(--black);">K</span>
+      </div>
+      <span style="font-size: 14px; font-weight: 700; color: var(--text-primary);">KAL Solutions Group</span>
+    </div>
+    <p style="font-size: 11px; color: var(--text-muted);">
+      kal.solutions &bull; admin@mooviz.co.il &bull; Project ID: MOOVIZ-2026
+    </p>
+  </div>
+
+  <div class="page-footer">MOOVIZ Full Project Audit &bull; KAL Solutions Group &bull; March 2026</div>
+  <div class="page-num">10 / 10</div>
+</div>
+
+</body>
+</html>

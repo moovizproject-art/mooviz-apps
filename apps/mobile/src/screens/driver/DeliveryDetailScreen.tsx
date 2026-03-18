@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 
 const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
@@ -181,13 +182,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     setLoadingSteps(['uploadingProof', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
     try {
       const url = await uploadProofPhoto(deliveryId, proofType, photoUri);
-      const newStatus = proofType === 'pickup' ? 'picked_up' : 'delivered';
-      const proofField = proofType === 'pickup' ? 'proof.pickupURL' : 'proof.deliveryURL';
-      await firestore().collection('deliveries').doc(deliveryId).update({
-        status: newStatus,
-        [proofField]: url,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      if (proofType === 'pickup') {
+        const fn = functions().httpsCallable('confirmPickup');
+        await fn({ deliveryId, pickupPhotoURL: url });
+      } else {
+        const fn = functions().httpsCallable('confirmDelivery');
+        await fn({ deliveryId, deliveryPhotoURL: url });
+      }
       setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
       carAlert.show(
         'success',

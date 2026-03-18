@@ -14,6 +14,25 @@ import { strings } from '../i18n/strings';
 const carImage = require('../assets/car.png');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+/**
+ * HOC that wraps a screen component with an ErrorBoundary.
+ * Use in navigator files to add per-screen error isolation.
+ */
+export function withErrorBoundary<P extends object>(
+  WrappedComponent: React.ComponentType<P>,
+  _screenName?: string,
+): React.FC<P> {
+  const ErrorBoundaryWrapper: React.FC<P> = (props: P) => (
+    <ErrorBoundary>
+      <WrappedComponent {...props} />
+    </ErrorBoundary>
+  );
+  ErrorBoundaryWrapper.displayName = `withErrorBoundary(${
+    WrappedComponent.displayName || WrappedComponent.name || 'Component'
+  })`;
+  return ErrorBoundaryWrapper;
+}
+
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallbackColors?: {

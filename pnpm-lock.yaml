@@ -264,10 +264,6 @@ importers:
         version: 5.9.3
 
   shared:
-    dependencies:
-      firebase-admin:
-        specifier: ^12.0.0
-        version: 12.7.0
     devDependencies:
       typescript:
         specifier: ^5.3.0
@@ -1994,7 +1990,7 @@ packages:
         optional: true
 
   '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    resolution: {integrity: sha512-pKmouZLzv2Ob4HpRPCnZScSB7hS8ydNdyZNO5JklRh26vR0xwVph0/3ZNgojx/sb3ORM2rhDV66e1jpfMmZWeA==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    resolution: {integrity: sha512-VPbvyhPy6pvq9z8wTh6p0E9g9h3+gNJdQSKg4dRDREO/WgtZIqZ6Kjnv7cav5enzjPSeluqguKSVMmDe7z0QAQ==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
     version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':
@@ -9662,12 +9658,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    dependencies:
-      firebase-admin: 12.7.0
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
+  '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

@@ -11,6 +11,7 @@ import {
   assertIsSender,
   assertIsDriver,
   assertUserRole,
+  assertDriverApproved,
 } from "../validators/statusValidator";
 import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
 import { getNearbyDriverTokensMultiLocation, encodeGeohash } from "../services/geohashService";
@@ -277,6 +278,7 @@ export const expressInterest = onCall(async (request) => {
   if (!uid) throw new HttpsError("unauthenticated", "Authentication required");
 
   const driverData = await assertUserRole(db, uid, "driver");
+  await assertDriverApproved(db, uid);
   const { deliveryId } = request.data;
   if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
 
@@ -727,6 +729,7 @@ export const confirmPickup = onCall(async (request) => {
   }
 
   await assertUserRole(db, uid, "driver");
+  await assertDriverApproved(db, uid);
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 
@@ -775,6 +778,7 @@ export const confirmDelivery = onCall(async (request) => {
   }
 
   await assertUserRole(db, uid, "driver");
+  await assertDriverApproved(db, uid);
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 

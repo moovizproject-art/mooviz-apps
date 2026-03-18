@@ -58,7 +58,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
-  const { getDeliveryById, isLoading, confirmPayment, selectDriver, cancelSelectedDriver } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
+  const { getDeliveryById, isLoading, confirmPayment, selectDriver, cancelSelectedDriver, cancelDelivery } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
   const delivery = getDeliveryById(deliveryId);
 
   const [driverProfile, setDriverProfile] = useState<any>(null);
@@ -775,11 +775,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               style: 'destructive',
               onPress: async () => {
                 try {
-                  await firestore().collection('deliveries').doc(delivery.id).update({
-                    status: 'cancelled',
-                    cancelledBy: currentUser?.uid,
-                    updatedAt: firestore.Timestamp.now(),
-                  });
+                  await cancelDelivery(delivery.id);
                 } catch (e: any) {
                   Alert.alert(strings.common.error.he, e.message);
                 }
