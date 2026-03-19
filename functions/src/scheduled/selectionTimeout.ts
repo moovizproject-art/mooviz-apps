@@ -15,7 +15,7 @@ export const selectionTimeout = onSchedule(
 
     const snapshot = await db
       .collection("deliveries")
-      .where("status", "==", "new")
+      .where("status", "==", "awaiting_confirm")
       .where("selectionExpiresAt", "<=", now)
       .limit(50)
       .get();
@@ -36,6 +36,13 @@ export const selectionTimeout = onSchedule(
         );
 
         await doc.ref.update({
+          status: "pending",
+          statusHistory: admin.firestore.FieldValue.arrayUnion({
+            status: "pending",
+            timestamp: now,
+            actor: "system",
+            note: "Driver selection timed out, reverted to pending",
+          }),
           interestedDrivers: updated,
           selectedDriverId: null,
           selectionExpiresAt: null,

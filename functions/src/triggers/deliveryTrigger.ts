@@ -259,15 +259,8 @@ export const onDeliveryUpdate = onDocumentUpdated(
       await handleStatusChange(deliveryId, before, after, change.after.ref);
     }
 
-    // Detect payment confirmation changes
-    const beforePayment = before.payment ?? { senderConfirmed: false, driverConfirmed: false };
-    const afterPayment = after.payment ?? { senderConfirmed: false, driverConfirmed: false };
-    if (
-      beforePayment.senderConfirmed !== afterPayment.senderConfirmed ||
-      beforePayment.driverConfirmed !== afterPayment.driverConfirmed
-    ) {
-      await handlePaymentConfirmation(deliveryId, after, change.after.ref);
-    }
+    // Payment confirmation handling moved to confirmPayment callable (v2 state machine).
+    // The callable now manages delivered → awaiting_payment → completed_paid transitions.
   }
 );
 
@@ -318,12 +311,14 @@ async function handleStatusChange(
   const chatId = (after as any).chatId as string | undefined;
   if (chatId) {
     const systemMessages: Record<string, string> = {
-      "pending": "\u{1F697} \u05E0\u05D4\u05D2 \u05D4\u05D1\u05D9\u05E2 \u05E2\u05E0\u05D9\u05D9\u05DF \u05D1\u05DE\u05E9\u05DC\u05D5\u05D7",
-      "waiting": "\u2705 \u05D4\u05E0\u05D4\u05D2 \u05D0\u05D5\u05E9\u05E8 \u05DC\u05DE\u05E9\u05DC\u05D5\u05D7",
-      "picked_up": "\u{1F4E6} \u05D4\u05E0\u05D4\u05D2 \u05D0\u05E1\u05E3 \u05D0\u05EA \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7",
-      "delivered": "\u{1F3E0} \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7 \u05D4\u05D2\u05D9\u05E2 \u05DC\u05D9\u05E2\u05D3",
-      "completed_paid": "\u{1F4B0} \u05D4\u05EA\u05E9\u05DC\u05D5\u05DD \u05D0\u05D5\u05E9\u05E8 \u05E2\u05DC \u05D9\u05D3\u05D9 \u05E9\u05E0\u05D9 \u05D4\u05E6\u05D3\u05D3\u05D9\u05DD",
-      "cancelled": "\u274C \u05D4\u05DE\u05E9\u05DC\u05D5\u05D7 \u05D1\u05D5\u05D8\u05DC",
+      "pending": "\u{1F697} נהג הביע עניין במשלוח",
+      "awaiting_confirm": "\u{1F446} השולח בחר נהג — ממתין לאישור הנהג",
+      "waiting_for_pickup": "\u2705 הנהג אושר למשלוח",
+      "picked_up": "\u{1F4E6} הנהג אסף את המשלוח",
+      "delivered": "\u{1F3E0} המשלוח הגיע ליעדו",
+      "awaiting_payment": "\u{1F4B3} צד אחד אישר תשלום — ממתין לצד השני",
+      "completed_paid": "\u{1F4B0} התשלום אושר על ידי שני הצדדים",
+      "cancelled": "\u274C המשלוח בוטל",
     };
     const systemMsg = systemMessages[newStatus];
     if (systemMsg) {
@@ -363,6 +358,13 @@ async function handleStatusChange(
           chatUpdate.chatCloseAt = closeAt;
           chatUpdate.closed = false;
         }
+        if (newStatus === "awaiting_payment") {
+          const closeAt = admin.firestore.Timestamp.fromMillis(
+            Date.now() + 48 * 60 * 60 * 1000 // 48 hours
+          );
+          chatUpdate.chatCloseAt = closeAt;
+          chatUpdate.closed = false;
+        }
         if (newStatus === "completed_paid") {
           const closeAt = admin.firestore.Timestamp.fromMillis(
             Date.now() + 20 * 60 * 1000 // 20 minutes
@@ -390,60 +392,5 @@ async function handleStatusChange(
   }
 }
 
-/**
- * Handle payment confirmation.
- * When both sender and driver confirm, transition to completed_paid.
- */
-async function handlePaymentConfirmation(
-  deliveryId: string,
-  delivery: Delivery,
-  ref: FirebaseFirestore.DocumentReference
-): Promise<void> {
-  const payment = delivery.payment ?? { senderConfirmed: false, driverConfirmed: false };
-  if (
-    payment.senderConfirmed &&
-    payment.driverConfirmed &&
-    delivery.status === "delivered"
-  ) {
-    console.log(
-      `Both parties confirmed payment for delivery ${deliveryId}, completing...`
-    );
-
-    // Use transaction to atomically check status and transition — prevents
-    // double-increment if trigger fires twice for the same payment change.
-    await db.runTransaction(async (txn) => {
-      const freshDoc = await txn.get(ref);
-      const freshData = freshDoc.data();
-      if (!freshData || freshData.status !== "delivered") {
-        console.log(`Delivery ${deliveryId} already transitioned (status=${freshData?.status}), skipping`);
-        return;
-      }
-
-      const now = admin.firestore.Timestamp.now();
-      const completionEntry: StatusEntry = {
-        status: "completed_paid",
-        timestamp: now,
-        actor: "system",
-        note: "Both parties confirmed payment",
-      };
-
-      txn.update(ref, {
-        status: "completed_paid" as DeliveryStatus,
-        statusHistory: admin.firestore.FieldValue.arrayUnion(completionEntry),
-        updatedAt: now,
-      });
-
-      // Update completed deliveries count for both users
-      if (freshData.senderId) {
-        txn.update(db.collection("users").doc(freshData.senderId), {
-          completedDeliveries: admin.firestore.FieldValue.increment(1),
-        });
-      }
-      if (freshData.driverId) {
-        txn.update(db.collection("users").doc(freshData.driverId), {
-          completedDeliveries: admin.firestore.FieldValue.increment(1),
-        });
-      }
-    });
-  }
-}
+// handlePaymentConfirmation removed — payment flow is now managed entirely by the
+// confirmPayment callable (v2 state machine: delivered → awaiting_payment → completed_paid).

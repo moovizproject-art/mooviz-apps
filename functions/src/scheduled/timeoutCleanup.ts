@@ -120,5 +120,64 @@ export const timeoutCleanup = onSchedule(
       `Timeout cleanup complete: ${totalProcessed} processed, ` +
         `${totalCancelled} cancelled, ${totalReverted} reverted to 'new'`
     );
+
+    // awaiting_payment timeout: 48h → send reminder; 72h → auto-complete
+    const awaitingPaymentQuery = db
+      .collection("deliveries")
+      .where("status", "==", "awaiting_payment")
+      .where("updatedAt", "<=", admin.firestore.Timestamp.fromMillis(
+        Date.now() - 48 * 60 * 60 * 1000
+      ));
+
+    const awaitingPaymentDocs = await awaitingPaymentQuery.get();
+    for (const doc of awaitingPaymentDocs.docs) {
+      const data = doc.data();
+      const updatedMs = data.updatedAt?.toMillis?.() ?? 0;
+      const hoursWaiting = Math.floor((Date.now() - updatedMs) / (60 * 60 * 1000));
+
+      if (hoursWaiting >= 72) {
+        const autoCompleteNow = admin.firestore.Timestamp.now();
+        await db.runTransaction(async (txn) => {
+          const fresh = await txn.get(doc.ref);
+          if (fresh.data()?.status !== "awaiting_payment") return;
+
+          txn.update(doc.ref, {
+            status: "completed_paid" as DeliveryStatus,
+            "payment.senderConfirmed": true,
+            "payment.driverConfirmed": true,
+            statusHistory: admin.firestore.FieldValue.arrayUnion({
+              status: "completed_paid",
+              timestamp: autoCompleteNow,
+              actor: "system",
+              note: `Auto-completed: payment awaiting for ${hoursWaiting}h`,
+            } as StatusEntry),
+            updatedAt: autoCompleteNow,
+          });
+
+          if (fresh.data()?.senderId) {
+            txn.update(db.collection("users").doc(fresh.data()!.senderId), {
+              completedDeliveries: admin.firestore.FieldValue.increment(1),
+            });
+          }
+          if (fresh.data()?.driverId) {
+            txn.update(db.collection("users").doc(fresh.data()!.driverId), {
+              completedDeliveries: admin.firestore.FieldValue.increment(1),
+            });
+          }
+        });
+        console.log(`[timeoutCleanup] Auto-completed ${doc.id} after ${hoursWaiting}h in awaiting_payment`);
+      } else {
+        // 48h+ but <72h: send reminder notification
+        try {
+          const { sendDeliveryNotification } = require("../services/notificationService");
+          await sendDeliveryNotification(doc.id, "payment_reminder", {
+            hoursWaiting: String(hoursWaiting),
+          });
+        } catch (err) {
+          console.error(`[timeoutCleanup] Payment reminder failed for ${doc.id}:`, err);
+        }
+        console.log(`[timeoutCleanup] Sent payment reminder for ${doc.id} (${hoursWaiting}h)`);
+      }
+    }
   }
 );
