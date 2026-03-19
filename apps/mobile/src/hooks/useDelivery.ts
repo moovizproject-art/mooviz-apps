@@ -157,6 +157,17 @@ interface UseDeliveryResult {
  * פעולות CRUD למשלוחים עם Firestore
  */
 export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
+  // Stabilize geohash range — only recompute when position changes significantly.
+  // GPS gives slightly different floats every tick (32.0815001 vs 32.0815002).
+  // Round to 4 decimal places (~11m precision) so minor drift doesn't cause
+  // useMemo → new query → Firestore re-subscribe → list flicker.
+  const stableLat = options?.nearLocation ? Math.round(options.nearLocation.latitude * 10000) / 10000 : 0;
+  const stableLng = options?.nearLocation ? Math.round(options.nearLocation.longitude * 10000) / 10000 : 0;
+  const geohashRange = useMemo(() => {
+    if (!stableLat || !stableLng || !options?.radiusKm) return undefined;
+    return getGeohashRange(stableLat, stableLng, options.radiusKm);
+  }, [stableLat, stableLng, options?.radiusKm]);
+
   // Build where clauses based on options
   const whereClauses = useMemo(() => {
     const clauses: [string, FirebaseFirestoreTypes.WhereFilterOp, unknown][] = [];
@@ -172,18 +183,13 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     }
 
     // Geohash-based proximity filter for driver feed
-    if (options?.nearLocation && options?.radiusKm) {
-      const { lower, upper } = getGeohashRange(
-        options.nearLocation.latitude,
-        options.nearLocation.longitude,
-        options.radiusKm,
-      );
-      clauses.push(['pickup.geohash', '>=', lower]);
-      clauses.push(['pickup.geohash', '<=', upper]);
+    if (geohashRange) {
+      clauses.push(['pickup.geohash', '>=', geohashRange.lower]);
+      clauses.push(['pickup.geohash', '<=', geohashRange.upper]);
     }
 
     return clauses.length > 0 ? clauses : undefined;
-  }, [options?.userId, options?.role, options?.statusFilter, options?.nearLocation, options?.radiusKm]);
+  }, [options?.userId, options?.role, options?.statusFilter, geohashRange]);
 
   // Skip server-side orderBy when using compound where clauses (driver feed)
   // to avoid requiring composite indexes — sort client-side instead
