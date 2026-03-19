@@ -1990,7 +1990,7 @@ packages:
         optional: true
 
   '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    resolution: {integrity: sha512-VPbvyhPy6pvq9z8wTh6p0E9g9h3+gNJdQSKg4dRDREO/WgtZIqZ6Kjnv7cav5enzjPSeluqguKSVMmDe7z0QAQ==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    resolution: {integrity: sha512-tWBIUKxOhoHNVsACHnr/WtMCtSRnPo3cCxX1d5vTqAal+7uE8vdffDaQCQMH4PMU/K30NGpHz9ZWmnrLUS5Pyw==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
     version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':

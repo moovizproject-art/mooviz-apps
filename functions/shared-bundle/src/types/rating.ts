@@ -1,4 +1,4 @@
-import { firestore } from "firebase-admin";
+import { Timestamp } from "./timestamp";
 
 export interface Rating {
   id?: string;
@@ -7,7 +7,7 @@ export interface Rating {
   toUserId: string;
   score: number; // 1-5
   comment?: string;
-  createdAt: firestore.Timestamp;
+  createdAt: Timestamp;
 }
 
 export interface RatingCreateData {

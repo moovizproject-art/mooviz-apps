@@ -1,4 +1,4 @@
-import { firestore } from "firebase-admin";
+import { Timestamp } from "./timestamp";
 
 export type ReportReason =
   | "inappropriate_behavior"
@@ -21,9 +21,9 @@ export interface Report {
   status: ReportStatus;
   adminNotes?: string;
   resolvedBy?: string;
-  resolvedAt?: firestore.Timestamp;
-  createdAt: firestore.Timestamp;
-  updatedAt: firestore.Timestamp;
+  resolvedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 export interface ReportCreateData {

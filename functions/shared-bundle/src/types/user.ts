@@ -1,4 +1,4 @@
-import { firestore } from "firebase-admin";
+import { Timestamp } from "./timestamp";
 
 export type UserRole = "sender" | "driver";
 export type ActiveMode = "client" | "driver";
@@ -37,8 +37,8 @@ export interface User {
   fcmTokens: string[];
   location: UserLocation;
   migratedFrom?: string;
-  createdAt: firestore.Timestamp;
-  updatedAt?: firestore.Timestamp;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface UserCreateData {
