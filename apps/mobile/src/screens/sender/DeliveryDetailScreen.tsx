@@ -248,8 +248,12 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   };
 
   const handleChat = () => {
+    if (!delivery.chatId) {
+      carAlert.show('info', '', 'הצ׳אט יהיה זמין לאחר אישור הנהג');
+      return;
+    }
     navigation.navigate('ChatRoom', {
-      chatId: delivery.chatId || '',
+      chatId: delivery.chatId,
       recipientName: driverName,
     });
   };
