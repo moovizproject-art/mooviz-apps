@@ -73,7 +73,7 @@ export function useStats(period?: Period) {
         ),
         getCountFromServer(query(usersRef, ...periodConstraints)),
         getCountFromServer(
-          query(usersRef, where('role', 'in', ['driver', 'both']), where('status', '==', 'active')),
+          query(usersRef, where('driverUnlocked', '==', true)),
         ),
         getCountFromServer(query(usersRef, where('kycStatus', '==', 'pending'))),
         getCountFromServer(query(reportsRef, where('status', '==', 'open'))),
