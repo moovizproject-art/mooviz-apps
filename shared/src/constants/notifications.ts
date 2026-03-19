@@ -11,7 +11,9 @@ export type NotificationEventType =
   | "driver_confirmed"
   | "driver_declined"
   | "selection_cancelled"
-  | "selection_timeout";
+  | "selection_timeout"
+  | "awaiting_payment_notify"
+  | "payment_reminder";
 
 export interface NotificationTemplate {
   event: NotificationEventType;
@@ -142,6 +144,24 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationEventType, NotificationT
     bodyEn: "Please select another driver from the list",
     recipient: "sender",
     dataKeys: ["deliveryId", "driverName"],
+  },
+  awaiting_payment_notify: {
+    event: "awaiting_payment_notify",
+    titleHe: "תורך לאשר תשלום",
+    titleEn: "Your Turn to Confirm Payment",
+    bodyHe: "הצד השני אישר את התשלום — אשר גם אתה כדי להשלים את המשלוח",
+    bodyEn: "The other party confirmed payment — confirm to complete the delivery",
+    recipient: "both",
+    dataKeys: ["deliveryId", "price"],
+  },
+  payment_reminder: {
+    event: "payment_reminder",
+    titleHe: "תזכורת: אשר תשלום",
+    titleEn: "Reminder: Confirm Payment",
+    bodyHe: "המשלוח ממתין לאישור תשלום שלך כבר {{hoursWaiting}} שעות",
+    bodyEn: "The delivery has been waiting for your payment confirmation for {{hoursWaiting}} hours",
+    recipient: "both",
+    dataKeys: ["deliveryId", "hoursWaiting"],
   },
 };
 
