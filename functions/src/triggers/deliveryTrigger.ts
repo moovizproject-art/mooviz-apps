@@ -230,17 +230,14 @@ export const onDeliveryUpdate = onDocumentUpdated(
     const before = change.before.data() as Delivery;
     const after = change.after.data() as Delivery;
 
-    // Normalize statusHistory if any entries have non-Timestamp values.
-    // We continue processing after normalization because the re-trigger from
-    // this write will have identical before/after for status and payment fields,
-    // so the guards below will correctly skip duplicate processing.
+    // Normalize statusHistory — only write if entries actually have string timestamps.
+    // Check BEFORE status processing to avoid a re-trigger loop.
     const rawHistory = (after as any).statusHistory;
+    let needsHistoryNormalization = false;
     if (Array.isArray(rawHistory) && rawHistory.some(
       (e: any) => e.timestamp && typeof e.timestamp === "string"
     )) {
-      await change.after.ref.update({
-        statusHistory: normalizeStatusHistory(rawHistory),
-      });
+      needsHistoryNormalization = true;
     }
 
     // Detect status change — validate transition server-side
@@ -257,6 +254,13 @@ export const onDeliveryUpdate = onDocumentUpdated(
         return;
       }
       await handleStatusChange(deliveryId, before, after, change.after.ref);
+    }
+
+    // Write history normalization AFTER status handling to batch into fewer writes
+    if (needsHistoryNormalization) {
+      await change.after.ref.update({
+        statusHistory: normalizeStatusHistory(rawHistory),
+      });
     }
 
     // Payment confirmation handling moved to confirmPayment callable (v2 state machine).

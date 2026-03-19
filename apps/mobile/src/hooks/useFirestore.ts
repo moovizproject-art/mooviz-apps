@@ -99,7 +99,15 @@ export function useFirestore<T extends { id: string }>({
       const unsubscribe = query.onSnapshot(
         (snapshot) => {
           const docs = snapshot.docs.map(transformFn);
-          setData(docs);
+          // Skip state update if no docs actually changed — prevents FlatList flicker
+          // from rapid Firestore writes (trigger normalization, status + chat updates).
+          setData((prev) => {
+            if (prev.length !== docs.length) return docs;
+            // Quick fingerprint: compare IDs + status + updatedAt
+            const fingerprint = (items: T[]) =>
+              items.map((d: any) => `${d.id}:${d.status || ''}:${d.updatedAt?._seconds || d.updatedAt || ''}`).join('|');
+            return fingerprint(prev) === fingerprint(docs) ? prev : docs;
+          });
           setIsLoading(false);
         },
         (err) => {
