@@ -247,13 +247,39 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     Linking.openURL(url).catch(() => {});
   };
 
-  const handleChat = () => {
-    if (!delivery.chatId) {
+  const handleChat = async () => {
+    let chatIdToUse = delivery.chatId;
+
+    // If chatId missing but driver assigned, create chat on-the-fly
+    if (!chatIdToUse && delivery.driverId && currentUser?.uid) {
+      try {
+        const chatRef = firestore().collection('chats').doc();
+        await chatRef.set({
+          deliveryId: delivery.id,
+          participants: [currentUser.uid, delivery.driverId],
+          senderName: currentUser.fullName || '',
+          driverName: driverName || '',
+          lastMessage: '',
+          createdAt: firestore.FieldValue.serverTimestamp(),
+        });
+        // Stamp chatId on the delivery doc
+        await firestore().collection('deliveries').doc(delivery.id).update({
+          chatId: chatRef.id,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+        chatIdToUse = chatRef.id;
+      } catch {
+        carAlert.show('error', '', 'שגיאה ביצירת צ׳אט');
+        return;
+      }
+    }
+
+    if (!chatIdToUse) {
       carAlert.show('info', '', 'הצ׳אט יהיה זמין לאחר אישור הנהג');
       return;
     }
     navigation.navigate('ChatRoom', {
-      chatId: delivery.chatId,
+      chatId: chatIdToUse,
       recipientName: driverName,
     });
   };
