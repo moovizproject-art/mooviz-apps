@@ -129,7 +129,7 @@ export function useDeliveryTimings(period: Period) {
 
         const created = data.createdAt?.toMillis?.() ?? times['new'];
         const pending = times['pending'];
-        const waiting = times['waiting'];
+        const waitingForPickup = times['waiting_for_pickup'];
         const pickedUp = times['picked_up'];
         const delivered = times['delivered'];
 
@@ -143,7 +143,7 @@ export function useDeliveryTimings(period: Period) {
         }
         const rd = regionData.get(region)!;
 
-        const approvalTime = pending || waiting;
+        const approvalTime = pending || waitingForPickup;
         if (approvalTime) rd.postToApproval.push((approvalTime - created) / 60000);
         if (approvalTime && pickedUp) rd.approvalToPickup.push((pickedUp - approvalTime) / 60000);
         if (pickedUp && delivered) rd.pickupToDelivery.push((delivered - pickedUp) / 60000);

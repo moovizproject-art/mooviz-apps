@@ -18,11 +18,13 @@ import { db } from './firebase';
 export type DeliveryStatus =
   | 'new'
   | 'pending'
-  | 'waiting'
+  | 'awaiting_confirm'
+  | 'waiting_for_pickup'
   | 'picked_up'
   | 'delivered'
-  | 'cancelled'
-  | 'completed_paid';
+  | 'awaiting_payment'
+  | 'completed_paid'
+  | 'cancelled';
 
 export interface GeoPoint {
   latitude: number;

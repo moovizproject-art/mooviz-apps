@@ -50,7 +50,7 @@ function mapHebrewStatus(hebrewStatus: string): string {
   const statusMap: Record<string, string> = {
     '\u05D7\u05D3\u05E9': 'new',
     '\u05DE\u05DE\u05EA\u05D9\u05DF \u05DC\u05D0\u05D9\u05E9\u05D5\u05E8': 'pending',
-    '\u05DE\u05DE\u05EA\u05D9\u05DF \u05DC\u05D0\u05D9\u05E1\u05D5\u05E3': 'waiting',
+    '\u05DE\u05DE\u05EA\u05D9\u05DF \u05DC\u05D0\u05D9\u05E1\u05D5\u05E3': 'waiting_for_pickup',
     '\u05E0\u05D0\u05E1\u05E3': 'picked_up',
     '\u05D4\u05DE\u05E9\u05DC\u05D5\u05D7 \u05E0\u05DE\u05E1\u05E8': 'delivered',
     '\u05E0\u05DE\u05E1\u05E8': 'delivered',

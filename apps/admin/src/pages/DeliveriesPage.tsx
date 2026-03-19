@@ -163,9 +163,11 @@ export default function DeliveriesPage() {
             <option value="">{t('deliveries.all')}</option>
             <option value="new">{t('deliveries.new')}</option>
             <option value="pending">{t('deliveries.pending')}</option>
-            <option value="waiting">{t('deliveries.waiting')}</option>
+            <option value="awaiting_confirm">{t('deliveries.awaitingConfirm')}</option>
+            <option value="waiting_for_pickup">{t('deliveries.waitingForPickup')}</option>
             <option value="picked_up">{t('deliveries.pickedUp')}</option>
             <option value="delivered">{t('deliveries.delivered')}</option>
+            <option value="awaiting_payment">{t('deliveries.awaitingPayment')}</option>
             <option value="completed_paid">{t('deliveries.completed')}</option>
             <option value="cancelled">{t('deliveries.cancelled')}</option>
           </select>

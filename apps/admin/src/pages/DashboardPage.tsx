@@ -38,9 +38,11 @@ import { Area, AreaChart } from 'recharts';
 const STATUS_COLORS: Record<string, string> = {
   new: '#3B82F6',
   pending: '#6366F1',
-  waiting: '#8B5CF6',
+  awaiting_confirm: '#FF6F00',
+  waiting_for_pickup: '#8B5CF6',
   picked_up: '#F59E0B',
   delivered: '#22C55E',
+  awaiting_payment: '#F57C00',
   completed_paid: '#10B981',
   cancelled: '#9CA3AF',
 };

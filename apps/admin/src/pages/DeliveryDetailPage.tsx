@@ -15,7 +15,7 @@ import {
 } from '../services/deliveries';
 
 const ALL_STATUSES: DeliveryStatus[] = [
-  'new', 'pending', 'waiting', 'picked_up', 'delivered', 'completed_paid', 'cancelled',
+  'new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered', 'awaiting_payment', 'completed_paid', 'cancelled',
 ];
 
 export default function DeliveryDetailPage() {

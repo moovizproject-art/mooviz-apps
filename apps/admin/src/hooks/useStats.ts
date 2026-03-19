@@ -69,7 +69,7 @@ export function useStats(period?: Period) {
       ] = await Promise.all([
         getCountFromServer(query(deliveriesRef, ...periodConstraints)),
         getCountFromServer(
-          query(deliveriesRef, where('status', 'in', ['new', 'pending', 'waiting', 'picked_up']), ...periodConstraints),
+          query(deliveriesRef, where('status', 'in', ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'awaiting_payment']), ...periodConstraints),
         ),
         getCountFromServer(query(usersRef, ...periodConstraints)),
         getCountFromServer(
@@ -139,7 +139,7 @@ export function useStatusDistribution(period?: Period) {
   return useQuery<StatusDistribution[]>({
     queryKey: ['status-distribution', period ?? 'all'],
     queryFn: async () => {
-      const statuses = ['new', 'pending', 'waiting', 'picked_up', 'delivered', 'completed_paid', 'cancelled'];
+      const statuses = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered', 'awaiting_payment', 'completed_paid', 'cancelled'];
       const deliveriesRef = collection(db, 'deliveries');
 
       // If period is provided and not 'all', filter by createdAt
