@@ -116,6 +116,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       const result = await launchImageLibrary({
         mediaType: 'photo',
         quality: 0.7,
+        maxWidth: 1920,
+        maxHeight: 1920,
         selectionLimit: maxNew,
       });
       if (!result.didCancel && result.assets) {
@@ -149,6 +151,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       const result = await launchCamera({
         mediaType: 'photo',
         quality: 0.7,
+        maxWidth: 1920,
+        maxHeight: 1920,
         saveToPhotos: false,
       });
       if (!result.didCancel && result.assets?.[0]?.uri) {

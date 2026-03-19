@@ -151,6 +151,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       const result = await launchImageLibrary({
         mediaType: type,
         quality: 0.7,
+        maxWidth: 1920,
+        maxHeight: 1920,
         selectionLimit: type === 'photo' ? maxNew : 1,
       });
       if (result.didCancel || !result.assets?.length) return;
