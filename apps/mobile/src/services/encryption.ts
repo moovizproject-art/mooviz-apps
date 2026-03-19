@@ -9,7 +9,7 @@
  *
  * Authorization for photos:
  * - Owner: always sees own photo
- * - Matched driver: sees sender photo only after delivery status >= 'waiting'
+ * - Matched driver: sees sender photo only after delivery status >= 'waiting_for_pickup'
  * - Before matching: silhouette (AvatarCircle initials)
  */
 

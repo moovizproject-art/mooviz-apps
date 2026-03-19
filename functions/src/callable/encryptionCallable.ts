@@ -126,7 +126,7 @@ export const uploadProfilePhoto = onCall(async (request) => {
  * Authorization rules:
  * 1. Owner — always allowed
  * 2. Matched driver — delivery exists where senderId == targetUser
- *    AND driverId == caller AND status >= 'waiting'
+ *    AND driverId == caller AND status >= 'waiting_for_pickup'
  * 3. Admin — always allowed
  *
  * Before matching, drivers see a silhouette (client handles this
@@ -167,9 +167,11 @@ export const getAuthorizedPhoto = onCall(async (request) => {
       .where("driverId", "==", callerUid)
       .where("senderId", "==", targetUserId)
       .where("status", "in", [
-        "waiting",
+        "awaiting_confirm",
+        "waiting_for_pickup",
         "picked_up",
         "delivered",
+        "awaiting_payment",
         "completed_paid",
       ])
       .limit(1)
@@ -187,9 +189,11 @@ export const getAuthorizedPhoto = onCall(async (request) => {
       .where("senderId", "==", callerUid)
       .where("driverId", "==", targetUserId)
       .where("status", "in", [
-        "waiting",
+        "awaiting_confirm",
+        "waiting_for_pickup",
         "picked_up",
         "delivered",
+        "awaiting_payment",
         "completed_paid",
       ])
       .limit(1)
