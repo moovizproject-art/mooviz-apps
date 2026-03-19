@@ -419,17 +419,18 @@ export const strings = {
   status: {
     new: { he: 'חדש', en: 'New' } as LocaleStrings,
     pending: { he: 'ממתין לאישור', en: 'Pending approval' } as LocaleStrings,
-    waiting: { he: 'ממתין לאיסוף', en: 'Waiting for pickup' } as LocaleStrings,
-    matched: { he: 'ממתין', en: 'Matched' } as LocaleStrings,
+    awaitingConfirm: { he: 'ממתין לאישור נהג', en: 'Awaiting driver confirmation' } as LocaleStrings,
+    waitingForPickup: { he: 'ממתין לאיסוף', en: 'Waiting for pickup' } as LocaleStrings,
     pickedUp: { he: 'נאסף', en: 'Picked up' } as LocaleStrings,
-    inTransit: { he: 'בדרך', en: 'In transit' } as LocaleStrings,
     delivered: { he: 'נמסר', en: 'Delivered' } as LocaleStrings,
-    cancelled: { he: 'בוטל', en: 'Cancelled' } as LocaleStrings,
+    awaitingPayment: { he: 'ממתין לתשלום', en: 'Awaiting payment' } as LocaleStrings,
     completedPaid: { he: 'הושלם ושולם', en: 'Completed & paid' } as LocaleStrings,
-    // Sender timeline labels (shorter form)
+    cancelled: { he: 'בוטל', en: 'Cancelled' } as LocaleStrings,
     waitingForDriver: { he: 'ממתין לנהג', en: 'Waiting for driver' } as LocaleStrings,
     driverInterested: { he: 'נהג מעוניין', en: 'Driver interested' } as LocaleStrings,
     approved: { he: 'אושר', en: 'Approved' } as LocaleStrings,
+    yourTurnToConfirm: { he: 'תורך לאשר תשלום', en: 'Your turn to confirm payment' } as LocaleStrings,
+    otherPartyConfirmed: { he: 'הצד השני אישר — ממתין לאישורך', en: 'Other party confirmed — waiting for yours' } as LocaleStrings,
   },
 
   // ── Rating ──

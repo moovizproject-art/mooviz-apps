@@ -1,7 +1,7 @@
 /**
  * Status Configuration — תצורת סטטוסים
  * Display configuration for each DeliveryStatus (label, color, icon).
- * Canonical state machine: new → pending → waiting → picked_up → delivered → completed_paid | cancelled
+ * Canonical state machine: new → pending → awaiting_confirm → waiting_for_pickup → picked_up → delivered → awaiting_payment → completed_paid | cancelled
  */
 
 import { COLORS } from './colors';
@@ -22,7 +22,7 @@ interface StatusDisplayConfig {
 
 /**
  * Status display config per delivery status.
- * Matches canonical 7-status state machine used by Cloud Functions and Firestore.
+ * Matches canonical 9-status state machine used by Cloud Functions and Firestore.
  */
 export const STATUS_CONFIG: Record<DeliveryStatus, StatusDisplayConfig> = {
   new: {
@@ -39,12 +39,19 @@ export const STATUS_CONFIG: Record<DeliveryStatus, StatusDisplayConfig> = {
     icon: '\u23F3',              // hourglass
     description: 'Waiting for sender approval',
   },
-  waiting: {
-    label: 'ממתין לאיסוף',       // Waiting for pickup
-    color: '#7C3AED',           // purple
+  awaiting_confirm: {
+    label: 'ממתין לאישור נהג',
+    color: '#FF6F00',
+    bgColor: '#FFF3E0',
+    icon: '\u23F3',              // hourglass
+    description: 'Sender selected driver, waiting for confirmation',
+  },
+  waiting_for_pickup: {
+    label: 'ממתין לאיסוף',
+    color: '#7C3AED',
     bgColor: '#EDE9FE',
     icon: '\u{1F91D}',          // handshake
-    description: 'Approved, waiting for driver pickup',
+    description: 'Driver confirmed, waiting for pickup',
   },
   picked_up: {
     label: 'נאסף',              // Picked up
@@ -59,6 +66,13 @@ export const STATUS_CONFIG: Record<DeliveryStatus, StatusDisplayConfig> = {
     bgColor: COLORS.successBg,
     icon: '\u2705',              // check mark
     description: 'Successfully delivered',
+  },
+  awaiting_payment: {
+    label: 'ממתין לתשלום',
+    color: '#F57C00',
+    bgColor: '#FFF3E0',
+    icon: '\u{1F4B3}',          // credit card
+    description: 'One party confirmed payment, waiting for other',
   },
   completed_paid: {
     label: 'הושלם ושולם',       // Completed & paid
@@ -90,9 +104,11 @@ export function getStatusConfig(status: string): StatusDisplayConfig {
 export const STATUS_TIMELINE_ORDER: DeliveryStatus[] = [
   'new',
   'pending',
-  'waiting',
+  'awaiting_confirm',
+  'waiting_for_pickup',
   'picked_up',
   'delivered',
+  'awaiting_payment',
   'completed_paid',
 ];
 

@@ -9,27 +9,27 @@ import { useI18n } from '../i18n/I18nContext';
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../constants/design';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  new: { bg: '#E3F2FD', text: '#1565C0' },
-  pending: { bg: '#FFF3E0', text: '#E65100' },
-  waiting: { bg: '#F3E5F5', text: '#7B1FA2' },
-  matched: { bg: '#FFF3E0', text: '#E65100' },
-  picked_up: { bg: '#E0F7FA', text: '#00838F' },
-  in_transit: { bg: '#E3F2FD', text: '#1A73E8' },
-  delivered: { bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { bg: '#FFEBEE', text: '#C62828' },
-  completed_paid: { bg: '#E8F5E9', text: '#1B5E20' },
+  new:                { bg: '#E3F2FD', text: '#1565C0' },
+  pending:            { bg: '#FFF3E0', text: '#E65100' },
+  awaiting_confirm:   { bg: '#FFF3E0', text: '#FF6F00' },
+  waiting_for_pickup: { bg: '#F3E5F5', text: '#7B1FA2' },
+  picked_up:          { bg: '#E0F7FA', text: '#00838F' },
+  delivered:          { bg: '#E8F5E9', text: '#2E7D32' },
+  awaiting_payment:   { bg: '#FFF3E0', text: '#F57C00' },
+  completed_paid:     { bg: '#E8F5E9', text: '#1B5E20' },
+  cancelled:          { bg: '#FFEBEE', text: '#C62828' },
 };
 
 const STATUS_I18N_KEYS: Record<string, string> = {
-  new: 'status.new',
-  pending: 'status.pending',
-  waiting: 'status.waiting',
-  matched: 'status.matched',
-  picked_up: 'status.pickedUp',
-  in_transit: 'status.inTransit',
-  delivered: 'status.delivered',
-  cancelled: 'status.cancelled',
-  completed_paid: 'status.completedPaid',
+  new:                'status.new',
+  pending:            'status.pending',
+  awaiting_confirm:   'status.awaitingConfirm',
+  waiting_for_pickup: 'status.waitingForPickup',
+  picked_up:          'status.pickedUp',
+  delivered:          'status.delivered',
+  awaiting_payment:   'status.awaitingPayment',
+  completed_paid:     'status.completedPaid',
+  cancelled:          'status.cancelled',
 };
 
 interface StatusIndicatorProps {
