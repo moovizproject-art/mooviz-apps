@@ -31,14 +31,8 @@ export function EmailVerificationScreen(): React.JSX.Element {
   const [checking, setChecking] = useState(false);
   const alert = useCarAlert();
 
-  // Send verification email on mount
-  useEffect(() => {
-    const user = auth().currentUser;
-    if (user && !user.emailVerified) {
-      user.sendEmailVerification().catch(() => {});
-      setResendTimer(RESEND_COOLDOWN);
-    }
-  }, []);
+  // Don't auto-send on mount — user clicks "Resend" button manually
+  // This prevents Firebase rate limiting (too many requests in short time)
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -48,6 +42,7 @@ export function EmailVerificationScreen(): React.JSX.Element {
 
   const handleResend = useCallback(async () => {
     try {
+      auth().languageCode = 'he';
       await auth().currentUser?.sendEmailVerification();
       setResendTimer(RESEND_COOLDOWN);
       alert.show('success', t('common.success'), t('auth.emailVerificationSent'));

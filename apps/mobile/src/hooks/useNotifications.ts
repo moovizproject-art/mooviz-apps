@@ -435,12 +435,49 @@ function handleNotificationNavigation(data?: Record<string, string>): void {
         navigateFromNotification(screen, { deliveryId });
       }
       break;
+    case 'new_listing_nearby':
+      // Driver taps a "new delivery nearby" notification
+      if (deliveryId) {
+        console.log('[Nav] Navigate to driver delivery (new listing):', deliveryId);
+        navigateFromNotification('DriverDeliveryDetail', { deliveryId });
+      }
+      break;
+    case 'driver_confirmed':
+      // Sender gets notified that driver confirmed selection
+      if (deliveryId) {
+        console.log('[Nav] Navigate to sender delivery (driver confirmed):', deliveryId);
+        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+      }
+      break;
+    case 'driver_declined':
+    case 'selection_timeout':
+      // Sender needs to pick another driver
+      if (deliveryId) {
+        console.log('[Nav] Navigate to sender delivery (select new driver):', deliveryId);
+        navigateFromNotification('SenderDeliveryDetail', { deliveryId });
+      }
+      break;
+    case 'selection_cancelled':
+      // Driver gets notified that sender cancelled selection
+      if (deliveryId) {
+        console.log('[Nav] Navigate to driver delivery (selection cancelled):', deliveryId);
+        navigateFromNotification('DriverDeliveryDetail', { deliveryId });
+      }
+      break;
     case 'kyc_approved':
     case 'kyc_rejected':
       console.log('[Nav] KYC status notification:', event);
       // No navigation needed — profile screen refreshes on focus
       break;
     default:
-      console.log('[Nav] Unknown notification event:', event);
+      // Fallback: if deliveryId exists, try routing by recipientRole
+      if (deliveryId) {
+        const fallbackRole = data.recipientRole;
+        const fallbackScreen = fallbackRole === 'driver' ? 'DriverDeliveryDetail' : 'SenderDeliveryDetail';
+        console.log('[Nav] Fallback navigation for event:', event, '→', fallbackScreen);
+        navigateFromNotification(fallbackScreen, { deliveryId });
+      } else {
+        console.log('[Nav] Unknown notification event, no deliveryId:', event);
+      }
   }
 }

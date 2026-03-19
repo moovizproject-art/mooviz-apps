@@ -243,8 +243,19 @@ export const onDeliveryUpdate = onDocumentUpdated(
       });
     }
 
-    // Detect status change
+    // Detect status change — validate transition server-side
     if (before.status !== after.status) {
+      // validateStatusTransition checks both allowed transitions and actor roles
+      // Using "system" role here since we can't determine actor from trigger context
+      const isValid = validateStatusTransition(before.status, after.status, "system");
+      if (!isValid) {
+        // REVERT invalid transition — defense against direct client writes
+        console.warn(
+          `[onDeliveryUpdate] REVERTED invalid transition ${before.status} → ${after.status} on ${deliveryId}`
+        );
+        await change.after.ref.update({ status: before.status });
+        return;
+      }
       await handleStatusChange(deliveryId, before, after, change.after.ref);
     }
 

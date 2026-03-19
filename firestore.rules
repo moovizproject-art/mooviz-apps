@@ -37,17 +37,21 @@ service cloud.firestore {
     }
 
     // Allowed fields for delivery sender updates
-    // NOTE: status, driverId, interestedDrivers REMOVED — must go through Cloud Functions
+    // NOTE: driverId, interestedDrivers REMOVED — must go through Cloud Functions
+    // TEMPORARY: status kept for backward compat with old APKs (v1.0.6 and below)
+    // TODO: Remove status after all users upgrade to v1.0.7+
     function allowedSenderDeliveryFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['payment', 'cancelledBy', 'updatedAt', 'proof', 'mediaURLs', 'photoUrl']);
+        .hasOnly(['status', 'payment', 'cancelledBy', 'updatedAt', 'proof', 'mediaURLs', 'photoUrl']);
     }
 
     // Allowed fields for delivery driver updates
-    // NOTE: status, interestedDrivers REMOVED — must go through Cloud Functions
+    // NOTE: interestedDrivers REMOVED — must go through Cloud Functions
+    // TEMPORARY: status kept for backward compat with old APKs (v1.0.6 and below)
+    // TODO: Remove status after all users upgrade to v1.0.7+
     function allowedDriverDeliveryFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['payment', 'proof', 'updatedAt']);
+        .hasOnly(['status', 'payment', 'proof', 'updatedAt']);
     }
 
     // Restrict role to sender/driver only (no admin self-promotion)

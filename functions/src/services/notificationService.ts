@@ -147,8 +147,8 @@ export async function sendDeliveryNotification(
   // Build template values
   const values: Record<string, string> = {
     deliveryId,
-    pickupCity: delivery.pickup?.city ?? "",
-    destinationCity: delivery.destination?.city ?? "",
+    pickupCity: delivery.pickup?.city || delivery.pickup?.address?.split(",")[0] || "",
+    destinationCity: delivery.destination?.city || delivery.destination?.address?.split(",")[0] || "",
     price: String(delivery.price ?? 0),
     ...extraData,
   };
