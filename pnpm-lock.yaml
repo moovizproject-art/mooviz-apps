@@ -229,7 +229,7 @@ importers:
   functions:
     dependencies:
       '@mooviz/shared':
-        specifier: file:./mooviz-shared-1.0.0.tgz
+        specifier: file:mooviz-shared-1.0.0.tgz
         version: file:functions/mooviz-shared-1.0.0.tgz
       firebase-admin:
         specifier: ^12.0.0
@@ -1990,7 +1990,7 @@ packages:
         optional: true
 
   '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    resolution: {integrity: sha512-tWBIUKxOhoHNVsACHnr/WtMCtSRnPo3cCxX1d5vTqAal+7uE8vdffDaQCQMH4PMU/K30NGpHz9ZWmnrLUS5Pyw==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    resolution: {integrity: sha512-G7PpOsTc5ODjEomCSpbJvDadZ19o1PNzl0DMS1VqV2LQOTpVMHpb6YNrSWJbiGvWeWCrcQwdZwZaYZjYBYOmDw==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
     version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':

@@ -148,7 +148,7 @@ export const createDelivery = onCall(async (request) => {
   // Reject if sender already has an active delivery with same pickup+destination geohash
   const recentDupes = await db.collection("deliveries")
     .where("senderId", "==", uid)
-    .where("status", "in", ["new", "pending", "waiting"])
+    .where("status", "in", ["new", "pending", "awaiting_confirm", "waiting_for_pickup"])
     .where("pickup.geohash", "==", pickupGeohash)
     .where("destination.geohash", "==", destGeohash)
     .limit(1)
@@ -383,7 +383,7 @@ export const selectDriver = onCall(async (request) => {
     const freshDoc = await txn.get(ref);
     const freshData = freshDoc.data()!;
 
-    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס חדש");
+    if (!["new", "pending"].includes(freshData.status)) throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס חדש או ממתין");
     if (freshData.selectedDriverId) throw new HttpsError("failed-precondition", "נהג אחר כבר נבחר, המתן או בטל");
 
     const interested: any[] = freshData.interestedDrivers || [];
@@ -394,9 +394,16 @@ export const selectDriver = onCall(async (request) => {
     const now = admin.firestore.Timestamp.now();
 
     txn.update(ref, {
+      status: "awaiting_confirm",
       interestedDrivers: updated,
       selectedDriverId: driverUid,
       selectionExpiresAt: admin.firestore.Timestamp.fromMillis(now.toMillis() + SELECTION_TIMEOUT_MS),
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: "awaiting_confirm",
+        timestamp: now,
+        actor: uid,
+        note: "Sender selected driver, waiting for confirmation",
+      }),
       updatedAt: now,
     });
   });
@@ -410,7 +417,7 @@ export const selectDriver = onCall(async (request) => {
 
 /**
  * Selected driver confirms the assignment.
- * Transitions: new -> waiting. Creates a chat room.
+ * Transitions: awaiting_confirm -> waiting_for_pickup. Creates a chat room.
  */
 export const confirmSelection = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -429,7 +436,7 @@ export const confirmSelection = onCall(async (request) => {
     const freshData = freshDoc.data()!;
     senderId = freshData.senderId;
 
-    if (freshData.status !== "new") throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס חדש");
+    if (freshData.status !== "awaiting_confirm") throw new HttpsError("failed-precondition", "המשלוח חייב להיות בסטטוס ממתין לאישור");
     if (freshData.selectedDriverId !== uid) throw new HttpsError("permission-denied", "אתה לא הנהג שנבחר");
 
     const expiresAt = freshData.selectionExpiresAt;
@@ -455,7 +462,7 @@ export const confirmSelection = onCall(async (request) => {
     });
 
     txn.update(ref, {
-      status: "waiting",
+      status: "waiting_for_pickup",
       driverId: uid,
       driverName: driverEntry?.name || "",
       driverPhotoUrl: driverEntry?.photoUrl || null,
@@ -465,7 +472,7 @@ export const confirmSelection = onCall(async (request) => {
       selectionExpiresAt: null,
       chatId: chatRef.id,
       statusHistory: admin.firestore.FieldValue.arrayUnion({
-        status: "waiting",
+        status: "waiting_for_pickup",
         timestamp: now,
         actor: uid,
         note: "Driver confirmed selection",
@@ -522,8 +529,8 @@ export const declineSelection = onCall(async (request) => {
 });
 
 /**
- * Sender cancels a driver after the delivery entered 'waiting' status.
- * Reverts delivery back to 'new' so other drivers can be selected.
+ * Sender cancels a selected or confirmed driver.
+ * Reverts delivery back to 'pending' so other drivers can be selected.
  */
 export const cancelSelectedDriver = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -544,26 +551,33 @@ export const cancelSelectedDriver = onCall(async (request) => {
     const now = admin.firestore.Timestamp.now();
     const interested: any[] = freshData.interestedDrivers || [];
 
-    if (freshData.status === "new" && freshData.selectedDriverId) {
+    if (freshData.status === "awaiting_confirm" && freshData.selectedDriverId) {
       // Case 1: Cancel pending selection (driver hasn't confirmed yet)
       cancelledDriverId = freshData.selectedDriverId;
       const updated = interested.map((d: any) =>
         d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
       );
       txn.update(ref, {
+        status: "pending",
         interestedDrivers: updated,
         selectedDriverId: null,
         selectionExpiresAt: null,
+        statusHistory: admin.firestore.FieldValue.arrayUnion({
+          status: "pending",
+          timestamp: now,
+          actor: uid,
+          note: "Sender cancelled pending selection, reverted to pending",
+        }),
         updatedAt: now,
       });
-    } else if (freshData.status === "waiting" && freshData.driverId) {
-      // Case 2: Cancel confirmed driver (revert waiting → new)
+    } else if (freshData.status === "waiting_for_pickup" && freshData.driverId) {
+      // Case 2: Cancel confirmed driver (revert waiting_for_pickup → pending)
       cancelledDriverId = freshData.driverId;
       const updated = interested.map((d: any) =>
         d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
       );
       txn.update(ref, {
-        status: "new",
+        status: "pending",
         driverId: null,
         driverName: null,
         driverPhotoUrl: null,
@@ -572,10 +586,10 @@ export const cancelSelectedDriver = onCall(async (request) => {
         selectedDriverId: null,
         selectionExpiresAt: null,
         statusHistory: admin.firestore.FieldValue.arrayUnion({
-          status: "new",
+          status: "pending",
           timestamp: now,
           actor: uid,
-          note: "Sender cancelled selected driver, reverted to new",
+          note: "Sender cancelled confirmed driver, reverted to pending",
         }),
         updatedAt: now,
       });
@@ -629,7 +643,7 @@ export const withdrawFromInterest = onCall(async (request) => {
 
 /**
  * Sender approves a driver for a delivery.
- * Transitions: pending -> waiting
+ * Transitions: pending -> waiting_for_pickup
  * Creates a chat room between sender and driver.
  * Denormalizes sender info onto the delivery document.
  */
@@ -649,7 +663,7 @@ export const approveDriver = onCall(async (request) => {
   assertIsSender(delivery.senderId, uid);
 
   // Validate transition
-  assertValidTransition(delivery.status, "waiting", "sender", uid);
+  assertValidTransition(delivery.status, "waiting_for_pickup", "sender", uid);
 
   if (!delivery.driverId) {
     throw new HttpsError(
@@ -689,7 +703,7 @@ export const approveDriver = onCall(async (request) => {
 
   await updateDeliveryStatus(
     ref,
-    "waiting",
+    "waiting_for_pickup",
     uid,
     "Sender approved driver",
     {
@@ -808,7 +822,8 @@ export const confirmDelivery = onCall(async (request) => {
 
 /**
  * Either party confirms payment has been sent/received.
- * When both confirm, system triggers: delivered -> completed_paid (handled in trigger).
+ * First confirm: delivered -> awaiting_payment
+ * Second confirm: awaiting_payment -> completed_paid
  */
 export const confirmPayment = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -817,17 +832,16 @@ export const confirmPayment = onCall(async (request) => {
   }
 
   const { deliveryId, paymentPhotoURL } = request.data;
-
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 
-  if (delivery.status !== "delivered") {
+  // Allow payment confirmation in both delivered and awaiting_payment
+  if (delivery.status !== "delivered" && delivery.status !== "awaiting_payment") {
     throw new HttpsError(
       "failed-precondition",
-      "Payment can only be confirmed when delivery status is 'delivered'"
+      "Payment can only be confirmed when status is 'delivered' or 'awaiting_payment'"
     );
   }
 
-  // Determine if the caller is the sender or driver
   const isSender = delivery.senderId === uid;
   const isDriver = delivery.driverId === uid;
 
@@ -838,33 +852,24 @@ export const confirmPayment = onCall(async (request) => {
     );
   }
 
-  const updateData: Record<string, unknown> = {
-    updatedAt: admin.firestore.Timestamp.now(),
-  };
-
-  if (isSender) {
-    if (delivery.payment.senderConfirmed) {
-      throw new HttpsError(
-        "already-exists",
-        "Sender has already confirmed payment"
-      );
-    }
-    updateData["payment.senderConfirmed"] = true;
+  // Check for double-confirm
+  if (isSender && delivery.payment.senderConfirmed) {
+    throw new HttpsError("already-exists", "Sender has already confirmed payment");
+  }
+  if (isDriver && delivery.payment.driverConfirmed) {
+    throw new HttpsError("already-exists", "Driver has already confirmed payment");
   }
 
+  const now = admin.firestore.Timestamp.now();
+  const updateData: Record<string, unknown> = {
+    updatedAt: now,
+  };
+
+  // Set the caller's confirmation flag
+  if (isSender) {
+    updateData["payment.senderConfirmed"] = true;
+  }
   if (isDriver) {
-    if (delivery.payment.driverConfirmed) {
-      throw new HttpsError(
-        "already-exists",
-        "Driver has already confirmed payment"
-      );
-    }
-    if (!delivery.payment.senderConfirmed) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Sender must confirm payment before driver can confirm"
-      );
-    }
     updateData["payment.driverConfirmed"] = true;
   }
 
@@ -873,19 +878,76 @@ export const confirmPayment = onCall(async (request) => {
     updateData["proof.paymentURL"] = paymentPhotoURL;
   }
 
-  await ref.update(updateData);
+  // Determine if this is the first or second confirmation
+  const otherConfirmed = isSender
+    ? delivery.payment.driverConfirmed
+    : delivery.payment.senderConfirmed;
 
-  // Notify the other party
-  await sendDeliveryNotification(deliveryId, "payment_confirmed", {
-    actorId: uid,
-  });
+  if (!otherConfirmed) {
+    // FIRST confirmation → transition to awaiting_payment
+    updateData.status = "awaiting_payment";
+    updateData.statusHistory = admin.firestore.FieldValue.arrayUnion({
+      status: "awaiting_payment",
+      timestamp: now,
+      actor: uid,
+      note: `${isSender ? "Sender" : "Driver"} confirmed payment, waiting for other party`,
+    });
+
+    await ref.update(updateData);
+
+    // Notify the OTHER party: "your turn to confirm"
+    await sendDeliveryNotification(deliveryId, "awaiting_payment_notify", {
+      actorId: uid,
+    });
+  } else {
+    // SECOND confirmation → transition to completed_paid
+    // Use transaction for atomicity (prevent double-increment)
+    await db.runTransaction(async (txn) => {
+      const freshDoc = await txn.get(ref);
+      const freshData = freshDoc.data();
+      if (!freshData || freshData.status !== "awaiting_payment") {
+        console.log(`Delivery ${deliveryId} already completed (status=${freshData?.status}), skipping`);
+        return;
+      }
+
+      const completionEntry = {
+        status: "completed_paid" as const,
+        timestamp: now,
+        actor: uid,
+        note: "Both parties confirmed payment",
+      };
+
+      txn.update(ref, {
+        ...updateData,
+        status: "completed_paid",
+        statusHistory: admin.firestore.FieldValue.arrayUnion(completionEntry),
+      });
+
+      // Increment completedDeliveries for both users
+      if (freshData.senderId) {
+        txn.update(db.collection("users").doc(freshData.senderId), {
+          completedDeliveries: admin.firestore.FieldValue.increment(1),
+        });
+      }
+      if (freshData.driverId) {
+        txn.update(db.collection("users").doc(freshData.driverId), {
+          completedDeliveries: admin.firestore.FieldValue.increment(1),
+        });
+      }
+    });
+
+    // Notify both parties
+    await sendDeliveryNotification(deliveryId, "payment_confirmed", {
+      actorId: uid,
+    });
+  }
 
   return { success: true, message: "Payment confirmation recorded" };
 });
 
 /**
  * Cancel a delivery.
- * Only allowed before pickup (status: new, pending, waiting).
+ * Only allowed before pickup (status: new, pending, awaiting_confirm, waiting_for_pickup).
  */
 export const cancelDelivery = onCall(async (request) => {
   const uid = request.auth?.uid;
