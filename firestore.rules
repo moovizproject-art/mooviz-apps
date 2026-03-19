@@ -38,21 +38,17 @@ service cloud.firestore {
     }
 
     // Allowed fields for delivery sender updates
-    // NOTE: driverId, interestedDrivers REMOVED — must go through Cloud Functions
-    // TEMPORARY: status kept for backward compat with old APKs (v1.0.6 and below)
-    // TODO: Remove status after all users upgrade to v1.0.7+
+    // NOTE: driverId, interestedDrivers, status REMOVED — must go through Cloud Functions
     function allowedSenderDeliveryFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['status', 'payment', 'cancelledBy', 'updatedAt', 'proof', 'mediaURLs', 'photoUrl', 'chatId']);
+        .hasOnly(['payment', 'cancelledBy', 'updatedAt', 'proof', 'mediaURLs', 'photoUrl', 'chatId']);
     }
 
     // Allowed fields for delivery driver updates
-    // NOTE: interestedDrivers REMOVED — must go through Cloud Functions
-    // TEMPORARY: status kept for backward compat with old APKs (v1.0.6 and below)
-    // TODO: Remove status after all users upgrade to v1.0.7+
+    // NOTE: interestedDrivers, status REMOVED — must go through Cloud Functions
     function allowedDriverDeliveryFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['status', 'payment', 'proof', 'updatedAt']);
+        .hasOnly(['payment', 'proof', 'updatedAt']);
     }
 
     // Restrict role to sender/driver only (no admin self-promotion)
@@ -96,9 +92,9 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && resource.data.senderId == request.auth.uid;
 
-      // Driver can read available deliveries (new/pending) or assigned
+      // Driver can read available deliveries (new/pending/awaiting_confirm) or assigned
       allow read: if isAuthenticated()
-        && (resource.data.status in ['new', 'pending'] || resource.data.driverId == request.auth.uid);
+        && (resource.data.status in ['new', 'pending', 'awaiting_confirm'] || resource.data.driverId == request.auth.uid);
 
       // Sender can update their own deliveries (restricted fields)
       allow update: if isAuthenticated()
