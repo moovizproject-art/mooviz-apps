@@ -67,7 +67,7 @@ export function useSenderExpenses(userId?: string) {
       const snapshot = await firestore()
         .collection('deliveries')
         .where('senderId', '==', userId)
-        .where('status', 'in', ['delivered', 'completed_paid'])
+        .where('status', 'in', ['delivered', 'awaiting_payment', 'completed_paid'])
         .orderBy('updatedAt', 'desc')
         .limit(200)
         .get();

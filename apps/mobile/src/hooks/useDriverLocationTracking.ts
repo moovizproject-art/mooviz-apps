@@ -27,7 +27,7 @@ import {
 export type TrackingMode = 'off' | 'idle' | 'active';
 
 /** Delivery statuses that indicate the driver is actively on a job */
-const ACTIVE_DELIVERY_STATUSES = ['waiting', 'picked_up'];
+const ACTIVE_DELIVERY_STATUSES = ['waiting_for_pickup', 'picked_up'];
 
 /** Minimum interval between Firestore location writes in active mode (ms) */
 const ACTIVE_SYNC_THROTTLE_MS = 30_000;

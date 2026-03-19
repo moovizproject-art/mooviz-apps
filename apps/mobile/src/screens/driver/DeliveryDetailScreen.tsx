@@ -486,7 +486,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </TouchableOpacity>
         )}
 
-        {isMyJob && (delivery.status === 'matched' || delivery.status === 'waiting') && (
+        {isMyJob && delivery.status === 'waiting_for_pickup' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={() => openProofCamera('pickup')}
@@ -501,7 +501,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         )}
 
         {/* Cancel delivery — driver can cancel before pickup (waiting/matched only, pending uses withdraw) */}
-        {isMyJob && ['waiting', 'matched'].includes(delivery.status) && (
+        {isMyJob && ['awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status) && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#E53935' }]}
             onPress={handleCancelDelivery}
@@ -510,7 +510,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </TouchableOpacity>
         )}
 
-        {isMyJob && (delivery.status === 'picked_up' || delivery.status === 'in_transit') && (
+        {isMyJob && delivery.status === 'picked_up' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.success }]}
             onPress={() => openProofCamera('delivery')}
@@ -715,8 +715,44 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
       )}
 
+      {/* ── 7b. Awaiting payment — driver confirms receipt ── */}
+      {isMyJob && delivery.status === 'awaiting_payment' && (
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.success, borderStartWidth: 3 }]}>
+          <Text style={[styles.sectionHeader, { color: colors.text }]}>💳 ממתין לתשלום</Text>
+          {delivery.payment?.driverConfirmed ? (
+            <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8 }}>
+              <Text style={{ color: '#2E7D32', fontWeight: '600', textAlign: 'right' }}>
+                ✅ אישרת תשלום — ממתין לאישור השולח
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.success }]}
+              onPress={async () => {
+                setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
+                try {
+                  await confirmPayment(delivery.id);
+                  setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
+                  carAlert.show('success', t('payment.successTitle'), t('payment.driverConfirmedMsg'));
+                } catch (e: any) {
+                  setLoadingVisible(false);
+                  carAlert.show('error', t('common.error'), e.message);
+                }
+              }}
+              disabled={confirmLoading}
+            >
+              {confirmLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.actionButtonText}>💰 אשר קבלת תשלום</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* ── 8. Rate sender ── */}
-      {['delivered', 'completed_paid'].includes(delivery.status) && !delivery.ratedByDriver && (
+      {['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedByDriver && (
         <TouchableOpacity
           style={[styles.card, { backgroundColor: colors.accent, alignItems: 'center', paddingVertical: 16 }]}
           onPress={() => navigation.navigate('Rating', { deliveryId: delivery.id, targetUserId: delivery.senderId })}
