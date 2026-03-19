@@ -33,7 +33,8 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['fullName', 'phone', 'city', 'activeMode',
                   'fcmToken', 'fcmTokens', 'location', 'updatedAt',
-                  'driverSettings', 'notificationSettings']);
+                  'driverSettings', 'notificationSettings',
+                  'lastOtpAt', 'lastLoginAt']);
     }
 
     // Allowed fields for delivery sender updates
