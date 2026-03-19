@@ -38,16 +38,9 @@ import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 import { InterestedDriversList } from '../../components/InterestedDriversList';
 import { DriverProfileModal } from '../../components/DriverProfileModal';
 import { strings } from '../../i18n/strings';
+import { STATUS_TIMELINE_ORDER, getStatusConfig } from '../../constants/statusConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
-
-const TIMELINE_STEPS = [
-  { key: 'new', labelKey: 'waitingForDriver' },
-  { key: 'pending', labelKey: 'driverInterested' },
-  { key: 'waiting', labelKey: 'approved' },
-  { key: 'picked_up', labelKey: 'pickedUp' },
-  { key: 'delivered', labelKey: 'delivered' },
-] as const;
 
 /**
  * DeliveryDetailScreen (Sender) — מסך פרטי משלוח לשולח
@@ -128,10 +121,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   const currentStepIndex = useMemo(() => {
     if (!delivery) return -1;
-    // Map matched/in_transit to their timeline equivalents
-    const statusMap: Record<string, string> = { matched: 'waiting', in_transit: 'picked_up' };
-    const mappedStatus = statusMap[delivery.status] || delivery.status;
-    return TIMELINE_STEPS.findIndex((s) => s.key === mappedStatus);
+    return STATUS_TIMELINE_ORDER.indexOf(delivery.status as any);
   }, [delivery?.status]);
 
   // Media: combine mediaURLs + single photoUrl (computed before hooks that depend on it)
@@ -198,7 +188,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   // Auto-scroll to payment section when delivery is picked_up/delivered (first access)
   useEffect(() => {
     if (!delivery || hasAutoScrolled.current) return;
-    const shouldScroll = ['picked_up', 'in_transit', 'delivered'].includes(delivery.status);
+    const shouldScroll = ['picked_up', 'delivered'].includes(delivery.status);
     if (shouldScroll && paymentSectionY.current > 0) {
       hasAutoScrolled.current = true;
       setTimeout(() => {
@@ -223,15 +213,15 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     address: delivery.destination?.address,
   };
 
-  const showLiveMap = ['matched', 'waiting', 'picked_up', 'in_transit', 'delivered'].includes(delivery.status) && delivery.driverId;
+  const showLiveMap = ['awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered'].includes(delivery.status) && delivery.driverId;
 
   // Find when delivery was marked as 'delivered' for car hide timer
   const deliveredAt = (delivery as any)?.statusHistory?.delivered ?? null;
   // Cancel allowed only pre-pickup statuses
-  const canCancel = ['new', 'pending', 'matched', 'waiting'].includes(delivery.status);
-  const isPostPickup = ['picked_up', 'in_transit', 'delivered', 'completed_paid'].includes(delivery.status);
-  const showPayment = delivery.status === 'delivered';
-  const showRate = ['delivered', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender;
+  const canCancel = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status);
+  const isPostPickup = ['picked_up', 'delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
+  const showPayment = delivery.status === 'delivered' || delivery.status === 'awaiting_payment';
+  const showRate = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender;
   const hasDriver = !!delivery.driverId;
   const driverName = driverProfile?.fullName || delivery.driverName || '';
   const driverPhoto = driverProfile?.profilePhotoURL || delivery.driverPhotoUrl;
@@ -348,43 +338,46 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 2. Horizontal Status Timeline ── */}
       <View style={[styles.timelineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.timeline}>
-          {TIMELINE_STEPS.map((step, i) => (
-            <React.Fragment key={step.key}>
-              {i > 0 && (
-                <View
-                  style={[
-                    styles.timelineSegment,
-                    { backgroundColor: colors.border },
-                    i <= currentStepIndex && { backgroundColor: colors.success },
-                  ]}
-                />
-              )}
-              <View style={styles.timelineStation}>
-                <View
-                  style={[
-                    styles.stationDot,
-                    { backgroundColor: colors.border },
-                    i < currentStepIndex && { backgroundColor: colors.success },
-                    i === currentStepIndex && { backgroundColor: colors.primary, borderWidth: 3, borderColor: 'rgba(26,115,232,0.3)' },
-                  ]}
-                />
-                {i === currentStepIndex && (
-                  <Text style={styles.truckIcon}>🚛</Text>
+          {STATUS_TIMELINE_ORDER.map((statusKey, i) => {
+            const cfg = getStatusConfig(statusKey);
+            return (
+              <React.Fragment key={statusKey}>
+                {i > 0 && (
+                  <View
+                    style={[
+                      styles.timelineSegment,
+                      { backgroundColor: colors.border },
+                      i <= currentStepIndex && { backgroundColor: colors.success },
+                    ]}
+                  />
                 )}
-                <Text
-                  style={[
-                    styles.stationLabel,
-                    { color: colors.textSecondary },
-                    i < currentStepIndex && { color: colors.success, fontWeight: '600' },
-                    i === currentStepIndex && { color: colors.primary, fontWeight: '700' },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {t(`status.${step.labelKey}`)}
-                </Text>
-              </View>
-            </React.Fragment>
-          ))}
+                <View style={styles.timelineStation}>
+                  <View
+                    style={[
+                      styles.stationDot,
+                      { backgroundColor: colors.border },
+                      i < currentStepIndex && { backgroundColor: colors.success },
+                      i === currentStepIndex && { backgroundColor: colors.primary, borderWidth: 3, borderColor: 'rgba(26,115,232,0.3)' },
+                    ]}
+                  />
+                  {i === currentStepIndex && (
+                    <Text style={styles.truckIcon}>🚛</Text>
+                  )}
+                  <Text
+                    style={[
+                      styles.stationLabel,
+                      { color: colors.textSecondary },
+                      i < currentStepIndex && { color: colors.success, fontWeight: '600' },
+                      i === currentStepIndex && { color: colors.primary, fontWeight: '700' },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {cfg.label}
+                  </Text>
+                </View>
+              </React.Fragment>
+            );
+          })}
         </View>
       </View>
 
@@ -572,6 +565,26 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 <Text style={styles.confirmPaymentButtonText}>{t('payment.confirmButton')}</Text>
               )}
             </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* ── 2e. Awaiting Payment Banner ── */}
+      {delivery.status === 'awaiting_payment' && (
+        <View style={[styles.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>{'💳 ממתין לתשלום'}</Text>
+          {delivery.payment?.senderConfirmed ? (
+            <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8 }}>
+              <Text style={{ color: '#2E7D32', fontWeight: '600', textAlign: 'right' }}>
+                {'✅ אישרת תשלום — ממתין לאישור הנהג'}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 8 }}>
+              <Text style={{ color: '#F57C00', fontWeight: '600', textAlign: 'right' }}>
+                {'הנהג אישר קבלת תשלום — תורך לאשר'}
+              </Text>
+            </View>
           )}
         </View>
       )}
