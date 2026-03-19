@@ -253,7 +253,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries: activeDeliveries } = useDelivery({
     userId: currentUser?.uid,
     role: 'driver',
-    statusFilter: ['pending', 'waiting', 'picked_up'],
+    statusFilter: ['pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up'],
   });
   const currentDelivery = activeDeliveries[0] || null;
 
@@ -625,7 +625,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                   </Text>
                   <View style={[styles.currentDeliveryBadge, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[styles.currentDeliveryBadgeText, { color: colors.primary }]}>
-                      {currentDelivery.status === 'picked_up' ? t('status.pickedUp') : currentDelivery.status === 'waiting' ? t('status.waiting') : t('status.pending')}
+                      {currentDelivery.status === 'picked_up' ? t('status.pickedUp') : currentDelivery.status === 'waiting_for_pickup' ? t('status.waitingForPickup') : t('status.pending')}
                     </Text>
                   </View>
                 </View>

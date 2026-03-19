@@ -24,7 +24,7 @@ type Props = DriverTabScreenProps<'MyJobs'>;
 type TabKey = 'active' | 'completed';
 
 const STATUS_MAP: Record<TabKey, string[]> = {
-  active: ['pending', 'waiting', 'picked_up', 'delivered'],
+  active: ['pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered', 'awaiting_payment'],
   completed: ['completed_paid'],
 };
 
@@ -44,7 +44,7 @@ export function MyJobsScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries: activeJobs } = useDelivery({
     userId: currentUser?.uid,
     role: 'driver',
-    statusFilter: ['waiting', 'picked_up'],
+    statusFilter: ['waiting_for_pickup', 'picked_up'],
   });
   useDriverLocationTracking({
     userId: currentUser?.uid,

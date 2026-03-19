@@ -72,7 +72,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries, isLoading, refresh } = useDelivery({
     userId: currentUser?.uid,
     role: 'sender',
-    statusFilter: ['new', 'pending', 'waiting', 'picked_up'],
+    statusFilter: ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up'],
   });
 
   const { expenses } = useSenderExpenses(currentUser?.uid);
