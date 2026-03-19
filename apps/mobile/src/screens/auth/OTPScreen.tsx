@@ -172,15 +172,13 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
           lastOtpAt: firestore.FieldValue.serverTimestamp(),
         }).catch(() => {});
       }
-      // Refresh user data first, then show alert — transition happens on dismiss
+      // Clear forceOtp BEFORE refreshing — prevents re-render loop
+      // (refreshUserDoc triggers navigator re-render; if forceOtp is still true,
+      // navigator shows PhoneVerification again before alert is visible)
+      setForceOtp(false);
       await refreshFirebaseUser();
       await refreshUserDoc();
-      carAlert.show('success', t('common.success'), t('auth.phoneVerified'), [
-        {
-          text: t('common.confirm'),
-          onPress: () => setForceOtp(false),
-        },
-      ]);
+      carAlert.show('success', t('common.success'), t('auth.phoneVerified'));
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };
       if (firebaseError.code) {
