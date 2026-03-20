@@ -6,13 +6,15 @@ import { UserRole } from "../types/user";
  * Key = current status, Value = array of statuses it can transition to.
  */
 export const STATUS_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
-  new: ["pending", "waiting", "cancelled"],
-  pending: ["waiting", "new", "cancelled"],
-  waiting: ["picked_up", "cancelled", "new"],
+  new: ["pending", "awaiting_confirm", "cancelled"],
+  pending: ["awaiting_confirm", "new", "cancelled"],
+  awaiting_confirm: ["waiting_for_pickup", "pending", "cancelled"],
+  waiting_for_pickup: ["picked_up", "cancelled"],
   picked_up: ["delivered"],
-  delivered: ["completed_paid"],
-  cancelled: [],
+  delivered: ["awaiting_payment"],
+  awaiting_payment: ["completed_paid"],
   completed_paid: [],
+  cancelled: [],
 };
 
 /**
@@ -21,16 +23,19 @@ export const STATUS_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
  */
 export const TRANSITION_ACTORS: Record<string, Array<UserRole | "system">> = {
   "new -> pending": ["driver"],
-  "new -> waiting": ["system"],
+  "new -> awaiting_confirm": ["sender"],
   "new -> cancelled": ["sender", "system"],
-  "pending -> waiting": ["sender"],
+  "pending -> awaiting_confirm": ["sender"],
   "pending -> new": ["sender", "driver"],
   "pending -> cancelled": ["sender", "driver", "system"],
-  "waiting -> picked_up": ["driver"],
-  "waiting -> new": ["sender"],
-  "waiting -> cancelled": ["sender", "driver"],
+  "awaiting_confirm -> waiting_for_pickup": ["driver"],
+  "awaiting_confirm -> pending": ["driver", "system"],
+  "awaiting_confirm -> cancelled": ["sender"],
+  "waiting_for_pickup -> picked_up": ["driver"],
+  "waiting_for_pickup -> cancelled": ["sender", "driver"],
   "picked_up -> delivered": ["driver"],
-  "delivered -> completed_paid": ["sender", "driver", "system"],
+  "delivered -> awaiting_payment": ["sender", "driver"],
+  "awaiting_payment -> completed_paid": ["sender", "driver", "system"],
 };
 
 export interface StatusDisplayConfig {
@@ -56,10 +61,16 @@ export const STATUS_DISPLAY: Record<DeliveryStatus, StatusDisplayConfig> = {
     color: "#FF9800",
     icon: "hourglass_empty",
   },
-  waiting: {
-    labelHe: "\u05DE\u05DE\u05EA\u05D9\u05DF \u05DC\u05D0\u05D9\u05E1\u05D5\u05E3",
+  awaiting_confirm: {
+    labelHe: "ממתין לאישור נהג",
+    labelEn: "Awaiting Driver Confirmation",
+    color: "#FF6F00",
+    icon: "hourglass_top",
+  },
+  waiting_for_pickup: {
+    labelHe: "ממתין לאיסוף",
     labelEn: "Waiting for Pickup",
-    color: "#9C27B0",
+    color: "#7B1FA2",
     icon: "schedule",
   },
   picked_up: {
@@ -73,6 +84,12 @@ export const STATUS_DISPLAY: Record<DeliveryStatus, StatusDisplayConfig> = {
     labelEn: "Delivered",
     color: "#8BC34A",
     icon: "check_circle",
+  },
+  awaiting_payment: {
+    labelHe: "ממתין לתשלום",
+    labelEn: "Awaiting Payment",
+    color: "#F57C00",
+    icon: "payments",
   },
   cancelled: {
     labelHe: "\u05D1\u05D5\u05D8\u05DC",
@@ -96,7 +113,12 @@ export const TERMINAL_STATUSES: DeliveryStatus[] = ["cancelled", "completed_paid
 /**
  * Statuses that are eligible for timeout cleanup.
  */
-export const TIMEOUT_ELIGIBLE_STATUSES: DeliveryStatus[] = ["new", "pending"];
+export const TIMEOUT_ELIGIBLE_STATUSES: DeliveryStatus[] = [
+  "new",
+  "pending",
+  "awaiting_confirm",
+  "awaiting_payment",
+];
 
 /**
  * Default timeout duration in hours for new deliveries.

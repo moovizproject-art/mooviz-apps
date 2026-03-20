@@ -6,7 +6,7 @@ import { UserRole } from "../types/user";
  * Key = current status, Value = array of statuses it can transition to.
  */
 export const STATUS_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
-  new: ["pending", "cancelled"],
+  new: ["pending", "awaiting_confirm", "cancelled"],
   pending: ["awaiting_confirm", "new", "cancelled"],
   awaiting_confirm: ["waiting_for_pickup", "pending", "cancelled"],
   waiting_for_pickup: ["picked_up", "cancelled"],
@@ -23,6 +23,7 @@ export const STATUS_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
  */
 export const TRANSITION_ACTORS: Record<string, Array<UserRole | "system">> = {
   "new -> pending": ["driver"],
+  "new -> awaiting_confirm": ["sender"],
   "new -> cancelled": ["sender", "system"],
   "pending -> awaiting_confirm": ["sender"],
   "pending -> new": ["sender", "driver"],
