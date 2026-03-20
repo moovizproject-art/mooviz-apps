@@ -121,11 +121,12 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
         // Firestore doc creation failed — write directly as fallback
         console.warn('[RegisterScreen] createUserDocument failed, writing directly:', docErr);
         const firestore = require('@react-native-firebase/firestore').default;
+        const { normalizePhoneNumber } = require('../../services/auth');
         await firestore().collection('users').doc(credential.user.uid).set({
           uid: credential.user.uid,
           fullName: form.fullName,
           email: form.email,
-          phone: form.phone,
+          phone: normalizePhoneNumber(form.phone),
           city: '',
           role: 'sender',
           driverUnlocked: false,

@@ -80,9 +80,11 @@ export function CompleteProfileScreen(): React.JSX.Element {
 
     try {
       setIsLoading(true);
+      // Normalize phone to E.164 (+972...) — users type 050... without country code
+      const { normalizePhoneNumber } = require('../../services/auth');
       await firestore().collection('users').doc(currentUser.uid).update({
         fullName: fullName.trim(),
-        phone: phone.trim(),
+        phone: normalizePhoneNumber(phone.trim()),
         ...(city.trim() ? { city: city.trim() } : {}),
         autoCreated: firestore.FieldValue.delete(), // Clear the auto-created flag
         updatedAt: firestore.FieldValue.serverTimestamp(),
