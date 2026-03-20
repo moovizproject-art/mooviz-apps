@@ -61,14 +61,14 @@ export const STATUS_CONFIG: Record<DeliveryStatus, StatusDisplayConfig> = {
     description: 'Package picked up, in transit',
   },
   delivered: {
-    label: 'נמסר',              // Delivered
-    color: COLORS.success,
-    bgColor: COLORS.successBg,
-    icon: '\u2705',              // check mark
-    description: 'Successfully delivered',
+    label: 'נמסר — ממתין לתשלום',  // Delivered, waiting for payment
+    color: '#F57C00',
+    bgColor: '#FFF3E0',
+    icon: '\u{1F4B3}',              // credit card
+    description: 'Delivered, waiting for payment',
   },
   awaiting_payment: {
-    label: 'ממתין לתשלום',
+    label: 'ממתין לאישור תשלום',  // Waiting for payment confirmation
     color: '#F57C00',
     bgColor: '#FFF3E0',
     icon: '\u{1F4B3}',          // credit card

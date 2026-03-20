@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { RatingsHistoryModal } from '../../components/RatingsHistoryModal';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -108,7 +109,7 @@ export function ProfileScreen(): React.JSX.Element {
   const handleChangePhoto = useCallback((): void => {
     const imageOpts = { mediaType: 'photo' as const, quality: 0.7 as const, maxWidth: 512, maxHeight: 512 };
 
-    carAlert.show('info', t('profile.changePhoto'), '', [
+    Alert.alert(t('profile.changePhoto'), '', [
       {
         text: t('common.takePhoto'),
         onPress: async () => {
@@ -133,7 +134,7 @@ export function ProfileScreen(): React.JSX.Element {
       },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, [t, carAlert, uploadProfilePhoto]);
+  }, [t, uploadProfilePhoto]);
 
   const handleChangePassword = async (): Promise<void> => {
     const email = currentUser?.email;

@@ -194,9 +194,9 @@ export function useNotifications(): UseNotificationsResult {
     setupNotificationCategories().catch(() => {});
   }, []);
 
-  // Register FCM token and save to Firestore
+  // Step 1: Request permission + get token ON MOUNT (no dependency on currentUser)
   useEffect(() => {
-    const registerToken = async (): Promise<void> => {
+    const getTokenEarly = async (): Promise<void> => {
       try {
         const granted = await requestPermission();
         if (!granted) {
@@ -204,7 +204,6 @@ export function useNotifications(): UseNotificationsResult {
           return;
         }
 
-        // Must register for remote messages before getting token
         if (!messaging().isDeviceRegisteredForRemoteMessages) {
           await messaging().registerDeviceForRemoteMessages();
         }
@@ -212,16 +211,7 @@ export function useNotifications(): UseNotificationsResult {
         const token = await messaging().getToken();
         console.log('[useNotifications] FCM token:', token?.substring(0, 20) + '...');
         setFcmToken(token);
-
-        if (currentUser?.uid && token) {
-          await firestore().collection('users').doc(currentUser.uid).update({
-            fcmTokens: firestore.FieldValue.arrayUnion(token),
-            lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
-          });
-          console.log('[useNotifications] Token saved to Firestore');
-        }
       } catch (error) {
-        // Expected on iOS Simulator (no APNs support)
         if (Platform.OS === 'ios') {
           console.log('[useNotifications] iOS Simulator — FCM not available (no APNs)');
         } else {
@@ -231,7 +221,21 @@ export function useNotifications(): UseNotificationsResult {
       }
     };
 
-    registerToken();
+    getTokenEarly();
+  }, [requestPermission]);
+
+  // Step 2: Save token to Firestore WHEN currentUser becomes available
+  useEffect(() => {
+    if (!currentUser?.uid || !fcmToken) return;
+
+    firestore().collection('users').doc(currentUser.uid).update({
+      fcmTokens: firestore.FieldValue.arrayUnion(fcmToken),
+      lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
+    }).then(() => {
+      console.log('[useNotifications] Token saved to Firestore');
+    }).catch((err) => {
+      console.warn('[useNotifications] Failed to save token:', err);
+    });
 
     // Listen for token refresh
     const unsubscribeTokenRefresh = messaging().onTokenRefresh(async (newToken) => {
@@ -244,7 +248,7 @@ export function useNotifications(): UseNotificationsResult {
     });
 
     return () => unsubscribeTokenRefresh();
-  }, [currentUser?.uid, requestPermission]);
+  }, [currentUser?.uid, fcmToken]);
 
   // Handle foreground notifications via notifee
   useEffect(() => {
