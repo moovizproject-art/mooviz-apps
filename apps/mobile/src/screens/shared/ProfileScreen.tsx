@@ -67,16 +67,11 @@ export function ProfileScreen(): React.JSX.Element {
     try {
       await updateProfile({
         fullName: editName,
+        nickname: editNickname,
         city: editCity,
         gender: editGender || '',
         ageRange: editAgeRange || '',
       });
-      // Save nickname to Firestore
-      if (currentUser?.uid) {
-        await firestore().collection('users').doc(currentUser.uid).update({
-          nickname: editNickname,
-        });
-      }
       setIsEditing(false);
       carAlert.show('success', t('common.success'), t('profile.profileUpdated'));
     } catch (err) {
