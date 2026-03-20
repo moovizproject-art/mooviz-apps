@@ -391,10 +391,15 @@ export const selectDriver = onCall(async (request) => {
     if (!driverEntry) throw new HttpsError("not-found", "הנהג לא נמצא ברשימה או לא זמין");
 
     const updated = interested.map((d: any) => d.uid === driverUid ? { ...d, status: "selected" } : d);
+    const selectedEntry = interested.find((d: any) => d.uid === driverUid);
     const now = admin.firestore.Timestamp.now();
 
     txn.update(ref, {
       status: "awaiting_confirm",
+      driverId: driverUid, // Set early so driver sees it in My Jobs
+      driverName: selectedEntry?.name || "",
+      driverPhotoUrl: selectedEntry?.photoUrl || null,
+      driverRating: selectedEntry?.rating || 0,
       interestedDrivers: updated,
       selectedDriverId: driverUid,
       selectionExpiresAt: admin.firestore.Timestamp.fromMillis(now.toMillis() + SELECTION_TIMEOUT_MS),
