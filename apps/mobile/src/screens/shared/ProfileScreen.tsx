@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { RatingsHistoryModal } from '../../components/RatingsHistoryModal';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import { useFocusEffect } from '@react-navigation/native';
 import storage from '@react-native-firebase/storage';
 import firestore from '@react-native-firebase/firestore';
 import { requestMediaLibraryPermission, requestCameraPermission } from '../../utils/permissions';
@@ -35,11 +34,8 @@ export function ProfileScreen(): React.JSX.Element {
   const drawer = useSettingsDrawer();
   const carAlert = useCarAlert();
 
-  // Refresh user doc once on mount — not on every focus (prevents scroll jump + re-render loop)
-  React.useEffect(() => {
-    refreshUserDoc().catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // No explicit refresh — useAuth provides currentUser from initial auth load.
+  // Previous useFocusEffect/useEffect refresh caused re-render loops + scroll jumps.
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
