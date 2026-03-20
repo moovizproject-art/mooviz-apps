@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { ISRAEL_CITIES } from '../../constants/cities';
 import firestore from '@react-native-firebase/firestore';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -37,6 +38,25 @@ export function CompleteProfileScreen(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; phone?: string }>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+
+  const handleCityChange = (text: string) => {
+    setCity(text);
+    if (text.trim().length > 0) {
+      const filtered = ISRAEL_CITIES.filter(c => c.includes(text.trim()));
+      setCitySuggestions(filtered.slice(0, 5));
+      setShowCitySuggestions(filtered.length > 0);
+    } else {
+      setCitySuggestions([]);
+      setShowCitySuggestions(false);
+    }
+  };
+
+  const selectCity = (selectedCity: string) => {
+    setCity(selectedCity);
+    setShowCitySuggestions(false);
+  };
 
   const phoneRef = useRef<TextInput>(null);
   const cityRef = useRef<TextInput>(null);
@@ -69,9 +89,14 @@ export function CompleteProfileScreen(): React.JSX.Element {
       });
       await refreshUserDoc();
       // RootNavigator will automatically redirect once isProfileComplete becomes true
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CompleteProfileScreen] Save error:', err);
-      carAlert.show('error', t('common.error'), t('errors.generalError'));
+      const message = err?.message?.includes('PERMISSION_DENIED')
+        ? 'אין הרשאה לעדכן פרופיל. נסה להתנתק ולהתחבר מחדש.'
+        : err?.message?.includes('NOT_FOUND')
+        ? 'המשתמש לא נמצא. נסה להתנתק ולהירשם מחדש.'
+        : 'שגיאה בשמירת הפרטים. נסה שוב.';
+      carAlert.show('error', 'שגיאה', message);
     } finally {
       setIsLoading(false);
     }
@@ -173,16 +198,29 @@ export function CompleteProfileScreen(): React.JSX.Element {
           )}
         </View>
 
-        {/* City (optional) */}
+        {/* City (optional with autocomplete) */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.label, { color: colors.textPrimary }]}>
             {t('profile.city')}
           </Text>
-          {renderInput('city', city, setCity, t('forms.cityPlaceholder'), {
+          {renderInput('city', city, handleCityChange, t('forms.cityPlaceholder'), {
             ref: cityRef,
             returnKeyType: 'done',
             onSubmitEditing: handleSave,
           })}
+          {showCitySuggestions && (
+            <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {citySuggestions.map((suggestion) => (
+                <TouchableOpacity
+                  key={suggestion}
+                  style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
+                  onPress={() => selectCity(suggestion)}
+                >
+                  <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Submit */}
@@ -289,6 +327,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
+  },
+  suggestionsContainer: {
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+  },
+  suggestionText: {
+    fontSize: 15,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   keyboardSpacer: {
     height: 120,
