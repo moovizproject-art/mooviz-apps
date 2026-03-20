@@ -233,8 +233,8 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       setLoadingVisible(false);
       carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
         { text: t('common.confirm'), onPress: () => {
-          // Navigate to MyDeliveries list to prevent re-submitting
-          navigation.getParent()?.navigate('MyDeliveries');
+          // Go back to home feed after creating a delivery
+          navigation.goBack();
         }},
       ]);
     } catch (e: any) {
