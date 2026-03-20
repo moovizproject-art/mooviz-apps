@@ -519,7 +519,7 @@ export const declineSelection = onCall(async (request) => {
     const updated = interested.map((d: any) => d.uid === uid ? { ...d, status: "declined" } : d);
 
     txn.update(ref, {
-      status: "pending",
+      status: "new",
       driverId: null,
       driverName: null,
       driverPhotoUrl: null,
@@ -528,10 +528,10 @@ export const declineSelection = onCall(async (request) => {
       selectedDriverId: null,
       selectionExpiresAt: null,
       statusHistory: admin.firestore.FieldValue.arrayUnion({
-        status: "pending",
+        status: "new",
         timestamp: now,
         actor: uid,
-        note: "Driver declined selection, reverted to pending",
+        note: "Driver declined selection, reverted to new",
       }),
       updatedAt: now,
     });
