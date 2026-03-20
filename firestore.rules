@@ -34,7 +34,7 @@ service cloud.firestore {
         .hasOnly(['fullName', 'phone', 'city', 'activeMode',
                   'fcmToken', 'fcmTokens', 'location', 'updatedAt',
                   'driverSettings', 'notificationSettings',
-                  'lastOtpAt', 'lastLoginAt']);
+                  'lastOtpAt', 'lastLoginAt', 'autoCreated']);
     }
 
     // Allowed fields for delivery sender updates
