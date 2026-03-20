@@ -129,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               status: data?.status || 'active',
               fcmTokens: data?.fcmTokens || [],
               location: data?.location || { lat: 0, lng: 0, geohash: '' },
+              nickname: data?.nickname || '',
               gender: data?.gender || '',
               ageRange: data?.ageRange || '',
               migratedFrom: data?.migratedFrom,
