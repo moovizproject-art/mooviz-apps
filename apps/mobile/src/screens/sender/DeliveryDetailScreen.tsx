@@ -38,9 +38,62 @@ import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 import { InterestedDriversList } from '../../components/InterestedDriversList';
 import { DriverProfileModal } from '../../components/DriverProfileModal';
 import { strings } from '../../i18n/strings';
-import { STATUS_TIMELINE_ORDER, getStatusConfig } from '../../constants/statusConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
+
+/** Get 4 visible timeline steps based on current status (sliding window) */
+function getTimelineSteps(currentStatus: string): Array<{ key: string; label: string; completed: boolean; active: boolean }> {
+  const FULL_ORDER = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered', 'awaiting_payment', 'completed_paid'];
+  const currentIndex = FULL_ORDER.indexOf(currentStatus);
+
+  type Step = { key: string; label: string; statuses: string[] };
+  let steps: Step[];
+
+  if (currentIndex <= 1) {
+    // Early phase: new, pending
+    steps = [
+      { key: 'start', label: currentStatus === 'pending' ? 'ממתין לנהג' : 'חדש ✨', statuses: ['new', 'pending'] },
+      { key: 'confirm', label: 'ממתין לאיסוף', statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
+      { key: 'transit', label: 'נאסף', statuses: ['picked_up'] },
+      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
+    ];
+  } else if (currentIndex <= 3) {
+    // Confirm/pickup phase
+    steps = [
+      { key: 'confirm', label: currentStatus === 'awaiting_confirm' ? 'ממתין לאישור' : 'ממתין לאיסוף', statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
+      { key: 'transit', label: 'נאסף', statuses: ['picked_up'] },
+      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
+      { key: 'payment', label: 'תשלום', statuses: ['awaiting_payment', 'completed_paid'] },
+    ];
+  } else if (currentIndex <= 5) {
+    // Transit/delivery phase
+    steps = [
+      { key: 'transit', label: 'נאסף', statuses: ['picked_up'] },
+      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
+      { key: 'payment', label: 'ממתין לתשלום', statuses: ['awaiting_payment'] },
+      { key: 'done', label: 'הושלם', statuses: ['completed_paid'] },
+    ];
+  } else {
+    // Payment/completion phase
+    steps = [
+      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
+      { key: 'payment', label: 'ממתין לתשלום', statuses: ['awaiting_payment'] },
+      { key: 'done', label: 'הושלם', statuses: ['completed_paid'] },
+      { key: 'final', label: '✅', statuses: ['completed_paid'] },
+    ];
+  }
+
+  return steps.map((step) => {
+    const stepMaxIndex = Math.max(...step.statuses.map(s => FULL_ORDER.indexOf(s)));
+    const stepMinIndex = Math.min(...step.statuses.map(s => FULL_ORDER.indexOf(s)));
+    return {
+      key: step.key,
+      label: step.label,
+      completed: currentIndex > stepMaxIndex,
+      active: currentIndex >= stepMinIndex && currentIndex <= stepMaxIndex,
+    };
+  });
+}
 
 /**
  * DeliveryDetailScreen (Sender) — מסך פרטי משלוח לשולח
@@ -119,10 +172,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     }
   };
 
-  const currentStepIndex = useMemo(() => {
-    if (!delivery) return -1;
-    return STATUS_TIMELINE_ORDER.indexOf(delivery.status as any);
-  }, [delivery?.status]);
+  const timelineSteps = useMemo(() => getTimelineSteps(delivery?.status || 'new'), [delivery?.status]);
 
   // Media: combine mediaURLs + single photoUrl (computed before hooks that depend on it)
   const mediaList: string[] = delivery?.mediaURLs?.length
@@ -335,49 +385,46 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
       </View>
 
-      {/* ── 2. Horizontal Status Timeline ── */}
+      {/* ── 2. Horizontal Status Timeline (4 dynamic nodes) ── */}
       <View style={[styles.timelineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.timeline}>
-          {STATUS_TIMELINE_ORDER.map((statusKey, i) => {
-            const cfg = getStatusConfig(statusKey);
-            return (
-              <React.Fragment key={statusKey}>
-                {i > 0 && (
-                  <View
-                    style={[
-                      styles.timelineSegment,
-                      { backgroundColor: colors.border },
-                      i <= currentStepIndex && { backgroundColor: colors.success },
-                    ]}
-                  />
+          {timelineSteps.map((step, i) => (
+            <React.Fragment key={step.key}>
+              {i > 0 && (
+                <View
+                  style={[
+                    styles.timelineSegment,
+                    { backgroundColor: colors.border },
+                    step.completed || step.active ? { backgroundColor: colors.success } : undefined,
+                  ]}
+                />
+              )}
+              <View style={styles.timelineStation}>
+                <View
+                  style={[
+                    styles.stationDot,
+                    { backgroundColor: colors.border },
+                    step.completed && { backgroundColor: colors.success },
+                    step.active && { backgroundColor: colors.primary, borderWidth: 3, borderColor: 'rgba(26,115,232,0.3)' },
+                  ]}
+                />
+                {step.active && (
+                  <Text style={styles.truckIcon}>🚛</Text>
                 )}
-                <View style={styles.timelineStation}>
-                  <View
-                    style={[
-                      styles.stationDot,
-                      { backgroundColor: colors.border },
-                      i < currentStepIndex && { backgroundColor: colors.success },
-                      i === currentStepIndex && { backgroundColor: colors.primary, borderWidth: 3, borderColor: 'rgba(26,115,232,0.3)' },
-                    ]}
-                  />
-                  {i === currentStepIndex && (
-                    <Text style={styles.truckIcon}>🚛</Text>
-                  )}
-                  <Text
-                    style={[
-                      styles.stationLabel,
-                      { color: colors.textSecondary },
-                      i < currentStepIndex && { color: colors.success, fontWeight: '600' },
-                      i === currentStepIndex && { color: colors.primary, fontWeight: '700' },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {cfg.label}
-                  </Text>
-                </View>
-              </React.Fragment>
-            );
-          })}
+                <Text
+                  style={[
+                    styles.stationLabel,
+                    { color: colors.textSecondary },
+                    step.completed && { color: colors.success, fontWeight: '600' },
+                    step.active && { color: colors.primary, fontWeight: '700' },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {step.label}
+                </Text>
+              </View>
+            </React.Fragment>
+          ))}
         </View>
       </View>
 
@@ -1009,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   timelineStation: {
     alignItems: 'center',
-    width: 52,
+    width: 72,
   },
   stationDot: {
     width: 20,
