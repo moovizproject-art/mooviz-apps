@@ -238,12 +238,14 @@ export const createDelivery = onCall(async (request) => {
     const destCity = destRaw.city ?? "";
     getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng, undefined, itemSize || undefined)
       .then(async (nearbyDrivers) => {
+        // Exclude the sender from driver notifications
+        const driversOnly = nearbyDrivers.filter((d) => d.uid !== uid);
         await Promise.all(
-          nearbyDrivers.map((driver) =>
+          driversOnly.map((driver) =>
             sendPushNotification(
               driver.uid,
               "משלוח חדש באזורך",
-              `משלוח חדש מ-${pickupCity} ל-${destCity} - ${price} ₪`,
+              `משלוח חדש מ-${pickupCity || pickupRaw.address || "איסוף"} ל-${destCity || destRaw.address || "יעד"} - ${price} ₪`,
               {
                 event: "new_listing_nearby",
                 deliveryId,
@@ -254,13 +256,13 @@ export const createDelivery = onCall(async (request) => {
             )
           )
         );
-        // Record notified drivers so expansion function skips them
-        if (nearbyDrivers.length > 0) {
+        // Record notified drivers so expansion function skips them (exclude sender)
+        if (driversOnly.length > 0) {
           await docRef.update({
-            notifiedDrivers: nearbyDrivers.map((d) => d.uid),
+            notifiedDrivers: driversOnly.map((d) => d.uid),
           });
         }
-        console.log(`createDelivery: notified ${nearbyDrivers.length} nearby drivers (multi-location)`);
+        console.log(`createDelivery: notified ${driversOnly.length} nearby drivers (multi-location, excluded sender)`);
       })
       .catch((err) => console.error("createDelivery: nearby driver notification failed:", err));
   }
