@@ -690,6 +690,11 @@ export const strings = {
     chatMessages: { he: 'הודעות צ׳אט', en: 'Chat messages' } as LocaleStrings,
   },
 
+  // ── Forms (shared) ──
+  forms: {
+    cityPlaceholder: { he: 'בחר עיר...', en: 'Select city...' } as LocaleStrings,
+  },
+
   // ── Error Boundary ──
   errorBoundary: {
     title: { he: 'אופס! משהו השתבש', en: 'Oops! Something went wrong' } as LocaleStrings,
