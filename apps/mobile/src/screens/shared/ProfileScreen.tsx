@@ -35,12 +35,11 @@ export function ProfileScreen(): React.JSX.Element {
   const drawer = useSettingsDrawer();
   const carAlert = useCarAlert();
 
-  // Refresh user doc when screen gains focus (fixes stale data after background)
-  useFocusEffect(
-    useCallback(() => {
-      refreshUserDoc().catch(() => {});
-    }, [refreshUserDoc]),
-  );
+  // Refresh user doc once on mount — not on every focus (prevents scroll jump + re-render loop)
+  React.useEffect(() => {
+    refreshUserDoc().catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(currentUser?.fullName || '');
