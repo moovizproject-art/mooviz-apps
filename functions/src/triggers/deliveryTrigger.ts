@@ -243,9 +243,11 @@ export const onDeliveryUpdate = onDocumentUpdated(
     // Detect status change — validate transition server-side
     if (before.status !== after.status) {
       // validateStatusTransition checks both allowed transitions and actor roles
-      // Using "system" role here since we can't determine actor from trigger context
-      const isValid = validateStatusTransition(before.status, after.status, "system");
-      if (!isValid) {
+      // Only validate the transition path is valid (not actor role).
+      // The callable already verified RBAC — the trigger can't know who wrote the change.
+      const { STATUS_TRANSITIONS } = require("@mooviz/shared");
+      const allowed = STATUS_TRANSITIONS[before.status as string];
+      if (!allowed || !allowed.includes(after.status)) {
         // REVERT invalid transition — defense against direct client writes
         console.warn(
           `[onDeliveryUpdate] REVERTED invalid transition ${before.status} → ${after.status} on ${deliveryId}`
