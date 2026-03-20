@@ -62,22 +62,27 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
     [navigation],
   );
 
-  // Split active deliveries: "needs attention" (drivers interested/confirmed) vs "regular"
-  const { attentionDeliveries, regularDeliveries } = useMemo(() => {
-    if (activeTab !== 'active') return { attentionDeliveries: [], regularDeliveries: deliveries };
+  // Split active deliveries into 3 sections: attention (drivers waiting), payment (awaiting payment), regular
+  const { attentionDeliveries, paymentDeliveries, regularDeliveries } = useMemo(() => {
+    if (activeTab !== 'active') return { attentionDeliveries: [], paymentDeliveries: [], regularDeliveries: deliveries };
     const attention: typeof deliveries = [];
+    const payment: typeof deliveries = [];
     const regular: typeof deliveries = [];
     for (const d of deliveries) {
-      const hasDrivers = (d as any).interestedDrivers?.some(
-        (dr: any) => dr.status === 'interested' || dr.status === 'confirmed'
-      );
-      if (hasDrivers) {
-        attention.push(d);
+      if (['delivered', 'awaiting_payment'].includes(d.status)) {
+        payment.push(d);
       } else {
-        regular.push(d);
+        const hasDrivers = (d as any).interestedDrivers?.some(
+          (dr: any) => dr.status === 'interested' || dr.status === 'confirmed'
+        );
+        if (hasDrivers) {
+          attention.push(d);
+        } else {
+          regular.push(d);
+        }
       }
     }
-    return { attentionDeliveries: attention, regularDeliveries: regular };
+    return { attentionDeliveries: attention, paymentDeliveries: payment, regularDeliveries: regular };
   }, [deliveries, activeTab]);
 
   const emptyMessages: Record<TabKey, { message: string; submessage: string }> = {
@@ -127,17 +132,18 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
       {/* Delivery list — all tabs use FlatList data for virtualization */}
       <FlatList
         data={activeTab === 'active'
-          ? [...attentionDeliveries, ...regularDeliveries]
+          ? [...attentionDeliveries, ...paymentDeliveries, ...regularDeliveries]
           : deliveries}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const isAttention = activeTab === 'active' && attentionDeliveries.includes(item);
+          const isPayment = activeTab === 'active' && paymentDeliveries.includes(item);
           return (
             <View style={isAttention ? styles.attentionCard : undefined}>
               <DeliveryCard
                 delivery={item}
                 onPress={() => handleDeliveryPress(item.id)}
-                isUnread={isAttention && !seenIds.current.has(item.id)}
+                isUnread={(isAttention || isPayment) && !seenIds.current.has(item.id)}
               />
             </View>
           );
@@ -148,6 +154,13 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
               <View style={[styles.attentionHeader, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
                 <Text style={[styles.attentionTitle, { color: colors.primary }]}>
                   🔔 נהגים מחכים לתשובה ({attentionDeliveries.length})
+                </Text>
+              </View>
+            )}
+            {paymentDeliveries.length > 0 && (
+              <View style={[styles.attentionHeader, { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }]}>
+                <Text style={[styles.attentionTitle, { color: '#F57C00' }]}>
+                  💳 ממתינים לתשלום ({paymentDeliveries.length})
                 </Text>
               </View>
             )}
