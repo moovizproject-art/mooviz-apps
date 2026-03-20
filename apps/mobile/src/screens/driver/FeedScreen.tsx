@@ -146,7 +146,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
 
   // ── Preferences state ──
   const [prefs, setPrefs] = useState<DriverPreferences>(DEFAULT_PREFS);
-  const [_prefsLoaded, setPrefsLoaded] = useState(false);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
   // isFirstDelivery removed — reserved for future onboarding UX
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [earningsOpen, setEarningsOpen] = useState(false);
@@ -278,7 +278,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries: rawNearMe, isLoading: loadingNearMe, refresh: _refresh } = useDelivery({
     role: 'driver',
     statusFilter: ['new', 'pending'],
-    ...(nearLocation ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
+    ...(nearLocation && prefsLoaded ? { nearLocation, radiusKm: prefs.radiusKm } : {}),
   });
   // Query near home address
   const homeLocation = useMemo(
@@ -288,7 +288,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries: rawNearHome, isLoading: loadingHome } = useDelivery({
     role: 'driver',
     statusFilter: ['new', 'pending'],
-    ...(homeLocation ? { nearLocation: homeLocation, radiusKm: prefs.radiusKm } : {}),
+    ...(homeLocation && prefsLoaded ? { nearLocation: homeLocation, radiusKm: prefs.radiusKm } : {}),
   });
   // Query near work address
   const workLocation = useMemo(
@@ -298,7 +298,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { deliveries: rawNearWork, isLoading: loadingWork } = useDelivery({
     role: 'driver',
     statusFilter: ['new', 'pending'],
-    ...(workLocation ? { nearLocation: workLocation, radiusKm: prefs.radiusKm } : {}),
+    ...(workLocation && prefsLoaded ? { nearLocation: workLocation, radiusKm: prefs.radiusKm } : {}),
   });
 
   const isLoading = loadingNearMe || (homeLocation ? loadingHome : false) || (workLocation ? loadingWork : false);
