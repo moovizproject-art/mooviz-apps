@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { RatingsHistoryModal } from '../../components/RatingsHistoryModal';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -109,7 +108,7 @@ export function ProfileScreen(): React.JSX.Element {
   const handleChangePhoto = useCallback((): void => {
     const imageOpts = { mediaType: 'photo' as const, quality: 0.7 as const, maxWidth: 512, maxHeight: 512 };
 
-    Alert.alert(t('profile.changePhoto'), '', [
+    carAlert.show('info', t('profile.changePhoto'), '', [
       {
         text: t('common.takePhoto'),
         onPress: async () => {
@@ -134,7 +133,7 @@ export function ProfileScreen(): React.JSX.Element {
       },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, [t, uploadProfilePhoto]);
+  }, [t, carAlert, uploadProfilePhoto]);
 
   const handleChangePassword = async (): Promise<void> => {
     const email = currentUser?.email;
@@ -252,7 +251,11 @@ export function ProfileScreen(): React.JSX.Element {
         <View style={styles.detailsSection}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('profile.personalDetails')}</Text>
-            <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+            <TouchableOpacity
+              onPress={() => setIsEditing(!isEditing)}
+              activeOpacity={0.6}
+              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+            >
               <Text style={[styles.editLink, { color: colors.primary }]}>
                 {isEditing ? t('profile.cancelEdit') : t('profile.editProfile')}
               </Text>
