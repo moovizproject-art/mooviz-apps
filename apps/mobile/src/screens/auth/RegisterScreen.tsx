@@ -18,7 +18,6 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
 import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
-import { ISRAEL_CITIES } from '../../constants/cities';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 
@@ -32,7 +31,6 @@ interface RegisterForm {
   password: string;
   confirmPassword: string;
   phone: string;
-  city: string;
 }
 
 type FormField = keyof RegisterForm;
@@ -50,7 +48,6 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     password: '',
     confirmPassword: '',
     phone: '',
-    city: '',
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
@@ -63,35 +60,14 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
 
-  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
-  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
-
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
-  const cityRef = useRef<TextInput>(null);
 
   const updateField = (key: FormField, value: string): void => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
-  };
-
-  const handleCityChange = (value: string) => {
-    updateField('city', value);
-    if (value.trim().length > 0) {
-      const filtered = ISRAEL_CITIES.filter(c => c.includes(value.trim()));
-      setCitySuggestions(filtered.slice(0, 5));
-      setShowCitySuggestions(filtered.length > 0);
-    } else {
-      setCitySuggestions([]);
-      setShowCitySuggestions(false);
-    }
-  };
-
-  const selectCity = (selectedCity: string) => {
-    updateField('city', selectedCity);
-    setShowCitySuggestions(false);
   };
 
   const validate = (): boolean => {
@@ -138,7 +114,6 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           fullName: form.fullName,
           email: form.email,
           phone: form.phone,
-          city: form.city || undefined,
           gender: gender || undefined,
           ageRange: ageRange || undefined,
         });
@@ -151,7 +126,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           fullName: form.fullName,
           email: form.email,
           phone: form.phone,
-          city: form.city || '',
+          city: '',
           role: 'sender',
           driverUnlocked: false,
           driverAvailable: false,
@@ -325,42 +300,8 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
         {renderInput('phone', '050-1234567', {
           keyboardType: 'phone-pad',
           ref: phoneRef,
-          nextRef: cityRef,
         })}
         {errors.phone && <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>}
-      </View>
-
-      {/* City (optional with autocomplete) */}
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('profile.cityField')}</Text>
-        <View style={[styles.inputWrapper, { borderColor: colors.border, backgroundColor: colors.inputBg }, focusedField === 'city' && { borderColor: colors.primary, borderWidth: 1.5, shadowColor: colors.primary, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }]}>
-          <TextInput
-            ref={cityRef}
-            style={[styles.input, { color: colors.textPrimary }]}
-            value={form.city}
-            onChangeText={handleCityChange}
-            placeholder={t('forms.cityPlaceholder')}
-            placeholderTextColor={colors.textTertiary}
-            textAlign="right"
-            editable={!isLoading}
-            onFocus={() => setFocusedField('city' as FormField)}
-            onBlur={() => setFocusedField(null)}
-            returnKeyType="done"
-          />
-        </View>
-        {showCitySuggestions && (
-          <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {citySuggestions.map((suggestion) => (
-              <TouchableOpacity
-                key={suggestion}
-                style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
-                onPress={() => selectCity(suggestion)}
-              >
-                <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{suggestion}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
       </View>
 
       {/* Gender */}
@@ -618,21 +559,5 @@ const styles = StyleSheet.create({
   reqItem: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  suggestionsContainer: {
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 4,
-    overflow: 'hidden',
-  },
-  suggestionItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-  },
-  suggestionText: {
-    fontSize: 15,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
 });
