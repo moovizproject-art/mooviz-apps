@@ -53,14 +53,17 @@ export function ProfileScreen(): React.JSX.Element {
   const [ratingsModalVisible, setRatingsModalVisible] = useState(false);
   const [ratingsModalMode, setRatingsModalMode] = useState<'sender' | 'driver'>('sender');
 
-  // Load own profile photo on mount
+  // Load own profile photo — use Firestore URL first, fetch fresh from Storage as upgrade
   React.useEffect(() => {
+    if (currentUser?.profilePhotoURL) {
+      setOwnPhotoUri(currentUser.profilePhotoURL);
+    }
     if (currentUser?.uid) {
       storage().ref(`users/${currentUser.uid}/profile.jpg`).getDownloadURL()
         .then(setOwnPhotoUri)
-        .catch(() => {}); // no photo yet
+        .catch(() => {}); // no photo in Storage — keep Firestore URL if available
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, currentUser?.profilePhotoURL]);
 
   const handleSave = async (): Promise<void> => {
     try {
