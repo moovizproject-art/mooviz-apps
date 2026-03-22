@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
   Platform,
+  PermissionsAndroid,
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -270,7 +271,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   // Cancel allowed only pre-pickup statuses
   const canCancel = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status);
   const isPostPickup = ['picked_up', 'delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
-  const showPayment = delivery.status === 'delivered' || delivery.status === 'awaiting_payment';
+  const showPayment = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
   const showRate = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender;
   const hasDriver = !!delivery.driverId;
   const driverName = driverProfile?.fullName || delivery.driverName || '';
@@ -560,6 +561,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                         text: '📷 ' + strings.common.takePhoto.he,
                         onPress: async () => {
                           try {
+                            if (Platform.OS === 'android') {
+                              const granted = await PermissionsAndroid.request(
+                                PermissionsAndroid.PERMISSIONS.CAMERA,
+                                { title: 'הרשאת מצלמה', message: 'נדרשת גישה למצלמה לצילום אישור תשלום', buttonPositive: 'אשר', buttonNegative: 'ביטול' },
+                              );
+                              if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+                            }
                             const result = await launchCamera({ mediaType: 'photo', quality: 0.5, maxWidth: 960, maxHeight: 960 });
                             if (result.didCancel || !result.assets?.[0]?.uri) return;
                             await uploadAndConfirm(result.assets[0].uri!);
