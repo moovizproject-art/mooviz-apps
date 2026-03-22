@@ -207,38 +207,54 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     });
   }, [currentUser?.uid]);
 
-  // ── Sync prefs to Firestore (debounced 2s) ──
+  // ── Sync prefs to Firestore (debounced 2s, flush on blur) ──
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPrefsRef = useRef<DriverPreferences | null>(null);
+
+  const doFirestoreSync = useCallback(async (nextPrefs: DriverPreferences) => {
+    if (!currentUser?.uid) return;
+    try {
+      await firestore().collection('users').doc(currentUser.uid).update({
+        driverPrefs: {
+          homeAddress: nextPrefs.homeAddress,
+          workAddress: nextPrefs.workAddress,
+          radiusKm: nextPrefs.radiusKm,
+          vehicleType: nextPrefs.vehicleType,
+          deliverySizes: Object.entries(nextPrefs.deliverySizes)
+            .filter(([_, v]) => v)
+            .map(([k]) => k),
+          schedule: nextPrefs.schedule,
+          quietHoursStart: nextPrefs.quietHours[0]?.from || null,
+          quietHoursEnd: nextPrefs.quietHours[0]?.to || null,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        },
+      });
+      pendingPrefsRef.current = null;
+      // Brief "saved" flash
+      setSavedFlash(true);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSavedFlash(false), 2000);
+    } catch (err) {
+      console.warn('[FeedScreen] Prefs sync error:', err);
+    }
+  }, [currentUser?.uid]);
 
   const syncPrefsToFirestore = useCallback((nextPrefs: DriverPreferences) => {
-    if (!currentUser?.uid) return;
+    pendingPrefsRef.current = nextPrefs;
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(async () => {
-      try {
-        await firestore().collection('users').doc(currentUser.uid).update({
-          driverPrefs: {
-            homeAddress: nextPrefs.homeAddress,
-            workAddress: nextPrefs.workAddress,
-            radiusKm: nextPrefs.radiusKm,
-            vehicleType: nextPrefs.vehicleType,
-            deliverySizes: Object.entries(nextPrefs.deliverySizes)
-              .filter(([_, v]) => v)
-              .map(([k]) => k),
-            schedule: nextPrefs.schedule,
-            quietHoursStart: nextPrefs.quietHours[0]?.from || null,
-            quietHoursEnd: nextPrefs.quietHours[0]?.to || null,
-            updatedAt: firestore.FieldValue.serverTimestamp(),
-          },
-        });
-        // Brief "saved" flash
-        setSavedFlash(true);
-        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-        savedTimerRef.current = setTimeout(() => setSavedFlash(false), 2000);
-      } catch (err) {
-        console.warn('[FeedScreen] Prefs sync error:', err);
+    syncTimerRef.current = setTimeout(() => doFirestoreSync(nextPrefs), 2000);
+  }, [doFirestoreSync]);
+
+  // Flush pending prefs to Firestore when screen loses focus (e.g. navigating to chat)
+  useEffect(() => {
+    const unsub = navigation.addListener('blur', () => {
+      if (pendingPrefsRef.current && syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        doFirestoreSync(pendingPrefsRef.current);
       }
-    }, 2000);
-  }, [currentUser?.uid]);
+    });
+    return unsub;
+  }, [navigation, doFirestoreSync]);
 
   const updatePref = useCallback(<K extends keyof DriverPreferences>(key: K, value: DriverPreferences[K]) => {
     setPrefs((prev) => {

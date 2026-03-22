@@ -35,6 +35,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [ratingSubmitted, setRatingSubmitted] = useState<boolean>(false);
 
   const handleSubmit = async (): Promise<void> => {
     if (rating === 0) {
@@ -50,6 +51,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
         rating,
         comment: comment.trim() || undefined,
       });
+      setRatingSubmitted(true);
       carAlert.show('success', t('rating.thanks'), t('rating.ratingSuccess'), [
         { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
@@ -109,7 +111,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
         <TouchableOpacity
           style={[styles.submitButton, { backgroundColor: colors.primary }, isSubmitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={isSubmitting || rating === 0}
+          disabled={isSubmitting || rating === 0 || ratingSubmitted}
         >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? t('rating.submitting') : t('rating.submitRating')}

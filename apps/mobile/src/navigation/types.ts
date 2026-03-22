@@ -62,8 +62,8 @@ export type RootStackParamList = {
   SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
   DriverTabs: NavigatorScreenParams<DriverTabsParamList>;
   CreateDelivery: undefined;
-  SenderDeliveryDetail: { deliveryId: string };
-  DriverDeliveryDetail: { deliveryId: string };
+  SenderDeliveryDetail: { deliveryId: string; justRated?: boolean };
+  DriverDeliveryDetail: { deliveryId: string; justRated?: boolean };
   ChatRoom: { chatId: string; recipientName: string };
   Rating: { deliveryId: string; targetUserId: string };
   DriverKYC: undefined;

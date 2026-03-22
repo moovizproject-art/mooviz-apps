@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -129,6 +129,18 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     return unsub;
   }, [deliveryId]);
 
+  // Track if driver navigated to Rating screen — hide button immediately on return
+  const navigatedToRating = useRef(false);
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      if (navigatedToRating.current) {
+        setJustRated(true);
+        navigatedToRating.current = false;
+      }
+    });
+    return unsub;
+  }, [navigation]);
+
   // Fallback: fetch sender info from users collection if not denormalized on the delivery
   useEffect(() => {
     if (!delivery?.senderId || delivery.senderName) return;
@@ -172,6 +184,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [proofType, setProofType] = useState<'pickup' | 'delivery'>('pickup');
   const [proofUploading, setProofUploading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [justRated, setJustRated] = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
@@ -752,10 +765,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       )}
 
       {/* ── 8. Rate sender ── */}
-      {['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedByDriver && (
+      {['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedByDriver && !justRated && (
         <TouchableOpacity
           style={[styles.card, { backgroundColor: colors.accent, alignItems: 'center', paddingVertical: 16 }]}
-          onPress={() => navigation.navigate('Rating', { deliveryId: delivery.id, targetUserId: delivery.senderId })}
+          onPress={() => {
+            navigatedToRating.current = true;
+            navigation.navigate('Rating', { deliveryId: delivery.id, targetUserId: delivery.senderId });
+          }}
         >
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{t('delivery.rateSender')}</Text>
         </TouchableOpacity>

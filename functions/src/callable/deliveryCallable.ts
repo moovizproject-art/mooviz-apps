@@ -183,27 +183,32 @@ export const createDelivery = onCall(async (request) => {
   const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
 
   // --- Duplicate delivery cooldown (2 minutes) ---
-  // Simple query: sender's recent active deliveries, filter route match in code.
-  // Avoids needing a multi-field composite index.
-  const TWO_MIN_AGO = admin.firestore.Timestamp.fromMillis(Date.now() - 2 * 60 * 1000);
-  const recentByUser = await db.collection("deliveries")
-    .where("senderId", "==", uid)
-    .where("createdAt", ">=", TWO_MIN_AGO)
-    .limit(10)
-    .get();
+  // Non-blocking: if the index is missing, skip the check rather than fail the delivery.
+  try {
+    const TWO_MIN_AGO = admin.firestore.Timestamp.fromMillis(Date.now() - 2 * 60 * 1000);
+    const recentByUser = await db.collection("deliveries")
+      .where("senderId", "==", uid)
+      .where("createdAt", ">=", TWO_MIN_AGO)
+      .limit(10)
+      .get();
 
-  const isDuplicate = recentByUser.docs.some((d) => {
-    const data = d.data();
-    return data.pickup?.geohash === pickupGeohash
-      && data.destination?.geohash === destGeohash
-      && ["new", "pending", "awaiting_confirm", "waiting_for_pickup"].includes(data.status);
-  });
+    const isDuplicate = recentByUser.docs.some((d) => {
+      const data = d.data();
+      return data.pickup?.geohash === pickupGeohash
+        && data.destination?.geohash === destGeohash
+        && ["new", "pending", "awaiting_confirm", "waiting_for_pickup"].includes(data.status);
+    });
 
-  if (isDuplicate) {
-    throw new HttpsError(
-      "already-exists",
-      "שלחת משלוח לאותו יעד לפני פחות מ-2 דקות. נסה שוב בעוד רגע."
-    );
+    if (isDuplicate) {
+      throw new HttpsError(
+        "already-exists",
+        "שלחת משלוח לאותו יעד לפני פחות מ-2 דקות. נסה שוב בעוד רגע."
+      );
+    }
+  } catch (err: unknown) {
+    // Re-throw HttpsError (duplicate found), but swallow index errors
+    if (err instanceof HttpsError) throw err;
+    console.warn("createDelivery: duplicate check skipped (index building?):", (err as Error).message);
   }
 
   // --- Sender info (already fetched by assertUserRole) ---
@@ -1030,42 +1035,48 @@ export const cancelDelivery = onCall(async (request) => {
   }
 
   const { deliveryId, reason } = request.data;
+  const { ref } = await getDeliveryOrThrow(deliveryId);
 
-  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+  let cancellerNameHe = "";
 
-  // Verify the caller is either the sender or the assigned driver
-  const isSender = delivery.senderId === uid;
-  const isDriver = delivery.driverId === uid;
+  // Use transaction to prevent race conditions (e.g. cancel + confirm at same time)
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const delivery = freshDoc.data() as Delivery;
+    if (!delivery) throw new HttpsError("not-found", `Delivery ${deliveryId} not found`);
 
-  if (!isSender && !isDriver) {
-    throw new HttpsError(
-      "permission-denied",
-      "Only the sender or assigned driver can cancel this delivery"
-    );
-  }
+    // Verify the caller is either the sender or the assigned driver
+    const isSender = delivery.senderId === uid;
+    const isDriver = delivery.driverId === uid;
 
-  // Determine actor role
-  const actorRole = isSender ? "sender" : "driver";
-
-  // Validate transition
-  assertValidTransition(delivery.status, "cancelled", actorRole, uid);
-
-  await updateDeliveryStatus(
-    ref,
-    "cancelled",
-    uid,
-    reason ?? "Cancelled by user",
-    {
-      cancelledBy: uid,
+    if (!isSender && !isDriver) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the sender or assigned driver can cancel this delivery"
+      );
     }
-  );
 
-  // If a driver was assigned but is not the canceller, reset the delivery
-  // so another driver could potentially pick it up
-  // (only if the sender cancels — driver cancel is permanent)
+    const actorRole = isSender ? "sender" : "driver";
+    cancellerNameHe = isSender ? "השולח" : "הנהג";
 
-  // Notify the other party (Hebrew role names for notification text)
-  const cancellerNameHe = isSender ? "השולח" : "הנהג";
+    // Validate transition against fresh status
+    assertValidTransition(delivery.status, "cancelled", actorRole, uid);
+
+    const now = admin.firestore.Timestamp.now();
+    txn.update(ref, {
+      status: "cancelled",
+      cancelledBy: uid,
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: "cancelled",
+        timestamp: now,
+        actor: uid,
+        note: reason ?? "Cancelled by user",
+      }),
+      updatedAt: now,
+    });
+  });
+
+  // Notify outside transaction
   await sendDeliveryNotification(deliveryId, "delivery_cancelled", {
     actorId: uid,
     cancelledBy: cancellerNameHe,
@@ -1193,11 +1204,12 @@ export const submitRating = onCall(async (request) => {
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
 
-  // Validate delivery status
-  if (delivery.status !== "delivered" && delivery.status !== "completed_paid") {
+  // Validate delivery status — allow rating during all post-delivery states
+  const ratingAllowedStatuses = ["delivered", "awaiting_payment", "completed_paid"];
+  if (!ratingAllowedStatuses.includes(delivery.status)) {
     throw new HttpsError(
       "failed-precondition",
-      "Ratings can only be submitted when delivery status is 'delivered' or 'completed_paid'"
+      "Ratings can only be submitted after delivery is completed"
     );
   }
 

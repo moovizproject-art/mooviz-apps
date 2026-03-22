@@ -127,6 +127,19 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileDriverUid, setProfileDriverUid] = useState<string | null>(null);
+  const [justRated, setJustRated] = useState(false);
+  const navigatedToRating = useRef(false);
+
+  // Hide rate button immediately when returning from Rating screen
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      if (navigatedToRating.current) {
+        setJustRated(true);
+        navigatedToRating.current = false;
+      }
+    });
+    return unsub;
+  }, [navigation]);
 
   const handleZoom = useCallback((factor: number) => {
     if (!mapRegion || !staticMapRef.current) return;
@@ -272,7 +285,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const canCancel = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status);
   const isPostPickup = ['picked_up', 'delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
   const showPayment = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
-  const showRate = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender;
+  const showRate = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender && !justRated;
   const hasDriver = !!delivery.driverId;
   const driverName = driverProfile?.fullName || delivery.driverName || '';
   const driverPhoto = driverProfile?.profilePhotoURL || delivery.driverPhotoUrl;
@@ -525,6 +538,28 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             <View style={styles.paymentProofRow}>
               <Image source={{ uri: delivery.proof.paymentURL }} style={styles.proofThumb} />
               <Text style={[styles.proofLabel, { color: colors.success }]}>{strings.deliveryExtra.paymentProofUploaded.he}</Text>
+            </View>
+          )}
+
+          {/* Payment app buttons — open Bit or PayBox to send payment */}
+          {!delivery.payment?.senderConfirmed && (
+            <View style={styles.paymentAppsRow}>
+              <TouchableOpacity
+                style={[styles.paymentAppBtn, { backgroundColor: '#00D4AA' }]}
+                onPress={() => Linking.openURL('https://www.bitpay.co.il/app/').catch(() =>
+                  Linking.openURL('https://apps.apple.com/il/app/bit/id1080926498')
+                )}
+              >
+                <Text style={styles.paymentAppBtnText}>{'💳 שלם ב-Bit'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.paymentAppBtn, { backgroundColor: '#FF6B00' }]}
+                onPress={() => Linking.openURL('https://payboxapp.page.link/pay').catch(() =>
+                  Linking.openURL('https://apps.apple.com/il/app/paybox/id1078498498')
+                )}
+              >
+                <Text style={styles.paymentAppBtnText}>{'💳 שלם ב-PayBox'}</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -897,12 +932,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         {showRate && (
           <TouchableOpacity
             style={[styles.rateBtn, { backgroundColor: colors.accent }]}
-            onPress={() =>
+            onPress={() => {
+              navigatedToRating.current = true;
               navigation.navigate('Rating', {
                 deliveryId: delivery.id,
                 targetUserId: delivery.driverId || '',
-              })
-            }
+              });
+            }}
           >
             <Text style={styles.rateBtnText}>{t('delivery.rateDriver')}</Text>
           </TouchableOpacity>
@@ -1345,6 +1381,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 8,
+  },
+  paymentAppsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  paymentAppBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  paymentAppBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   confirmPaymentButton: {
     marginTop: 12,
