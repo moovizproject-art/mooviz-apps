@@ -9,8 +9,6 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
-
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -24,7 +22,7 @@ const logo = require('../../assets/logo.png');
 export function AcceptTermsScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { currentUser, refreshUserDoc } = useAuth();
+  const { currentUser, updateProfile } = useAuth();
   const [accepted, setAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,13 +31,10 @@ export function AcceptTermsScreen(): React.JSX.Element {
 
     try {
       setIsLoading(true);
-      await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .update({
-          acceptedTermsAt: firestore.FieldValue.serverTimestamp(),
-        });
-      await refreshUserDoc();
+      // updateProfile writes to Firestore AND optimistically updates
+      // local state, so navigation advances immediately without waiting
+      // for serverTimestamp() to resolve from cache.
+      await updateProfile({ acceptedTermsAt: new Date() });
     } catch {
       // Retry silently — user can tap again
     } finally {

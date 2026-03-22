@@ -115,7 +115,9 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
   }
 
   constraints.push(orderBy('createdAt', 'desc'));
-  constraints.push(limit(params.pageSize ?? 200));
+  if (params.pageSize) {
+    constraints.push(limit(params.pageSize));
+  }
 
   if (params.lastDoc) {
     constraints.push(startAfter(params.lastDoc));
@@ -139,19 +141,23 @@ export async function getUserById(userId: string): Promise<AppUser | null> {
 export async function searchUsers(searchQuery: string): Promise<AppUser[]> {
   // Firestore does not support full-text search natively.
   // We fetch all users and filter client-side for the admin panel.
-  // No orderBy — ensures docs without createdAt are still included.
-  const q = query(usersRef, limit(500));
-  const snapshot = await getDocs(q);
-  const lower = searchQuery.toLowerCase();
+  const snapshot = await getDocs(query(usersRef));
+  const q = searchQuery.toLowerCase().trim();
 
   return snapshot.docs
     .map(normalizeUser)
-    .filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(lower) ||
-        u.email.toLowerCase().includes(lower) ||
-        u.phone.includes(searchQuery),
-    );
+    .filter((u) => {
+      // Normalize phone: +972 54... → 054...
+      const localPhone = u.phone.startsWith('+972')
+        ? '0' + u.phone.slice(4)
+        : u.phone;
+      return (
+        u.fullName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.phone.includes(q) ||
+        localPhone.includes(q)
+      );
+    });
 }
 
 export async function updateUserStatus(userId: string, status: UserStatus): Promise<void> {

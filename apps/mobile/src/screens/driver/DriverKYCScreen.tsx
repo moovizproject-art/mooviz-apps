@@ -21,8 +21,10 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { uploadImage } from '../../services/storage';
 import { useAuth } from '../../hooks/useAuth';
+import { requestCameraPermission } from '../../utils/permissions';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../theme/tokens';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
+import { IMAGE_MAX_SIZE } from '../../constants/config';
 import type { KycStatus } from '../../types';
 
 const logo = require('../../assets/logo.png');
@@ -66,22 +68,52 @@ export function DriverKYCScreen(): React.JSX.Element {
   const pickImage = (setter: (uri: string | null) => void): void => {
     const imageOpts = { mediaType: 'photo' as const, quality: 0.8 as const, maxWidth: 1920, maxHeight: 1920 };
 
+    const handleResult = (result: ImagePickerResponse): void => {
+      if (result.didCancel) return;
+      if (result.errorCode) {
+        const msg = result.errorCode === 'camera_unavailable'
+          ? t('kyc.errorCameraUnavailable')
+          : result.errorCode === 'permission'
+            ? t('kyc.errorCameraPermission')
+            : result.errorMessage || t('kyc.errorImagePicker');
+        carAlert.show('error', t('common.error'), msg);
+        return;
+      }
+      const asset = result.assets?.[0];
+      if (!asset?.uri) return;
+      // Client-side size check before attempting upload
+      if (asset.fileSize && asset.fileSize > IMAGE_MAX_SIZE) {
+        carAlert.show('error', t('common.error'), t('kyc.errorFileTooLarge'));
+        return;
+      }
+      setter(asset.uri);
+    };
+
     Alert.alert(t('common.selectImageSource'), '', [
       {
         text: t('common.takePhoto'),
         onPress: async () => {
-          const result: ImagePickerResponse = await launchCamera(imageOpts);
-          if (!result.didCancel && result.assets?.[0]?.uri) {
-            setter(result.assets[0].uri);
+          const hasPermission = await requestCameraPermission();
+          if (!hasPermission) {
+            carAlert.show('error', t('common.error'), t('kyc.errorCameraPermission'));
+            return;
+          }
+          try {
+            const result: ImagePickerResponse = await launchCamera(imageOpts);
+            handleResult(result);
+          } catch (err: any) {
+            carAlert.show('error', t('common.error'), err.message || t('kyc.errorImagePicker'));
           }
         },
       },
       {
         text: t('common.chooseFromGallery'),
         onPress: async () => {
-          const result: ImagePickerResponse = await launchImageLibrary(imageOpts);
-          if (!result.didCancel && result.assets?.[0]?.uri) {
-            setter(result.assets[0].uri);
+          try {
+            const result: ImagePickerResponse = await launchImageLibrary(imageOpts);
+            handleResult(result);
+          } catch (err: any) {
+            carAlert.show('error', t('common.error'), err.message || t('kyc.errorImagePicker'));
           }
         },
       },
@@ -137,9 +169,21 @@ export function DriverKYCScreen(): React.JSX.Element {
       setLicenseUri(null);
       setIdUri(null);
       carAlert.show('success', t('common.success'), t('kyc.uploadSuccess'));
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DriverKYCScreen] Upload error:', error);
-      carAlert.show('error', t('common.error'), t('kyc.uploadError'));
+      // Show specific error based on Firebase Storage error codes
+      let msg = t('kyc.uploadError');
+      const code = error?.code || '';
+      if (code === 'storage/unauthorized' || code === 'storage/unauthenticated') {
+        msg = t('kyc.errorPermissionDenied');
+      } else if (code === 'storage/retry-limit-exceeded' || code === 'storage/canceled') {
+        msg = t('kyc.errorNetworkUpload');
+      } else if (code === 'storage/quota-exceeded') {
+        msg = t('kyc.errorStorageFull');
+      } else if (error?.message) {
+        msg = error.message;
+      }
+      carAlert.show('error', t('common.error'), msg);
     } finally {
       setIsUploading(false);
     }

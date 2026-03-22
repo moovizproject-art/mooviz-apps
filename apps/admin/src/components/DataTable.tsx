@@ -60,11 +60,20 @@ export default function DataTable<T extends Record<string, any>>({
     let items = [...data];
 
     if (search && searchFields.length > 0) {
-      const lower = search.toLowerCase();
+      const q = search.toLowerCase().trim();
+
       items = items.filter((item) =>
         searchFields.some((field) => {
           const val = getNestedValue(item, field);
-          return typeof val === 'string' && val.toLowerCase().includes(lower);
+          if (typeof val !== 'string') return false;
+          const valLower = val.toLowerCase();
+          // For phone fields: also match against local Israeli format
+          // e.g. "+972542174262" → also searchable as "0542174262" / "054-217..."
+          let normalizedVal = valLower;
+          if (field === 'phone' && valLower.startsWith('+972')) {
+            normalizedVal = '0' + valLower.slice(4); // +972 54... → 054...
+          }
+          return valLower.includes(q) || normalizedVal.includes(q);
         }),
       );
     }

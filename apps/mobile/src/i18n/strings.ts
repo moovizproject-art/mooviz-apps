@@ -249,6 +249,13 @@ export const strings = {
     errorTerms: { he: 'יש לאשר את תנאי השימוש לנהגים', en: 'Please accept driver terms of use' } as LocaleStrings,
     uploadSuccess: { he: 'המסמכים הועלו בהצלחה. הבקשה בבדיקה.', en: 'Documents uploaded successfully. Under review.' } as LocaleStrings,
     uploadError: { he: 'שגיאה בהעלאת המסמכים. נסה שוב.', en: 'Error uploading documents. Try again.' } as LocaleStrings,
+    errorCameraPermission: { he: 'אין הרשאה למצלמה. יש לאשר בהגדרות המכשיר.', en: 'Camera permission denied. Please allow in device settings.' } as LocaleStrings,
+    errorCameraUnavailable: { he: 'המצלמה אינה זמינה במכשיר זה.', en: 'Camera is not available on this device.' } as LocaleStrings,
+    errorImagePicker: { he: 'שגיאה בבחירת תמונה. נסה שוב.', en: 'Error selecting image. Try again.' } as LocaleStrings,
+    errorFileTooLarge: { he: 'הקובץ גדול מדי (מקסימום 5MB). נסה לצלם שוב.', en: 'File too large (max 5MB). Try taking the photo again.' } as LocaleStrings,
+    errorPermissionDenied: { he: 'אין הרשאה להעלות קבצים. נסה להתנתק ולהתחבר מחדש.', en: 'Upload permission denied. Try logging out and back in.' } as LocaleStrings,
+    errorNetworkUpload: { he: 'שגיאת רשת בהעלאה. בדוק חיבור אינטרנט ונסה שוב.', en: 'Network error during upload. Check connection and retry.' } as LocaleStrings,
+    errorStorageFull: { he: 'שטח האחסון מלא. פנה לתמיכה.', en: 'Storage quota exceeded. Contact support.' } as LocaleStrings,
   },
 
   // ── Delivery ──
