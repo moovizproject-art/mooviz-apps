@@ -32,6 +32,7 @@ service cloud.firestore {
     function allowedUserUpdateFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['fullName', 'nickname', 'phone', 'city', 'activeMode',
+                  'gender', 'ageRange',
                   'fcmToken', 'fcmTokens', 'location', 'updatedAt',
                   'driverSettings', 'notificationSettings',
                   'lastOtpAt', 'lastLoginAt', 'lastTokenUpdate', 'autoCreated']);
