@@ -31,12 +31,11 @@ export function AcceptTermsScreen(): React.JSX.Element {
 
     try {
       setIsLoading(true);
-      // updateProfile writes to Firestore AND optimistically updates
-      // local state, so navigation advances immediately without waiting
-      // for serverTimestamp() to resolve from cache.
+      console.log('[AcceptTerms] handleContinue — uid:', currentUser.uid);
       await updateProfile({ acceptedTermsAt: new Date() });
-    } catch {
-      // Retry silently — user can tap again
+      console.log('[AcceptTerms] updateProfile succeeded');
+    } catch (err: any) {
+      console.error('[AcceptTerms] updateProfile FAILED:', err?.message || err);
     } finally {
       setIsLoading(false);
     }

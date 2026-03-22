@@ -35,7 +35,8 @@ service cloud.firestore {
                   'gender', 'ageRange',
                   'fcmToken', 'fcmTokens', 'location', 'updatedAt',
                   'driverSettings', 'notificationSettings',
-                  'lastOtpAt', 'lastLoginAt', 'lastTokenUpdate', 'autoCreated']);
+                  'lastOtpAt', 'lastLoginAt', 'lastTokenUpdate', 'autoCreated',
+                  'acceptedTermsAt']);
     }
 
     // Allowed fields for delivery sender updates
