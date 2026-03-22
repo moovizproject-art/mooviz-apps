@@ -55,45 +55,66 @@ export function useStats(period?: Period) {
       const reportsRef = collection(db, 'reports');
 
       const days = period ? periodToDays(period) : null;
-      const periodConstraints = days
-        ? [where('createdAt', '>=', Timestamp.fromDate(subDays(new Date(), days)))]
-        : [];
+      const cutoff = days ? Timestamp.fromDate(subDays(new Date(), days)) : null;
 
+      // Queries that DON'T use period filter (global counts)
       const [
-        totalDeliveriesSnap,
-        activeDeliveriesSnap,
         totalUsersSnap,
         activeDriversSnap,
         pendingKycSnap,
         openReportsSnap,
       ] = await Promise.all([
-        getCountFromServer(query(deliveriesRef, ...periodConstraints)),
-        getCountFromServer(
-          query(deliveriesRef, where('status', 'in', ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'awaiting_payment']), ...periodConstraints),
-        ),
-        getCountFromServer(query(usersRef, ...periodConstraints)),
-        getCountFromServer(
-          query(usersRef, where('driverUnlocked', '==', true)),
-        ),
+        getCountFromServer(query(usersRef)),
+        getCountFromServer(query(usersRef, where('driverUnlocked', '==', true))),
         getCountFromServer(query(usersRef, where('kycStatus', '==', 'pending'))),
         getCountFromServer(query(reportsRef, where('status', '==', 'open'))),
       ]);
 
-      // Estimate revenue from completed deliveries
-      const completedQuery = query(
-        deliveriesRef,
-        where('status', 'in', ['delivered', 'completed_paid']),
-        ...periodConstraints,
-      );
-      const completedSnap = await getDocs(completedQuery);
-      const totalRevenue = completedSnap.docs.reduce(
-        (sum, docSnap) => sum + (docSnap.data().price ?? docSnap.data().suggestedPrice ?? 0),
-        0,
-      );
+      // Delivery counts — avoid IN + inequality (needs composite index per status).
+      // Instead, fetch all deliveries in period and count client-side.
+      const ACTIVE_STATUSES = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'awaiting_payment'];
+      const COMPLETED_STATUSES = ['delivered', 'completed_paid'];
+
+      let totalDeliveries = 0;
+      let activeDeliveries = 0;
+      let totalRevenue = 0;
+
+      if (cutoff) {
+        // Period-filtered: fetch deliveries created in range and count client-side
+        const periodDeliveries = await getDocs(
+          query(deliveriesRef, where('createdAt', '>=', cutoff)),
+        );
+        totalDeliveries = periodDeliveries.size;
+        for (const docSnap of periodDeliveries.docs) {
+          const d = docSnap.data();
+          if (ACTIVE_STATUSES.includes(d.status)) activeDeliveries++;
+          if (COMPLETED_STATUSES.includes(d.status)) {
+            totalRevenue += d.price ?? d.suggestedPrice ?? 0;
+          }
+        }
+      } else {
+        // No period: use server counts (more efficient)
+        const [totalSnap, activeSnap] = await Promise.all([
+          getCountFromServer(query(deliveriesRef)),
+          getCountFromServer(
+            query(deliveriesRef, where('status', 'in', ACTIVE_STATUSES)),
+          ),
+        ]);
+        totalDeliveries = totalSnap.data().count;
+        activeDeliveries = activeSnap.data().count;
+
+        const completedSnap = await getDocs(
+          query(deliveriesRef, where('status', 'in', COMPLETED_STATUSES)),
+        );
+        totalRevenue = completedSnap.docs.reduce(
+          (sum, docSnap) => sum + (docSnap.data().price ?? docSnap.data().suggestedPrice ?? 0),
+          0,
+        );
+      }
 
       return {
-        totalDeliveries: totalDeliveriesSnap.data().count,
-        activeDeliveries: activeDeliveriesSnap.data().count,
+        totalDeliveries,
+        activeDeliveries,
         totalUsers: totalUsersSnap.data().count,
         activeDrivers: activeDriversSnap.data().count,
         totalRevenue,

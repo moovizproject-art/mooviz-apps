@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
-  collection, getDocs, query, where, Timestamp, getCountFromServer,
+  collection, getDocs, query, where, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subDays, subMonths, format, startOfMonth } from 'date-fns';
@@ -30,35 +30,38 @@ export interface DeliveryTiming {
   sampleSize: number;
 }
 
-export function useUserBreakdown(period: Period) {
+export function useUserBreakdown(_period: Period) {
   return useQuery<UserBreakdown>({
-    queryKey: ['user-breakdown', period],
+    queryKey: ['user-breakdown'],
     queryFn: async () => {
       const usersRef = collection(db, 'users');
       const thirtyDaysAgo = Timestamp.fromDate(subDays(new Date(), 30));
-      const days = periodToDays(period);
-      const periodStart = days ? Timestamp.fromDate(subDays(new Date(), days)) : null;
 
-      const baseConstraints = periodStart
-        ? [where('createdAt', '>=', periodStart)]
-        : [];
+      // All users have role='sender'. Drivers are identified by driverUnlocked=true.
+      // Active = logged in within 30 days (lastLoginAt field).
+      const allUsers = await getDocs(query(usersRef));
 
-      const [senderSnap, driverSnap] = await Promise.all([
-        getCountFromServer(query(usersRef, where('role', '==', 'sender'), ...baseConstraints)),
-        getCountFromServer(query(usersRef, where('role', 'in', ['driver', 'both']), ...baseConstraints)),
-      ]);
+      let totalSenders = 0;
+      let totalDrivers = 0;
+      let activeSenders = 0;
+      let activeDrivers = 0;
 
-      const [activeSenderSnap, activeDriverSnap] = await Promise.all([
-        getCountFromServer(query(usersRef, where('role', '==', 'sender'), where('lastActiveAt', '>=', thirtyDaysAgo))),
-        getCountFromServer(query(usersRef, where('role', 'in', ['driver', 'both']), where('lastActiveAt', '>=', thirtyDaysAgo))),
-      ]);
+      for (const docSnap of allUsers.docs) {
+        const data = docSnap.data();
+        const isDriver = data.driverUnlocked === true;
+        const lastLogin = data.lastLoginAt;
+        const isActive = lastLogin && lastLogin.toMillis() >= thirtyDaysAgo.toMillis();
 
-      return {
-        totalSenders: senderSnap.data().count,
-        totalDrivers: driverSnap.data().count,
-        activeSenders: activeSenderSnap.data().count,
-        activeDrivers: activeDriverSnap.data().count,
-      };
+        if (isDriver) {
+          totalDrivers++;
+          if (isActive) activeDrivers++;
+        } else {
+          totalSenders++;
+          if (isActive) activeSenders++;
+        }
+      }
+
+      return { totalSenders, totalDrivers, activeSenders, activeDrivers };
     },
     staleTime: 2 * 60 * 1000,
   });

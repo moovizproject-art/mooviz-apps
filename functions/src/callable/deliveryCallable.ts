@@ -182,20 +182,27 @@ export const createDelivery = onCall(async (request) => {
   const pickupGeohash = encodeGeohash(pickupLat, pickupLng, GEOHASH_PRECISION);
   const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
 
-  // --- Duplicate delivery check ---
-  // Reject if sender already has an active delivery with same pickup+destination geohash
-  const recentDupes = await db.collection("deliveries")
+  // --- Duplicate delivery cooldown (2 minutes) ---
+  // Simple query: sender's recent active deliveries, filter route match in code.
+  // Avoids needing a multi-field composite index.
+  const TWO_MIN_AGO = admin.firestore.Timestamp.fromMillis(Date.now() - 2 * 60 * 1000);
+  const recentByUser = await db.collection("deliveries")
     .where("senderId", "==", uid)
-    .where("status", "in", ["new", "pending", "awaiting_confirm", "waiting_for_pickup"])
-    .where("pickup.geohash", "==", pickupGeohash)
-    .where("destination.geohash", "==", destGeohash)
-    .limit(1)
+    .where("createdAt", ">=", TWO_MIN_AGO)
+    .limit(10)
     .get();
 
-  if (!recentDupes.empty) {
+  const isDuplicate = recentByUser.docs.some((d) => {
+    const data = d.data();
+    return data.pickup?.geohash === pickupGeohash
+      && data.destination?.geohash === destGeohash
+      && ["new", "pending", "awaiting_confirm", "waiting_for_pickup"].includes(data.status);
+  });
+
+  if (isDuplicate) {
     throw new HttpsError(
       "already-exists",
-      "יש לך כבר משלוח פעיל לאותו יעד. בטל אותו קודם או המתן לסיומו."
+      "שלחת משלוח לאותו יעד לפני פחות מ-2 דקות. נסה שוב בעוד רגע."
     );
   }
 
