@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { sendPushNotification } from "../services/notificationService";
+import { getNearbyDriverTokensMultiLocation } from "../services/geohashService";
 
 const db = admin.firestore();
 
@@ -36,12 +37,16 @@ export const selectionTimeout = onSchedule(
         );
 
         await doc.ref.update({
-          status: "pending",
+          status: "new",
+          driverId: null,
+          driverName: null,
+          driverPhotoUrl: null,
+          driverRating: null,
           statusHistory: admin.firestore.FieldValue.arrayUnion({
-            status: "pending",
+            status: "new",
             timestamp: now,
             actor: "system",
-            note: "Driver selection timed out, reverted to pending",
+            note: "Driver selection timed out, reverted to new",
           }),
           interestedDrivers: updated,
           selectedDriverId: null,
@@ -62,6 +67,33 @@ export const selectionTimeout = onSchedule(
           "לא אישרת בזמן, השולח יבחר נהג אחר",
           { event: "selection_timeout", deliveryId: doc.id }
         ).catch(() => {});
+
+        // Re-notify nearby drivers (exclude timed-out driver)
+        const pickupGeohash = data.pickup?.geohash;
+        if (pickupGeohash) {
+          const pickupCity = data.pickup?.city ?? "";
+          const destCity = data.destination?.city ?? "";
+          getNearbyDriverTokensMultiLocation(pickupGeohash, 15, data.pickup?.lat, data.pickup?.lng, [selectedDriverId])
+            .then((nearbyDrivers) =>
+              Promise.all(
+                nearbyDrivers.map((driver) =>
+                  sendPushNotification(
+                    driver.uid,
+                    "משלוח זמין באזורך",
+                    `משלוח מ-${pickupCity} ל-${destCity} - ${data.price} ₪`,
+                    {
+                      event: "new_listing_nearby",
+                      deliveryId: doc.id,
+                      pickupCity,
+                      destinationCity: destCity,
+                      price: String(data.price ?? 0),
+                    }
+                  )
+                )
+              ).then(() => console.log(`[selectionTimeout] re-notified ${nearbyDrivers.length} nearby drivers for ${doc.id}`))
+            )
+            .catch((err) => console.error(`[selectionTimeout] nearby driver notification failed for ${doc.id}:`, err));
+        }
 
         console.log(`[selectionTimeout] Expired selection for delivery ${doc.id}, driver ${selectedDriverId}`);
       } catch (error) {

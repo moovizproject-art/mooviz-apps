@@ -31,7 +31,7 @@ service cloud.firestore {
     // Allowed fields for user self-update
     function allowedUserUpdateFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['fullName', 'phone', 'city', 'activeMode',
+        .hasOnly(['fullName', 'nickname', 'phone', 'city', 'activeMode',
                   'fcmToken', 'fcmTokens', 'location', 'updatedAt',
                   'driverSettings', 'notificationSettings',
                   'lastOtpAt', 'lastLoginAt', 'lastTokenUpdate', 'autoCreated']);

@@ -21,6 +21,7 @@ export interface ChatMessage {
 interface SendMessageInput {
   chatId: string;
   senderId: string;
+  senderName: string;
   text: string;
   type: 'text' | 'image';
 }
@@ -28,6 +29,7 @@ interface SendMessageInput {
 interface SendImageInput {
   chatId: string;
   senderId: string;
+  senderName: string;
   imageUri: string;
 }
 
@@ -123,6 +125,7 @@ export function useChat(chatId: string): UseChatResult {
       batch.set(messageRef, {
         chatId: input.chatId,
         senderId: input.senderId,
+        senderName: input.senderName,
         text: input.text,
         type: input.type,
         read: false,
@@ -166,6 +169,7 @@ export function useChat(chatId: string): UseChatResult {
       batch.set(messageRef, {
         chatId: input.chatId,
         senderId: input.senderId,
+        senderName: input.senderName,
         text: '',
         type: 'image',
         imageUrl,

@@ -20,6 +20,44 @@ const db = admin.firestore();
 const GEOHASH_PRECISION = 7;
 
 /**
+ * Fire-and-forget: re-notify nearby drivers about a delivery that's available again.
+ * Excludes specified driver UIDs (cancelled/declined drivers + sender).
+ */
+function renotifyNearbyDrivers(
+  delivery: Delivery,
+  deliveryId: string,
+  excludeUids: string[],
+  context: string,
+): void {
+  const pickupGeohash = delivery.pickup?.geohash;
+  if (!pickupGeohash) return;
+
+  const pickupCity = delivery.pickup?.city ?? "";
+  const destCity = delivery.destination?.city ?? "";
+
+  getNearbyDriverTokensMultiLocation(pickupGeohash, 15, delivery.pickup?.lat, delivery.pickup?.lng, excludeUids)
+    .then((nearbyDrivers: import("../services/geohashService").NearbyDriver[]) =>
+      Promise.all(
+        nearbyDrivers.map((driver: import("../services/geohashService").NearbyDriver) =>
+          sendPushNotification(
+            driver.uid,
+            "משלוח זמין באזורך",
+            `משלוח מ-${pickupCity} ל-${destCity} - ${delivery.price} ₪`,
+            {
+              event: "new_listing_nearby",
+              deliveryId,
+              pickupCity,
+              destinationCity: destCity,
+              price: String(delivery.price ?? 0),
+            }
+          )
+        )
+      ).then(() => console.log(`${context}: notified ${nearbyDrivers.length} nearby drivers`))
+    )
+    .catch((err: unknown) => console.error(`${context}: nearby driver notification failed:`, err));
+}
+
+/**
  * Helper to get a delivery document or throw.
  */
 async function getDeliveryOrThrow(
@@ -506,7 +544,7 @@ export const declineSelection = onCall(async (request) => {
   const { deliveryId } = request.data;
   if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
 
-  const { ref } = await getDeliveryOrThrow(deliveryId);
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
   let senderId = "";
 
   await db.runTransaction(async (txn) => {
@@ -542,6 +580,9 @@ export const declineSelection = onCall(async (request) => {
   sendPushNotification(senderId, "הנהג דחה", "בחר נהג אחר מהרשימה", { event: "driver_declined", deliveryId })
     .catch((err: unknown) => console.error("declineSelection notification failed:", err));
 
+  // Re-notify nearby drivers (exclude the declined driver)
+  renotifyNearbyDrivers(delivery, deliveryId, [uid], "declineSelection");
+
   console.log(`declineSelection: driver ${uid} declined for delivery ${deliveryId}`);
   return { success: true };
 });
@@ -557,7 +598,7 @@ export const cancelSelectedDriver = onCall(async (request) => {
   const { deliveryId } = request.data;
   if (!deliveryId) throw new HttpsError("invalid-argument", "deliveryId is required");
 
-  const { ref } = await getDeliveryOrThrow(deliveryId);
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
   let cancelledDriverId = "";
 
   await db.runTransaction(async (txn) => {
@@ -576,26 +617,7 @@ export const cancelSelectedDriver = onCall(async (request) => {
         d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
       );
       txn.update(ref, {
-        status: "pending",
-        interestedDrivers: updated,
-        selectedDriverId: null,
-        selectionExpiresAt: null,
-        statusHistory: admin.firestore.FieldValue.arrayUnion({
-          status: "pending",
-          timestamp: now,
-          actor: uid,
-          note: "Sender cancelled pending selection, reverted to pending",
-        }),
-        updatedAt: now,
-      });
-    } else if (freshData.status === "waiting_for_pickup" && freshData.driverId) {
-      // Case 2: Cancel confirmed driver (revert waiting_for_pickup → pending)
-      cancelledDriverId = freshData.driverId;
-      const updated = interested.map((d: any) =>
-        d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
-      );
-      txn.update(ref, {
-        status: "pending",
+        status: "new",
         driverId: null,
         driverName: null,
         driverPhotoUrl: null,
@@ -604,10 +626,33 @@ export const cancelSelectedDriver = onCall(async (request) => {
         selectedDriverId: null,
         selectionExpiresAt: null,
         statusHistory: admin.firestore.FieldValue.arrayUnion({
-          status: "pending",
+          status: "new",
           timestamp: now,
           actor: uid,
-          note: "Sender cancelled confirmed driver, reverted to pending",
+          note: "Sender cancelled pending selection, reverted to new",
+        }),
+        updatedAt: now,
+      });
+    } else if (freshData.status === "waiting_for_pickup" && freshData.driverId) {
+      // Case 2: Cancel confirmed driver (revert waiting_for_pickup → new)
+      cancelledDriverId = freshData.driverId;
+      const updated = interested.map((d: any) =>
+        d.uid === cancelledDriverId ? { ...d, status: "cancelled" } : d
+      );
+      txn.update(ref, {
+        status: "new",
+        driverId: null,
+        driverName: null,
+        driverPhotoUrl: null,
+        driverRating: null,
+        interestedDrivers: updated,
+        selectedDriverId: null,
+        selectionExpiresAt: null,
+        statusHistory: admin.firestore.FieldValue.arrayUnion({
+          status: "new",
+          timestamp: now,
+          actor: uid,
+          note: "Sender cancelled confirmed driver, reverted to new",
         }),
         updatedAt: now,
       });
@@ -618,6 +663,9 @@ export const cancelSelectedDriver = onCall(async (request) => {
 
   sendPushNotification(cancelledDriverId, "השולח ביטל את הבחירה", "המשלוח הוחזר לרשימה", { event: "selection_cancelled", deliveryId })
     .catch((err: unknown) => console.error("cancelSelectedDriver notification failed:", err));
+
+  // Re-notify nearby drivers (exclude the cancelled driver and sender)
+  renotifyNearbyDrivers(delivery, deliveryId, [cancelledDriverId, uid], "cancelSelectedDriver");
 
   console.log(`cancelSelectedDriver: sender ${uid} cancelled driver ${cancelledDriverId} for delivery ${deliveryId}`);
   return { success: true };
@@ -850,84 +898,82 @@ export const confirmPayment = onCall(async (request) => {
   }
 
   const { deliveryId, paymentPhotoURL } = request.data;
-  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+  const { ref } = await getDeliveryOrThrow(deliveryId);
 
-  // Allow payment confirmation in both delivered and awaiting_payment
-  if (delivery.status !== "delivered" && delivery.status !== "awaiting_payment") {
-    throw new HttpsError(
-      "failed-precondition",
-      "Payment can only be confirmed when status is 'delivered' or 'awaiting_payment'"
-    );
-  }
+  // Use a single transaction for ALL payment confirmations to prevent race conditions.
+  // Without this, two simultaneous callers could both read otherConfirmed=false and
+  // both transition to awaiting_payment instead of one going to completed_paid.
+  let notifyEvent: "awaiting_payment_notify" | "payment_confirmed" | null = null;
 
-  const isSender = delivery.senderId === uid;
-  const isDriver = delivery.driverId === uid;
+  await db.runTransaction(async (txn) => {
+    const freshDoc = await txn.get(ref);
+    const delivery = freshDoc.data() as Delivery;
 
-  if (!isSender && !isDriver) {
-    throw new HttpsError(
-      "permission-denied",
-      "Only the sender or driver can confirm payment"
-    );
-  }
+    if (!delivery) throw new HttpsError("not-found", `Delivery ${deliveryId} not found`);
 
-  // Check for double-confirm
-  if (isSender && delivery.payment.senderConfirmed) {
-    throw new HttpsError("already-exists", "Sender has already confirmed payment");
-  }
-  if (isDriver && delivery.payment.driverConfirmed) {
-    throw new HttpsError("already-exists", "Driver has already confirmed payment");
-  }
+    // Allow payment confirmation in both delivered and awaiting_payment
+    if (delivery.status !== "delivered" && delivery.status !== "awaiting_payment") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Payment can only be confirmed when status is 'delivered' or 'awaiting_payment'"
+      );
+    }
 
-  const now = admin.firestore.Timestamp.now();
-  const updateData: Record<string, unknown> = {
-    updatedAt: now,
-  };
+    const isSender = delivery.senderId === uid;
+    const isDriver = delivery.driverId === uid;
 
-  // Set the caller's confirmation flag
-  if (isSender) {
-    updateData["payment.senderConfirmed"] = true;
-  }
-  if (isDriver) {
-    updateData["payment.driverConfirmed"] = true;
-  }
+    if (!isSender && !isDriver) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the sender or driver can confirm payment"
+      );
+    }
 
-  // Store payment proof photo if provided
-  if (paymentPhotoURL && typeof paymentPhotoURL === "string") {
-    updateData["proof.paymentURL"] = paymentPhotoURL;
-  }
+    // Check for double-confirm
+    if (isSender && delivery.payment.senderConfirmed) {
+      throw new HttpsError("already-exists", "Sender has already confirmed payment");
+    }
+    if (isDriver && delivery.payment.driverConfirmed) {
+      throw new HttpsError("already-exists", "Driver has already confirmed payment");
+    }
 
-  // Determine if this is the first or second confirmation
-  const otherConfirmed = isSender
-    ? delivery.payment.driverConfirmed
-    : delivery.payment.senderConfirmed;
+    const now = admin.firestore.Timestamp.now();
+    const updateData: Record<string, unknown> = {
+      updatedAt: now,
+    };
 
-  if (!otherConfirmed) {
-    // FIRST confirmation → transition to awaiting_payment
-    updateData.status = "awaiting_payment";
-    updateData.statusHistory = admin.firestore.FieldValue.arrayUnion({
-      status: "awaiting_payment",
-      timestamp: now,
-      actor: uid,
-      note: `${isSender ? "Sender" : "Driver"} confirmed payment, waiting for other party`,
-    });
+    // Set the caller's confirmation flag
+    if (isSender) {
+      updateData["payment.senderConfirmed"] = true;
+    }
+    if (isDriver) {
+      updateData["payment.driverConfirmed"] = true;
+    }
 
-    await ref.update(updateData);
+    // Store payment proof photo if provided
+    if (paymentPhotoURL && typeof paymentPhotoURL === "string") {
+      updateData["proof.paymentURL"] = paymentPhotoURL;
+    }
 
-    // Notify the OTHER party: "your turn to confirm"
-    await sendDeliveryNotification(deliveryId, "awaiting_payment_notify", {
-      actorId: uid,
-    });
-  } else {
-    // SECOND confirmation → transition to completed_paid
-    // Use transaction for atomicity (prevent double-increment)
-    await db.runTransaction(async (txn) => {
-      const freshDoc = await txn.get(ref);
-      const freshData = freshDoc.data();
-      if (!freshData || freshData.status !== "awaiting_payment") {
-        console.log(`Delivery ${deliveryId} already completed (status=${freshData?.status}), skipping`);
-        return;
-      }
+    // Determine if this is the first or second confirmation (fresh read inside txn)
+    const otherConfirmed = isSender
+      ? delivery.payment.driverConfirmed
+      : delivery.payment.senderConfirmed;
 
+    if (!otherConfirmed) {
+      // FIRST confirmation → transition to awaiting_payment
+      updateData.status = "awaiting_payment";
+      updateData.statusHistory = admin.firestore.FieldValue.arrayUnion({
+        status: "awaiting_payment",
+        timestamp: now,
+        actor: uid,
+        note: `${isSender ? "Sender" : "Driver"} confirmed payment, waiting for other party`,
+      });
+
+      txn.update(ref, updateData);
+      notifyEvent = "awaiting_payment_notify";
+    } else {
+      // SECOND confirmation → transition to completed_paid
       const completionEntry = {
         status: "completed_paid" as const,
         timestamp: now,
@@ -942,22 +988,25 @@ export const confirmPayment = onCall(async (request) => {
       });
 
       // Increment completedDeliveries for both users
-      if (freshData.senderId) {
-        txn.update(db.collection("users").doc(freshData.senderId), {
+      if (delivery.senderId) {
+        txn.update(db.collection("users").doc(delivery.senderId), {
           completedDeliveries: admin.firestore.FieldValue.increment(1),
         });
       }
-      if (freshData.driverId) {
-        txn.update(db.collection("users").doc(freshData.driverId), {
+      if (delivery.driverId) {
+        txn.update(db.collection("users").doc(delivery.driverId), {
           completedDeliveries: admin.firestore.FieldValue.increment(1),
         });
       }
-    });
+      notifyEvent = "payment_confirmed";
+    }
+  });
 
-    // Notify both parties
-    await sendDeliveryNotification(deliveryId, "payment_confirmed", {
-      actorId: uid,
-    });
+  // Send notifications outside the transaction
+  if (notifyEvent === "awaiting_payment_notify") {
+    await sendDeliveryNotification(deliveryId, "awaiting_payment_notify", { actorId: uid });
+  } else if (notifyEvent === "payment_confirmed") {
+    await sendDeliveryNotification(deliveryId, "payment_confirmed", { actorId: uid });
   }
 
   return { success: true, message: "Payment confirmation recorded" };
@@ -1034,13 +1083,8 @@ export const declineDriver = onCall(async (request) => {
   // Verify caller is the sender
   assertIsSender(delivery.senderId, uid);
 
-  // Can only decline when status is pending
-  if (delivery.status !== "pending") {
-    throw new HttpsError(
-      "failed-precondition",
-      "Can only decline a driver when delivery status is 'pending'"
-    );
-  }
+  // Validate transition: pending → new (sender declines the driver)
+  assertValidTransition(delivery.status, "new", "sender", uid);
 
   const declinedDriverId = delivery.driverId;
 
@@ -1112,32 +1156,8 @@ export const withdrawInterest = onCall(async (request) => {
     console.error("withdrawInterest: sender notification failed:", notifErr);
   }
 
-  // Re-notify nearby drivers about the now-available delivery
-  const pickupGeohash = delivery.pickup?.geohash;
-  if (pickupGeohash) {
-    const pickupCity = delivery.pickup?.city ?? "";
-    const destCity = delivery.destination?.city ?? "";
-    getNearbyDriverTokensMultiLocation(pickupGeohash, 15, delivery.pickup?.lat, delivery.pickup?.lng, [uid])
-      .then((nearbyDrivers: import("../services/geohashService").NearbyDriver[]) =>
-        Promise.all(
-          nearbyDrivers.map((driver: import("../services/geohashService").NearbyDriver) =>
-            sendPushNotification(
-              driver.uid,
-              "משלוח חדש באזורך",
-              `משלוח מ-${pickupCity} ל-${destCity} - ${delivery.price} ₪`,
-              {
-                event: "new_listing_nearby",
-                deliveryId,
-                pickupCity,
-                destinationCity: destCity,
-                price: String(delivery.price ?? 0),
-              }
-            )
-          )
-        ).then(() => console.log(`withdrawInterest: notified ${nearbyDrivers.length} nearby drivers (multi-location)`))
-      )
-      .catch((err: unknown) => console.error("withdrawInterest: nearby driver notification failed:", err));
-  }
+  // Re-notify nearby drivers (exclude the withdrawing driver)
+  renotifyNearbyDrivers(delivery, deliveryId, [uid], "withdrawInterest");
 
   return { success: true };
 });

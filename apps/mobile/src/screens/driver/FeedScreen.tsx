@@ -420,30 +420,6 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   }, [nearMeDeliveries.length, nearHomeDeliveries.length, nearWorkDeliveries.length, prefs.homeAddress, prefs.workAddress]);
 
 
-  // ── Latest chat message for current delivery ──
-  const [lastChatMessage, setLastChatMessage] = useState<string>('');
-  useEffect(() => {
-    if (!currentDelivery?.chatId) {
-      setLastChatMessage('');
-      return;
-    }
-    const unsub = firestore()
-      .collection('chats')
-      .doc(currentDelivery.chatId)
-      .collection('messages')
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .onSnapshot((snap) => {
-        if (snap && !snap.empty) {
-          const msg = snap.docs[0].data();
-          setLastChatMessage(msg.text || '');
-        }
-      }, () => {
-        // Permission denied or query error — ignore silently
-      });
-    return () => unsub();
-  }, [currentDelivery?.chatId]);
-
   // ── Earnings ──
   const { earnings, recentTransactions, isLoading: _earningsLoading } = useDriverEarnings(currentUser?.uid);
   const [transactionsOpen, setTransactionsOpen] = useState(false);
@@ -607,40 +583,17 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
         )}
       </View>
 
-      {/* ── Current Delivery Strip ── */}
+      {/* ── Current Active Delivery ── */}
       {currentDelivery && (
-        <TouchableOpacity
-          onPress={() => handleDeliveryPress(currentDelivery.id)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 4, padding: SPACING.md }]}>
-            <View style={styles.currentDeliveryRow}>
-              <View style={styles.currentDeliveryIcon}>
-                <Text style={{ fontSize: 22 }}>📦</Text>
-              </View>
-              <View style={styles.currentDeliveryInfo}>
-                <View style={styles.currentDeliveryTop}>
-                  <Text style={[styles.currentDeliveryTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {currentDelivery.itemDescription || strings.deliveryExtra.activeDelivery.he}
-                  </Text>
-                  <View style={[styles.currentDeliveryBadge, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[styles.currentDeliveryBadgeText, { color: colors.primary }]}>
-                      {currentDelivery.status === 'picked_up' ? t('status.pickedUp') : currentDelivery.status === 'waiting_for_pickup' ? t('status.waitingForPickup') : t('status.pending')}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.currentDeliveryDest, { color: colors.textSecondary }]} numberOfLines={1}>
-                  → {currentDelivery.destination?.address || ''}
-                </Text>
-                {lastChatMessage ? (
-                  <Text style={[styles.currentDeliveryChat, { color: colors.textTertiary }]} numberOfLines={1}>
-                    💬 {lastChatMessage}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
+        <View style={[styles.section, { paddingHorizontal: SPACING.md }]}>
+          <Text style={[styles.feedSectionTitle, { color: colors.textPrimary, marginBottom: SPACING.sm }]}>
+            📦 {strings.deliveryExtra.activeDelivery.he}
+          </Text>
+          <DeliveryCard
+            delivery={currentDelivery}
+            onPress={() => handleDeliveryPress(currentDelivery.id)}
+          />
+        </View>
       )}
 
       {/* ── Earnings Dashboard (collapsible) ── */}

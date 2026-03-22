@@ -91,6 +91,7 @@ export function ChatScreen(): React.JSX.Element {
     await sendMessage({
       chatId,
       senderId: currentUser!.uid,
+      senderName: currentUser!.nickname || currentUser!.fullName || '',
       text,
       type: 'text',
     });
@@ -124,6 +125,7 @@ export function ChatScreen(): React.JSX.Element {
             await sendImage({
               chatId,
               senderId: currentUser!.uid,
+              senderName: currentUser!.nickname || currentUser!.fullName || '',
               imageUri: retry.assets[0].uri!,
             });
             return;
@@ -133,6 +135,7 @@ export function ChatScreen(): React.JSX.Element {
         await sendImage({
           chatId,
           senderId: currentUser!.uid,
+          senderName: currentUser!.nickname || currentUser!.fullName || '',
           imageUri: asset.uri,
         });
       }
@@ -163,6 +166,7 @@ export function ChatScreen(): React.JSX.Element {
       await sendImage({
         chatId,
         senderId: currentUser!.uid,
+        senderName: currentUser!.nickname || currentUser!.fullName || '',
         imageUri: result.assets[0].uri,
       });
     }
