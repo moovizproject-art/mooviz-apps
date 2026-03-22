@@ -532,6 +532,55 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               style={[styles.confirmPaymentButton, { backgroundColor: colors.primary }]}
               disabled={paymentUploading}
               onPress={() => {
+                // Helper: upload photo and confirm payment
+                const uploadAndConfirm = async (uri: string) => {
+                  setPaymentUploading(true);
+                  setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
+                  try {
+                    const url = await uploadPaymentProof(delivery.id, uri);
+                    await confirmPayment(delivery.id, url);
+                    setPaymentUploading(false);
+                    setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
+                    carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                  } catch (e: any) {
+                    setPaymentUploading(false);
+                    setLoadingVisible(false);
+                    carAlert.show('error', t('common.error'), e.message);
+                  }
+                };
+
+                // Helper: show camera/gallery picker (step 2)
+                const showPhotoPicker = () => {
+                  Alert.alert(
+                    '📸 צילום מסך תשלום',
+                    'בחר מקור תמונה',
+                    [
+                      { text: strings.common.cancel.he, style: 'cancel' },
+                      {
+                        text: '📷 ' + strings.common.takePhoto.he,
+                        onPress: async () => {
+                          try {
+                            const result = await launchCamera({ mediaType: 'photo', quality: 0.5, maxWidth: 960, maxHeight: 960 });
+                            if (result.didCancel || !result.assets?.[0]?.uri) return;
+                            await uploadAndConfirm(result.assets[0].uri!);
+                          } catch (e: any) { carAlert.show('error', t('common.error'), e.message); }
+                        },
+                      },
+                      {
+                        text: '🖼 ' + (strings.common.chooseFromGallery?.he || 'בחר מהגלריה'),
+                        onPress: async () => {
+                          try {
+                            const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.5, maxWidth: 960, maxHeight: 960, selectionLimit: 1 });
+                            if (result.didCancel || !result.assets?.[0]?.uri) return;
+                            await uploadAndConfirm(result.assets[0].uri!);
+                          } catch (e: any) { carAlert.show('error', t('common.error'), e.message); }
+                        },
+                      },
+                    ],
+                  );
+                };
+
+                // Step 1: Confirm without photo or attach proof
                 Alert.alert(
                   strings.payment.confirmTitle.he,
                   strings.deliveryExtra.confirmPaymentPrompt.he,
@@ -553,54 +602,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                     },
                     {
                       text: strings.deliveryExtra.uploadScreenshot.he,
-                      onPress: async () => {
-                        try {
-                          const result = await launchImageLibrary({
-                            mediaType: 'photo',
-                            quality: 0.8,
-                            maxWidth: 1024,
-                            maxHeight: 1024,
-                            selectionLimit: 1,
-                          });
-                          if (result.didCancel || !result.assets?.[0]?.uri) return;
-                          setPaymentUploading(true);
-                          setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
-                          const url = await uploadPaymentProof(delivery.id, result.assets[0].uri!);
-                          await confirmPayment(delivery.id, url);
-                          setPaymentUploading(false);
-                          setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
-                        } catch (e: any) {
-                          setPaymentUploading(false);
-                          setLoadingVisible(false);
-                          carAlert.show('error', t('common.error'), e.message);
-                        }
-                      },
-                    },
-                    {
-                      text: strings.common.takePhoto.he,
-                      onPress: async () => {
-                        try {
-                          const result = await launchCamera({
-                            mediaType: 'photo',
-                            quality: 0.8,
-                            maxWidth: 1024,
-                            maxHeight: 1024,
-                          });
-                          if (result.didCancel || !result.assets?.[0]?.uri) return;
-                          setPaymentUploading(true);
-                          setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
-                          const url = await uploadPaymentProof(delivery.id, result.assets[0].uri!);
-                          await confirmPayment(delivery.id, url);
-                          setPaymentUploading(false);
-                          setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
-                        } catch (e: any) {
-                          setPaymentUploading(false);
-                          setLoadingVisible(false);
-                          carAlert.show('error', t('common.error'), e.message);
-                        }
-                      },
+                      onPress: showPhotoPicker,
                     },
                   ],
                 );
