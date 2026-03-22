@@ -160,12 +160,14 @@ export const onDeliveryCreate = onDocumentCreated(
 
       if (pickupGeohash && pickupLat && pickupLng) {
         const itemSize = (data as any).item?.size as string | undefined;
+        // Exclude the sender so they don't get "new delivery nearby" for their own delivery
+        const excludeUids = data.senderId ? [data.senderId] : [];
         const nearbyDrivers = await getNearbyDriverTokensMultiLocation(
           pickupGeohash,
           initialRadius,
           pickupLat,
           pickupLng,
-          undefined,
+          excludeUids,
           itemSize
         );
 
@@ -192,7 +194,7 @@ export const onDeliveryCreate = onDocumentCreated(
         );
 
         console.log(
-          `Notified ${nearbyDrivers.length} nearby drivers for delivery ${deliveryId}`
+          `Notified ${nearbyDrivers.length} nearby drivers for delivery ${deliveryId} (excluded sender ${data.senderId})`
         );
       }
 
@@ -242,12 +244,26 @@ export const onDeliveryUpdate = onDocumentUpdated(
 
     // Detect status change — validate transition server-side
     if (before.status !== after.status) {
-      // validateStatusTransition checks both allowed transitions and actor roles
-      // Only validate the transition path is valid (not actor role).
-      // The callable already verified RBAC — the trigger can't know who wrote the change.
-      const { STATUS_TRANSITIONS } = require("@mooviz/shared");
+      const { STATUS_TRANSITIONS, TERMINAL_STATUSES } = require("@mooviz/shared");
+
+      // Guard: if BOTH before and after are terminal, don't revert (avoids infinite loop)
+      if (TERMINAL_STATUSES.includes(before.status) && TERMINAL_STATUSES.includes(after.status)) {
+        console.warn(
+          `[onDeliveryUpdate] Skipping revert — both statuses are terminal: ${before.status} → ${after.status} on ${deliveryId}`
+        );
+        return;
+      }
+
+      // Guard: if reverting TO a terminal status would just re-trigger, skip
       const allowed = STATUS_TRANSITIONS[before.status as string];
       if (!allowed || !allowed.includes(after.status)) {
+        // Don't revert if the before-status is also terminal (would cause infinite loop)
+        if (TERMINAL_STATUSES.includes(before.status)) {
+          console.warn(
+            `[onDeliveryUpdate] Skipping revert — before-status '${before.status}' is terminal, cannot revert ${after.status} on ${deliveryId}`
+          );
+          return;
+        }
         // REVERT invalid transition — defense against direct client writes
         console.warn(
           `[onDeliveryUpdate] REVERTED invalid transition ${before.status} → ${after.status} on ${deliveryId}`

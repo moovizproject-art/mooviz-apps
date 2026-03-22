@@ -63,26 +63,37 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
   );
 
   // Split active deliveries into 3 sections: attention (drivers waiting), payment (awaiting payment), regular
-  const { attentionDeliveries, paymentDeliveries, regularDeliveries } = useMemo(() => {
-    if (activeTab !== 'active') return { attentionDeliveries: [], paymentDeliveries: [], regularDeliveries: deliveries };
+  // Use stable ID sets to prevent FlatList flickering when interestedDrivers updates
+  const { sortedData, attentionIds, paymentIds, attentionCount, paymentCount } = useMemo(() => {
+    if (activeTab !== 'active') return { sortedData: deliveries, attentionIds: new Set<string>(), paymentIds: new Set<string>(), attentionCount: 0, paymentCount: 0 };
     const attention: typeof deliveries = [];
     const payment: typeof deliveries = [];
     const regular: typeof deliveries = [];
+    const aIds = new Set<string>();
+    const pIds = new Set<string>();
     for (const d of deliveries) {
       if (['delivered', 'awaiting_payment'].includes(d.status)) {
         payment.push(d);
+        pIds.add(d.id);
       } else {
         const hasDrivers = (d as any).interestedDrivers?.some(
           (dr: any) => dr.status === 'interested' || dr.status === 'confirmed'
         );
         if (hasDrivers) {
           attention.push(d);
+          aIds.add(d.id);
         } else {
           regular.push(d);
         }
       }
     }
-    return { attentionDeliveries: attention, paymentDeliveries: payment, regularDeliveries: regular };
+    return {
+      sortedData: [...attention, ...payment, ...regular],
+      attentionIds: aIds,
+      paymentIds: pIds,
+      attentionCount: attention.length,
+      paymentCount: payment.length,
+    };
   }, [deliveries, activeTab]);
 
   const emptyMessages: Record<TabKey, { message: string; submessage: string }> = {
@@ -131,13 +142,11 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
 
       {/* Delivery list — all tabs use FlatList data for virtualization */}
       <FlatList
-        data={activeTab === 'active'
-          ? [...attentionDeliveries, ...paymentDeliveries, ...regularDeliveries]
-          : deliveries}
+        data={sortedData}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
-          const isAttention = activeTab === 'active' && attentionDeliveries.includes(item);
-          const isPayment = activeTab === 'active' && paymentDeliveries.includes(item);
+          const isAttention = attentionIds.has(item.id);
+          const isPayment = paymentIds.has(item.id);
           return (
             <View style={isAttention ? styles.attentionCard : undefined}>
               <DeliveryCard
@@ -150,17 +159,17 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
         }}
         ListHeaderComponent={activeTab === 'active' ? (
           <View>
-            {attentionDeliveries.length > 0 && (
+            {attentionCount > 0 && (
               <View style={[styles.attentionHeader, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
                 <Text style={[styles.attentionTitle, { color: colors.primary }]}>
-                  🔔 נהגים מחכים לתשובה ({attentionDeliveries.length})
+                  🔔 נהגים מחכים לתשובה ({attentionCount})
                 </Text>
               </View>
             )}
-            {paymentDeliveries.length > 0 && (
+            {paymentCount > 0 && (
               <View style={[styles.attentionHeader, { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }]}>
                 <Text style={[styles.attentionTitle, { color: '#F57C00' }]}>
-                  💳 ממתינים לתשלום ({paymentDeliveries.length})
+                  💳 ממתינים לתשלום ({paymentCount})
                 </Text>
               </View>
             )}

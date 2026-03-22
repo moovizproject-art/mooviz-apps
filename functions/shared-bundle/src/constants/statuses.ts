@@ -12,7 +12,7 @@ export const STATUS_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
   waiting_for_pickup: ["picked_up", "new", "cancelled"],
   picked_up: ["delivered"],
   delivered: ["awaiting_payment"],
-  awaiting_payment: ["completed_paid"],
+  awaiting_payment: ["completed_paid", "cancelled"],
   completed_paid: [],
   cancelled: [],
 };
@@ -39,6 +39,7 @@ export const TRANSITION_ACTORS: Record<string, Array<UserRole | "system">> = {
   "picked_up -> delivered": ["driver"],
   "delivered -> awaiting_payment": ["sender", "driver"],
   "awaiting_payment -> completed_paid": ["sender", "driver", "system"],
+  "awaiting_payment -> cancelled": ["system"],
 };
 
 export interface StatusDisplayConfig {

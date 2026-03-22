@@ -52,6 +52,12 @@ export const timeoutCleanup = onSchedule(
 
       for (const doc of snapshot.docs) {
         const delivery = doc.data();
+
+        // Safety: skip if already cancelled or completed (race condition guard)
+        if (delivery.status === "cancelled" || delivery.status === "completed_paid") {
+          continue;
+        }
+
         totalProcessed++;
 
         const statusEntry: StatusEntry = {
@@ -132,6 +138,8 @@ export const timeoutCleanup = onSchedule(
     const awaitingPaymentDocs = await awaitingPaymentQuery.get();
     for (const doc of awaitingPaymentDocs.docs) {
       const data = doc.data();
+      // Safety: skip if status changed between query and processing
+      if (data.status !== "awaiting_payment") continue;
       const updatedMs = data.updatedAt?.toMillis?.() ?? 0;
       const hoursWaiting = Math.floor((Date.now() - updatedMs) / (60 * 60 * 1000));
 
