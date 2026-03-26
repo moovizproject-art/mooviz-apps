@@ -62,7 +62,7 @@ export function AcceptTermsScreen(): React.JSX.Element {
         {/* Links */}
         <View style={styles.linksSection}>
           <TouchableOpacity
-            onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/terms')}
+            onPress={() => Linking.openURL('https://admin.mooviz.co.il/terms')}
             activeOpacity={0.7}
           >
             <Text style={[styles.linkText, { color: colors.primary }]}>
@@ -71,7 +71,7 @@ export function AcceptTermsScreen(): React.JSX.Element {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/privacy')}
+            onPress={() => Linking.openURL('https://admin.mooviz.co.il/privacy')}
             activeOpacity={0.7}
           >
             <Text style={[styles.linkText, { color: colors.primary }]}>

@@ -375,14 +375,14 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
             {t('auth.acceptTerms')}{' '}
             <Text
               style={{ color: colors.primary, fontWeight: '700' }}
-              onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/terms')}
+              onPress={() => Linking.openURL('https://admin.mooviz.co.il/terms')}
             >
               {t('auth.termsOfService')}
             </Text>
             {' '}{t('common.and') || 'ו'}{' '}
             <Text
               style={{ color: colors.primary, fontWeight: '700' }}
-              onPress={() => Linking.openURL('https://mooviz-app-9b766.web.app/privacy')}
+              onPress={() => Linking.openURL('https://admin.mooviz.co.il/privacy')}
             >
               {t('terms.privacyPolicy')}
             </Text>

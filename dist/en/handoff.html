@@ -1,0 +1,2653 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOOVIZ — Technical Handoff Documentation</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #D2AC47;
+      --gold-light: #F5E6B8;
+      --gold-dark: #B8922E;
+      --dark: #1B1C1D;
+      --dark-soft: #2C2D2E;
+      --bg: #FFFFFF;
+      --bg-alt: #F8F8F8;
+      --text: #1B1C1D;
+      --text-muted: #666666;
+      --border: #E0E0E0;
+      --code-bg: #F4F4F4;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --danger: #F44336;
+      --info: #2196F3;
+    }
+
+    @page {
+      size: A4;
+      margin: 15mm 20mm;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      body { font-size: 11px; line-height: 1.5; }
+      .page-break { page-break-before: always; }
+      .no-break { page-break-inside: avoid; }
+      .header-bar { position: static; }
+      table { font-size: 10px; }
+      pre { font-size: 9px; }
+      h1 { font-size: 22px; }
+      h2 { font-size: 17px; }
+      h3 { font-size: 14px; }
+    }
+
+    /* ===== LAYOUT ===== */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ===== HEADER BAR ===== */
+    .header-bar {
+      background: var(--dark);
+      padding: 16px 0;
+      border-bottom: 3px solid var(--gold);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .header-logo {
+      height: 52px;
+      object-fit: contain;
+    }
+
+    .header-logo-right {
+      height: 44px;
+      object-fit: contain;
+    }
+
+    .header-title {
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* ===== COVER PAGE ===== */
+    .cover {
+      text-align: center;
+      padding: 80px 0 60px;
+    }
+
+    .cover h1 {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+
+    .cover .subtitle {
+      font-size: 18px;
+      color: var(--gold-dark);
+      font-weight: 600;
+      margin-bottom: 40px;
+    }
+
+    .cover .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 600px;
+      margin: 0 auto 40px;
+      text-align: left;
+    }
+
+    .cover .meta-item {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
+      padding: 12px 16px;
+      border-radius: 4px;
+    }
+
+    .cover .meta-item .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .cover .meta-item .value {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .cover .doc-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 20px;
+    }
+
+    .gold-line {
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+      border: none;
+      margin: 0;
+    }
+
+    /* ===== SECTION HEADINGS ===== */
+    h1.section-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--dark);
+      border-bottom: 3px solid var(--gold);
+      padding-bottom: 10px;
+      margin: 40px 0 24px;
+    }
+
+    h2 {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--dark-soft);
+      margin: 28px 0 12px;
+      padding-left: 12px;
+      border-left: 4px solid var(--gold);
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--dark-soft);
+      margin: 20px 0 8px;
+    }
+
+    p {
+      margin-bottom: 12px;
+    }
+
+    /* ===== TABLES ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: var(--dark);
+      color: #FFFFFF;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    thead th:first-child {
+      border-radius: 4px 0 0 0;
+    }
+
+    thead th:last-child {
+      border-radius: 0 4px 0 0;
+    }
+
+    tbody td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--bg-alt);
+    }
+
+    tbody tr:hover {
+      background: var(--gold-light);
+    }
+
+    /* ===== CODE ===== */
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      color: #C7254E;
+    }
+
+    pre {
+      background: var(--dark);
+      color: #E0E0E0;
+      padding: 16px 20px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 12px 0 20px;
+      border-left: 4px solid var(--gold);
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-blue { background: #E3F2FD; color: #1565C0; }
+    .badge-orange { background: #FFF3E0; color: #E65100; }
+    .badge-purple { background: #F3E5F5; color: #6A1B9A; }
+    .badge-cyan { background: #E0F7FA; color: #00695C; }
+    .badge-green { background: #E8F5E9; color: #2E7D32; }
+    .badge-red { background: #FFEBEE; color: #C62828; }
+    .badge-gold { background: #FFF8E1; color: #8D6E00; }
+    .badge-gray { background: #F5F5F5; color: #616161; }
+
+    /* ===== INFO BOXES ===== */
+    .info-box {
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+
+    .info-box.note {
+      background: #E3F2FD;
+      border-left: 4px solid #1976D2;
+    }
+
+    .info-box.warning {
+      background: #FFF3E0;
+      border-left: 4px solid #F57C00;
+    }
+
+    .info-box.important {
+      background: #FFEBEE;
+      border-left: 4px solid #D32F2F;
+    }
+
+    .info-box.success {
+      background: #E8F5E9;
+      border-left: 4px solid #388E3C;
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* ===== STATE MACHINE DIAGRAM (CSS) ===== */
+    .state-machine {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--bg-alt);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .state-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .state-node {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 2px solid;
+      white-space: nowrap;
+    }
+
+    .state-arrow {
+      color: var(--text-muted);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .state-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 120px;
+    }
+
+    /* ===== TOC ===== */
+    .toc {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 32px;
+      margin: 24px 0;
+    }
+
+    .toc h2 {
+      border-left: none;
+      padding-left: 0;
+      margin-top: 0;
+    }
+
+    .toc ol {
+      padding-left: 24px;
+    }
+
+    .toc li {
+      padding: 4px 0;
+      font-size: 14px;
+    }
+
+    .toc a {
+      color: var(--dark);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--gold);
+    }
+
+    .toc a:hover {
+      color: var(--gold-dark);
+    }
+
+    /* ===== LISTS ===== */
+    ul, ol {
+      margin: 8px 0 16px 24px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* ===== FIELD TABLE ===== */
+    .field-table td:first-child {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      white-space: nowrap;
+      color: #C7254E;
+    }
+
+    .field-table td:nth-child(2) {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      white-space: nowrap;
+      color: #0D47A1;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      margin-top: 60px;
+      padding: 24px 0;
+      border-top: 3px solid var(--gold);
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer strong {
+      color: var(--dark);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media screen and (max-width: 768px) {
+      .header-inner { padding: 0 12px; }
+      .container { padding: 0 12px; }
+      .cover .meta-grid { grid-template-columns: 1fr; }
+      table { font-size: 11px; }
+      pre { font-size: 10px; padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== HEADER ==================== -->
+<div class="header-bar">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Technical Handoff Documentation</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ==================== COVER PAGE ==================== -->
+<div class="cover">
+  <h1>MOOVIZ</h1>
+  <div class="subtitle">Real-Time Community Delivery Platform</div>
+  <p style="font-size: 15px; color: var(--text-muted); margin-bottom: 32px;">
+    Complete Technical Handoff &amp; Architecture Reference
+  </p>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <div class="label">Client</div>
+      <div class="value">G.M. Mooviz Software (2026) Ltd</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Developer</div>
+      <div class="value">KAL Solutions Group</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">CTO</div>
+      <div class="value">Tamir Konortov</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Version</div>
+      <div class="value">1.1.9</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Budget</div>
+      <div class="value">90,000 NIS + VAT</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Timeline</div>
+      <div class="value">45 Days / 8 Sprints</div>
+    </div>
+  </div>
+
+  <div class="doc-info">
+    Document generated: March 2026 &nbsp;|&nbsp; Classification: Confidential &nbsp;|&nbsp; Version: 1.0
+  </div>
+</div>
+
+<hr class="gold-line">
+
+<!-- ==================== TABLE OF CONTENTS ==================== -->
+<div class="toc">
+  <h2 style="font-size: 20px; margin-bottom: 16px;">Table of Contents</h2>
+  <ol>
+    <li><a href="#executive-summary">Executive Summary</a></li>
+    <li><a href="#technology-stack">Technology Stack</a></li>
+    <li><a href="#architecture">Architecture Overview</a></li>
+    <li><a href="#directory-structure">Directory Structure</a></li>
+    <li><a href="#data-model">Data Model (Firestore Collections)</a></li>
+    <li><a href="#state-machine">Delivery Status State Machine</a></li>
+    <li><a href="#cloud-functions">Cloud Functions (26 Total)</a></li>
+    <li><a href="#push-notifications">Push Notifications (8 Events)</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="#mobile-screens">Mobile App Screens (22 Total)</a></li>
+    <li><a href="#components">Reusable Components (46 Total)</a></li>
+    <li><a href="#hooks">Custom Hooks (14 Total)</a></li>
+    <li><a href="#services">Service Layer</a></li>
+    <li><a href="#admin-dashboard">Admin Dashboard (11 Pages)</a></li>
+    <li><a href="#environments">Environments</a></li>
+    <li><a href="#build-deploy">Build &amp; Deploy</a></li>
+    <li><a href="#known-limitations">Known Limitations &amp; Future Work</a></li>
+  </ol>
+</div>
+
+
+<!-- ==================== 1. EXECUTIVE SUMMARY ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 1 &mdash; Executive Summary</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="executive-summary">1. Executive Summary</h1>
+
+<p>
+  <strong>MOOVIZ</strong> is a real-time community delivery platform that connects senders who need packages delivered with available drivers in their area. The application operates in the Israeli market with full Hebrew RTL support, serving as a peer-to-peer logistics marketplace.
+</p>
+
+<h2>Project Overview</h2>
+
+<table>
+  <thead>
+    <tr><th>Attribute</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Application Name</td><td><strong>MOOVIZ</strong> &mdash; Real-Time Community Delivery Platform (MVP)</td></tr>
+    <tr><td>Client</td><td>G.M. Mooviz Software (2026) Ltd</td></tr>
+    <tr><td>Developer</td><td>KAL Solutions Group</td></tr>
+    <tr><td>CTO</td><td>Tamir Konortov &mdash; End-to-end technical ownership</td></tr>
+    <tr><td>Budget</td><td>90,000 NIS + VAT (fixed price)</td></tr>
+    <tr><td>Timeline</td><td>45 calendar days, 8 sprints</td></tr>
+    <tr><td>Current Version</td><td>v1.1.9</td></tr>
+    <tr><td>Platforms</td><td>iOS + Android (React Native)</td></tr>
+  </tbody>
+</table>
+
+<h2>Core Capabilities</h2>
+
+<ul>
+  <li><strong>Sender Flow:</strong> Create delivery requests with pickup/destination, item details, photos, pricing, and scheduling. Track deliveries in real-time. Approve/decline interested drivers. Confirm payment completion.</li>
+  <li><strong>Driver Flow:</strong> Browse nearby deliveries via geohash-based proximity feed. Express interest, receive selection notifications. Proof photo system for pickup and delivery. Confirm payment receipt.</li>
+  <li><strong>Multi-Driver Selection:</strong> Multiple drivers can express interest in a delivery. Sender selects preferred driver. Selected driver has 15 minutes to confirm acceptance.</li>
+  <li><strong>Real-Time Chat:</strong> In-app messaging between sender and driver per delivery, with image sharing, system messages, and automatic 12-hour close after delivery completion.</li>
+  <li><strong>Admin Dashboard:</strong> User management, delivery oversight, KYC approval/rejection, reports moderation, analytics dashboards, bulk email, and migration tools.</li>
+  <li><strong>Push Notifications:</strong> 8 notification events covering the full delivery lifecycle, with custom sounds, quiet hours, and action buttons.</li>
+</ul>
+
+<h2>Milestone Completion</h2>
+
+<table>
+  <thead>
+    <tr><th>Milestone</th><th>Scope</th><th>Payment</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>M0</td>
+      <td>Setup &amp; Scaffold</td>
+      <td>50% advance = 45,000 NIS</td>
+      <td><span class="badge badge-green">COMPLETE</span></td>
+    </tr>
+    <tr>
+      <td>M1</td>
+      <td>Auth + Users + Data Models + Base Mobile</td>
+      <td>15% = 13,500 NIS</td>
+      <td><span class="badge badge-green">COMPLETE</span></td>
+    </tr>
+    <tr>
+      <td>M2</td>
+      <td>Delivery Lifecycle + GPS + Chat + Push + Admin</td>
+      <td>10% = 9,000 NIS</td>
+      <td><span class="badge badge-green">COMPLETE</span></td>
+    </tr>
+    <tr>
+      <td>M3</td>
+      <td>Ratings + Cancellation + Polish + QA</td>
+      <td>5% = 4,500 NIS</td>
+      <td><span class="badge badge-green">COMPLETE</span></td>
+    </tr>
+    <tr>
+      <td>M4</td>
+      <td>Production Build + Store Submission</td>
+      <td>20% = 18,000 NIS</td>
+      <td><span class="badge badge-orange">IN PROGRESS</span></td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 2. TECHNOLOGY STACK ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 2 &mdash; Technology Stack</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="technology-stack">2. Technology Stack</h1>
+
+<table>
+  <thead>
+    <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Mobile Framework</td>
+      <td>React Native (Bare Workflow)</td>
+      <td>0.75.5</td>
+      <td>No Expo managed workflow; bare RN with native modules</td>
+    </tr>
+    <tr>
+      <td>Navigation</td>
+      <td>React Navigation</td>
+      <td>7.x</td>
+      <td>Stack + Bottom Tabs navigators</td>
+    </tr>
+    <tr>
+      <td>State Management</td>
+      <td>React Context + Firestore Listeners</td>
+      <td>&mdash;</td>
+      <td>No Redux; real-time via <code>onSnapshot</code></td>
+    </tr>
+    <tr>
+      <td>Maps</td>
+      <td>react-native-maps + Google Maps SDK</td>
+      <td>1.18.2</td>
+      <td>Google Places Autocomplete + Geohash proximity queries</td>
+    </tr>
+    <tr>
+      <td>Animations</td>
+      <td>react-native-reanimated</td>
+      <td>3.15.5</td>
+      <td>Gesture-driven animations, Lottie integration</td>
+    </tr>
+    <tr>
+      <td>Gesture Handling</td>
+      <td>react-native-gesture-handler</td>
+      <td>2.20.2</td>
+      <td>Swipeable cards, pull-to-refresh</td>
+    </tr>
+    <tr>
+      <td>Backend</td>
+      <td>Firebase Cloud Functions (Gen 2)</td>
+      <td>Node 18</td>
+      <td>TypeScript, onCall + triggers + scheduled</td>
+    </tr>
+    <tr>
+      <td>Database</td>
+      <td>Cloud Firestore (NoSQL)</td>
+      <td>&mdash;</td>
+      <td>Real-time document database with offline persistence</td>
+    </tr>
+    <tr>
+      <td>Authentication</td>
+      <td>Firebase Auth</td>
+      <td>&mdash;</td>
+      <td>Email+Password + Phone OTP (SMS verification)</td>
+    </tr>
+    <tr>
+      <td>Storage</td>
+      <td>Firebase Cloud Storage</td>
+      <td>&mdash;</td>
+      <td>Images, videos, KYC documents; 5MB max per file</td>
+    </tr>
+    <tr>
+      <td>Push Notifications</td>
+      <td>Firebase Cloud Messaging</td>
+      <td>FCM v1 HTTP API</td>
+      <td>Triggered by Cloud Functions on Firestore writes</td>
+    </tr>
+    <tr>
+      <td>Admin Dashboard</td>
+      <td>React + Vite + Tailwind CSS</td>
+      <td>&mdash;</td>
+      <td>Single-page application (SPA)</td>
+    </tr>
+    <tr>
+      <td>Language</td>
+      <td>TypeScript</td>
+      <td>5.x</td>
+      <td>Strict mode everywhere (mobile, functions, admin, shared)</td>
+    </tr>
+    <tr>
+      <td>Monorepo</td>
+      <td>pnpm Workspaces</td>
+      <td>&mdash;</td>
+      <td><code>public-hoist-pattern[]=*</code> in .npmrc</td>
+    </tr>
+    <tr>
+      <td>iOS Build</td>
+      <td>CocoaPods + Xcode</td>
+      <td>&mdash;</td>
+      <td>Firebase iOS SDK 11.11, modular headers</td>
+    </tr>
+    <tr>
+      <td>Android Build</td>
+      <td>Gradle (AGP 8.5)</td>
+      <td>compileSdk 34</td>
+      <td>Hermes engine, 16KB page-aligned</td>
+    </tr>
+    <tr>
+      <td>i18n</td>
+      <td>Custom I18nContext</td>
+      <td>&mdash;</td>
+      <td>Hebrew-first RTL layout; English secondary</td>
+    </tr>
+    <tr>
+      <td>Theming</td>
+      <td>Custom ThemeContext</td>
+      <td>&mdash;</td>
+      <td>Dark/light mode with design tokens</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Key Pinned Dependencies</h2>
+
+<div class="info-box warning">
+  <strong>Version Pinning Notice</strong>
+  The following dependencies are pinned to specific versions due to compatibility requirements with React Native 0.75.5. Upgrading any of these requires thorough testing on both platforms.
+</div>
+
+<table>
+  <thead>
+    <tr><th>Package</th><th>Pinned Version</th><th>Reason</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>react-native-reanimated</code></td><td>3.15.5</td><td>RN 0.75.x compatibility</td></tr>
+    <tr><td><code>react-native-gesture-handler</code></td><td>2.20.2</td><td>Stable with reanimated 3.15.5</td></tr>
+    <tr><td><code>react-native-screens</code></td><td>3.35.0</td><td>Navigation 7.x compatibility</td></tr>
+    <tr><td><code>react-native-safe-area-context</code></td><td>4.12.0</td><td>Layout stability</td></tr>
+    <tr><td><code>react-native-maps</code></td><td>1.18.2</td><td>Google Maps SDK compatibility</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 3. ARCHITECTURE OVERVIEW ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 3 &mdash; Architecture Overview</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="architecture">3. Architecture Overview</h1>
+
+<p>
+  MOOVIZ follows a three-tier serverless architecture built entirely on Google Cloud Platform (GCP) via Firebase. All business logic resides in Cloud Functions, ensuring the mobile client never directly mutates critical state.
+</p>
+
+<h2>Architecture Layers</h2>
+
+<h3>Tier 1: Mobile Client (React Native)</h3>
+<ul>
+  <li>Communicates with Firebase via the official React Native Firebase SDK (<code>@react-native-firebase/*</code>)</li>
+  <li>Real-time data via Firestore <code>onSnapshot</code> listeners &mdash; no polling</li>
+  <li>Offline persistence enabled via Firestore's built-in cache</li>
+  <li>All state-changing operations go through Cloud Functions (callable) &mdash; never direct writes for critical fields</li>
+  <li>Google Maps SDK for map rendering, Places API for address autocomplete</li>
+  <li>Geohash-based proximity queries for the driver feed (1&ndash;50km radius)</li>
+  <li>FCM for push notification reception; custom sound files per event type</li>
+</ul>
+
+<h3>Tier 2: Cloud Functions (Serverless Backend)</h3>
+<ul>
+  <li><strong>Callable Functions (22):</strong> HTTPS-callable endpoints for all user actions (create delivery, express interest, confirm pickup, etc.). Each validates authentication, role-based access control (RBAC), and state machine transitions server-side.</li>
+  <li><strong>Firestore Triggers (3):</strong> React to document changes &mdash; send push notifications on status transitions, handle user creation defaults, and KYC status change events.</li>
+  <li><strong>Scheduled Functions (4):</strong> Cron jobs for timeout cleanup (72h stale deliveries), selection timeout (15min), chat auto-close (12h inactive), and notification radius expansion (5min intervals).</li>
+  <li>All functions use Firestore transactions for atomic state mutations, preventing race conditions.</li>
+</ul>
+
+<h3>Tier 3: Admin Dashboard (React SPA)</h3>
+<ul>
+  <li>React + Vite + Tailwind CSS single-page application</li>
+  <li>Direct Firestore access via Firebase JS SDK with admin-role security rules</li>
+  <li>User management, KYC approval, delivery oversight, report moderation</li>
+  <li>Analytics dashboards with period filters, regional breakdowns, and CSV exports</li>
+  <li>Bulk email broadcasting via callable Cloud Function</li>
+</ul>
+
+<h2>Data Flow</h2>
+
+<pre><code>Mobile App (React Native)
+    |
+    |-- Firebase Auth (Email+Password / Phone OTP)
+    |-- Firestore SDK (onSnapshot listeners for real-time data)
+    |-- Cloud Functions SDK (callable for state mutations)
+    |-- Cloud Storage SDK (image/video upload)
+    |-- FCM SDK (push notification reception)
+    |
+Cloud Functions (Node 18, Gen 2)
+    |
+    |-- Firestore Admin SDK (read/write with elevated privileges)
+    |-- FCM Admin SDK (send notifications)
+    |-- Cloud Storage Admin (generate signed URLs)
+    |-- Nodemailer (SMTP for bulk emails)
+    |
+Cloud Firestore (NoSQL Document Database)
+    |
+    |-- Security Rules (RBAC enforcement)
+    |-- Real-time sync to all connected clients
+    |-- Offline persistence (mobile)
+    |
+Admin Dashboard (React SPA)
+    |
+    |-- Firebase JS SDK (Firestore + Auth + Storage)
+    |-- Admin-role security rules (elevated read/write)</code></pre>
+
+<h2>Key Architectural Decisions</h2>
+
+<table>
+  <thead>
+    <tr><th>Decision</th><th>Rationale</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Server-side status validation</td>
+      <td>All delivery status transitions validated in Cloud Functions. Client cannot directly write to status fields. Prevents tampering and race conditions.</td>
+    </tr>
+    <tr>
+      <td>Geohash proximity queries</td>
+      <td>Firestore does not support native geo-queries. Geohash encoding (precision 6, ~1.2km grid) enables efficient range queries using string prefix matching.</td>
+    </tr>
+    <tr>
+      <td>Firestore real-time listeners</td>
+      <td>No polling. <code>onSnapshot</code> provides sub-second updates for delivery status, chat messages, and driver locations.</td>
+    </tr>
+    <tr>
+      <td>Firestore transactions</td>
+      <td>All status mutations use transactions to prevent race conditions (e.g., two drivers confirming simultaneously).</td>
+    </tr>
+    <tr>
+      <td>External payment processing</td>
+      <td>Payments handled via deep links to Bit/PayBox apps. No in-app payment processing, avoiding PCI compliance overhead for MVP.</td>
+    </tr>
+    <tr>
+      <td>Dual-role users</td>
+      <td>Users can be both sender and driver. <code>activeMode</code> field toggles between roles without separate accounts.</td>
+    </tr>
+    <tr>
+      <td>Session token enforcement</td>
+      <td>Single-device login via <code>sessionToken</code> field. New login invalidates previous sessions.</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 4. DIRECTORY STRUCTURE ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 4 &mdash; Directory Structure</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="directory-structure">4. Directory Structure</h1>
+
+<pre><code>Mooviz/
+├── apps/
+│   ├── mobile/                          # React Native app (iOS + Android)
+│   │   ├── src/
+│   │   │   ├── screens/                 # Screen components organized by role
+│   │   │   │   ├── auth/                # 8 auth screens (Login, Register, OTP, etc.)
+│   │   │   │   ├── sender/              # 4 sender screens (Home, Create, MyDeliveries, Detail)
+│   │   │   │   ├── driver/              # 4 driver screens (Feed, MyJobs, Detail, KYC)
+│   │   │   │   ├── onboarding/          # 1 onboarding screen
+│   │   │   │   └── shared/              # 5 shared screens (Chat, Profile, Rating, Map, CompleteProfile)
+│   │   │   ├── components/              # 46 reusable UI components
+│   │   │   ├── hooks/                   # 14 custom React hooks
+│   │   │   ├── services/                # 11 Firebase service wrappers
+│   │   │   ├── navigation/              # React Navigation config (RootNavigator, types)
+│   │   │   ├── i18n/                    # Internationalization (Hebrew + English strings)
+│   │   │   ├── theme/                   # Dark/light theme system (ThemeContext, tokens)
+│   │   │   ├── utils/                   # 6 utility modules (formatters, validators, geohash, etc.)
+│   │   │   ├── types/                   # TypeScript type definitions
+│   │   │   └── constants/               # 6 constant files (config, colors, cities, statusConfig, etc.)
+│   │   ├── android/                     # Android native project (Gradle, build.gradle)
+│   │   │   └── app/
+│   │   │       ├── build.gradle         # compileSdk 34, AGP 8.5, signing configs
+│   │   │       └── src/main/
+│   │   │           ├── AndroidManifest.xml
+│   │   │           └── res/raw/         # Custom notification sounds (.mp3)
+│   │   └── ios/                         # iOS native project (Xcode)
+│   │       ├── MoovizMobile.xcodeproj
+│   │       ├── MoovizMobile/
+│   │       │   ├── Info.plist
+│   │       │   ├── AppDelegate.mm
+│   │       │   └── *.mp3                # Custom notification sounds
+│   │       ├── Podfile                  # CocoaPods config (Firebase iOS SDK 11.11)
+│   │       └── Pods/                    # CocoaPods dependencies
+│   │
+│   └── admin/                           # Admin dashboard (React + Vite)
+│       ├── src/
+│       │   ├── pages/                   # 11 admin pages
+│       │   ├── components/              # Admin UI components (CsvExport, etc.)
+│       │   ├── hooks/                   # Admin hooks (useAnalytics, etc.)
+│       │   ├── constants/               # Regions, configs
+│       │   └── services/                # Firebase service layer
+│       ├── index.html
+│       └── vite.config.ts
+│
+├── functions/                           # Firebase Cloud Functions (TypeScript)
+│   ├── src/
+│   │   ├── callable/                    # 5 callable modules (22 exported functions)
+│   │   │   ├── deliveryCallable.ts      # Delivery lifecycle (create, interest, confirm, cancel)
+│   │   │   ├── userCallable.ts          # User management (createUser, updateProfile, FCM tokens)
+│   │   │   ├── kycCallable.ts           # KYC review (admin)
+│   │   │   ├── emailCallable.ts         # Bulk email broadcasting
+│   │   │   └── encryptionCallable.ts    # Authorized photo access, document decryption
+│   │   ├── triggers/                    # 3 Firestore trigger modules
+│   │   │   ├── deliveryTrigger.ts       # onDeliveryUpdate: push notifications + system messages
+│   │   │   ├── userTrigger.ts           # onUserCreate + onUserUpdate
+│   │   │   └── chatTrigger.ts           # Chat-related triggers
+│   │   ├── scheduled/                   # 4 scheduled (cron) functions
+│   │   │   ├── timeoutCleanup.ts        # Revert stale pending deliveries (72h)
+│   │   │   ├── selectionTimeout.ts      # Revert unconfirmed selections (15min)
+│   │   │   ├── chatAutoClose.ts         # Close inactive chats (12h)
+│   │   │   └── notifyExpansion.ts       # Expand notification radius (5min intervals)
+│   │   ├── validators/                  # Status transition + RBAC validation
+│   │   │   └── statusValidator.ts
+│   │   └── services/                    # Backend services
+│   │       ├── notificationService.ts   # FCM push notification sender
+│   │       └── geohashService.ts        # Geohash encoding/querying
+│   ├── tsconfig.json
+│   └── package.json
+│
+├── shared/                              # Shared types, constants, validators
+│   ├── src/
+│   │   ├── types/                       # TypeScript interfaces (User, Delivery, Chat, Rating, Report)
+│   │   ├── constants/                   # Status transitions, notification events
+│   │   ├── validators/                  # Shared validation logic
+│   │   └── index.ts                     # Barrel export
+│   ├── dist/                            # Compiled output
+│   └── package.json                     # @mooviz/shared
+│
+├── firestore.rules                      # Firestore security rules
+├── storage.rules                        # Cloud Storage security rules
+├── firebase.json                        # Firebase project configuration
+├── pnpm-workspace.yaml                  # pnpm monorepo config
+├── .npmrc                               # public-hoist-pattern[]=*
+└── docs/                                # Documentation, architecture docs, ADRs</code></pre>
+
+
+<!-- ==================== 5. DATA MODEL ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 5 &mdash; Data Model</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="data-model">5. Data Model (Firestore Collections)</h1>
+
+<p>
+  All data is stored in Cloud Firestore, a NoSQL document database. Each collection is detailed below with field names, types, and descriptions. Timestamps use Firestore's native <code>Timestamp</code> type.
+</p>
+
+<!-- users -->
+<h2>5.1 &nbsp; users/{userId}</h2>
+<p>Stores user profile, role, location, KYC status, and FCM tokens. Document ID matches Firebase Auth UID.</p>
+
+<table class="field-table">
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>uid</td><td>string</td><td>Firebase Auth UID (matches document ID)</td></tr>
+    <tr><td>fullName</td><td>string</td><td>User's full legal name</td></tr>
+    <tr><td>nickname</td><td>string?</td><td>Optional display nickname</td></tr>
+    <tr><td>phone</td><td>string</td><td>Phone number in E.164 format (e.g., +972501234567)</td></tr>
+    <tr><td>email</td><td>string?</td><td>Email address (from Firebase Auth)</td></tr>
+    <tr><td>city</td><td>string</td><td>User's city name (Hebrew)</td></tr>
+    <tr><td>role</td><td>"sender" | "driver"</td><td>Base user role (all users start as "sender")</td></tr>
+    <tr><td>activeMode</td><td>"client" | "driver"</td><td>Current active mode toggle (client = sender behavior)</td></tr>
+    <tr><td>driverAvailable</td><td>boolean</td><td>Whether driver is currently available for deliveries</td></tr>
+    <tr><td>driverUnlocked</td><td>boolean</td><td>Whether driver mode is unlocked (via KYC approval or migration)</td></tr>
+    <tr><td>profilePhotoURL</td><td>string</td><td>Cloud Storage URL for profile photo</td></tr>
+    <tr><td>kycDocumentURL</td><td>string</td><td>Cloud Storage URL for KYC driver's license document</td></tr>
+    <tr><td>kycIdURL</td><td>string?</td><td>Cloud Storage URL for KYC ID document</td></tr>
+    <tr><td>kycStatus</td><td>"pending" | "approved" | "rejected"</td><td>KYC verification status (admin-controlled)</td></tr>
+    <tr><td>ratingAsDriver</td><td>{ average: number, count: number }</td><td>Aggregate rating when acting as driver</td></tr>
+    <tr><td>ratingAsSender</td><td>{ average: number, count: number }</td><td>Aggregate rating when acting as sender</td></tr>
+    <tr><td>completedDeliveries</td><td>number</td><td>Total completed deliveries count</td></tr>
+    <tr><td>status</td><td>"active" | "suspended" | "blocked"</td><td>Account status (admin-controlled)</td></tr>
+    <tr><td>fcmTokens</td><td>string[]</td><td>Array of FCM device tokens for push notifications</td></tr>
+    <tr><td>location</td><td>{ lat, lng, geohash }</td><td>Last known location with geohash for proximity queries</td></tr>
+    <tr><td>sessionToken</td><td>string?</td><td>Current session token for single-device enforcement</td></tr>
+    <tr><td>gender</td><td>string?</td><td>User's gender (optional profile field)</td></tr>
+    <tr><td>ageRange</td><td>string?</td><td>User's age range (optional profile field)</td></tr>
+    <tr><td>acceptedTermsAt</td><td>Timestamp?</td><td>When the user accepted terms of service</td></tr>
+    <tr><td>migratedFrom</td><td>string?</td><td>Source ID if migrated from Glide platform</td></tr>
+    <tr><td>createdAt</td><td>Timestamp</td><td>Account creation timestamp</td></tr>
+    <tr><td>updatedAt</td><td>Timestamp?</td><td>Last profile update timestamp</td></tr>
+  </tbody>
+</table>
+
+<!-- deliveries -->
+<h2>5.2 &nbsp; deliveries/{deliveryId}</h2>
+<p>Core delivery document containing full lifecycle data, participants, proof photos, and the interested drivers list.</p>
+
+<table class="field-table">
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>senderId</td><td>string</td><td>UID of the sender who created the delivery</td></tr>
+    <tr><td>senderName</td><td>string?</td><td>Denormalized sender display name</td></tr>
+    <tr><td>senderPhotoUrl</td><td>string?</td><td>Denormalized sender profile photo URL</td></tr>
+    <tr><td>senderRating</td><td>number?</td><td>Denormalized sender rating at time of creation</td></tr>
+    <tr><td>driverId</td><td>string?</td><td>UID of the assigned driver (null until assigned)</td></tr>
+    <tr><td>driverName</td><td>string?</td><td>Denormalized driver display name</td></tr>
+    <tr><td>driverPhotoUrl</td><td>string?</td><td>Denormalized driver profile photo URL</td></tr>
+    <tr><td>driverRating</td><td>number?</td><td>Denormalized driver rating</td></tr>
+    <tr><td>chatId</td><td>string?</td><td>Reference to the associated chat document</td></tr>
+    <tr><td>status</td><td>DeliveryStatus</td><td>Current status (see State Machine, Section 6)</td></tr>
+    <tr><td>pickup</td><td>GeoPoint</td><td>Pickup location: { address, city, lat, lng, geohash }</td></tr>
+    <tr><td>destination</td><td>GeoPoint</td><td>Destination location: { address, city, lat, lng, geohash }</td></tr>
+    <tr><td>item</td><td>DeliveryItem</td><td>Item details: { description, size }</td></tr>
+    <tr><td>mediaURLs</td><td>string[]</td><td>Array of item photo/video Cloud Storage URLs</td></tr>
+    <tr><td>price</td><td>number</td><td>Delivery price in NIS</td></tr>
+    <tr><td>pickupDate</td><td>Timestamp | "asap"</td><td>Scheduled pickup date or ASAP flag</td></tr>
+    <tr><td>timeRange</td><td>string?</td><td>Preferred time range (e.g., "morning", "afternoon")</td></tr>
+    <tr><td>notes</td><td>string?</td><td>Free-text sender notes for the driver</td></tr>
+    <tr><td>payment</td><td>{ senderConfirmed, driverConfirmed }</td><td>Payment confirmation flags (both must be true)</td></tr>
+    <tr><td>proof</td><td>{ pickupURL?, deliveryURL?, paymentURL? }</td><td>Proof photo URLs for pickup, delivery, and payment</td></tr>
+    <tr><td>interestedDrivers</td><td>InterestedDriver[]</td><td>Array of drivers who expressed interest (multi-driver system)</td></tr>
+    <tr><td>selectedDriverId</td><td>string?</td><td>UID of sender's selected driver (pending confirmation)</td></tr>
+    <tr><td>selectionExpiresAt</td><td>Timestamp?</td><td>When the 15-minute selection confirmation window expires</td></tr>
+    <tr><td>statusHistory</td><td>StatusEntry[]</td><td>Array of all status transitions: { status, timestamp, actor, note? }</td></tr>
+    <tr><td>cancelledBy</td><td>string?</td><td>UID of the user who cancelled (if applicable)</td></tr>
+    <tr><td>rated</td><td>boolean?</td><td>Whether rating has been submitted</td></tr>
+    <tr><td>ratedBySender</td><td>boolean?</td><td>Whether sender submitted rating</td></tr>
+    <tr><td>ratedByDriver</td><td>boolean?</td><td>Whether driver submitted rating</td></tr>
+    <tr><td>ratingsVisibleAt</td><td>Timestamp?</td><td>When mutual ratings become visible (after both rate)</td></tr>
+    <tr><td>notifiedDrivers</td><td>string[]</td><td>UIDs of drivers who were notified about this delivery</td></tr>
+    <tr><td>notifyRadius</td><td>number</td><td>Current notification radius in km (expands over time)</td></tr>
+    <tr><td>notifyExpansionCount</td><td>number</td><td>Number of radius expansions performed</td></tr>
+    <tr><td>lastNotifyExpansion</td><td>Timestamp?</td><td>When the last radius expansion was performed</td></tr>
+    <tr><td>timeoutAt</td><td>Timestamp</td><td>When this delivery will be auto-cleaned (72h default)</td></tr>
+    <tr><td>createdAt</td><td>Timestamp</td><td>Delivery creation timestamp</td></tr>
+    <tr><td>updatedAt</td><td>Timestamp</td><td>Last update timestamp</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box note">
+  <strong>InterestedDriver Sub-Object</strong>
+  Each entry in <code>interestedDrivers[]</code> contains: <code>uid</code>, <code>name</code>, <code>photoUrl</code>, <code>rating</code>, <code>completedDeliveries</code>, <code>distanceKm</code>, <code>expressedAt</code> (Timestamp), and <code>status</code> ("interested" | "selected" | "confirmed" | "declined" | "cancelled" | "withdrawn").
+</div>
+
+<!-- chats -->
+<div class="page-break"></div>
+
+<h2>5.3 &nbsp; chats/{chatId}</h2>
+<p>Chat thread metadata. One chat per delivery. Messages stored in a subcollection.</p>
+
+<table class="field-table">
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>participants</td><td>string[]</td><td>Array of two UIDs [senderId, driverId]</td></tr>
+    <tr><td>deliveryId</td><td>string</td><td>Reference to the associated delivery</td></tr>
+    <tr><td>lastMessage</td><td>string</td><td>Preview text of the last message</td></tr>
+    <tr><td>lastMessageAt</td><td>Timestamp</td><td>Timestamp of the last message</td></tr>
+    <tr><td>lastSenderId</td><td>string</td><td>UID of the last message sender</td></tr>
+    <tr><td>lastReadBy</td><td>{ [uid]: Timestamp }</td><td>Map of user UIDs to their last-read timestamps</td></tr>
+    <tr><td>closed</td><td>boolean</td><td>Whether chat is closed (auto-closed after 12h inactivity)</td></tr>
+    <tr><td>closedAt</td><td>Timestamp?</td><td>When the chat was closed</td></tr>
+  </tbody>
+</table>
+
+<h3>chats/{chatId}/messages/{messageId} (Subcollection)</h3>
+
+<table class="field-table">
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>senderId</td><td>string</td><td>UID of the message sender (or "system" for automated messages)</td></tr>
+    <tr><td>senderName</td><td>string</td><td>Display name of the sender</td></tr>
+    <tr><td>text</td><td>string</td><td>Message content</td></tr>
+    <tr><td>imageUrl</td><td>string?</td><td>Cloud Storage URL if message contains an image</td></tr>
+    <tr><td>type</td><td>"text" | "image" | "system"</td><td>Message type (system = auto-generated status updates)</td></tr>
+    <tr><td>createdAt</td><td>Timestamp</td><td>Message timestamp</td></tr>
+  </tbody>
+</table>
+
+<!-- ratings -->
+<h2>5.4 &nbsp; ratings/{ratingId}</h2>
+<p>Individual rating records. Both sender and driver can rate each other after delivery.</p>
+
+<table class="field-table">
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>fromUserId</td><td>string</td><td>UID of the rater</td></tr>
+    <tr><td>toUserId</td><td>string</td><td>UID of the rated user</td></tr>
+    <tr><td>deliveryId</td><td>string</td><td>Associated delivery ID</td></tr>
+    <tr><td>rating</td><td>number (1-5)</td><td>Star rating value</td></tr>
+    <tr><td>comment</td><td>string?</td><td>Optional text comment</td></tr>
+    <tr><td>role</td><td>"sender" | "driver"</td><td>Role of the rater</td></tr>
+    <tr><td>createdAt</td><td>Timestamp</td><td>Rating submission timestamp</td></tr>
+  </tbody>
+</table>
+
+<!-- reports -->
+<h2>5.5 &nbsp; reports/{reportId}</h2>
+<p>User reports for moderation. Created by users, resolved by admins.</p>
+
+<table class="field-table">
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>reporterId</td><td>string</td><td>UID of the reporter</td></tr>
+    <tr><td>reporterName</td><td>string</td><td>Display name of the reporter</td></tr>
+    <tr><td>reporterPhone</td><td>string</td><td>Reporter's phone number</td></tr>
+    <tr><td>reportedUserId</td><td>string</td><td>UID of the reported user</td></tr>
+    <tr><td>reportedUserName</td><td>string</td><td>Display name of the reported user</td></tr>
+    <tr><td>reportedRole</td><td>string</td><td>Role of the reported user</td></tr>
+    <tr><td>deliveryId</td><td>string</td><td>Associated delivery ID</td></tr>
+    <tr><td>category</td><td>string</td><td>Report category (e.g., "fraud", "abuse", "no_show")</td></tr>
+    <tr><td>description</td><td>string</td><td>Detailed report description</td></tr>
+    <tr><td>status</td><td>string</td><td>Report status ("open", "investigating", "resolved", "dismissed")</td></tr>
+    <tr><td>moderationAction</td><td>string?</td><td>Action taken (e.g., "warning", "suspend", "block")</td></tr>
+    <tr><td>moderatorNote</td><td>string?</td><td>Internal moderator notes</td></tr>
+    <tr><td>resolvedBy</td><td>string?</td><td>UID of the admin who resolved</td></tr>
+    <tr><td>createdAt</td><td>Timestamp</td><td>Report creation timestamp</td></tr>
+    <tr><td>resolvedAt</td><td>Timestamp?</td><td>Resolution timestamp</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 6. STATE MACHINE ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 6 &mdash; Delivery Status State Machine</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="state-machine">6. Delivery Status State Machine</h1>
+
+<p>
+  Every delivery follows a strict state machine enforced server-side in Cloud Functions. The <code>assertValidTransition()</code> validator checks both the transition validity and the actor's RBAC role before allowing any status change.
+</p>
+
+<h2>Status Types (9 Total)</h2>
+
+<table>
+  <thead>
+    <tr><th>Status</th><th>Display Name</th><th>Color</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-blue">NEW</span></td>
+      <td>New</td>
+      <td>#2196F3</td>
+      <td>Delivery just created, visible in driver feed. Waiting for driver interest.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-orange">PENDING</span></td>
+      <td>Pending Approval</td>
+      <td>#FF9800</td>
+      <td>One or more drivers expressed interest. Waiting for sender to select a driver.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-gold">AWAITING_CONFIRM</span></td>
+      <td>Awaiting Driver Confirmation</td>
+      <td>#FF6F00</td>
+      <td>Sender selected a driver. Driver has 15 minutes to confirm acceptance.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-purple">WAITING_FOR_PICKUP</span></td>
+      <td>Waiting for Pickup</td>
+      <td>#7B1FA2</td>
+      <td>Driver confirmed. En route to pickup location.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-cyan">PICKED_UP</span></td>
+      <td>Picked Up</td>
+      <td>#00BCD4</td>
+      <td>Driver picked up the package (proof photo required). En route to destination.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">DELIVERED</span></td>
+      <td>Delivered</td>
+      <td>#8BC34A</td>
+      <td>Package delivered to destination (proof photo required).</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-orange">AWAITING_PAYMENT</span></td>
+      <td>Awaiting Payment</td>
+      <td>#F57C00</td>
+      <td>Delivery complete, waiting for both parties to confirm payment.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">COMPLETED_PAID</span></td>
+      <td>Completed &amp; Paid</td>
+      <td>#4CAF50</td>
+      <td>Both parties confirmed payment. Terminal state.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-red">CANCELLED</span></td>
+      <td>Cancelled</td>
+      <td>#F44336</td>
+      <td>Delivery cancelled (only allowed pre-pickup). Terminal state.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Transition Map</h2>
+
+<pre><code>STATUS_TRANSITIONS = {
+  new:                ["pending", "awaiting_confirm", "cancelled"],
+  pending:            ["awaiting_confirm", "waiting_for_pickup", "new", "cancelled"],
+  awaiting_confirm:   ["waiting_for_pickup", "pending", "new", "cancelled"],
+  waiting_for_pickup: ["picked_up", "new", "cancelled"],
+  picked_up:          ["delivered"],
+  delivered:          ["awaiting_payment"],
+  awaiting_payment:   ["completed_paid", "cancelled"],
+  completed_paid:     [],   // terminal
+  cancelled:          [],   // terminal
+}</code></pre>
+
+<h2>RBAC &mdash; Who Can Trigger Each Transition</h2>
+
+<table>
+  <thead>
+    <tr><th>Transition</th><th>Allowed Actors</th><th>Trigger</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>new &rarr; pending</td><td>Driver</td><td>Driver expresses interest (<code>expressInterest</code>)</td></tr>
+    <tr><td>new &rarr; awaiting_confirm</td><td>Sender</td><td>Sender selects driver directly</td></tr>
+    <tr><td>new &rarr; cancelled</td><td>Sender, System</td><td>Sender cancels or timeout cleanup</td></tr>
+    <tr><td>pending &rarr; awaiting_confirm</td><td>Sender</td><td>Sender selects from interested drivers (<code>selectDriver</code>)</td></tr>
+    <tr><td>pending &rarr; new</td><td>Sender, Driver</td><td>Driver withdraws interest or sender declines all</td></tr>
+    <tr><td>pending &rarr; waiting_for_pickup</td><td>Sender</td><td>Sender approves driver (legacy single-driver flow)</td></tr>
+    <tr><td>pending &rarr; cancelled</td><td>Sender, Driver, System</td><td>Either party cancels or timeout</td></tr>
+    <tr><td>awaiting_confirm &rarr; waiting_for_pickup</td><td>Driver</td><td>Driver confirms selection (<code>confirmSelection</code>)</td></tr>
+    <tr><td>awaiting_confirm &rarr; pending</td><td>Driver, System</td><td>Driver declines or 15-min timeout</td></tr>
+    <tr><td>awaiting_confirm &rarr; new</td><td>Sender, Driver, System</td><td>Cancel selected driver</td></tr>
+    <tr><td>awaiting_confirm &rarr; cancelled</td><td>Sender</td><td>Sender cancels delivery</td></tr>
+    <tr><td>waiting_for_pickup &rarr; picked_up</td><td>Driver</td><td>Driver confirms pickup + proof photo (<code>confirmPickup</code>)</td></tr>
+    <tr><td>waiting_for_pickup &rarr; new</td><td>Sender</td><td>Sender removes driver pre-pickup</td></tr>
+    <tr><td>waiting_for_pickup &rarr; cancelled</td><td>Sender, Driver</td><td>Either party cancels pre-pickup</td></tr>
+    <tr><td>picked_up &rarr; delivered</td><td>Driver</td><td>Driver confirms delivery + proof photo (<code>confirmDelivery</code>)</td></tr>
+    <tr><td>delivered &rarr; awaiting_payment</td><td>Sender, Driver</td><td>First party confirms payment (<code>confirmPayment</code>)</td></tr>
+    <tr><td>awaiting_payment &rarr; completed_paid</td><td>Sender, Driver, System</td><td>Second party confirms payment</td></tr>
+    <tr><td>awaiting_payment &rarr; cancelled</td><td>System</td><td>System timeout (edge case)</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box important">
+  <strong>Post-Pickup Irreversibility</strong>
+  Once a delivery reaches <code>picked_up</code> status, it cannot be cancelled. The only valid forward path is: <code>picked_up</code> &rarr; <code>delivered</code> &rarr; <code>awaiting_payment</code> &rarr; <code>completed_paid</code>. This protects both parties after physical custody of the package has changed hands.
+</div>
+
+<h2>Multi-Driver Interest Flow</h2>
+
+<ol>
+  <li><strong>Express Interest:</strong> Multiple drivers call <code>expressInterest</code>. Each is added to the <code>interestedDrivers[]</code> array with status <code>"interested"</code>.</li>
+  <li><strong>Sender Selection:</strong> Sender reviews interested drivers (profile, rating, distance) and calls <code>selectDriver</code>. Delivery moves to <code>awaiting_confirm</code>. Selected driver entry status becomes <code>"selected"</code>.</li>
+  <li><strong>15-Minute Confirmation Window:</strong> <code>selectionExpiresAt</code> is set. The <code>selectionTimeout</code> scheduled function checks every 5 minutes and reverts to <code>new</code> if the window expires.</li>
+  <li><strong>Driver Confirms:</strong> Selected driver calls <code>confirmSelection</code>. Delivery moves to <code>waiting_for_pickup</code>. Driver entry status becomes <code>"confirmed"</code>.</li>
+  <li><strong>Driver Declines:</strong> Selected driver calls <code>declineSelection</code>. Delivery reverts. Sender can select another driver from the remaining interested list.</li>
+</ol>
+
+
+<!-- ==================== 7. CLOUD FUNCTIONS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 7 &mdash; Cloud Functions</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="cloud-functions">7. Cloud Functions (26 Total)</h1>
+
+<p>
+  All Cloud Functions are written in TypeScript, running on Node 18 (Gen 2). Callable functions require Firebase Auth and validate RBAC. All status mutations use Firestore transactions.
+</p>
+
+<h2>7.1 &nbsp; Callable Functions (22)</h2>
+
+<h3>deliveryCallable.ts &mdash; Delivery Lifecycle (15 functions)</h3>
+
+<table>
+  <thead>
+    <tr><th>Function</th><th>Actor</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>createDelivery</code></td><td>Sender</td><td>Creates a new delivery with pickup/destination, item details, price, scheduling. Initializes notification radius expansion fields.</td></tr>
+    <tr><td><code>expressInterest</code></td><td>Driver</td><td>Driver expresses interest in a delivery. Adds to <code>interestedDrivers[]</code> array. Transitions <code>new</code> &rarr; <code>pending</code> on first interest.</td></tr>
+    <tr><td><code>withdrawInterest</code></td><td>Driver</td><td>Driver withdraws their interest before selection. Removes from array. Reverts to <code>new</code> if no interested drivers remain.</td></tr>
+    <tr><td><code>withdrawFromInterest</code></td><td>Driver</td><td>Alias/variant of withdrawInterest for multi-driver flow.</td></tr>
+    <tr><td><code>selectDriver</code></td><td>Sender</td><td>Sender selects a driver from the interested list. Sets <code>selectedDriverId</code> and <code>selectionExpiresAt</code> (15 min). Transitions to <code>awaiting_confirm</code>.</td></tr>
+    <tr><td><code>confirmSelection</code></td><td>Driver</td><td>Selected driver confirms acceptance within 15-min window. Assigns <code>driverId</code>, creates chat, transitions to <code>waiting_for_pickup</code>.</td></tr>
+    <tr><td><code>declineSelection</code></td><td>Driver</td><td>Selected driver declines. Reverts to <code>pending</code> (or <code>new</code> if no other interested drivers).</td></tr>
+    <tr><td><code>cancelSelectedDriver</code></td><td>Sender</td><td>Sender cancels their driver selection before confirmation. Reverts delivery status.</td></tr>
+    <tr><td><code>approveDriver</code></td><td>Sender</td><td>Legacy single-driver approval. Directly assigns driver and transitions to <code>waiting_for_pickup</code>.</td></tr>
+    <tr><td><code>declineDriver</code></td><td>Sender</td><td>Sender declines a specific interested driver. Removes from array.</td></tr>
+    <tr><td><code>confirmPickup</code></td><td>Driver</td><td>Driver confirms package pickup. Requires proof photo URL. Transitions <code>waiting_for_pickup</code> &rarr; <code>picked_up</code>.</td></tr>
+    <tr><td><code>confirmDelivery</code></td><td>Driver</td><td>Driver confirms package delivery. Requires proof photo URL. Transitions <code>picked_up</code> &rarr; <code>delivered</code>.</td></tr>
+    <tr><td><code>confirmPayment</code></td><td>Sender/Driver</td><td>Either party confirms payment receipt. When both confirm, transitions to <code>completed_paid</code>. Increments <code>completedDeliveries</code> counter.</td></tr>
+    <tr><td><code>cancelDelivery</code></td><td>Sender/Driver</td><td>Cancels delivery (pre-pickup only). Uses transaction to prevent race with <code>confirmSelection</code>. Sets <code>cancelledBy</code>.</td></tr>
+    <tr><td><code>submitRating</code></td><td>Sender/Driver</td><td>Submits a 1-5 star rating with optional comment. Updates aggregate <code>ratingAsDriver</code>/<code>ratingAsSender</code> on the rated user's profile. Prevents double submission.</td></tr>
+  </tbody>
+</table>
+
+<h3>userCallable.ts &mdash; User Management (4 functions)</h3>
+
+<table>
+  <thead>
+    <tr><th>Function</th><th>Actor</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>createUser</code></td><td>Auth'd User</td><td>Creates user profile document in Firestore after Firebase Auth signup. Sets defaults for all fields.</td></tr>
+    <tr><td><code>updateProfile</code></td><td>Auth'd User</td><td>Updates user profile fields (name, city, email, etc.). Validates allowed fields.</td></tr>
+    <tr><td><code>updateFCMToken</code></td><td>Auth'd User</td><td>Adds or updates FCM device token in <code>fcmTokens[]</code> array for push notifications.</td></tr>
+    <tr><td><code>removeFCMToken</code></td><td>Auth'd User</td><td>Removes FCM token on logout or device change.</td></tr>
+  </tbody>
+</table>
+
+<h3>kycCallable.ts &mdash; KYC Admin (1 function)</h3>
+
+<table>
+  <thead>
+    <tr><th>Function</th><th>Actor</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>reviewKYC</code></td><td>Admin</td><td>Approves or rejects driver KYC. Sets <code>kycStatus</code>, <code>driverUnlocked</code>. Sends push notification to the user.</td></tr>
+  </tbody>
+</table>
+
+<h3>emailCallable.ts &mdash; Email (1 function)</h3>
+
+<table>
+  <thead>
+    <tr><th>Function</th><th>Actor</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sendBulkEmail</code></td><td>Admin</td><td>Sends HTML email to all users or a filtered subset. Uses SMTP (Hostinger) via Nodemailer.</td></tr>
+  </tbody>
+</table>
+
+<h3>encryptionCallable.ts &mdash; Secure Access (2 functions)</h3>
+
+<table>
+  <thead>
+    <tr><th>Function</th><th>Actor</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>uploadProfilePhoto</code></td><td>Auth'd User</td><td>Handles profile photo upload with server-side validation (size, type).</td></tr>
+    <tr><td><code>getAuthorizedPhoto</code></td><td>Auth'd User</td><td>Generates time-limited signed URL for accessing protected photos (KYC docs, proof photos).</td></tr>
+  </tbody>
+</table>
+
+<h2>7.2 &nbsp; Firestore Triggers (3 modules)</h2>
+
+<table>
+  <thead>
+    <tr><th>Module</th><th>Trigger</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>deliveryTrigger.ts</code></td>
+      <td><code>onDocumentUpdated("deliveries/{id}")</code></td>
+      <td>Fires on every delivery document update. Detects status transitions and sends appropriate push notifications (8 event types). Inserts system chat messages for status changes (e.g., "Driver has picked up your package").</td>
+    </tr>
+    <tr>
+      <td><code>userTrigger.ts</code></td>
+      <td><code>onDocumentCreated("users/{id}")</code><br><code>onDocumentUpdated("users/{id}")</code></td>
+      <td>onCreate: sets default fields, sends welcome notification. onUpdate: detects KYC status changes, notifies user of approval/rejection.</td>
+    </tr>
+    <tr>
+      <td><code>chatTrigger.ts</code></td>
+      <td>Chat-related triggers</td>
+      <td>Handles chat message events and metadata updates.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>7.3 &nbsp; Scheduled Functions (4)</h2>
+
+<table>
+  <thead>
+    <tr><th>Function</th><th>Schedule</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>timeoutCleanup</code></td>
+      <td>Every hour</td>
+      <td>Queries deliveries with <code>timeoutAt &lt; now</code> in eligible statuses (new, pending, awaiting_confirm, awaiting_payment). Reverts stale deliveries to cancelled or new. Default timeout: 24 hours (configurable per status).</td>
+    </tr>
+    <tr>
+      <td><code>selectionTimeout</code></td>
+      <td>Every 5 minutes</td>
+      <td>Checks <code>awaiting_confirm</code> deliveries where <code>selectionExpiresAt &lt; now</code>. Reverts to <code>new</code> and marks selected driver as "cancelled". Sends notification to sender.</td>
+    </tr>
+    <tr>
+      <td><code>chatAutoClose</code></td>
+      <td>Every hour</td>
+      <td>Finds chats where <code>lastMessageAt</code> is more than 12 hours ago and the associated delivery is in a terminal state. Sets <code>closed: true</code> and <code>closedAt</code>.</td>
+    </tr>
+    <tr>
+      <td><code>notifyExpansion</code></td>
+      <td>Every 5 minutes</td>
+      <td>For new deliveries with no interested drivers, gradually expands the notification radius (e.g., 5km &rarr; 10km &rarr; 20km &rarr; 50km) and notifies additional drivers in the expanded area.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>7.4 &nbsp; Backend Services</h2>
+
+<table>
+  <thead>
+    <tr><th>Service</th><th>File</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Notification Service</td>
+      <td><code>services/notificationService.ts</code></td>
+      <td>Centralized FCM push notification sender. Reads <code>fcmTokens[]</code> array from user document. Supports cached tokens/delivery data for performance. Handles token cleanup on send failure.</td>
+    </tr>
+    <tr>
+      <td>Geohash Service</td>
+      <td><code>services/geohashService.ts</code></td>
+      <td>Geohash encoding, neighbor calculation, and range query generation for proximity searches.</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 8. PUSH NOTIFICATIONS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 8 &mdash; Push Notifications</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="push-notifications">8. Push Notifications (8 Events)</h1>
+
+<p>
+  All push notifications are triggered by Cloud Functions (primarily the <code>deliveryTrigger</code>) via Firebase Cloud Messaging (FCM v1 HTTP API). Notifications are sent to all devices in the user's <code>fcmTokens[]</code> array.
+</p>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Event</th><th>Recipient</th><th>Trigger</th><th>Custom Sound</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td><strong>new_listing_nearby</strong></td>
+      <td>Drivers within geohash radius</td>
+      <td>New delivery created + <code>notifyExpansion</code> scheduled function</td>
+      <td>new_delivery.mp3</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><strong>driver_interested</strong></td>
+      <td>Sender (delivery owner)</td>
+      <td>Driver calls <code>expressInterest</code></td>
+      <td>driver_interested.mp3</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><strong>driver_selected / sender_approved</strong></td>
+      <td>Driver (selected/assigned)</td>
+      <td>Sender calls <code>selectDriver</code> or <code>approveDriver</code></td>
+      <td>success.mp3</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><strong>delivery_picked_up</strong></td>
+      <td>Sender</td>
+      <td>Delivery status &rarr; <code>picked_up</code></td>
+      <td>success.mp3</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><strong>delivery_delivered</strong></td>
+      <td>Sender</td>
+      <td>Delivery status &rarr; <code>delivered</code></td>
+      <td>success.mp3</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><strong>payment_confirmed</strong></td>
+      <td>Both parties</td>
+      <td>Delivery status &rarr; <code>completed_paid</code></td>
+      <td>payment.mp3</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td><strong>delivery_cancelled</strong></td>
+      <td>Other party</td>
+      <td>Delivery status &rarr; <code>cancelled</code></td>
+      <td>error.mp3</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td><strong>new_chat_message</strong></td>
+      <td>Recipient (other party)</td>
+      <td>New message in chat subcollection</td>
+      <td>question.mp3</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Sound Files</h2>
+
+<p>Custom notification sounds are bundled in both platforms:</p>
+<ul>
+  <li><strong>Android:</strong> <code>android/app/src/main/res/raw/</code> &mdash; MP3 files</li>
+  <li><strong>iOS:</strong> <code>ios/MoovizMobile/</code> &mdash; MP3 files added to Xcode bundle resources</li>
+</ul>
+
+<table>
+  <thead>
+    <tr><th>Sound File</th><th>Used For</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>new_delivery.mp3</code></td><td>New delivery nearby notification</td></tr>
+    <tr><td><code>driver_interested.mp3</code></td><td>Driver expressed interest</td></tr>
+    <tr><td><code>success.mp3</code></td><td>Positive events (approved, picked up, delivered)</td></tr>
+    <tr><td><code>payment.mp3</code></td><td>Payment confirmed</td></tr>
+    <tr><td><code>error.mp3</code></td><td>Negative events (cancelled)</td></tr>
+    <tr><td><code>question.mp3</code></td><td>Chat messages</td></tr>
+  </tbody>
+</table>
+
+<h2>Notification Configuration</h2>
+
+<ul>
+  <li><strong>FCM API:</strong> v1 HTTP API (not legacy)</li>
+  <li><strong>Token Storage:</strong> Array of tokens per user (<code>fcmTokens[]</code>) supporting multiple devices</li>
+  <li><strong>Token Cleanup:</strong> Failed tokens are automatically removed from the array</li>
+  <li><strong>Android 13+:</strong> POST_NOTIFICATIONS permission requested at runtime via <code>useNotifications</code> hook</li>
+  <li><strong>iOS:</strong> APNs certificate required for push delivery (development + production)</li>
+  <li><strong>Exclusions:</strong> Notification sender is excluded from receiving their own notification</li>
+</ul>
+
+
+<!-- ==================== 9. SECURITY ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 9 &mdash; Security</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="security">9. Security</h1>
+
+<h2>9.1 &nbsp; Authentication</h2>
+
+<ul>
+  <li><strong>Firebase Auth</strong> handles all authentication. Two methods supported:
+    <ul>
+      <li><strong>Email + Password:</strong> Primary registration method. Email verification required.</li>
+      <li><strong>Phone OTP (SMS):</strong> Secondary verification. 6-digit code, 60-second resend cooldown.</li>
+    </ul>
+  </li>
+  <li><strong>Two-Factor:</strong> Users must verify both email and phone number to complete profile.</li>
+  <li><strong>Session Management:</strong> <code>sessionToken</code> field enforces single-device login. New login on another device invalidates previous session.</li>
+  <li><strong>Language:</strong> <code>auth.languageCode = 'he'</code> set before sending verification/reset emails for Hebrew templates.</li>
+</ul>
+
+<h2>9.2 &nbsp; Firestore Security Rules</h2>
+
+<table>
+  <thead>
+    <tr><th>Collection</th><th>Read</th><th>Write</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>users</code></td>
+      <td>Own profile + admin</td>
+      <td>Own non-protected fields + admin</td>
+      <td>Protected fields (role, status, kycStatus) cannot be client-written</td>
+    </tr>
+    <tr>
+      <td><code>deliveries</code></td>
+      <td>Sender (own) + Drivers (available) + Admin</td>
+      <td>Via Cloud Functions only (for status fields)</td>
+      <td>Sender can read own deliveries; drivers can read <code>new</code>/<code>pending</code> deliveries</td>
+    </tr>
+    <tr>
+      <td><code>chats</code></td>
+      <td>Participants only + Admin</td>
+      <td>Participants (messages subcollection)</td>
+      <td>Chat document read restricted to <code>participants[]</code> array members</td>
+    </tr>
+    <tr>
+      <td><code>ratings</code></td>
+      <td>Authenticated users</td>
+      <td>Via Cloud Function (<code>submitRating</code>)</td>
+      <td>Prevents rating manipulation</td>
+    </tr>
+    <tr>
+      <td><code>reports</code></td>
+      <td>Reporter (own) + Admin</td>
+      <td>Create: authenticated; Update: admin only</td>
+      <td>Users can create reports but cannot modify after submission</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>9.3 &nbsp; Storage Security Rules</h2>
+
+<ul>
+  <li><strong>KYC Documents:</strong> Only the document owner can upload. Admin can read. Path: <code>kyc/{userId}/*</code></li>
+  <li><strong>Profile Photos:</strong> Owner upload only. Authenticated read. Path: <code>profiles/{userId}/*</code></li>
+  <li><strong>Delivery Media:</strong> Sender/driver upload. Authenticated read. Path: <code>deliveries/{deliveryId}/*</code></li>
+  <li><strong>File Size Limit:</strong> 5MB maximum per file</li>
+  <li><strong>Content Type:</strong> Restricted to <code>image/jpeg</code> and <code>image/png</code></li>
+</ul>
+
+<h2>9.4 &nbsp; Server-Side Validation</h2>
+
+<ul>
+  <li><strong>Status Transitions:</strong> <code>assertValidTransition()</code> validates every state change against the transition map and RBAC rules</li>
+  <li><strong>Role Verification:</strong> <code>assertUserRole()</code> checks <code>activeMode</code> and <code>driverUnlocked</code> before allowing driver actions</li>
+  <li><strong>Ownership Checks:</strong> <code>assertIsSender()</code> and <code>assertIsDriver()</code> verify the caller is the delivery participant</li>
+  <li><strong>Active Account:</strong> <code>assertUserActive()</code> blocks suspended/blocked users from performing actions</li>
+  <li><strong>KYC Verification:</strong> <code>assertDriverApproved()</code> ensures KYC approval before driver actions (with grandfather clause for Glide-migrated drivers)</li>
+  <li><strong>Transaction Safety:</strong> All status mutations use Firestore transactions to prevent race conditions</li>
+</ul>
+
+<h2>9.5 &nbsp; Data Protection</h2>
+
+<ul>
+  <li>Phone numbers stored in E.164 format with validation</li>
+  <li>No PII in Cloud Function logs</li>
+  <li>HTTPS enforced on all connections</li>
+  <li>KYC documents accessible only via time-limited signed URLs (<code>getAuthorizedPhoto</code>)</li>
+  <li>FCM tokens are per-device; removed on logout via <code>removeFCMToken</code></li>
+  <li><code>google-services.json</code> and <code>.env</code> files are gitignored</li>
+</ul>
+
+
+<!-- ==================== 10. MOBILE SCREENS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 10 &mdash; Mobile App Screens</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="mobile-screens">10. Mobile App Screens (22 Total)</h1>
+
+<h2>10.1 &nbsp; Auth Screens (8)</h2>
+
+<table>
+  <thead>
+    <tr><th>Screen</th><th>File</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>LoginScreen</strong></td>
+      <td><code>screens/auth/LoginScreen.tsx</code></td>
+      <td>Email + password login. Social login buttons (disabled for MVP). "Forgot Password" link. Navigation to Register.</td>
+    </tr>
+    <tr>
+      <td><strong>RegisterScreen</strong></td>
+      <td><code>screens/auth/RegisterScreen.tsx</code></td>
+      <td>Email + password registration. Full name, city selector. Triggers email verification on success.</td>
+    </tr>
+    <tr>
+      <td><strong>OTPScreen</strong></td>
+      <td><code>screens/auth/OTPScreen.tsx</code></td>
+      <td>6-digit OTP code entry for phone verification. Auto-submit on complete. Resend timer (60s cooldown).</td>
+    </tr>
+    <tr>
+      <td><strong>AddPhoneScreen</strong></td>
+      <td><code>screens/auth/AddPhoneScreen.tsx</code></td>
+      <td>Phone number input with E.164 validation. Sends OTP via Firebase Auth phone provider.</td>
+    </tr>
+    <tr>
+      <td><strong>EmailVerificationScreen</strong></td>
+      <td><code>screens/auth/EmailVerificationScreen.tsx</code></td>
+      <td>Waiting screen for email verification. Polls for verification status. Resend link.</td>
+    </tr>
+    <tr>
+      <td><strong>ForgotPasswordScreen</strong></td>
+      <td><code>screens/auth/ForgotPasswordScreen.tsx</code></td>
+      <td>Password reset email request. Hebrew language template.</td>
+    </tr>
+    <tr>
+      <td><strong>CompleteProfileScreen</strong></td>
+      <td><code>screens/auth/CompleteProfileScreen.tsx</code></td>
+      <td>Post-registration profile completion: photo upload, city, gender, age range.</td>
+    </tr>
+    <tr>
+      <td><strong>AcceptTermsScreen</strong></td>
+      <td><code>screens/auth/AcceptTermsScreen.tsx</code></td>
+      <td>Terms of service acceptance gate. Must accept before accessing the app. Sets <code>acceptedTermsAt</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>10.2 &nbsp; Sender Screens (4)</h2>
+
+<table>
+  <thead>
+    <tr><th>Screen</th><th>File</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>HomeScreen</strong></td>
+      <td><code>screens/sender/HomeScreen.tsx</code></td>
+      <td>Sender dashboard. Shows active deliveries count, recent deliveries, unread chat banner. Quick-create delivery button.</td>
+    </tr>
+    <tr>
+      <td><strong>CreateDeliveryScreen</strong></td>
+      <td><code>screens/sender/CreateDeliveryScreen.tsx</code></td>
+      <td>Multi-step delivery creation: pickup/destination map picker with Places autocomplete, item description, size selector, media upload (photos/video), price input, date picker (ASAP or scheduled with time range chips), notes.</td>
+    </tr>
+    <tr>
+      <td><strong>MyDeliveriesScreen</strong></td>
+      <td><code>screens/sender/MyDeliveriesScreen.tsx</code></td>
+      <td>List of all sender's deliveries with status filter tabs. FlatList virtualization for performance. Pull-to-refresh. Navigation to detail.</td>
+    </tr>
+    <tr>
+      <td><strong>DeliveryDetailScreen</strong></td>
+      <td><code>screens/sender/DeliveryDetailScreen.tsx</code></td>
+      <td>Full delivery detail: live map tracking, status timeline, interested drivers list (with selection), proof photos gallery, payment confirmation (Bit/PayBox deep links), rating prompt, report button. Chat access.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>10.3 &nbsp; Driver Screens (4)</h2>
+
+<table>
+  <thead>
+    <tr><th>Screen</th><th>File</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>FeedScreen</strong></td>
+      <td><code>screens/driver/FeedScreen.tsx</code></td>
+      <td>Nearby delivery feed with animated radar. Geohash proximity queries (1-50km slider). Size/distance preference filters. Available toggle. Card-based delivery list with express-interest button.</td>
+    </tr>
+    <tr>
+      <td><strong>MyJobsScreen</strong></td>
+      <td><code>screens/driver/MyJobsScreen.tsx</code></td>
+      <td>List of driver's assigned/active jobs with status filter tabs. Similar layout to MyDeliveries.</td>
+    </tr>
+    <tr>
+      <td><strong>DeliveryDetailScreen</strong></td>
+      <td><code>screens/driver/DeliveryDetailScreen.tsx</code></td>
+      <td>Driver's view of delivery detail: navigation to pickup/destination (maps deep link), proof camera for pickup/delivery, selection countdown banner (15min), payment confirmation, rating prompt, report button.</td>
+    </tr>
+    <tr>
+      <td><strong>DriverKYCScreen</strong></td>
+      <td><code>screens/driver/DriverKYCScreen.tsx</code></td>
+      <td>KYC document upload: driver's license and ID photo. Camera or gallery picker. Upload to Cloud Storage. Status tracking (pending/approved/rejected).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>10.4 &nbsp; Onboarding (1)</h2>
+
+<table>
+  <thead>
+    <tr><th>Screen</th><th>File</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>OnboardingScreen</strong></td>
+      <td><code>screens/onboarding/OnboardingScreen.tsx</code></td>
+      <td>First-launch onboarding slides introducing MOOVIZ features. Swipeable pages with Lottie animations.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>10.5 &nbsp; Shared Screens (5)</h2>
+
+<table>
+  <thead>
+    <tr><th>Screen</th><th>File</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>ChatScreen</strong></td>
+      <td><code>screens/shared/ChatScreen.tsx</code></td>
+      <td>Real-time chat between sender and driver. Text + image messages. System messages for status changes. Batch writes for performance. Location sharing throttled (30s). "Chat closed" banner when auto-closed.</td>
+    </tr>
+    <tr>
+      <td><strong>ProfileScreen</strong></td>
+      <td><code>screens/shared/ProfileScreen.tsx</code></td>
+      <td>User profile view and edit. Profile photo, name, city, contact info. KYC document viewer. Rating history. Mode switcher (sender/driver). Settings drawer.</td>
+    </tr>
+    <tr>
+      <td><strong>CompleteProfileScreen</strong></td>
+      <td><code>screens/shared/CompleteProfileScreen.tsx</code></td>
+      <td>Shared profile completion screen (used in flows beyond auth).</td>
+    </tr>
+    <tr>
+      <td><strong>RatingScreen</strong></td>
+      <td><code>screens/shared/RatingScreen.tsx</code></td>
+      <td>Star rating (1-5) with comment input. Prevents double submission via <code>ratingSubmitted</code> guard. Hides rate button after submission.</td>
+    </tr>
+    <tr>
+      <td><strong>FullScreenMapScreen</strong></td>
+      <td><code>screens/shared/FullScreenMapScreen.tsx</code></td>
+      <td>Full-screen map view for delivery pickup/destination locations. Used from detail screens.</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 11. COMPONENTS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 11 &mdash; Reusable Components</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="components">11. Reusable Components (46 Total)</h1>
+
+<table>
+  <thead>
+    <tr><th>Component</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>AddressAutocomplete</code></td><td>Google Places autocomplete input for pickup/destination address selection with map preview.</td></tr>
+    <tr><td><code>AnimatedButton</code></td><td>Pressable button with scale/opacity animation feedback using react-native-reanimated.</td></tr>
+    <tr><td><code>AppAlert</code></td><td>Branded alert dialog replacement for native Alert. Themed with MOOVIZ colors and RTL support.</td></tr>
+    <tr><td><code>AvailabilityToggle</code></td><td>Driver availability switch. Persists <code>driverAvailable</code> to Firestore. Controls feed visibility.</td></tr>
+    <tr><td><code>AvatarCircle</code></td><td>Circular profile photo with fallback initials. Supports various sizes.</td></tr>
+    <tr><td><code>Badge</code></td><td>Generic badge component for counts, labels, and status indicators.</td></tr>
+    <tr><td><code>Button</code></td><td>Primary button component with loading state, disabled state, and theme variants.</td></tr>
+    <tr><td><code>CarAlert</code></td><td>Delivery-specific alert with car icon animation.</td></tr>
+    <tr><td><code>Card</code></td><td>Base card container with shadow, border radius, and theme-aware background.</td></tr>
+    <tr><td><code>ChatDeliveryBanner</code></td><td>Banner showing unread chat count, links to active delivery chat.</td></tr>
+    <tr><td><code>DatePickerInput</code></td><td>Native date picker with ASAP option and time range chips (morning, afternoon, evening).</td></tr>
+    <tr><td><code>DeliveryCard</code></td><td>Delivery list item card. Shows pickup/destination, price, status badge, item size. Memoized with <code>React.memo</code> for FlatList performance.</td></tr>
+    <tr><td><code>DriverApprovalCard</code></td><td>Card showing interested driver info with approve/decline actions for sender.</td></tr>
+    <tr><td><code>DriverConfirmBanner</code></td><td>Top banner on driver detail screen showing 15-minute countdown for selection confirmation.</td></tr>
+    <tr><td><code>DriverOnboarding</code></td><td>Onboarding flow for new drivers explaining KYC requirements.</td></tr>
+    <tr><td><code>DriverProfileModal</code></td><td>Modal displaying driver profile: photo, rating, completed deliveries, vehicle info.</td></tr>
+    <tr><td><code>EmptyState</code></td><td>Empty list state with illustration and call-to-action. Used across feed, deliveries, jobs lists.</td></tr>
+    <tr><td><code>ErrorBoundary</code></td><td>React error boundary wrapping every screen. Catches render errors with retry capability.</td></tr>
+    <tr><td><code>GlassCard</code></td><td>Glassmorphism-style card with blur effect for premium UI elements.</td></tr>
+    <tr><td><code>ImageGalleryModal</code></td><td>Full-screen image viewer for proof photos, item photos. Pinch-to-zoom, swipe navigation.</td></tr>
+    <tr><td><code>InterestedDriversList</code></td><td>Scrollable list of interested drivers with profile modals, select button. Used in sender delivery detail.</td></tr>
+    <tr><td><code>LiveMapView</code></td><td>Real-time map showing driver location, pickup/destination markers. FAB buttons for recenter and directions.</td></tr>
+    <tr><td><code>LoadingOverlay</code></td><td>Full-screen semi-transparent loading overlay with spinner.</td></tr>
+    <tr><td><code>LoadingScreen</code></td><td>Full-screen loading state with MOOVIZ branding.</td></tr>
+    <tr><td><code>LoadingTruck</code></td><td>Animated truck loading indicator (Lottie animation).</td></tr>
+    <tr><td><code>MapPicker</code></td><td>Interactive map for selecting pickup/destination. Draggable marker with reverse geocoding.</td></tr>
+    <tr><td><code>Modal</code></td><td>Base modal component with backdrop, close button, and animated entry.</td></tr>
+    <tr><td><code>ModeSwitcher</code></td><td>Toggle between sender and driver mode. Updates <code>activeMode</code> in Firestore.</td></tr>
+    <tr><td><code>OfflineBanner</code></td><td>Top banner displayed when device is offline. Monitors network status via <code>useNetworkStatus</code>.</td></tr>
+    <tr><td><code>ProofCamera</code></td><td>Camera capture component for proof photos (pickup/delivery). Validates and compresses before upload.</td></tr>
+    <tr><td><code>RatingStars</code></td><td>Interactive star rating input (1-5) and display-only mode.</td></tr>
+    <tr><td><code>RatingsHistoryModal</code></td><td>Modal showing user's rating history with comments.</td></tr>
+    <tr><td><code>ReportModal</code></td><td>Report form modal: category selector, description input. Creates report document in Firestore.</td></tr>
+    <tr><td><code>ScreenHeader</code></td><td>Consistent screen header with back button, title, and optional right actions.</td></tr>
+    <tr><td><code>SelectionCountdown</code></td><td>Animated countdown timer for the 15-minute driver selection confirmation window.</td></tr>
+    <tr><td><code>SenderOnboarding</code></td><td>Onboarding flow for new senders explaining how to create deliveries.</td></tr>
+    <tr><td><code>SenderProfileModal</code></td><td>Modal displaying sender profile: photo, rating, completed deliveries.</td></tr>
+    <tr><td><code>SettingsDrawer</code></td><td>Side drawer with app settings: theme toggle, language, notifications, logout.</td></tr>
+    <tr><td><code>SkeletonLoader</code></td><td>Animated placeholder skeletons for loading states across lists and detail screens.</td></tr>
+    <tr><td><code>StatusBadge</code></td><td>Delivery status badge with color coding matching the state machine colors.</td></tr>
+    <tr><td><code>StatusIndicator</code></td><td>Small status dot indicator for user online/offline state.</td></tr>
+    <tr><td><code>TabHeader</code></td><td>Tab bar header for filtered list views (e.g., delivery status tabs).</td></tr>
+    <tr><td><code>TabIcons</code></td><td>Bottom tab navigation icon set with badge counts.</td></tr>
+    <tr><td><code>TextInput</code></td><td>Base text input with label, error display, RTL support, and validation.</td></tr>
+    <tr><td><code>ThemedInput</code></td><td>Theme-aware input variant with dark/light mode support.</td></tr>
+    <tr><td><code>VerificationStepper</code></td><td>Step indicator for the auth verification flow (email &rarr; phone &rarr; profile &rarr; terms).</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 12. HOOKS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 12 &mdash; Custom Hooks &amp; Services</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="hooks">12. Custom Hooks (14 Total)</h1>
+
+<table>
+  <thead>
+    <tr><th>Hook</th><th>File</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>useAuth</code></td>
+      <td><code>hooks/useAuth.ts</code></td>
+      <td>Authentication state management. Provides current user, loading state, login/logout/register functions. Wraps Firebase Auth listener.</td>
+    </tr>
+    <tr>
+      <td><code>useChat</code></td>
+      <td><code>hooks/useChat.ts</code></td>
+      <td>Real-time chat for a specific delivery. Subscribes to messages subcollection via <code>onSnapshot</code>. Provides send message, send image, mark as read functions.</td>
+    </tr>
+    <tr>
+      <td><code>useChatList</code></td>
+      <td><code>hooks/useChatList.ts</code></td>
+      <td>Lists all user's active chats with unread counts. Cached user/delivery lookups to eliminate N+1 queries. Real-time via <code>onSnapshot</code>.</td>
+    </tr>
+    <tr>
+      <td><code>useDelivery</code></td>
+      <td><code>hooks/useDelivery.ts</code></td>
+      <td>Real-time subscription to a single delivery document. Provides all delivery data, status, participants, interested drivers list.</td>
+    </tr>
+    <tr>
+      <td><code>useDriverAvailability</code></td>
+      <td><code>hooks/useDriverAvailability.ts</code></td>
+      <td>Manages driver's available/unavailable toggle. Persists to Firestore. Does NOT reset on unmount (persistent preference).</td>
+    </tr>
+    <tr>
+      <td><code>useDriverEarnings</code></td>
+      <td><code>hooks/useDriverEarnings.ts</code></td>
+      <td>Fetches driver's completed delivery earnings. Uses <code>get()</code> with limit(200) instead of <code>onSnapshot</code> for performance.</td>
+    </tr>
+    <tr>
+      <td><code>useDriverLocationTracking</code></td>
+      <td><code>hooks/useDriverLocationTracking.ts</code></td>
+      <td>Two-tier GPS tracking: idle mode (5min intervals, 200m distance filter) and active delivery mode (1min intervals, 50m filter). Syncs to Firestore with geohash.</td>
+    </tr>
+    <tr>
+      <td><code>useFirestore</code></td>
+      <td><code>hooks/useFirestore.ts</code></td>
+      <td>Generic Firestore hook for collection/document subscriptions. Base hook used by others.</td>
+    </tr>
+    <tr>
+      <td><code>useInAppReview</code></td>
+      <td><code>hooks/useInAppReview.ts</code></td>
+      <td>Triggers native in-app review prompt after successful delivery completion.</td>
+    </tr>
+    <tr>
+      <td><code>useLocation</code></td>
+      <td><code>hooks/useLocation.ts</code></td>
+      <td>Current device location with permission handling. Used for initial map centering and distance calculations.</td>
+    </tr>
+    <tr>
+      <td><code>useNetworkStatus</code></td>
+      <td><code>hooks/useNetworkStatus.ts</code></td>
+      <td>Network connectivity monitoring. Drives <code>OfflineBanner</code> visibility. Handles offline-to-online transitions.</td>
+    </tr>
+    <tr>
+      <td><code>useNotifications</code></td>
+      <td><code>hooks/useNotifications.ts</code></td>
+      <td>FCM setup: requests permission (Android 13+ POST_NOTIFICATIONS), gets device token, registers/updates in Firestore. Handles foreground message display.</td>
+    </tr>
+    <tr>
+      <td><code>useSenderExpenses</code></td>
+      <td><code>hooks/useSenderExpenses.ts</code></td>
+      <td>Fetches sender's delivery expense history. Uses <code>get()</code> with limit(200) for performance.</td>
+    </tr>
+    <tr>
+      <td><code>useSound</code></td>
+      <td><code>hooks/useSound.tsx</code></td>
+      <td>Crash-proof sound playback with kill switch. Plays custom notification sounds. Gracefully degrades on failure.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1 class="section-title" id="services">13. Service Layer (11 Modules)</h1>
+
+<table>
+  <thead>
+    <tr><th>Service</th><th>File</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>firebase</code></td><td><code>services/firebase.ts</code></td><td>Firebase app initialization. Exports <code>auth</code>, <code>db</code>, <code>storage</code>, <code>functions</code> instances.</td></tr>
+    <tr><td><code>auth</code></td><td><code>services/auth.ts</code></td><td>Authentication wrappers: signIn, signUp, signOut, sendOTP, verifyOTP, resetPassword, updateProfile.</td></tr>
+    <tr><td><code>chat</code></td><td><code>services/chat.ts</code></td><td>Chat operations: send message, send image, mark read, create chat document.</td></tr>
+    <tr><td><code>storage</code></td><td><code>services/storage.ts</code></td><td>Cloud Storage uploads: profile photos, KYC docs, delivery media, proof photos. Compression via react-native-compressor.</td></tr>
+    <tr><td><code>notifications</code></td><td><code>services/notifications.ts</code></td><td>Client-side notification handling: foreground display, navigation on tap, sound playback.</td></tr>
+    <tr><td><code>navigation</code></td><td><code>services/navigation.ts</code></td><td>Navigation service for deep linking and notification-triggered navigation.</td></tr>
+    <tr><td><code>sound</code></td><td><code>services/sound.ts</code></td><td>Sound player service with error recovery and kill switch for crash-proofing.</td></tr>
+    <tr><td><code>geohash</code></td><td><code>services/geohash.ts</code></td><td>Client-side geohash encoding for location updates.</td></tr>
+    <tr><td><code>analytics</code></td><td><code>services/analytics.ts</code></td><td>Analytics event tracking wrapper.</td></tr>
+    <tr><td><code>encryption</code></td><td><code>services/encryption.ts</code></td><td>Client-side encryption helpers for secure document access.</td></tr>
+    <tr><td><code>offlineQueue</code></td><td><code>services/offlineQueue.ts</code></td><td>Offline action queue for operations performed while disconnected.</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 14. ADMIN DASHBOARD ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 14 &mdash; Admin Dashboard</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="admin-dashboard">14. Admin Dashboard (11 Pages)</h1>
+
+<p>
+  The admin dashboard is a React + Vite + Tailwind CSS single-page application. It uses Firebase JS SDK for direct Firestore access with admin-role security rules. Authentication is email+password (admin accounts pre-seeded).
+</p>
+
+<table>
+  <thead>
+    <tr><th>Page</th><th>File</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>LoginPage</strong></td>
+      <td><code>pages/LoginPage.tsx</code></td>
+      <td>Admin email+password login. Redirects to dashboard on success.</td>
+    </tr>
+    <tr>
+      <td><strong>DashboardPage</strong></td>
+      <td><code>pages/DashboardPage.tsx</code></td>
+      <td>Analytics overview: total users, deliveries, revenue. Period filter (7d/30d/90d/all). User breakdown (senders vs drivers). Regional distribution (Israel cities mapped to regions). Delivery timing charts. Monthly trend charts. Cashflow summary. CSV export on all data views.</td>
+    </tr>
+    <tr>
+      <td><strong>UsersPage</strong></td>
+      <td><code>pages/UsersPage.tsx</code></td>
+      <td>User list with search, role filter, status filter. Sortable columns. Click through to user detail.</td>
+    </tr>
+    <tr>
+      <td><strong>UserDetailPage</strong></td>
+      <td><code>pages/UserDetailPage.tsx</code></td>
+      <td>Full user profile view. KYC document viewer with approve/reject actions. Status management (active/suspend/block). Delivery history. Rating history. FCM token list.</td>
+    </tr>
+    <tr>
+      <td><strong>DeliveriesPage</strong></td>
+      <td><code>pages/DeliveriesPage.tsx</code></td>
+      <td>Delivery list with status filter tabs, date range filter, search. Shows all deliveries across all users.</td>
+    </tr>
+    <tr>
+      <td><strong>DeliveryDetailPage</strong></td>
+      <td><code>pages/DeliveryDetailPage.tsx</code></td>
+      <td>Full delivery detail: participants, status history timeline, proof photos, payment status, interested drivers list, chat messages.</td>
+    </tr>
+    <tr>
+      <td><strong>ChatsPage</strong></td>
+      <td><code>pages/ChatsPage.tsx</code></td>
+      <td>All active chats list. Click through to read messages. Identifies closed vs open chats.</td>
+    </tr>
+    <tr>
+      <td><strong>ReportsPage</strong></td>
+      <td><code>pages/ReportsPage.tsx</code></td>
+      <td>User reports moderation: open/investigating/resolved/dismissed tabs. Actions: investigate (set status), resolve with moderation action (warning, suspend, block), dismiss. Moderator notes.</td>
+    </tr>
+    <tr>
+      <td><strong>EmailPage</strong></td>
+      <td><code>pages/EmailPage.tsx</code></td>
+      <td>Bulk email broadcasting. Recipient selection (all users, by role, custom list). HTML email editor. Sends via <code>sendBulkEmail</code> callable function. SMTP: Hostinger (smtp.hostinger.com:465, SSL).</td>
+    </tr>
+    <tr>
+      <td><strong>SettingsPage</strong></td>
+      <td><code>pages/SettingsPage.tsx</code></td>
+      <td>Admin settings and configuration.</td>
+    </tr>
+    <tr>
+      <td><strong>MigrationPage</strong></td>
+      <td><code>pages/MigrationPage.tsx</code></td>
+      <td>Data migration tools for Glide-to-Firestore migration. User import, delivery import, image URL migration.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Admin Analytics Features</h2>
+
+<ul>
+  <li><strong>Period Filters:</strong> 7 days, 30 days, 90 days, all time</li>
+  <li><strong>User Breakdown:</strong> Total users, senders, drivers, KYC pending/approved/rejected</li>
+  <li><strong>Regional Distribution:</strong> Israeli cities mapped to regions (North, Center, South, Jerusalem, etc.)</li>
+  <li><strong>Delivery Timings:</strong> Average time per status, pickup-to-delivery duration</li>
+  <li><strong>Monthly Charts:</strong> Delivery volume, user growth, revenue trends</li>
+  <li><strong>Cashflow:</strong> Total revenue, average delivery price, payment confirmation rate</li>
+  <li><strong>CSV Export:</strong> Every data view supports CSV export with UTF-8 BOM for Hebrew support in Excel</li>
+</ul>
+
+
+<!-- ==================== 15. ENVIRONMENTS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 15 &mdash; Environments</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="environments">15. Environments</h1>
+
+<table>
+  <thead>
+    <tr><th>Attribute</th><th>Development</th><th>Production</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Firebase Project ID</td><td><code>mooviz-app-9b766</code></td><td><code>mooviz-prod</code></td></tr>
+    <tr><td>Firebase Console</td><td>console.firebase.google.com/project/mooviz-app-9b766</td><td>console.firebase.google.com/project/mooviz-prod</td></tr>
+    <tr><td>Admin Dashboard</td><td><code>mooviz-app-9b766.web.app</code></td><td><code>admin.mooviz.co.il</code></td></tr>
+    <tr><td>Cloud Functions</td><td>Deployed</td><td>Deployed</td></tr>
+    <tr><td>Firestore Rules</td><td>Deployed</td><td>Deployed</td></tr>
+    <tr><td>Storage Rules</td><td>Deployed</td><td>Deployed</td></tr>
+    <tr><td>Firebase Auth Owner</td><td>tamir@k-a-l.solutions</td><td>tamir@k-a-l.solutions</td></tr>
+    <tr><td>SMTP Server</td><td colspan="2">smtp.hostinger.com:465 (SSL) &mdash; admin@mooviz.co.il</td></tr>
+    <tr><td>Google Maps API Key</td><td colspan="2">Stored in <code>.env</code> (gitignored) &mdash; loaded via react-native-config</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box warning">
+  <strong>Environment Files</strong>
+  The following files are gitignored and must be configured manually on new development machines:
+  <ul style="margin-top: 8px;">
+    <li><code>apps/mobile/.env</code> &mdash; GOOGLE_MAPS_API_KEY</li>
+    <li><code>apps/mobile/android/app/google-services.json</code> &mdash; Firebase Android config</li>
+    <li><code>apps/mobile/ios/MoovizMobile/GoogleService-Info.plist</code> &mdash; Firebase iOS config</li>
+    <li><code>apps/admin/.env.production</code> &mdash; Firebase production project config</li>
+  </ul>
+</div>
+
+<h2>Firebase Project Configuration</h2>
+
+<p>The <code>firebase.json</code> at the project root configures:</p>
+<ul>
+  <li><strong>Firestore:</strong> Rules file (<code>firestore.rules</code>), indexes</li>
+  <li><strong>Storage:</strong> Rules file (<code>storage.rules</code>)</li>
+  <li><strong>Functions:</strong> Source directory (<code>functions</code>), Node 18 runtime</li>
+  <li><strong>Hosting:</strong> Admin dashboard public directory, SPA rewrites</li>
+</ul>
+
+
+<!-- ==================== 16. BUILD & DEPLOY ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 16 &mdash; Build &amp; Deploy</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="build-deploy">16. Build &amp; Deploy</h1>
+
+<h2>16.1 &nbsp; Android Build</h2>
+
+<pre><code># Navigate to mobile app
+cd apps/mobile/android
+
+# Clean build
+./gradlew clean
+
+# Build release APK (signed)
+./gradlew assembleRelease
+
+# Output location:
+# apps/mobile/android/app/build/outputs/apk/release/mooviz-{version}.apk</code></pre>
+
+<table>
+  <thead>
+    <tr><th>Config</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>compileSdk</td><td>34</td></tr>
+    <tr><td>targetSdk</td><td>34</td></tr>
+    <tr><td>minSdk</td><td>24 (Android 7.0)</td></tr>
+    <tr><td>Android Gradle Plugin</td><td>8.5</td></tr>
+    <tr><td>JS Engine</td><td>Hermes</td></tr>
+    <tr><td>Page Alignment</td><td>16KB (required for modern Android)</td></tr>
+    <tr><td>Signing</td><td>Release keystore configured in <code>build.gradle</code></td></tr>
+  </tbody>
+</table>
+
+<h2>16.2 &nbsp; iOS Build</h2>
+
+<pre><code># Navigate to iOS project
+cd apps/mobile/ios
+
+# Install CocoaPods dependencies
+pod install
+
+# Open in Xcode
+open MoovizMobile.xcworkspace
+
+# In Xcode:
+# 1. Select "MoovizMobile" scheme
+# 2. Select "Any iOS Device (arm64)" target
+# 3. Product → Archive
+# 4. Distribute to TestFlight</code></pre>
+
+<table>
+  <thead>
+    <tr><th>Config</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Firebase iOS SDK</td><td>11.11</td></tr>
+    <tr><td>CocoaPods</td><td>Modular headers (selective)</td></tr>
+    <tr><td>Deployment Target</td><td>iOS 15.0+</td></tr>
+    <tr><td>APNs</td><td>Required for push notifications and phone auth</td></tr>
+    <tr><td>Signing</td><td>Apple Developer Program required</td></tr>
+  </tbody>
+</table>
+
+<h2>16.3 &nbsp; Cloud Functions Deploy</h2>
+
+<pre><code># Build shared package first (if validators changed)
+cd shared
+pnpm build
+pnpm pack
+# Copy mooviz-shared-1.0.0.tgz to functions/
+cp mooviz-shared-1.0.0.tgz ../functions/
+cd ../functions
+pnpm install
+
+# Deploy to development
+firebase deploy --only functions --project mooviz-app-9b766
+
+# Deploy to production
+firebase deploy --only functions --project mooviz-prod</code></pre>
+
+<div class="info-box important">
+  <strong>Shared Package Rebuild</strong>
+  When updating validators or types in <code>shared/</code>, you MUST rebuild the tgz package. The predeploy <code>cp</code> command does NOT update <code>node_modules/@mooviz/shared</code> which comes from the tgz. Sequence: <code>cd shared && pnpm build && pnpm pack</code> &rarr; copy tgz &rarr; <code>cd functions && pnpm install</code> &rarr; deploy.
+</div>
+
+<h2>16.4 &nbsp; Admin Dashboard Deploy</h2>
+
+<pre><code># Build for production
+cd apps/admin
+pnpm build --mode mooviz-prod
+
+# Deploy to Firebase Hosting
+firebase deploy --only hosting --project mooviz-prod</code></pre>
+
+<h2>16.5 &nbsp; Firestore &amp; Storage Rules Deploy</h2>
+
+<pre><code># Deploy rules to development
+firebase deploy --only firestore:rules,storage --project mooviz-app-9b766
+
+# Deploy rules to production
+firebase deploy --only firestore:rules,storage --project mooviz-prod</code></pre>
+
+<h2>16.6 &nbsp; Metro Bundler (Development)</h2>
+
+<pre><code># Start Metro bundler for React Native development
+cd apps/mobile
+node ../../node_modules/react-native/cli.js start
+
+# Run on Android emulator/device
+node ../../node_modules/react-native/cli.js run-android
+
+# Run on iOS simulator
+node ../../node_modules/react-native/cli.js run-ios</code></pre>
+
+<h2>16.7 &nbsp; Git Workflow</h2>
+
+<table>
+  <thead>
+    <tr><th>Attribute</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Source Control</td><td>GitHub (private repository)</td></tr>
+    <tr><td>Branches</td><td><code>main</code>, <code>develop</code>, <code>feature/*</code>, <code>release/*</code></td></tr>
+    <tr><td>Commit Format</td><td><code>&lt;type&gt;(&lt;scope&gt;): &lt;description&gt;</code></td></tr>
+    <tr><td>Commit Types</td><td><code>feat</code>, <code>fix</code>, <code>refactor</code>, <code>style</code>, <code>docs</code>, <code>test</code>, <code>chore</code></td></tr>
+    <tr><td>Monorepo</td><td>pnpm workspaces</td></tr>
+    <tr><td>Remotes</td><td><code>origin</code> (developer), <code>client</code> (client)</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== 17. KNOWN LIMITATIONS ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Section 17 &mdash; Known Limitations &amp; Future Work</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="known-limitations">17. Known Limitations &amp; Future Work</h1>
+
+<h2>17.1 &nbsp; Current Limitations</h2>
+
+<table>
+  <thead>
+    <tr><th>Area</th><th>Limitation</th><th>Impact</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Payments</td>
+      <td>No in-app payment processing. External deep links to Bit/PayBox apps only.</td>
+      <td>Users must manually confirm payment receipt. No automated payment verification.</td>
+    </tr>
+    <tr>
+      <td>Shared Package</td>
+      <td><code>shared/</code> imports <code>firebase-admin</code> (server SDK), causing friction when used from client SDK.</td>
+      <td>Must use tgz bundle approach for functions. Cannot import shared types directly in mobile app without workarounds.</td>
+    </tr>
+    <tr>
+      <td>Glide Migration</td>
+      <td>Migrated drivers have <code>driverUnlocked: true</code> without completing KYC process.</td>
+      <td>These drivers bypass KYC checks via the grandfather clause in <code>assertDriverApproved()</code>.</td>
+    </tr>
+    <tr>
+      <td>Firestore Rules</td>
+      <td>Some delivery fields still allow direct client writes. <code>adminActions</code> collection has no security rules.</td>
+      <td>Full RBAC lockdown is a P0 item for production hardening.</td>
+    </tr>
+    <tr>
+      <td>Edit/Delete Delivery</td>
+      <td>No ability to edit or delete a delivery after creation.</td>
+      <td>Users must cancel and recreate. Feature deferred to post-launch.</td>
+    </tr>
+    <tr>
+      <td>Store Submissions</td>
+      <td>Apple App Store and Google Play Store submissions are pending.</td>
+      <td>Distribution currently via direct APK install (Android) and TestFlight (iOS).</td>
+    </tr>
+    <tr>
+      <td>Monetization</td>
+      <td>Zero monetization features. No commission, no subscription, no ads.</td>
+      <td>Revenue model must be defined for sustainability.</td>
+    </tr>
+    <tr>
+      <td>Privacy Policy</td>
+      <td>Privacy policy page referenced but not fully implemented.</td>
+      <td>Required for store submissions (Apple and Google both require it).</td>
+    </tr>
+    <tr>
+      <td>iOS OTP Testing</td>
+      <td>Phone OTP verification requires physical device + APNs certificate.</td>
+      <td>Cannot test on iOS Simulator. Must use real device for phone auth testing.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>17.2 &nbsp; Future Work (Backlog)</h2>
+
+<table>
+  <thead>
+    <tr><th>Feature</th><th>Priority</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Production Config</td>
+      <td><span class="badge badge-red">P0</span></td>
+      <td>Separate Firebase production project with dedicated signing keys.</td>
+    </tr>
+    <tr>
+      <td>Store Submissions</td>
+      <td><span class="badge badge-red">P0</span></td>
+      <td>Apple App Store + Google Play Store submission with required assets, screenshots, privacy policy.</td>
+    </tr>
+    <tr>
+      <td>Full RBAC Lockdown</td>
+      <td><span class="badge badge-red">P0</span></td>
+      <td>Complete Firestore security rules hardening. Remove direct client write access to protected fields.</td>
+    </tr>
+    <tr>
+      <td>Bug Triage</td>
+      <td><span class="badge badge-red">P0</span></td>
+      <td>Pre-release P0/P1 bug triage and resolution.</td>
+    </tr>
+    <tr>
+      <td>Analytics Events</td>
+      <td><span class="badge badge-orange">P1</span></td>
+      <td>GA4/Amplitude event tracking across all user actions for product analytics.</td>
+    </tr>
+    <tr>
+      <td>Interstitial Ads</td>
+      <td><span class="badge badge-orange">P1</span></td>
+      <td>Ad integration for monetization (post-launch).</td>
+    </tr>
+    <tr>
+      <td>Edit/Delete Delivery</td>
+      <td><span class="badge badge-orange">P1</span></td>
+      <td>Allow senders to edit delivery details or delete before driver assignment.</td>
+    </tr>
+    <tr>
+      <td>Payment Integration</td>
+      <td><span class="badge badge-gold">P2</span></td>
+      <td>In-app payment processing to replace external deep links.</td>
+    </tr>
+    <tr>
+      <td>Delivery Tracking Map</td>
+      <td><span class="badge badge-gold">P2</span></td>
+      <td>Enhanced real-time tracking with ETA and route visualization.</td>
+    </tr>
+    <tr>
+      <td>Multi-Language</td>
+      <td><span class="badge badge-gold">P2</span></td>
+      <td>Full Arabic and Russian language support (current: Hebrew primary, English secondary).</td>
+    </tr>
+    <tr>
+      <td>Driver Vehicle Management</td>
+      <td><span class="badge badge-gray">P3</span></td>
+      <td>Vehicle type registration, capacity matching, vehicle photos.</td>
+    </tr>
+    <tr>
+      <td>Recurring Deliveries</td>
+      <td><span class="badge badge-gray">P3</span></td>
+      <td>Schedule recurring delivery requests (daily, weekly).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>17.3 &nbsp; Technical Debt</h2>
+
+<ul>
+  <li><strong>Shared package architecture:</strong> The <code>@mooviz/shared</code> package should be split into <code>@mooviz/types</code> (platform-agnostic) and <code>@mooviz/server-utils</code> (firebase-admin dependent) to eliminate the server SDK friction on the client.</li>
+  <li><strong>Firestore index management:</strong> Some compound queries require manually created Firestore indexes. These should be documented in <code>firestore.indexes.json</code>.</li>
+  <li><strong>Error tracking:</strong> No Sentry/Crashlytics integration for production crash reporting. Firebase Crashlytics SDK is installed but not fully configured.</li>
+  <li><strong>Test coverage:</strong> No automated test suite (unit, integration, or E2E). Testing has been manual QA rounds.</li>
+  <li><strong>Rate limiting:</strong> Cloud Functions have basic rate limiting but no WAF or advanced DDoS protection.</li>
+</ul>
+
+
+<!-- ==================== APPENDIX ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Appendix</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title">Appendix A &mdash; Configuration Constants</h1>
+
+<p>Key application constants defined in <code>apps/mobile/src/constants/config.ts</code>:</p>
+
+<table>
+  <thead>
+    <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>MAX_DELIVERY_RADIUS_KM</code></td><td>50</td><td>Maximum delivery search radius (km)</td></tr>
+    <tr><td><code>DEFAULT_DELIVERY_RADIUS_KM</code></td><td>10</td><td>Default search radius (km)</td></tr>
+    <tr><td><code>GEOHASH_PRECISION</code></td><td>6</td><td>Geohash precision for location indexing (~1.2km grid)</td></tr>
+    <tr><td><code>IMAGE_MAX_SIZE</code></td><td>5,242,880 (5MB)</td><td>Maximum image file size in bytes</td></tr>
+    <tr><td><code>IMAGE_MAX_WIDTH / HEIGHT</code></td><td>1920</td><td>Maximum image dimensions for upload</td></tr>
+    <tr><td><code>IMAGE_QUALITY</code></td><td>0.8</td><td>JPEG compression quality (0-1)</td></tr>
+    <tr><td><code>OTP_LENGTH</code></td><td>6</td><td>OTP code digit count</td></tr>
+    <tr><td><code>OTP_RESEND_COOLDOWN_SECONDS</code></td><td>60</td><td>Seconds between OTP resend attempts</td></tr>
+    <tr><td><code>CHAT_MESSAGE_MAX_LENGTH</code></td><td>1,000</td><td>Maximum characters per chat message</td></tr>
+    <tr><td><code>CHAT_MESSAGES_PAGE_SIZE</code></td><td>50</td><td>Messages loaded per pagination page</td></tr>
+    <tr><td><code>DELIVERIES_PAGE_SIZE</code></td><td>20</td><td>Deliveries loaded per pagination page</td></tr>
+    <tr><td><code>RATING_SCALE</code></td><td>5</td><td>Maximum star rating value</td></tr>
+    <tr><td><code>LOCATION_IDLE_INTERVAL_MS</code></td><td>300,000 (5min)</td><td>GPS tracking interval in idle mode</td></tr>
+    <tr><td><code>LOCATION_ACTIVE_INTERVAL_MS</code></td><td>60,000 (1min)</td><td>GPS tracking interval during active delivery</td></tr>
+    <tr><td><code>LOCATION_DISTANCE_FILTER_IDLE</code></td><td>200m</td><td>Minimum distance change for idle updates</td></tr>
+    <tr><td><code>LOCATION_DISTANCE_FILTER_ACTIVE</code></td><td>50m</td><td>Minimum distance change for active updates</td></tr>
+    <tr><td><code>APP_VERSION</code></td><td>1.1.9</td><td>Current application version</td></tr>
+    <tr><td><code>DEEP_LINK_SCHEME</code></td><td>mooviz://</td><td>App deep link URL scheme</td></tr>
+    <tr><td><code>SUPPORT_EMAIL</code></td><td>support@mooviz.app</td><td>Support contact email</td></tr>
+    <tr><td><code>DEFAULT_TIMEOUT_HOURS</code></td><td>24</td><td>Default delivery timeout (hours)</td></tr>
+  </tbody>
+</table>
+
+<h1 class="section-title">Appendix B &mdash; DeliveryStatus Type Reference</h1>
+
+<pre><code>type DeliveryStatus =
+  | "new"
+  | "pending"
+  | "awaiting_confirm"
+  | "waiting_for_pickup"
+  | "picked_up"
+  | "delivered"
+  | "awaiting_payment"
+  | "completed_paid"
+  | "cancelled";
+
+type InterestedDriverStatus =
+  | "interested"
+  | "selected"
+  | "confirmed"
+  | "declined"
+  | "cancelled"
+  | "withdrawn";
+
+interface InterestedDriver {
+  uid: string;
+  name: string;
+  photoUrl: string | null;
+  rating: number;
+  completedDeliveries: number;
+  distanceKm: number;
+  expressedAt: Timestamp;
+  status: InterestedDriverStatus;
+}
+
+interface StatusEntry {
+  status: DeliveryStatus;
+  timestamp: Timestamp;
+  actor: string;
+  note?: string;
+}
+
+// Terminal statuses (no further transitions allowed)
+const TERMINAL_STATUSES: DeliveryStatus[] = ["cancelled", "completed_paid"];
+
+// Statuses eligible for timeout cleanup
+const TIMEOUT_ELIGIBLE_STATUSES: DeliveryStatus[] = [
+  "new", "pending", "awaiting_confirm", "awaiting_payment"
+];</code></pre>
+
+<h1 class="section-title">Appendix C &mdash; User Type Reference</h1>
+
+<pre><code>type UserRole = "sender" | "driver";
+type ActiveMode = "client" | "driver";
+type KycStatus = "pending" | "approved" | "rejected";
+type UserStatus = "active" | "suspended" | "blocked";
+
+interface User {
+  uid: string;
+  fullName: string;
+  nickname?: string;
+  phone: string;             // E.164 format
+  email?: string;
+  city: string;
+  role: UserRole;
+  activeMode: ActiveMode;
+  driverAvailable: boolean;
+  driverUnlocked: boolean;
+  profilePhotoURL: string;
+  kycDocumentURL: string;
+  kycStatus: KycStatus;
+  ratingAsDriver: { average: number; count: number };
+  ratingAsSender: { average: number; count: number };
+  completedDeliveries: number;
+  status: UserStatus;
+  fcmTokens: string[];
+  location: { lat: number; lng: number; geohash: string };
+  migratedFrom?: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}</code></pre>
+
+<h1 class="section-title">Appendix D &mdash; Key File Paths Quick Reference</h1>
+
+<table>
+  <thead>
+    <tr><th>Purpose</th><th>Path</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Firebase config</td><td><code>firebase.json</code></td></tr>
+    <tr><td>Firestore security rules</td><td><code>firestore.rules</code></td></tr>
+    <tr><td>Storage security rules</td><td><code>storage.rules</code></td></tr>
+    <tr><td>Mobile entry point</td><td><code>apps/mobile/index.js</code></td></tr>
+    <tr><td>Root Navigator</td><td><code>apps/mobile/src/navigation/RootNavigator.tsx</code></td></tr>
+    <tr><td>Firebase initialization (mobile)</td><td><code>apps/mobile/src/services/firebase.ts</code></td></tr>
+    <tr><td>Auth service</td><td><code>apps/mobile/src/services/auth.ts</code></td></tr>
+    <tr><td>App constants</td><td><code>apps/mobile/src/constants/config.ts</code></td></tr>
+    <tr><td>Status display config</td><td><code>apps/mobile/src/constants/statusConfig.ts</code></td></tr>
+    <tr><td>Theme tokens</td><td><code>apps/mobile/src/theme/tokens.ts</code></td></tr>
+    <tr><td>i18n strings</td><td><code>apps/mobile/src/i18n/strings.ts</code></td></tr>
+    <tr><td>Delivery callable functions</td><td><code>functions/src/callable/deliveryCallable.ts</code></td></tr>
+    <tr><td>User callable functions</td><td><code>functions/src/callable/userCallable.ts</code></td></tr>
+    <tr><td>Status validator</td><td><code>functions/src/validators/statusValidator.ts</code></td></tr>
+    <tr><td>Notification service</td><td><code>functions/src/services/notificationService.ts</code></td></tr>
+    <tr><td>Delivery trigger</td><td><code>functions/src/triggers/deliveryTrigger.ts</code></td></tr>
+    <tr><td>Status transitions map</td><td><code>shared/src/constants/statuses.ts</code></td></tr>
+    <tr><td>Delivery types</td><td><code>shared/src/types/delivery.ts</code></td></tr>
+    <tr><td>User types</td><td><code>shared/src/types/user.ts</code></td></tr>
+    <tr><td>Android build config</td><td><code>apps/mobile/android/app/build.gradle</code></td></tr>
+    <tr><td>iOS Podfile</td><td><code>apps/mobile/ios/Podfile</code></td></tr>
+    <tr><td>Admin dashboard entry</td><td><code>apps/admin/src/main.tsx</code></td></tr>
+    <tr><td>Shared package exports</td><td><code>shared/src/index.ts</code></td></tr>
+    <tr><td>Sound service (crash-proof)</td><td><code>apps/mobile/src/services/sound.ts</code></td></tr>
+    <tr><td>Location tracking hook</td><td><code>apps/mobile/src/hooks/useDriverLocationTracking.ts</code></td></tr>
+    <tr><td>Chat auto-close cron</td><td><code>functions/src/scheduled/chatAutoClose.ts</code></td></tr>
+    <tr><td>Session continuation guide</td><td><code>docs/next-session.md</code></td></tr>
+  </tbody>
+</table>
+
+
+<!-- ==================== FOOTER ==================== -->
+</div><!-- .container -->
+
+<hr class="gold-line" style="margin-top: 60px;">
+
+<div class="footer">
+  <p>
+    <strong>MOOVIZ &mdash; Technical Handoff Documentation</strong><br>
+    Prepared by <strong>KAL Solutions Group</strong> for <strong>G.M. Mooviz Software (2026) Ltd</strong><br>
+    CTO: Tamir Konortov &nbsp;|&nbsp; Version 1.0 &nbsp;|&nbsp; March 2026<br>
+    <br>
+    <span style="color: var(--gold);">This document is confidential and intended solely for the use of the client.</span>
+  </p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOOVIZ — מסמך מסירה טכני</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --gold: #D2AC47;
+      --gold-light: #F5E6B8;
+      --gold-bg: #FBF6E9;
+      --dark: #1B1C1D;
+      --dark-secondary: #2D2E2F;
+      --gray-100: #F7F7F8;
+      --gray-200: #E8E9EB;
+      --gray-300: #D1D3D6;
+      --gray-500: #6B7280;
+      --gray-700: #374151;
+      --white: #FFFFFF;
+      --red: #DC2626;
+      --green: #16A34A;
+      --blue: #2563EB;
+      --orange: #EA580C;
+    }
+
+    @page {
+      size: A4;
+      margin: 20mm 15mm;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--dark);
+      background: var(--white);
+      direction: rtl;
+      text-align: right;
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      body { font-size: 11pt; line-height: 1.5; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      header { page-break-after: avoid; }
+      h2 { page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+      pre { page-break-inside: avoid; }
+      .card { page-break-inside: avoid; }
+    }
+
+    /* ===== LAYOUT ===== */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark-secondary) 100%);
+      color: var(--white);
+      padding: 32px 0;
+      border-bottom: 4px solid var(--gold);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .header-logo {
+      height: 72px;
+      max-width: 200px;
+      object-fit: contain;
+    }
+
+    .header-center {
+      flex: 1;
+      text-align: center;
+    }
+
+    .header-center h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .header-center .subtitle {
+      font-size: 16px;
+      color: var(--gray-300);
+      font-weight: 400;
+    }
+
+    .header-meta {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 13px;
+      color: var(--gray-300);
+    }
+
+    .header-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-meta strong {
+      color: var(--gold);
+    }
+
+    /* ===== TABLE OF CONTENTS ===== */
+    .toc {
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin: 32px 0;
+    }
+
+    .toc h2 {
+      font-size: 20px;
+      color: var(--dark);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc-counter;
+      columns: 2;
+      column-gap: 40px;
+    }
+
+    .toc li {
+      counter-increment: toc-counter;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .toc li::before {
+      content: counter(toc-counter) ". ";
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .toc a {
+      color: var(--dark);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--gray-300);
+      transition: color 0.2s;
+    }
+
+    .toc a:hover {
+      color: var(--gold);
+    }
+
+    /* ===== SECTIONS ===== */
+    section {
+      margin: 40px 0;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--dark);
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--gold);
+      margin-bottom: 20px;
+    }
+
+    h2 .section-num {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--white);
+      width: 32px;
+      height: 32px;
+      line-height: 32px;
+      text-align: center;
+      border-radius: 50%;
+      font-size: 15px;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--dark-secondary);
+      margin: 24px 0 12px;
+      padding-right: 12px;
+      border-right: 3px solid var(--gold);
+    }
+
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin: 16px 0 8px;
+    }
+
+    p {
+      margin-bottom: 12px;
+    }
+
+    /* ===== TABLES ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: var(--dark);
+      color: var(--white);
+      padding: 10px 14px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--gray-200);
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--gray-100);
+    }
+
+    tbody tr:hover {
+      background: var(--gold-bg);
+    }
+
+    /* ===== CODE ===== */
+    pre {
+      background: var(--dark);
+      color: #E5E7EB;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.6;
+      direction: ltr;
+      text-align: left;
+      margin: 16px 0;
+      border: 1px solid var(--gray-300);
+    }
+
+    code {
+      font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+    }
+
+    .inline-code {
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      color: var(--dark-secondary);
+      direction: ltr;
+      display: inline-block;
+    }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 12px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .card-gold {
+      border-right: 4px solid var(--gold);
+    }
+
+    .card-highlight {
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-light);
+    }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-gold { background: var(--gold-light); color: #8B6914; }
+    .badge-green { background: #DCFCE7; color: #166534; }
+    .badge-red { background: #FEE2E2; color: #991B1B; }
+    .badge-blue { background: #DBEAFE; color: #1E40AF; }
+    .badge-gray { background: var(--gray-200); color: var(--gray-700); }
+    .badge-orange { background: #FED7AA; color: #9A3412; }
+
+    /* ===== STATE MACHINE ===== */
+    .state-flow {
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 16px 0;
+      direction: ltr;
+      text-align: center;
+    }
+
+    .state-node {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      margin: 4px;
+    }
+
+    .state-arrow {
+      display: inline-block;
+      color: var(--gold);
+      font-weight: 700;
+      margin: 0 4px;
+      font-size: 16px;
+    }
+
+    .state-new { background: #DBEAFE; color: #1E40AF; }
+    .state-pending { background: #FEF3C7; color: #92400E; }
+    .state-waiting { background: #FED7AA; color: #9A3412; }
+    .state-active { background: #BBF7D0; color: #166534; }
+    .state-done { background: #D1FAE5; color: #065F46; }
+    .state-cancel { background: #FEE2E2; color: #991B1B; }
+
+    /* ===== LISTS ===== */
+    ul, ol {
+      margin: 8px 0 16px 0;
+      padding-right: 24px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* ===== DEFINITION LIST ===== */
+    .def-grid {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 8px 16px;
+      margin: 12px 0;
+    }
+
+    .def-grid dt {
+      font-weight: 600;
+      color: var(--gray-700);
+      padding: 4px 0;
+    }
+
+    .def-grid dd {
+      padding: 4px 0;
+      color: var(--dark);
+    }
+
+    /* ===== SEPARATOR ===== */
+    hr {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 32px 0;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: var(--dark);
+      color: var(--gray-300);
+      padding: 24px 0;
+      margin-top: 60px;
+      border-top: 3px solid var(--gold);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    footer .footer-brand {
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    /* ===== UTILITY ===== */
+    .text-gold { color: var(--gold); }
+    .text-muted { color: var(--gray-500); }
+    .text-sm { font-size: 12px; }
+    .text-center { text-align: center; }
+    .mt-8 { margin-top: 8px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-8 { margin-bottom: 8px; }
+    .mb-16 { margin-bottom: 16px; }
+    .ltr { direction: ltr; text-align: left; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .two-col { grid-template-columns: 1fr; }
+      .toc ol { columns: 1; }
+      .header-inner { flex-direction: column; text-align: center; }
+      .def-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== FIELD TYPE INDICATOR ===== */
+    .field-type {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--blue);
+      font-weight: 400;
+    }
+
+    .field-required {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .field-optional {
+      color: var(--gray-500);
+      font-style: italic;
+    }
+
+    /* ===== WATERMARK ===== */
+    .confidential-bar {
+      background: var(--gold);
+      color: var(--dark);
+      text-align: center;
+      padding: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- CONFIDENTIAL BAR                                              -->
+<!-- ============================================================ -->
+<div class="confidential-bar">
+  מסמך סודי — מיועד לצוות הטכני בלבד
+</div>
+
+<!-- ============================================================ -->
+<!-- HEADER                                                        -->
+<!-- ============================================================ -->
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <img src="../images/mooviz-logo.jpg" alt="MOOVIZ Logo" class="header-logo">
+      <div class="header-center">
+        <h1>MOOVIZ — מסמך מסירה טכני</h1>
+        <div class="subtitle">פלטפורמת משלוחים קהילתית בזמן אמת</div>
+      </div>
+      <img src="../images/kal-logo.png" alt="KAL Solutions Logo" class="header-logo">
+    </div>
+    <div class="header-meta">
+      <span><strong>גרסה:</strong> 1.1.7</span>
+      <span><strong>תאריך:</strong> מרץ 2026</span>
+      <span><strong>מפתח:</strong> KAL Solutions Group</span>
+      <span><strong>מסמך:</strong> MOOVIZ-HANDOFF-HE-001</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS                                             -->
+<!-- ============================================================ -->
+<div class="container">
+
+  <div class="toc">
+    <h2>תוכן עניינים</h2>
+    <ol>
+      <li><a href="#sec-executive">תקציר מנהלים</a></li>
+      <li><a href="#sec-stack">ערימת טכנולוגיות</a></li>
+      <li><a href="#sec-architecture">סקירת ארכיטקטורה</a></li>
+      <li><a href="#sec-structure">מבנה תיקיות</a></li>
+      <li><a href="#sec-data-model">מודל נתונים</a></li>
+      <li><a href="#sec-state-machine">מכונת מצבים של משלוח</a></li>
+      <li><a href="#sec-cloud-functions">Cloud Functions</a></li>
+      <li><a href="#sec-push">התראות Push</a></li>
+      <li><a href="#sec-security">אבטחה</a></li>
+      <li><a href="#sec-screens">מסכי האפליקציה</a></li>
+      <li><a href="#sec-components">רכיבים</a></li>
+      <li><a href="#sec-admin">ממשק ניהול</a></li>
+      <li><a href="#sec-environments">סביבות</a></li>
+      <li><a href="#sec-build">בנייה ופריסה</a></li>
+      <li><a href="#sec-limitations">מגבלות ידועות ועבודה עתידית</a></li>
+    </ol>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 1. EXECUTIVE SUMMARY                                         -->
+  <!-- ============================================================ -->
+  <section id="sec-executive">
+    <h2><span class="section-num">1</span> תקציר מנהלים</h2>
+
+    <div class="card card-gold">
+      <p>
+        <strong>MOOVIZ</strong> היא פלטפורמת משלוחים קהילתית בזמן אמת המחברת בין שולחי חבילות לנהגים עצמאיים.
+        האפליקציה מאפשרת לשולח ליצור משלוח, לקבל הצעות ממספר נהגים, לבחור נהג מועדף,
+        ולעקוב אחר תהליך המשלוח בזמן אמת — מהאיסוף ועד המסירה ואישור התשלום.
+      </p>
+    </div>
+
+    <table>
+      <tbody>
+        <tr>
+          <td><strong>שם המערכת</strong></td>
+          <td>MOOVIZ — פלטפורמת משלוחים קהילתית בזמן אמת</td>
+        </tr>
+        <tr>
+          <td><strong>לקוח</strong></td>
+          <td>ג.מ. מוביז תוכנה (2026) בע"מ</td>
+        </tr>
+        <tr>
+          <td><strong>חברת פיתוח</strong></td>
+          <td>KAL Solutions Group</td>
+        </tr>
+        <tr>
+          <td><strong>CTO</strong></td>
+          <td>תמיר קונורטוב — אחריות טכנית מקצה לקצה</td>
+        </tr>
+        <tr>
+          <td><strong>תקציב</strong></td>
+          <td>90,000 &#8362; + מע"מ</td>
+        </tr>
+        <tr>
+          <td><strong>לוח זמנים</strong></td>
+          <td>45 ימי לוח, 8 ספרינטים</td>
+        </tr>
+        <tr>
+          <td><strong>פלטפורמות</strong></td>
+          <td>iOS + Android (React Native) + ממשק ניהול רשת</td>
+        </tr>
+        <tr>
+          <td><strong>גרסה נוכחית</strong></td>
+          <td>v1.1.7 (versionCode 117)</td>
+        </tr>
+        <tr>
+          <td><strong>סטטוס</strong></td>
+          <td><span class="badge badge-green">MVP מושלם</span> — מוכן להגשה לחנויות</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>אבני דרך ותשלומים</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>אבן דרך</th>
+          <th>היקף</th>
+          <th>תשלום</th>
+          <th>סטטוס</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>M0</strong></td>
+          <td>הקמה ותשתיות</td>
+          <td>50% מקדמה = 45,000 &#8362;</td>
+          <td><span class="badge badge-green">הושלם</span></td>
+        </tr>
+        <tr>
+          <td><strong>M1</strong></td>
+          <td>אימות + משתמשים + מודל נתונים + בסיס מובייל</td>
+          <td>15% = 13,500 &#8362;</td>
+          <td><span class="badge badge-green">הושלם</span></td>
+        </tr>
+        <tr>
+          <td><strong>M2</strong></td>
+          <td>מחזור חיי משלוח + GPS + צ'אט + התראות + ניהול</td>
+          <td>10% = 9,000 &#8362;</td>
+          <td><span class="badge badge-green">הושלם</span></td>
+        </tr>
+        <tr>
+          <td><strong>M3</strong></td>
+          <td>דירוגים + ביטול + ליטוש + מיגרציה</td>
+          <td>5% = 4,500 &#8362;</td>
+          <td><span class="badge badge-green">הושלם</span></td>
+        </tr>
+        <tr>
+          <td><strong>M4</strong></td>
+          <td>בניית ייצור + הגשה לחנויות</td>
+          <td>20% = 18,000 &#8362;</td>
+          <td><span class="badge badge-orange">בתהליך</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 2. TECHNOLOGY STACK                                          -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-stack">
+    <h2><span class="section-num">2</span> ערימת טכנולוגיות</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>שכבה</th>
+          <th>טכנולוגיה</th>
+          <th>גרסה</th>
+          <th>תיאור</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>מובייל</strong></td>
+          <td>React Native</td>
+          <td>0.75.5</td>
+          <td>bare workflow — ‏iOS + Android, מנוע Hermes</td>
+        </tr>
+        <tr>
+          <td><strong>ניווט</strong></td>
+          <td>React Navigation</td>
+          <td>7.x</td>
+          <td>ניווט מבוסס Stack + Tab + Drawer</td>
+        </tr>
+        <tr>
+          <td><strong>ניהול מצב</strong></td>
+          <td>React Context + Firestore</td>
+          <td>—</td>
+          <td>האזנה לשינויים בזמן אמת באמצעות <span class="inline-code">onSnapshot</span></td>
+        </tr>
+        <tr>
+          <td><strong>מפות</strong></td>
+          <td>Google Maps SDK</td>
+          <td>—</td>
+          <td>react-native-maps 1.18.2 + Places API + Geohash לחיפוש קרבה</td>
+        </tr>
+        <tr>
+          <td><strong>אנימציות</strong></td>
+          <td>React Native Reanimated</td>
+          <td>3.15.5</td>
+          <td>אנימציות מבוססות UI thread</td>
+        </tr>
+        <tr>
+          <td><strong>מחוות</strong></td>
+          <td>React Native Gesture Handler</td>
+          <td>2.20.2</td>
+          <td>טיפול במחוות מגע מתקדמות</td>
+        </tr>
+        <tr>
+          <td><strong>שרת</strong></td>
+          <td>Firebase Cloud Functions</td>
+          <td>Node 18, Gen 2</td>
+          <td>פונקציות serverless ב-TypeScript — callable + triggers + scheduled</td>
+        </tr>
+        <tr>
+          <td><strong>מסד נתונים</strong></td>
+          <td>Cloud Firestore</td>
+          <td>—</td>
+          <td>NoSQL מסמכי בזמן אמת עם persistence מקומי</td>
+        </tr>
+        <tr>
+          <td><strong>אימות</strong></td>
+          <td>Firebase Auth</td>
+          <td>—</td>
+          <td>אימייל+סיסמה + OTP SMS לאימות דו-שלבי</td>
+        </tr>
+        <tr>
+          <td><strong>אחסון</strong></td>
+          <td>Firebase Cloud Storage</td>
+          <td>—</td>
+          <td>תמונות, וידאו, מסמכי KYC — מקסימום 5MB</td>
+        </tr>
+        <tr>
+          <td><strong>התראות</strong></td>
+          <td>Firebase Cloud Messaging</td>
+          <td>FCM v1</td>
+          <td>התראות push עם צלילים מותאמים וכפתורי פעולה</td>
+        </tr>
+        <tr>
+          <td><strong>ממשק ניהול</strong></td>
+          <td>React + Vite + Tailwind CSS</td>
+          <td>—</td>
+          <td>אפליקציית SPA לניהול משתמשים, משלוחים ודיווחים</td>
+        </tr>
+        <tr>
+          <td><strong>שפת תכנות</strong></td>
+          <td>TypeScript</td>
+          <td>5.x strict</td>
+          <td>בכל הפרויקט — מובייל, שרת, ניהול, משותף</td>
+        </tr>
+        <tr>
+          <td><strong>מונו-ריפו</strong></td>
+          <td>pnpm workspaces</td>
+          <td>—</td>
+          <td>ניהול חבילות מרכזי עם <span class="inline-code">public-hoist-pattern[]=*</span></td>
+        </tr>
+        <tr>
+          <td><strong>Lottie</strong></td>
+          <td>lottie-react-native</td>
+          <td>—</td>
+          <td>אנימציות JSON (רדאר, טעינה, מצבים ריקים)</td>
+        </tr>
+        <tr>
+          <td><strong>וידאו</strong></td>
+          <td>react-native-video</td>
+          <td>—</td>
+          <td>ניגון מדיה באפליקציה</td>
+        </tr>
+        <tr>
+          <td><strong>Android Build</strong></td>
+          <td>AGP (Android Gradle Plugin)</td>
+          <td>8.5</td>
+          <td>compileSdk 34, frameworks מיושרים ל-16KB pages</td>
+        </tr>
+        <tr>
+          <td><strong>iOS Build</strong></td>
+          <td>CocoaPods + Xcode</td>
+          <td>—</td>
+          <td>Firebase iOS SDK 11.11 עם modular_headers סלקטיבי</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card card-highlight">
+      <h4>תלויות קריטיות — גרסאות נעולות</h4>
+      <p>הגרסאות הבאות נעולות לשם יציבות. <strong>אין לשדרג</strong> ללא בדיקה מקיפה:</p>
+      <table>
+        <thead>
+          <tr><th>חבילה</th><th>גרסה נעולה</th><th>סיבה</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="inline-code">react-native-reanimated</span></td><td>3.15.5</td><td>תאימות Hermes</td></tr>
+          <tr><td><span class="inline-code">react-native-gesture-handler</span></td><td>2.20.2</td><td>יציבות מחוות</td></tr>
+          <tr><td><span class="inline-code">react-native-screens</span></td><td>3.35.0</td><td>תאימות Navigation</td></tr>
+          <tr><td><span class="inline-code">react-native-safe-area-context</span></td><td>4.12.0</td><td>תאימות Layout</td></tr>
+          <tr><td><span class="inline-code">react-native-maps</span></td><td>1.18.2</td><td>תאימות Google Maps</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 3. ARCHITECTURE                                              -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-architecture">
+    <h2><span class="section-num">3</span> סקירת ארכיטקטורה</h2>
+
+    <p>
+      המערכת בנויה בארכיטקטורת 3 שכבות serverless המבוססת על Firebase/GCP:
+    </p>
+
+    <div class="card card-gold">
+      <h4>שכבה 1 — אפליקציית מובייל (React Native)</h4>
+      <ul>
+        <li>אפליקציה אחת התומכת ב-iOS ו-Android עם קוד משותף</li>
+        <li>שני תפקידים באפליקציה: <strong>שולח</strong> (יוצר משלוחים) ו<strong>נהג</strong> (מבצע משלוחים)</li>
+        <li>תקשורת ישירה עם Firestore באמצעות SDK — האזנה בזמן אמת (<span class="inline-code">onSnapshot</span>)</li>
+        <li>קריאות לפונקציות שרת באמצעות <span class="inline-code">httpsCallable</span> לפעולות מוגנות</li>
+        <li>Firestore persistence מופעל — עובד גם ללא חיבור רשת</li>
+        <li>מנוע Hermes לביצועים מיטביים</li>
+        <li>תמיכה מלאה ב-RTL (עברית כשפה ראשית)</li>
+      </ul>
+    </div>
+
+    <div class="card card-gold">
+      <h4>שכבה 2 — שרת (Firebase Cloud Functions)</h4>
+      <ul>
+        <li><strong>פונקציות Callable (18):</strong> לוגיקה עסקית מוגנת — יצירת משלוח, מעבר סטטוס, דירוג, KYC</li>
+        <li><strong>טריגרים (3):</strong> מופעלים אוטומטית בשינויי נתונים — התראות push, עדכון KYC</li>
+        <li><strong>פונקציות מתוזמנות (4):</strong> ניקוי timeouts, סגירת צ'אטים, הרחבת רדיוס התראות</li>
+        <li>כל מעבר סטטוס מאומת בצד השרת — לעולם לא סומכים על הלקוח</li>
+        <li>RBAC (בקרת גישה מבוססת תפקידים) נאכף בכל פונקציה</li>
+      </ul>
+    </div>
+
+    <div class="card card-gold">
+      <h4>שכבה 3 — ממשק ניהול (React SPA)</h4>
+      <ul>
+        <li>אפליקציית רשת React + Vite + Tailwind CSS</li>
+        <li>גישה ישירה ל-Firestore עם הרשאות admin</li>
+        <li>לוח בקרה עם אנליטיקס, ניהול משתמשים, אישור KYC, טיפול בדיווחים</li>
+        <li>ייצוא CSV עם תמיכה ב-BOM לעברית</li>
+      </ul>
+    </div>
+
+    <h3>תרשים ארכיטקטורה כללי</h3>
+    <pre><code>
+    +-------------------+       +-------------------+       +-------------------+
+    |   אפליקציית       |       |   ממשק ניהול      |       |   Firebase        |
+    |   מובייל          |       |   (React SPA)     |       |   Console         |
+    |   (React Native)  |       |                   |       |                   |
+    +--------+----------+       +--------+----------+       +--------+----------+
+             |                           |                           |
+             | Firestore SDK             | Firestore SDK             |
+             | httpsCallable             | (admin access)            |
+             |                           |                           |
+    +--------v---------------------------v---------------------------v----------+
+    |                          Firebase / GCP Platform                          |
+    |                                                                          |
+    |  +------------------+  +------------------+  +------------------+        |
+    |  |  Firebase Auth   |  | Cloud Firestore  |  | Cloud Storage   |        |
+    |  |  (Email + OTP)   |  | (Real-time DB)   |  | (Images/Video)  |        |
+    |  +------------------+  +------------------+  +------------------+        |
+    |                                                                          |
+    |  +------------------+  +------------------+  +------------------+        |
+    |  | Cloud Functions  |  | FCM (Push)       |  | Google Maps     |        |
+    |  | (Node 18, Gen2)  |  | (Notifications)  |  | (SDK + Places)  |        |
+    |  +------------------+  +------------------+  +------------------+        |
+    |                                                                          |
+    +--------------------------------------------------------------------------+
+    </code></pre>
+
+    <h3>זרימת נתונים</h3>
+    <table>
+      <thead>
+        <tr><th>מקור</th><th>יעד</th><th>פרוטוקול</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>מובייל</td><td>Firestore</td>
+          <td><span class="inline-code">onSnapshot</span></td>
+          <td>האזנה בזמן אמת לשינויי משלוחים, צ'אט, פרופיל</td>
+        </tr>
+        <tr>
+          <td>מובייל</td><td>Cloud Functions</td>
+          <td><span class="inline-code">httpsCallable</span></td>
+          <td>פעולות מוגנות: יצירת משלוח, מעבר סטטוס, דירוג</td>
+        </tr>
+        <tr>
+          <td>מובייל</td><td>Cloud Storage</td>
+          <td>Firebase SDK</td>
+          <td>העלאת תמונות (פרופיל, פריט, הוכחות, KYC)</td>
+        </tr>
+        <tr>
+          <td>Cloud Functions</td><td>FCM</td>
+          <td>Admin SDK</td>
+          <td>שליחת התראות push בעקבות שינויי נתונים</td>
+        </tr>
+        <tr>
+          <td>Cloud Functions</td><td>Firestore</td>
+          <td>Admin SDK</td>
+          <td>עדכון נתונים, ניקוי timeouts, סגירת צ'אטים</td>
+        </tr>
+        <tr>
+          <td>ניהול</td><td>Firestore</td>
+          <td>Firebase SDK</td>
+          <td>קריאה/כתיבה ישירה עם הרשאות admin</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 4. DIRECTORY STRUCTURE                                       -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-structure">
+    <h2><span class="section-num">4</span> מבנה תיקיות</h2>
+
+    <pre><code>Mooviz/
+├── apps/
+│   ├── mobile/                          # אפליקציית React Native (Expo bare workflow)
+│   │   ├── src/
+│   │   │   ├── screens/                 # 22 מסכים
+│   │   │   │   ├── auth/                # 8 מסכי אימות
+│   │   │   │   │   ├── LoginScreen.tsx
+│   │   │   │   │   ├── RegisterScreen.tsx
+│   │   │   │   │   ├── OTPScreen.tsx
+│   │   │   │   │   ├── AddPhoneScreen.tsx
+│   │   │   │   │   ├── EmailVerificationScreen.tsx
+│   │   │   │   │   ├── ForgotPasswordScreen.tsx
+│   │   │   │   │   ├── CompleteProfileScreen.tsx
+│   │   │   │   │   └── AcceptTermsScreen.tsx
+│   │   │   │   ├── sender/              # 4 מסכי שולח
+│   │   │   │   │   ├── HomeScreen.tsx
+│   │   │   │   │   ├── CreateDeliveryScreen.tsx
+│   │   │   │   │   ├── MyDeliveriesScreen.tsx
+│   │   │   │   │   └── DeliveryDetailScreen.tsx
+│   │   │   │   ├── driver/              # 4 מסכי נהג
+│   │   │   │   │   ├── FeedScreen.tsx
+│   │   │   │   │   ├── MyJobsScreen.tsx
+│   │   │   │   │   ├── DeliveryDetailScreen.tsx
+│   │   │   │   │   └── DriverKYCScreen.tsx
+│   │   │   │   ├── shared/              # 5 מסכים משותפים
+│   │   │   │   │   ├── ChatScreen.tsx
+│   │   │   │   │   ├── ProfileScreen.tsx
+│   │   │   │   │   ├── RatingScreen.tsx
+│   │   │   │   │   ├── FullScreenMapScreen.tsx
+│   │   │   │   │   └── CompleteProfileScreen.tsx
+│   │   │   │   └── onboarding/          # 1 מסך הכרות
+│   │   │   │       └── OnboardingScreen.tsx
+│   │   │   ├── components/              # 46 רכיבים משותפים
+│   │   │   ├── hooks/                   # 14 hooks מותאמים
+│   │   │   ├── services/                # 11 שירותי Firebase
+│   │   │   ├── navigation/              # הגדרות React Navigation
+│   │   │   ├── utils/                   # פונקציות עזר (geohash, validation, formatting)
+│   │   │   ├── types/                   # TypeScript types &amp; interfaces
+│   │   │   ├── i18n/                    # עברית + אנגלית
+│   │   │   └── constants/               # קבועים והגדרות
+│   │   ├── android/                     # פרויקט Android (Gradle)
+│   │   ├── ios/                         # פרויקט iOS (Xcode + CocoaPods)
+│   │   ├── app.json                     # הגדרות Expo
+│   │   └── tsconfig.json
+│   │
+│   └── admin/                           # ממשק ניהול (React + Vite)
+│       └── src/
+│           ├── pages/                   # 11 דפי ניהול
+│           ├── components/              # רכיבי UI
+│           ├── hooks/                   # hooks מותאמים (useAnalytics, etc.)
+│           ├── constants/               # אזורים, קטגוריות
+│           └── services/                # שירותי Firebase
+│
+├── functions/                           # Cloud Functions (TypeScript)
+│   ├── src/
+│   │   ├── callable/                    # 5 קבצי פונקציות callable
+│   │   │   ├── deliveryCallable.ts      # 14 פונקציות משלוח
+│   │   │   ├── userCallable.ts          # פונקציות משתמש (פרופיל, FCM)
+│   │   │   ├── kycCallable.ts           # אישור/דחיית KYC
+│   │   │   ├── emailCallable.ts         # שליחת מיילים בכמות
+│   │   │   └── encryptionCallable.ts    # הצפנת תמונות מאושרות
+│   │   ├── triggers/                    # 3 טריגרים
+│   │   │   ├── deliveryTrigger.ts       # onDeliveryUpdate — התראות + הודעות מערכת
+│   │   │   ├── userTrigger.ts           # onUserCreate / onUserUpdate — KYC
+│   │   │   └── chatTrigger.ts           # onChatMessage — התראת צ'אט
+│   │   ├── scheduled/                   # 4 פונקציות מתוזמנות
+│   │   │   ├── timeoutCleanup.ts        # ניקוי 72 שעות — PENDING → NEW
+│   │   │   ├── selectionTimeout.ts      # timeout בחירה 15 דקות
+│   │   │   ├── chatAutoClose.ts         # סגירת צ'אט אוטומטית 12 שעות
+│   │   │   └── notifyExpansion.ts       # הרחבת רדיוס התראות כל 5 דקות
+│   │   ├── validators/                  # ולידציית מעברי סטטוס
+│   │   │   └── statusValidator.ts       # RBAC + state machine enforcement
+│   │   └── services/                    # שירותים צד שרת
+│   │       ├── notificationService.ts   # FCM push + caching
+│   │       └── geohashService.ts        # חיפוש נהגים לפי geohash
+│   └── tsconfig.json
+│
+├── shared/                              # טיפוסים משותפים + ולידציה
+│   └── types/                           # DeliveryStatus, StatusTransitions, UserRole
+│
+├── firestore.rules                      # כללי אבטחה Firestore
+├── storage.rules                        # כללי אבטחה Storage
+├── firebase.json                        # הגדרות Firebase
+├── package.json                         # שורש מונו-ריפו
+├── pnpm-workspace.yaml                  # הגדרת workspaces
+└── docs/                                # תיעוד ארכיטקטורה</code></pre>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 5. DATA MODEL                                                -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-data-model">
+    <h2><span class="section-num">5</span> מודל נתונים (Firestore Collections)</h2>
+
+    <p>
+      כל הנתונים מאוחסנים ב-Cloud Firestore כמסמכי JSON. להלן האוספים העיקריים עם כל השדות, הסוגים והתיאורים.
+    </p>
+
+    <!-- users -->
+    <h3>users/{userId}</h3>
+    <p>מסמך משתמש — נוצר בהרשמה, מתעדכן לאורך מחזור החיים.</p>
+    <table>
+      <thead>
+        <tr><th>שדה</th><th>סוג</th><th>חובה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">uid</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה Firebase Auth — מפתח ראשי</td></tr>
+        <tr><td><span class="inline-code">fullName</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>שם מלא של המשתמש</td></tr>
+        <tr><td><span class="inline-code">phone</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מספר טלפון בפורמט E.164 (למשל: <span class="inline-code">+972501234567</span>)</td></tr>
+        <tr><td><span class="inline-code">email</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>כתובת אימייל (אופציונלי — חלק מהמשתמשים נרשמים בטלפון בלבד)</td></tr>
+        <tr><td><span class="inline-code">city</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>עיר מגורים</td></tr>
+        <tr><td><span class="inline-code">role</span></td><td><span class="field-type">'sender' | 'driver'</span></td><td><span class="field-required">*</span></td><td>תפקיד ראשי (כל המשתמשים מתחילים כ-sender)</td></tr>
+        <tr><td><span class="inline-code">activeMode</span></td><td><span class="field-type">'sender' | 'driver'</span></td><td><span class="field-required">*</span></td><td>מצב פעיל נוכחי — ניתן להחלפה ע"י המשתמש</td></tr>
+        <tr><td><span class="inline-code">driverAvailable</span></td><td><span class="field-type">boolean</span></td><td><span class="field-optional">?</span></td><td>האם הנהג זמין לקבלת משלוחים (toggle ידני)</td></tr>
+        <tr><td><span class="inline-code">driverUnlocked</span></td><td><span class="field-type">boolean</span></td><td><span class="field-optional">?</span></td><td>האם פונקציונליות נהג פתוחה (לאחר אישור KYC)</td></tr>
+        <tr><td><span class="inline-code">profilePhotoURL</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>URL לתמונת פרופיל ב-Cloud Storage</td></tr>
+        <tr><td><span class="inline-code">kycDocumentURL</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>URL לצילום רישיון נהיגה</td></tr>
+        <tr><td><span class="inline-code">kycIdURL</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>URL לצילום תעודת זהות</td></tr>
+        <tr><td><span class="inline-code">kycStatus</span></td><td><span class="field-type">'pending' | 'approved' | 'rejected'</span></td><td><span class="field-optional">?</span></td><td>סטטוס אימות נהג — רק admin יכול לשנות</td></tr>
+        <tr><td><span class="inline-code">ratingAsDriver</span></td><td><span class="field-type">{ average: number, count: number }</span></td><td><span class="field-optional">?</span></td><td>ממוצע דירוג ומספר דירוגים כנהג</td></tr>
+        <tr><td><span class="inline-code">ratingAsSender</span></td><td><span class="field-type">{ average: number, count: number }</span></td><td><span class="field-optional">?</span></td><td>ממוצע דירוג ומספר דירוגים כשולח</td></tr>
+        <tr><td><span class="inline-code">completedDeliveries</span></td><td><span class="field-type">number</span></td><td><span class="field-optional">?</span></td><td>מספר משלוחים שהושלמו</td></tr>
+        <tr><td><span class="inline-code">status</span></td><td><span class="field-type">'active' | 'suspended' | 'blocked'</span></td><td><span class="field-required">*</span></td><td>סטטוס חשבון — רק admin יכול לשנות</td></tr>
+        <tr><td><span class="inline-code">fcmTokens</span></td><td><span class="field-type">string[]</span></td><td><span class="field-optional">?</span></td><td>מערך טוקנים של FCM (תמיכה במספר מכשירים)</td></tr>
+        <tr><td><span class="inline-code">location</span></td><td><span class="field-type">{ lat, lng, geohash }</span></td><td><span class="field-optional">?</span></td><td>מיקום אחרון — geohash לחיפוש קרבה</td></tr>
+        <tr><td><span class="inline-code">sessionToken</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>אסימון סשן לאכיפת מכשיר יחיד</td></tr>
+        <tr><td><span class="inline-code">gender</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>מגדר (אופציונלי)</td></tr>
+        <tr><td><span class="inline-code">ageRange</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>טווח גילאים (אופציונלי)</td></tr>
+        <tr><td><span class="inline-code">acceptedTermsAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-optional">?</span></td><td>תאריך אישור תנאי שימוש</td></tr>
+        <tr><td><span class="inline-code">createdAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>תאריך יצירת החשבון</td></tr>
+        <tr><td><span class="inline-code">updatedAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>תאריך עדכון אחרון</td></tr>
+      </tbody>
+    </table>
+
+    <!-- deliveries -->
+    <div class="page-break"></div>
+    <h3>deliveries/{deliveryId}</h3>
+    <p>מסמך משלוח — הישות המרכזית במערכת. עוקב אחר מחזור החיים המלא.</p>
+    <table>
+      <thead>
+        <tr><th>שדה</th><th>סוג</th><th>חובה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">senderId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה השולח (→ users)</td></tr>
+        <tr><td><span class="inline-code">senderName</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>שם השולח (denormalized להצגה מהירה)</td></tr>
+        <tr><td><span class="inline-code">driverId</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>מזהה הנהג שנבחר (→ users)</td></tr>
+        <tr><td><span class="inline-code">driverName</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>שם הנהג שנבחר</td></tr>
+        <tr><td><span class="inline-code">status</span></td><td><span class="field-type">DeliveryStatus</span></td><td><span class="field-required">*</span></td><td>סטטוס נוכחי (ראה מכונת מצבים)</td></tr>
+        <tr><td><span class="inline-code">pickup</span></td><td><span class="field-type">{ address, city, lat, lng, geohash }</span></td><td><span class="field-required">*</span></td><td>כתובת ומיקום האיסוף</td></tr>
+        <tr><td><span class="inline-code">destination</span></td><td><span class="field-type">{ address, city, lat, lng, geohash }</span></td><td><span class="field-required">*</span></td><td>כתובת ומיקום המסירה</td></tr>
+        <tr><td><span class="inline-code">item</span></td><td><span class="field-type">{ description, size }</span></td><td><span class="field-required">*</span></td><td>תיאור הפריט וגודל (small / medium / large / extra_large)</td></tr>
+        <tr><td><span class="inline-code">mediaURLs</span></td><td><span class="field-type">string[]</span></td><td><span class="field-optional">?</span></td><td>תמונות/וידאו של הפריט</td></tr>
+        <tr><td><span class="inline-code">price</span></td><td><span class="field-type">number</span></td><td><span class="field-required">*</span></td><td>מחיר המשלוח ב-₪</td></tr>
+        <tr><td><span class="inline-code">scheduledDate</span></td><td><span class="field-type">Timestamp | 'asap'</span></td><td><span class="field-required">*</span></td><td>תאריך מתוכנן או "בהקדם"</td></tr>
+        <tr><td><span class="inline-code">timeRange</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>טווח שעות מועדף (בוקר/צהריים/ערב)</td></tr>
+        <tr><td><span class="inline-code">notes</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>הערות חופשיות</td></tr>
+        <tr><td><span class="inline-code">payment</span></td><td><span class="field-type">{ senderConfirmed, driverConfirmed }</span></td><td><span class="field-required">*</span></td><td>אישור תשלום דו-צדדי</td></tr>
+        <tr><td><span class="inline-code">proof</span></td><td><span class="field-type">{ pickupURL?, deliveryURL?, paymentURL? }</span></td><td><span class="field-optional">?</span></td><td>תמונות הוכחה — איסוף, מסירה, תשלום</td></tr>
+        <tr><td><span class="inline-code">interestedDrivers</span></td><td><span class="field-type">DriverInterest[]</span></td><td><span class="field-optional">?</span></td><td>מערך נהגים שהביעו עניין (מערכת ריבוי נהגים)</td></tr>
+        <tr><td><span class="inline-code">selectedDriverId</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>מזהה הנהג שנבחר (לפני אישור)</td></tr>
+        <tr><td><span class="inline-code">statusHistory</span></td><td><span class="field-type">StatusEntry[]</span></td><td><span class="field-required">*</span></td><td>היסטוריית מעברי סטטוס עם חותמות זמן</td></tr>
+        <tr><td><span class="inline-code">cancelledBy</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>מזהה המשתמש שביטל</td></tr>
+        <tr><td><span class="inline-code">notifiedDrivers</span></td><td><span class="field-type">string[]</span></td><td><span class="field-optional">?</span></td><td>מערך מזהי נהגים שכבר קיבלו התראה</td></tr>
+        <tr><td><span class="inline-code">notifyRadius</span></td><td><span class="field-type">number</span></td><td><span class="field-optional">?</span></td><td>רדיוס התראה נוכחי (ק"מ)</td></tr>
+        <tr><td><span class="inline-code">notifyExpansionCount</span></td><td><span class="field-type">number</span></td><td><span class="field-optional">?</span></td><td>מספר הרחבות רדיוס שבוצעו</td></tr>
+        <tr><td><span class="inline-code">lastNotifyExpansion</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-optional">?</span></td><td>חותמת זמן של הרחבת רדיוס אחרונה</td></tr>
+        <tr><td><span class="inline-code">createdAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>תאריך יצירת המשלוח</td></tr>
+        <tr><td><span class="inline-code">updatedAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>תאריך עדכון אחרון</td></tr>
+      </tbody>
+    </table>
+
+    <!-- chats -->
+    <h3>chats/{chatId}</h3>
+    <p>מסמך צ'אט — נוצר אוטומטית כשנהג נבחר למשלוח. כולל תת-אוסף הודעות.</p>
+    <table>
+      <thead>
+        <tr><th>שדה</th><th>סוג</th><th>חובה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">participants</span></td><td><span class="field-type">string[]</span></td><td><span class="field-required">*</span></td><td>מערך מזהי המשתתפים [senderId, driverId]</td></tr>
+        <tr><td><span class="inline-code">deliveryId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המשלוח המקושר</td></tr>
+        <tr><td><span class="inline-code">lastMessage</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>תוכן ההודעה האחרונה</td></tr>
+        <tr><td><span class="inline-code">lastMessageAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-optional">?</span></td><td>חותמת זמן של ההודעה האחרונה</td></tr>
+        <tr><td><span class="inline-code">lastSenderId</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>מזהה שולח ההודעה האחרונה</td></tr>
+        <tr><td><span class="inline-code">lastReadBy</span></td><td><span class="field-type">{ [userId]: Timestamp }</span></td><td><span class="field-optional">?</span></td><td>חותמת זמן קריאה אחרונה לכל משתתף</td></tr>
+        <tr><td><span class="inline-code">closed</span></td><td><span class="field-type">boolean</span></td><td><span class="field-optional">?</span></td><td>האם הצ'אט נסגר (אוטומטי אחרי 12 שעות)</td></tr>
+        <tr><td><span class="inline-code">closedAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-optional">?</span></td><td>חותמת זמן סגירה</td></tr>
+      </tbody>
+    </table>
+
+    <h4>chats/{chatId}/messages/{msgId} — תת-אוסף</h4>
+    <table>
+      <thead>
+        <tr><th>שדה</th><th>סוג</th><th>חובה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">senderId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה שולח ההודעה</td></tr>
+        <tr><td><span class="inline-code">senderName</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>שם שולח ההודעה</td></tr>
+        <tr><td><span class="inline-code">text</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>תוכן ההודעה</td></tr>
+        <tr><td><span class="inline-code">imageUrl</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>URL לתמונה מצורפת</td></tr>
+        <tr><td><span class="inline-code">type</span></td><td><span class="field-type">'text' | 'image' | 'system' | 'location'</span></td><td><span class="field-required">*</span></td><td>סוג ההודעה</td></tr>
+        <tr><td><span class="inline-code">createdAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>חותמת זמן שליחה</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ratings -->
+    <h3>ratings/{ratingId}</h3>
+    <p>מסמך דירוג — נוצר לאחר השלמת משלוח או אישור תשלום.</p>
+    <table>
+      <thead>
+        <tr><th>שדה</th><th>סוג</th><th>חובה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">fromUserId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המדרג</td></tr>
+        <tr><td><span class="inline-code">toUserId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המדורג</td></tr>
+        <tr><td><span class="inline-code">deliveryId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המשלוח הרלוונטי</td></tr>
+        <tr><td><span class="inline-code">rating</span></td><td><span class="field-type">number (1-5)</span></td><td><span class="field-required">*</span></td><td>ציון הדירוג</td></tr>
+        <tr><td><span class="inline-code">comment</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>תגובה חופשית</td></tr>
+        <tr><td><span class="inline-code">role</span></td><td><span class="field-type">'sender' | 'driver'</span></td><td><span class="field-required">*</span></td><td>תפקיד המדרג</td></tr>
+        <tr><td><span class="inline-code">createdAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>תאריך הדירוג</td></tr>
+      </tbody>
+    </table>
+
+    <!-- reports -->
+    <h3>reports/{reportId}</h3>
+    <p>מסמך דיווח — דיווח על משתמש בעייתי לבדיקת מנהלים.</p>
+    <table>
+      <thead>
+        <tr><th>שדה</th><th>סוג</th><th>חובה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">reporterId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המדווח</td></tr>
+        <tr><td><span class="inline-code">reporterName</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>שם המדווח</td></tr>
+        <tr><td><span class="inline-code">reporterPhone</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>טלפון המדווח</td></tr>
+        <tr><td><span class="inline-code">reportedUserId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המדווח עליו</td></tr>
+        <tr><td><span class="inline-code">reportedUserName</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>שם המדווח עליו</td></tr>
+        <tr><td><span class="inline-code">reportedRole</span></td><td><span class="field-type">'sender' | 'driver'</span></td><td><span class="field-required">*</span></td><td>תפקיד המדווח עליו</td></tr>
+        <tr><td><span class="inline-code">deliveryId</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>מזהה המשלוח הרלוונטי</td></tr>
+        <tr><td><span class="inline-code">category</span></td><td><span class="field-type">'harassment' | 'fraud' | 'damage' | 'no_show' | 'other'</span></td><td><span class="field-required">*</span></td><td>קטגוריית הדיווח</td></tr>
+        <tr><td><span class="inline-code">description</span></td><td><span class="field-type">string</span></td><td><span class="field-required">*</span></td><td>תיאור מפורט</td></tr>
+        <tr><td><span class="inline-code">status</span></td><td><span class="field-type">'open' | 'investigating' | 'resolved' | 'dismissed'</span></td><td><span class="field-required">*</span></td><td>סטטוס הטיפול</td></tr>
+        <tr><td><span class="inline-code">moderationAction</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>פעולת מודרציה שננקטה</td></tr>
+        <tr><td><span class="inline-code">moderatorNote</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>הערת מנהל</td></tr>
+        <tr><td><span class="inline-code">resolvedBy</span></td><td><span class="field-type">string</span></td><td><span class="field-optional">?</span></td><td>מזהה המנהל שטיפל</td></tr>
+        <tr><td><span class="inline-code">createdAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-required">*</span></td><td>תאריך הדיווח</td></tr>
+        <tr><td><span class="inline-code">resolvedAt</span></td><td><span class="field-type">Timestamp</span></td><td><span class="field-optional">?</span></td><td>תאריך הפתרון</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 6. STATE MACHINE                                             -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-state-machine">
+    <h2><span class="section-num">6</span> מכונת מצבים של משלוח</h2>
+
+    <p>
+      כל משלוח עובר דרך סדרת מצבים מוגדרת. מעברים מאומתים בצד השרת באמצעות
+      <span class="inline-code">statusValidator.ts</span> — הלקוח לא יכול לדלג או לזייף מעברים.
+    </p>
+
+    <div class="state-flow">
+      <span class="state-node state-new">NEW חדש</span>
+      <span class="state-arrow">&rarr;</span>
+      <span class="state-node state-pending">PENDING ממתין</span>
+      <span class="state-arrow">&rarr;</span>
+      <span class="state-node state-waiting">AWAITING_DRIVER ממתין לאישור נהג</span>
+      <span class="state-arrow">&rarr;</span>
+      <span class="state-node state-waiting">WAITING ממתין לאיסוף</span>
+      <br><br>
+      <span class="state-arrow">&rarr;</span>
+      <span class="state-node state-active">PICKED_UP נאסף</span>
+      <span class="state-arrow">&rarr;</span>
+      <span class="state-node state-active">DELIVERED / AWAITING_PAYMENT נמסר</span>
+      <span class="state-arrow">&rarr;</span>
+      <span class="state-node state-done">COMPLETED_PAID הושלם</span>
+      <br><br>
+      <span style="font-size:12px; color:#666;">ביטול אפשרי:</span>
+      <span class="state-node state-cancel">CANCELLED בוטל</span>
+    </div>
+
+    <h3>פירוט מעברי מצב</h3>
+    <table>
+      <thead>
+        <tr><th>ממצב</th><th>למצב</th><th>שחקן</th><th>תנאי</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">new</span></td>
+          <td><span class="badge badge-gold">pending</span></td>
+          <td>נהג</td>
+          <td>KYC מאושר, זמין</td>
+          <td>נהג מביע עניין במשלוח (<span class="inline-code">expressInterest</span>)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">pending</span></td>
+          <td><span class="badge badge-orange">awaiting_driver</span></td>
+          <td>שולח</td>
+          <td>יש נהגים מעוניינים</td>
+          <td>שולח בוחר נהג מהרשימה (<span class="inline-code">selectDriver</span>)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">awaiting_driver</span></td>
+          <td><span class="badge badge-gold">waiting</span></td>
+          <td>נהג</td>
+          <td>תוך 15 דקות מהבחירה</td>
+          <td>נהג נבחר מאשר קבלת המשלוח (<span class="inline-code">confirmSelection</span>)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">awaiting_driver</span></td>
+          <td><span class="badge badge-blue">new</span></td>
+          <td>נהג / מערכת</td>
+          <td>נהג דוחה או timeout 15 דק'</td>
+          <td>נהג נבחר דוחה או לא מגיב (<span class="inline-code">declineSelection</span> / <span class="inline-code">selectionTimeout</span>)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">waiting</span></td>
+          <td><span class="badge badge-green">picked_up</span></td>
+          <td>נהג</td>
+          <td>צילום הוכחת איסוף חובה</td>
+          <td>נהג אוסף את הפריט + צילום (<span class="inline-code">confirmPickup</span>)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">picked_up</span></td>
+          <td><span class="badge badge-green">delivered</span></td>
+          <td>נהג</td>
+          <td>צילום הוכחת מסירה חובה</td>
+          <td>נהג מוסר את הפריט + צילום (מעבר סטטוס)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">delivered</span></td>
+          <td><span class="badge badge-green">completed_paid</span></td>
+          <td>שני הצדדים</td>
+          <td>שניהם מאשרים</td>
+          <td>אישור תשלום דו-צדדי (<span class="inline-code">confirmPayment</span>)</td>
+        </tr>
+        <tr>
+          <td colspan="5" style="background: #FEE2E2; font-weight: 600;">ביטול</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">new</span> / <span class="badge badge-gold">pending</span> / <span class="badge badge-orange">awaiting_driver</span> / <span class="badge badge-gold">waiting</span></td>
+          <td><span class="badge badge-red">cancelled</span></td>
+          <td>שולח / נהג</td>
+          <td>לפני איסוף בלבד</td>
+          <td>ביטול — לאחר איסוף <strong>אין אפשרות ביטול</strong></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">pending</span></td>
+          <td><span class="badge badge-blue">new</span></td>
+          <td>נהג / מערכת</td>
+          <td>timeout 72 שעות</td>
+          <td>נהג מושך עניין או timeout אוטומטי (<span class="inline-code">timeoutCleanup</span>)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card card-highlight">
+      <h4>מערכת ריבוי נהגים</h4>
+      <p>
+        המערכת תומכת במספר נהגים המביעים עניין במשלוח בו-זמנית. השולח רואה רשימת כל הנהגים המעוניינים
+        (כולל דירוג, מרחק, ומספר משלוחים שהושלמו) ובוחר את הנהג המועדף.
+        לנהג הנבחר יש <strong>15 דקות</strong> לאשר — אם לא מאשר, המשלוח חוזר לסטטוס חדש
+        וכל הנהגים מקבלים התראה מחדש.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 7. CLOUD FUNCTIONS                                           -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-cloud-functions">
+    <h2><span class="section-num">7</span> Cloud Functions (26 סה"כ)</h2>
+
+    <p>
+      כל הפונקציות כתובות ב-TypeScript ופועלות על Node 18 (Gen 2).
+      פונקציות callable דורשות אימות Firebase Auth. כל מעבר סטטוס עובר ולידציה מלאה של
+      <span class="inline-code">statusValidator.ts</span> הכוללת בדיקת מכונת מצבים + RBAC.
+    </p>
+
+    <h3>פונקציות Callable (19)</h3>
+    <table>
+      <thead>
+        <tr><th>פונקציה</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">createDelivery</span></td><td>deliveryCallable.ts</td><td>יצירת משלוח חדש — מגדיר פרמטרי התראה והרחבת רדיוס</td></tr>
+        <tr><td><span class="inline-code">expressInterest</span></td><td>deliveryCallable.ts</td><td>נהג מביע עניין במשלוח — מוסיף לרשימת המעוניינים</td></tr>
+        <tr><td><span class="inline-code">withdrawInterest</span></td><td>deliveryCallable.ts</td><td>נהג מושך הבעת עניין — מוציא מרשימת המעוניינים</td></tr>
+        <tr><td><span class="inline-code">withdrawFromInterest</span></td><td>deliveryCallable.ts</td><td>משיכה מהתעניינות (גרסה חלופית)</td></tr>
+        <tr><td><span class="inline-code">selectDriver</span></td><td>deliveryCallable.ts</td><td>שולח בוחר נהג מרשימת המעוניינים — מעביר ל-awaiting_driver</td></tr>
+        <tr><td><span class="inline-code">confirmSelection</span></td><td>deliveryCallable.ts</td><td>נהג נבחר מאשר קבלת משלוח — מעביר ל-waiting (תוך 15 דק')</td></tr>
+        <tr><td><span class="inline-code">declineSelection</span></td><td>deliveryCallable.ts</td><td>נהג נבחר דוחה — מחזיר ל-new ומתריע מחדש</td></tr>
+        <tr><td><span class="inline-code">cancelSelectedDriver</span></td><td>deliveryCallable.ts</td><td>שולח מבטל בחירת נהג — מחזיר ל-pending</td></tr>
+        <tr><td><span class="inline-code">approveDriver</span></td><td>deliveryCallable.ts</td><td>אישור נהג (legacy — תמיכה לאחור)</td></tr>
+        <tr><td><span class="inline-code">declineDriver</span></td><td>deliveryCallable.ts</td><td>דחיית נהג (legacy — תמיכה לאחור)</td></tr>
+        <tr><td><span class="inline-code">confirmPickup</span></td><td>deliveryCallable.ts</td><td>נהג מאשר איסוף + תמונת הוכחה — מעביר ל-picked_up</td></tr>
+        <tr><td><span class="inline-code">confirmPayment</span></td><td>deliveryCallable.ts</td><td>אישור תשלום — דו-צדדי (שולח + נהג), כשהשניים מאשרים → completed_paid</td></tr>
+        <tr><td><span class="inline-code">cancelDelivery</span></td><td>deliveryCallable.ts</td><td>ביטול משלוח — עטוף ב-transaction למניעת race condition</td></tr>
+        <tr><td><span class="inline-code">submitRating</span></td><td>deliveryCallable.ts</td><td>שליחת דירוג (1-5) + עדכון ממוצע המדורג</td></tr>
+        <tr><td><span class="inline-code">reviewKYC</span></td><td>kycCallable.ts</td><td>אישור/דחיית KYC — admin בלבד, מעדכן <span class="inline-code">kycStatus</span> + <span class="inline-code">driverUnlocked</span></td></tr>
+        <tr><td><span class="inline-code">sendBulkEmail</span></td><td>emailCallable.ts</td><td>שליחת מיילים בכמות — admin בלבד, SMTP דרך Hostinger</td></tr>
+        <tr><td><span class="inline-code">uploadProfilePhoto</span></td><td>userCallable.ts</td><td>העלאת תמונת פרופיל + עדכון URL במסמך המשתמש</td></tr>
+        <tr><td><span class="inline-code">getAuthorizedPhoto</span></td><td>encryptionCallable.ts</td><td>קבלת URL מורשה לתמונה מוגנת — בדיקת הרשאות</td></tr>
+        <tr><td><span class="inline-code">removeFCMToken</span></td><td>userCallable.ts</td><td>הסרת FCM token בעת logout — מונע התראות למכשיר מנותק</td></tr>
+      </tbody>
+    </table>
+
+    <h3>טריגרים (3)</h3>
+    <table>
+      <thead>
+        <tr><th>טריגר</th><th>קובץ</th><th>אירוע</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="inline-code">onDeliveryUpdate</span></td>
+          <td>deliveryTrigger.ts</td>
+          <td>onUpdate</td>
+          <td>מופעל בכל שינוי למסמך משלוח — שולח התראות push, יוצר הודעות מערכת בצ'אט, מעדכן מונים</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">onUserCreate</span></td>
+          <td>userTrigger.ts</td>
+          <td>onCreate</td>
+          <td>מופעל ביצירת משתמש חדש — אתחול שדות ברירת מחדל</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">onUserUpdate</span></td>
+          <td>userTrigger.ts</td>
+          <td>onUpdate</td>
+          <td>מופעל בעדכון משתמש — טיפול בשינויי KYC</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>פונקציות מתוזמנות (4)</h3>
+    <table>
+      <thead>
+        <tr><th>פונקציה</th><th>קובץ</th><th>תדירות</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="inline-code">timeoutCleanup</span></td>
+          <td>timeoutCleanup.ts</td>
+          <td>כל שעה</td>
+          <td>משלוחים ב-PENDING מעל 72 שעות → חזרה ל-NEW, ניקוי נהגים מעוניינים</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">selectionTimeout</span></td>
+          <td>selectionTimeout.ts</td>
+          <td>כל 5 דקות</td>
+          <td>משלוחים ב-AWAITING_DRIVER מעל 15 דקות → חזרה ל-NEW, התראה מחדש לנהגים</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">chatAutoClose</span></td>
+          <td>chatAutoClose.ts</td>
+          <td>כל שעה</td>
+          <td>סגירת צ'אטים ללא פעילות מעל 12 שעות — <span class="inline-code">closed: true</span></td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">notifyExpansion</span></td>
+          <td>notifyExpansion.ts</td>
+          <td>כל 5 דקות</td>
+          <td>הרחבת רדיוס התראות למשלוחים חדשים — מ-5 ק"מ עד 15 ק"מ בשלבים</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 8. PUSH NOTIFICATIONS                                        -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-push">
+    <h2><span class="section-num">8</span> התראות Push (8 אירועים)</h2>
+
+    <p>
+      כל ההתראות מופעלות על ידי Cloud Functions בעקבות שינויי נתונים ב-Firestore.
+      נשלחות באמצעות FCM v1 HTTP API עם תמיכה בצלילים מותאמים וכפתורי פעולה.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>#</th><th>אירוע</th><th>נמען</th><th>צליל</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><span class="inline-code">new_listing_nearby</span></td>
+          <td>נהגים ברדיוס geohash</td>
+          <td><span class="inline-code">new_delivery</span></td>
+          <td>משלוח חדש באזור — נשלח לכל הנהגים הזמינים ברדיוס 5-15 ק"מ</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><span class="inline-code">driver_interested</span></td>
+          <td>שולח (בעל המשלוח)</td>
+          <td><span class="inline-code">driver_interested</span></td>
+          <td>נהג הביע עניין — כולל שם הנהג ודירוג</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><span class="inline-code">sender_approved</span></td>
+          <td>נהג נבחר</td>
+          <td><span class="inline-code">success</span></td>
+          <td>שולח בחר/אישר את הנהג — כולל כפתורי "אשר"/"דחה"</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><span class="inline-code">delivery_picked_up</span></td>
+          <td>שולח</td>
+          <td><span class="inline-code">success</span></td>
+          <td>הפריט נאסף — כולל תמונת הוכחה</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><span class="inline-code">delivery_delivered</span></td>
+          <td>שולח</td>
+          <td><span class="inline-code">success</span></td>
+          <td>הפריט נמסר — כולל תמונת הוכחה</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><span class="inline-code">payment_confirmed</span></td>
+          <td>שני הצדדים</td>
+          <td><span class="inline-code">payment</span></td>
+          <td>תשלום אושר — נשלח כששני הצדדים מאשרים</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><span class="inline-code">delivery_cancelled</span></td>
+          <td>הצד השני</td>
+          <td><span class="inline-code">error</span></td>
+          <td>משלוח בוטל — כולל מזהה המבטל</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><span class="inline-code">new_chat_message</span></td>
+          <td>נמען (הצד השני בצ'אט)</td>
+          <td><span class="inline-code">question</span></td>
+          <td>הודעת צ'אט חדשה — כולל תוכן ושם השולח</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card card-gold">
+      <h4>פרטי מימוש</h4>
+      <ul>
+        <li><strong>צלילים מותאמים:</strong> כל סוג אירוע משמיע צליל ייחודי — קבצי <span class="inline-code">.mp3</span> משולבים ב-Android ו-iOS</li>
+        <li><strong>כפתורי פעולה:</strong> התראת "נהג מתעניין" כוללת כפתורי "אשר"/"דחה" (Android action buttons)</li>
+        <li><strong>שעות שקט:</strong> ההגדרה ברמת המכשיר (OS level) — אין חסימה בצד השרת</li>
+        <li><strong>מערך FCM tokens:</strong> כל משתמש יכול להיות מחובר ממספר מכשירים — ההתראה נשלחת לכולם</li>
+        <li><strong>הדרת שולח:</strong> משלוח חדש לא שולח התראה לשולח עצמו</li>
+        <li><strong>FCM caching:</strong> שירות ההתראות תומך ב-tokens מועברים כפרמטר (חסכון בקריאות Firestore)</li>
+      </ul>
+    </div>
+
+    <h3>קבצי צליל</h3>
+    <table>
+      <thead>
+        <tr><th>שם קובץ</th><th>אירוע</th><th>מיקום Android</th><th>מיקום iOS</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="inline-code">new_delivery.mp3</span></td><td>משלוח חדש באזור</td><td><span class="inline-code">android/app/src/main/res/raw/</span></td><td><span class="inline-code">ios/MoovizMobile/</span></td></tr>
+        <tr><td><span class="inline-code">driver_interested.mp3</span></td><td>נהג מתעניין</td><td>—"—</td><td>—"—</td></tr>
+        <tr><td><span class="inline-code">success.mp3</span></td><td>אישור, איסוף, מסירה</td><td>—"—</td><td>—"—</td></tr>
+        <tr><td><span class="inline-code">payment.mp3</span></td><td>תשלום אושר</td><td>—"—</td><td>—"—</td></tr>
+        <tr><td><span class="inline-code">error.mp3</span></td><td>ביטול, שגיאה</td><td>—"—</td><td>—"—</td></tr>
+        <tr><td><span class="inline-code">question.mp3</span></td><td>הודעת צ'אט</td><td>—"—</td><td>—"—</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 9. SECURITY                                                  -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-security">
+    <h2><span class="section-num">9</span> אבטחה</h2>
+
+    <h3>אימות (Authentication)</h3>
+    <div class="card card-gold">
+      <ul>
+        <li><strong>Firebase Auth:</strong> אימייל+סיסמה כשיטה ראשית, OTP SMS כאימות דו-שלבי בכל התחברות</li>
+        <li><strong>טלפון חובה:</strong> כל משתמש חייב לאמת מספר טלפון לפני שימוש באפליקציה</li>
+        <li><strong>ולידציית E.164:</strong> מספרי טלפון מאומתים בפורמט בינלאומי</li>
+        <li><strong>הגבלת קצב OTP:</strong> מניעת שימוש לרעה בשליחת SMS</li>
+        <li><strong>שפת הודעות:</strong> <span class="inline-code">languageCode='he'</span> מוגדר לפני שליחת מיילי אימות/איפוס</li>
+      </ul>
+    </div>
+
+    <h3>ניהול סשן</h3>
+    <div class="card card-gold">
+      <ul>
+        <li><strong>מכשיר יחיד:</strong> שדה <span class="inline-code">sessionToken</span> מאפשר אכיפת חיבור ממכשיר אחד בלבד</li>
+        <li><strong>FCM cleanup:</strong> בעת logout — <span class="inline-code">removeFCMToken</span> מסיר את הטוקן של המכשיר המנותק</li>
+      </ul>
+    </div>
+
+    <h3>כללי אבטחה — Firestore Rules</h3>
+    <table>
+      <thead>
+        <tr><th>אוסף</th><th>קריאה</th><th>כתיבה</th><th>הערות</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="inline-code">users</span></td>
+          <td>בעלים בלבד (פרופיל עצמי); נהגים יכולים לקרוא פרטים בסיסיים</td>
+          <td>בעלים — שדות מוגבלים; admin — הכל</td>
+          <td><span class="inline-code">role</span>, <span class="inline-code">status</span>, <span class="inline-code">kycStatus</span> מוגנים מכתיבת לקוח</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">deliveries</span></td>
+          <td>שולח: משלוחים שלו; נהג: משלוחים זמינים + משויכים</td>
+          <td>Cloud Functions בלבד (דרך callable)</td>
+          <td>כל מעבר סטטוס עובר ולידציה בצד שרת</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">chats</span></td>
+          <td>משתתפים בלבד</td>
+          <td>משתתפים — הודעות; Cloud Functions — סגירה</td>
+          <td>צ'אט סגור חוסם כתיבת הודעות חדשות</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">ratings</span></td>
+          <td>כל משתמש מאומת</td>
+          <td>Cloud Functions בלבד</td>
+          <td>מניעת שינוי דירוג לאחר שליחה</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">reports</span></td>
+          <td>admin בלבד</td>
+          <td>משתמש מאומת: יצירה; admin: עדכון</td>
+          <td>מדווח לא יכול לשנות דיווח שנשלח</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>כללי אבטחה — Cloud Storage</h3>
+    <table>
+      <thead>
+        <tr><th>נתיב</th><th>קריאה</th><th>כתיבה</th><th>הגבלות</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="inline-code">users/{uid}/kyc/*</span></td>
+          <td>בעלים + admin</td>
+          <td>בעלים בלבד</td>
+          <td>מקס 5MB, <span class="inline-code">image/jpeg</span> או <span class="inline-code">image/png</span></td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">users/{uid}/profile/*</span></td>
+          <td>כל מאומת</td>
+          <td>בעלים בלבד</td>
+          <td>מקס 5MB, תמונות בלבד</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">deliveries/{id}/*</span></td>
+          <td>משתתפים + admin</td>
+          <td>משתתפים בלבד</td>
+          <td>מקס 5MB, תמונות + וידאו</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>הגנות צד שרת</h3>
+    <div class="card">
+      <ul>
+        <li><strong>ולידציית מעברי סטטוס:</strong> <span class="inline-code">assertValidTransition()</span> — בדיקת מכונת מצבים + RBAC</li>
+        <li><strong>בדיקת שחקן:</strong> <span class="inline-code">assertIsSender()</span>, <span class="inline-code">assertIsDriver()</span> — רק בעל המשלוח/הנהג המשויך</li>
+        <li><strong>בדיקת תפקיד:</strong> <span class="inline-code">assertUserRole()</span> — אכיפת תפקיד (sender/driver/admin)</li>
+        <li><strong>בדיקת KYC:</strong> <span class="inline-code">assertDriverApproved()</span> — רק נהגים עם KYC מאושר יכולים לפעול</li>
+        <li><strong>Transactions:</strong> פעולות קריטיות (ביטול, אישור בחירה) עטופות ב-Firestore transactions</li>
+        <li><strong>HTTPS בכל מקום:</strong> כל התקשורת מוצפנת</li>
+        <li><strong>ללא PII בלוגים:</strong> מידע אישי לא נכתב ליומני מערכת</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 10. SCREENS                                                  -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-screens">
+    <h2><span class="section-num">10</span> מסכי האפליקציה (22)</h2>
+
+    <h3>מסכי אימות (8)</h3>
+    <table>
+      <thead>
+        <tr><th>מסך</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>התחברות</strong></td>
+          <td><span class="inline-code">LoginScreen.tsx</span></td>
+          <td>אימייל + סיסמה, קישור לשכחתי סיסמה ולהרשמה</td>
+        </tr>
+        <tr>
+          <td><strong>הרשמה</strong></td>
+          <td><span class="inline-code">RegisterScreen.tsx</span></td>
+          <td>יצירת חשבון חדש — שם, אימייל, סיסמה, עיר, מגדר, טווח גילאים</td>
+        </tr>
+        <tr>
+          <td><strong>אימות OTP</strong></td>
+          <td><span class="inline-code">OTPScreen.tsx</span></td>
+          <td>הזנת קוד SMS לאימות טלפון — 6 ספרות עם countdown</td>
+        </tr>
+        <tr>
+          <td><strong>הוספת טלפון</strong></td>
+          <td><span class="inline-code">AddPhoneScreen.tsx</span></td>
+          <td>הזנת מספר טלפון לאימות דו-שלבי</td>
+        </tr>
+        <tr>
+          <td><strong>אימות אימייל</strong></td>
+          <td><span class="inline-code">EmailVerificationScreen.tsx</span></td>
+          <td>מסך המתנה לאישור אימייל עם כפתור שליחה מחדש</td>
+        </tr>
+        <tr>
+          <td><strong>שכחתי סיסמה</strong></td>
+          <td><span class="inline-code">ForgotPasswordScreen.tsx</span></td>
+          <td>שליחת מייל איפוס סיסמה</td>
+        </tr>
+        <tr>
+          <td><strong>השלמת פרופיל</strong></td>
+          <td><span class="inline-code">CompleteProfileScreen.tsx</span></td>
+          <td>השלמת שדות חסרים (תמונת פרופיל, עיר)</td>
+        </tr>
+        <tr>
+          <td><strong>אישור תנאים</strong></td>
+          <td><span class="inline-code">AcceptTermsScreen.tsx</span></td>
+          <td>הצגת תנאי שימוש ומדיניות פרטיות — חובה לפני שימוש ראשון</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>מסכי שולח (4)</h3>
+    <table>
+      <thead>
+        <tr><th>מסך</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>בית</strong></td>
+          <td><span class="inline-code">HomeScreen.tsx</span></td>
+          <td>לוח בקרה — סיכום משלוחים, באנר צ'אט שלא נקרא, גישה מהירה ליצירת משלוח</td>
+        </tr>
+        <tr>
+          <td><strong>יצירת משלוח</strong></td>
+          <td><span class="inline-code">CreateDeliveryScreen.tsx</span></td>
+          <td>טופס מלא — בורר מפה לאיסוף/מסירה, העלאת מדיה, גודל חבילה, תזמון, מחיר</td>
+        </tr>
+        <tr>
+          <td><strong>המשלוחים שלי</strong></td>
+          <td><span class="inline-code">MyDeliveriesScreen.tsx</span></td>
+          <td>רשימת משלוחים עם סינון לפי סטטוס — FlatList מאוונט (virtualized)</td>
+        </tr>
+        <tr>
+          <td><strong>פרטי משלוח</strong></td>
+          <td><span class="inline-code">DeliveryDetailScreen.tsx</span></td>
+          <td>תצוגת פרטים מלאה — רשימת נהגים מעוניינים, מעקב חי, תשלום (Bit/PayBox deep links), דירוג, דיווח</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>מסכי נהג (4)</h3>
+    <table>
+      <thead>
+        <tr><th>מסך</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>פיד</strong></td>
+          <td><span class="inline-code">FeedScreen.tsx</span></td>
+          <td>רדאר Lottie + רשימת משלוחים זמינים — סינון לפי geohash, גודל, מחיר, רדיוס, העדפות</td>
+        </tr>
+        <tr>
+          <td><strong>המשלוחים שלי</strong></td>
+          <td><span class="inline-code">MyJobsScreen.tsx</span></td>
+          <td>רשימת עבודות פעילות ומושלמות</td>
+        </tr>
+        <tr>
+          <td><strong>פרטי משלוח</strong></td>
+          <td><span class="inline-code">DeliveryDetailScreen.tsx</span></td>
+          <td>מצלמת הוכחה (ProofCamera), ניווט (Waze/Google Maps), אישור תשלום, דיווח</td>
+        </tr>
+        <tr>
+          <td><strong>אימות נהג (KYC)</strong></td>
+          <td><span class="inline-code">DriverKYCScreen.tsx</span></td>
+          <td>העלאת צילום רישיון נהיגה + ת.ז. — שליחה לאישור admin</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>מסכים משותפים (5)</h3>
+    <table>
+      <thead>
+        <tr><th>מסך</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>צ'אט</strong></td>
+          <td><span class="inline-code">ChatScreen.tsx</span></td>
+          <td>צ'אט בזמן אמת — טקסט, תמונות, הודעות מערכת, שיתוף מיקום, באנר צ'אט סגור</td>
+        </tr>
+        <tr>
+          <td><strong>פרופיל</strong></td>
+          <td><span class="inline-code">ProfileScreen.tsx</span></td>
+          <td>עריכת פרופיל, צפייה ב-KYC, דירוגים, היסטוריית משלוחים, toggle זמינות</td>
+        </tr>
+        <tr>
+          <td><strong>דירוג</strong></td>
+          <td><span class="inline-code">RatingScreen.tsx</span></td>
+          <td>מסך דירוג — 1-5 כוכבים + תגובה חופשית, מניעת שליחה כפולה</td>
+        </tr>
+        <tr>
+          <td><strong>מפה מלאה</strong></td>
+          <td><span class="inline-code">FullScreenMapScreen.tsx</span></td>
+          <td>תצוגת מפה מלאה עם markers — איסוף, מסירה, מיקום נהג</td>
+        </tr>
+        <tr>
+          <td><strong>השלמת פרופיל</strong></td>
+          <td><span class="inline-code">CompleteProfileScreen.tsx</span></td>
+          <td>גרסה משותפת להשלמת פרטים חסרים</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>מסך הכרות (1)</h3>
+    <table>
+      <thead>
+        <tr><th>מסך</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>מסך הכרות</strong></td>
+          <td><span class="inline-code">OnboardingScreen.tsx</span></td>
+          <td>מסך פתיחה עם סליידר — הצגת יתרונות האפליקציה למשתמש חדש</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 11. COMPONENTS                                               -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-components">
+    <h2><span class="section-num">11</span> רכיבים (46)</h2>
+
+    <p>
+      כל הרכיבים נמצאים ב-<span class="inline-code">apps/mobile/src/components/</span>.
+      רוב הרכיבים עטופים ב-<span class="inline-code">React.memo</span> לביצועים מיטביים.
+    </p>
+
+    <div class="two-col">
+      <div>
+        <h4>רכיבי ממשק בסיסיים</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">Button</span></td><td>כפתור ממותג עם מצבי טעינה</td></tr>
+            <tr><td><span class="inline-code">AnimatedButton</span></td><td>כפתור עם אנימציות Reanimated</td></tr>
+            <tr><td><span class="inline-code">TextInput</span></td><td>שדה קלט עם תמיכת RTL</td></tr>
+            <tr><td><span class="inline-code">ThemedInput</span></td><td>שדה קלט מעוצב בהתאמה לנושא</td></tr>
+            <tr><td><span class="inline-code">Card</span></td><td>כרטיס בסיסי עם צל</td></tr>
+            <tr><td><span class="inline-code">GlassCard</span></td><td>כרטיס שקוף עם אפקט זכוכית</td></tr>
+            <tr><td><span class="inline-code">Badge</span></td><td>תג צבעוני</td></tr>
+            <tr><td><span class="inline-code">Modal</span></td><td>חלון מודאלי בסיסי</td></tr>
+            <tr><td><span class="inline-code">AppAlert</span></td><td>התראה ממותגת (מחליפה Alert.alert)</td></tr>
+            <tr><td><span class="inline-code">CarAlert</span></td><td>התראה עם אייקון רכב</td></tr>
+            <tr><td><span class="inline-code">EmptyState</span></td><td>מצב ריק עם אייקון ומסר</td></tr>
+            <tr><td><span class="inline-code">ScreenHeader</span></td><td>כותרת מסך עם ניווט חזרה</td></tr>
+            <tr><td><span class="inline-code">TabHeader</span></td><td>כותרת טאב עם אייקונים</td></tr>
+            <tr><td><span class="inline-code">TabIcons</span></td><td>אייקוני ניווט תחתון</td></tr>
+          </tbody>
+        </table>
+
+        <h4>רכיבי מצב וטעינה</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">LoadingOverlay</span></td><td>שכבת טעינה שקופה</td></tr>
+            <tr><td><span class="inline-code">LoadingScreen</span></td><td>מסך טעינה מלא</td></tr>
+            <tr><td><span class="inline-code">LoadingTruck</span></td><td>אנימציית טעינה עם משאית</td></tr>
+            <tr><td><span class="inline-code">SkeletonLoader</span></td><td>Skeleton placeholder בזמן טעינה</td></tr>
+            <tr><td><span class="inline-code">ErrorBoundary</span></td><td>לכידת שגיאות עם אפשרות retry</td></tr>
+            <tr><td><span class="inline-code">OfflineBanner</span></td><td>באנר "אין חיבור לרשת"</td></tr>
+            <tr><td><span class="inline-code">StatusIndicator</span></td><td>אינדיקטור סטטוס חי</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h4>רכיבי משלוח</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">DeliveryCard</span></td><td>כרטיס משלוח — memo + virtualized</td></tr>
+            <tr><td><span class="inline-code">StatusBadge</span></td><td>תג סטטוס צבעוני (7 מצבים)</td></tr>
+            <tr><td><span class="inline-code">ProofCamera</span></td><td>מצלמת הוכחה (איסוף/מסירה)</td></tr>
+            <tr><td><span class="inline-code">ImageGalleryModal</span></td><td>גלריית תמונות מסך מלא</td></tr>
+          </tbody>
+        </table>
+
+        <h4>רכיבי נהג</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">DriverApprovalCard</span></td><td>כרטיס נהג מעוניין (דירוג, מרחק)</td></tr>
+            <tr><td><span class="inline-code">DriverConfirmBanner</span></td><td>באנר אישור בחירה (15 דק' countdown)</td></tr>
+            <tr><td><span class="inline-code">DriverOnboarding</span></td><td>מדריך צעדים לנהג חדש</td></tr>
+            <tr><td><span class="inline-code">DriverProfileModal</span></td><td>מודאל פרופיל נהג</td></tr>
+            <tr><td><span class="inline-code">InterestedDriversList</span></td><td>רשימת נהגים מעוניינים</td></tr>
+            <tr><td><span class="inline-code">SelectionCountdown</span></td><td>ספירה לאחור 15 דקות</td></tr>
+            <tr><td><span class="inline-code">AvailabilityToggle</span></td><td>Toggle זמינות נהג</td></tr>
+          </tbody>
+        </table>
+
+        <h4>רכיבי מפה ומיקום</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">LiveMapView</span></td><td>מפה חיה + FABs (מעקב נהג)</td></tr>
+            <tr><td><span class="inline-code">MapPicker</span></td><td>בורר מיקום על מפה</td></tr>
+            <tr><td><span class="inline-code">AddressAutocomplete</span></td><td>השלמה אוטומטית (Places API)</td></tr>
+            <tr><td><span class="inline-code">DatePickerInput</span></td><td>בורר תאריך + ASAP + טווח שעות</td></tr>
+          </tbody>
+        </table>
+
+        <h4>רכיבי משתמש</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">AvatarCircle</span></td><td>תמונת פרופיל עגולה</td></tr>
+            <tr><td><span class="inline-code">RatingStars</span></td><td>תצוגת כוכבי דירוג</td></tr>
+            <tr><td><span class="inline-code">RatingsHistoryModal</span></td><td>היסטוריית דירוגים</td></tr>
+            <tr><td><span class="inline-code">SenderOnboarding</span></td><td>מדריך צעדים לשולח חדש</td></tr>
+            <tr><td><span class="inline-code">SenderProfileModal</span></td><td>מודאל פרופיל שולח</td></tr>
+            <tr><td><span class="inline-code">VerificationStepper</span></td><td>צעדי אימות (אימייל → טלפון → פרופיל)</td></tr>
+            <tr><td><span class="inline-code">ModeSwitcher</span></td><td>מעבר בין מצב שולח/נהג</td></tr>
+            <tr><td><span class="inline-code">SettingsDrawer</span></td><td>תפריט צדדי — הגדרות, logout</td></tr>
+          </tbody>
+        </table>
+
+        <h4>רכיבים נוספים</h4>
+        <table>
+          <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
+          <tbody>
+            <tr><td><span class="inline-code">ChatDeliveryBanner</span></td><td>באנר משלוח בראש הצ'אט</td></tr>
+            <tr><td><span class="inline-code">ReportModal</span></td><td>דיווח על משתמש</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 12. ADMIN PANEL                                              -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-admin">
+    <h2><span class="section-num">12</span> ממשק ניהול (11 דפים)</h2>
+
+    <p>
+      ממשק הניהול בנוי ב-React + Vite + Tailwind CSS ומאוחסן ב-Firebase Hosting.
+      גישה ל-admin בלבד — אימות Firebase Auth עם תפקיד admin.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>דף</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>התחברות</strong></td>
+          <td><span class="inline-code">LoginPage.tsx</span></td>
+          <td>דף התחברות admin — אימייל + סיסמה</td>
+        </tr>
+        <tr>
+          <td><strong>לוח בקרה</strong></td>
+          <td><span class="inline-code">DashboardPage.tsx</span></td>
+          <td>אנליטיקס מלא: סה"כ משתמשים/משלוחים, פילוח לפי תקופה, פיצול משתמשים, אזורים, תזמונים, גרפי מגמה חודשיים, תזרים מזומנים, ייצוא CSV</td>
+        </tr>
+        <tr>
+          <td><strong>משתמשים</strong></td>
+          <td><span class="inline-code">UsersPage.tsx</span></td>
+          <td>רשימת משתמשים עם חיפוש, סינון לפי תפקיד/סטטוס/KYC, אישור/דחיית KYC</td>
+        </tr>
+        <tr>
+          <td><strong>פרטי משתמש</strong></td>
+          <td><span class="inline-code">UserDetailPage.tsx</span></td>
+          <td>פרופיל מלא — מסמכי KYC, היסטוריית משלוחים, דירוגים, חסימה/השעיה</td>
+        </tr>
+        <tr>
+          <td><strong>משלוחים</strong></td>
+          <td><span class="inline-code">DeliveriesPage.tsx</span></td>
+          <td>רשימת כל המשלוחים עם סינון לפי סטטוס, תאריך, אזור</td>
+        </tr>
+        <tr>
+          <td><strong>פרטי משלוח</strong></td>
+          <td><span class="inline-code">DeliveryDetailPage.tsx</span></td>
+          <td>תצוגת משלוח מלאה — מפה, תמונות הוכחה, היסטוריית סטטוס, צ'אט</td>
+        </tr>
+        <tr>
+          <td><strong>צ'אטים</strong></td>
+          <td><span class="inline-code">ChatsPage.tsx</span></td>
+          <td>רשימת צ'אטים — צפייה בשיחות, סגירה ידנית</td>
+        </tr>
+        <tr>
+          <td><strong>דיווחים</strong></td>
+          <td><span class="inline-code">ReportsPage.tsx</span></td>
+          <td>ניהול דיווחים — חקירה, פתרון, דחייה, מודרציה (חסימה/השעיה)</td>
+        </tr>
+        <tr>
+          <td><strong>שליחת מיילים</strong></td>
+          <td><span class="inline-code">EmailPage.tsx</span></td>
+          <td>שליחת מיילים לכל/חלק מהמשתמשים — SMTP דרך Hostinger</td>
+        </tr>
+        <tr>
+          <td><strong>הגדרות</strong></td>
+          <td><span class="inline-code">SettingsPage.tsx</span></td>
+          <td>הגדרות מערכת</td>
+        </tr>
+        <tr>
+          <td><strong>כלי מיגרציה</strong></td>
+          <td><span class="inline-code">MigrationPage.tsx</span></td>
+          <td>כלים להעברת נתונים מ-Glide — ייבוא משתמשים, משלוחים, תמונות</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card card-highlight">
+      <h4>חשבונות Admin</h4>
+      <table>
+        <thead><tr><th>אימייל</th><th>הערות</th></tr></thead>
+        <tbody>
+          <tr><td><span class="inline-code">admin@mooviz.co.il</span></td><td>חשבון admin ראשי</td></tr>
+          <tr><td><span class="inline-code">tamir@kal.solutions</span></td><td>CTO</td></tr>
+          <tr><td><span class="inline-code">tamir.konor@gmail.com</span></td><td>גיבוי</td></tr>
+        </tbody>
+      </table>
+      <p class="text-sm text-muted">
+        סיסמה ראשונית: <span class="inline-code">1q2w3e4r</span> — מומלץ מאוד לשנות מיד לאחר כניסה ראשונה.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 13. ENVIRONMENTS                                             -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-environments">
+    <h2><span class="section-num">13</span> סביבות</h2>
+
+    <table>
+      <thead>
+        <tr><th></th><th>פיתוח (Development)</th><th>ייצור (Production)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>פרויקט Firebase</strong></td>
+          <td><span class="inline-code">mooviz-app-9b766</span></td>
+          <td><span class="inline-code">mooviz-prod</span></td>
+        </tr>
+        <tr>
+          <td><strong>Firestore</strong></td>
+          <td>mooviz-app-9b766.firebaseio.com</td>
+          <td>mooviz-prod.firebaseio.com</td>
+        </tr>
+        <tr>
+          <td><strong>ממשק ניהול</strong></td>
+          <td><span class="inline-code">mooviz-app-9b766.web.app</span></td>
+          <td><span class="inline-code">admin.mooviz.co.il</span></td>
+        </tr>
+        <tr>
+          <td><strong>Cloud Functions</strong></td>
+          <td>us-central1 (ברירת מחדל)</td>
+          <td>us-central1</td>
+        </tr>
+        <tr>
+          <td><strong>Auth</strong></td>
+          <td>Email + Phone (SMS)</td>
+          <td>Email + Phone (SMS)</td>
+        </tr>
+        <tr>
+          <td><strong>חשבון שירות</strong></td>
+          <td>tamir@k-a-l.solutions</td>
+          <td>לקוח</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>קבצי סביבה</h3>
+    <div class="card card-highlight">
+      <p><strong>חשוב:</strong> קבצי סביבה (<span class="inline-code">.env</span>) אינם נכללים ב-Git ויש להגדירם ידנית בכל שיבוט חדש.</p>
+      <table>
+        <thead><tr><th>קובץ</th><th>מיקום</th><th>תיאור</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="inline-code">.env</span></td>
+            <td><span class="inline-code">apps/admin/</span></td>
+            <td>הגדרות Firebase למצב פיתוח — API key, project ID, etc.</td>
+          </tr>
+          <tr>
+            <td><span class="inline-code">.env.production</span></td>
+            <td><span class="inline-code">apps/admin/</span></td>
+            <td>הגדרות Firebase למצב ייצור — <strong>חובה לוודא שמצביע ל-mooviz-prod</strong></td>
+          </tr>
+          <tr>
+            <td><span class="inline-code">google-services.json</span></td>
+            <td><span class="inline-code">apps/mobile/android/app/</span></td>
+            <td>הגדרות Firebase ל-Android — <strong>gitignored, חובה להורדה מ-Firebase Console</strong></td>
+          </tr>
+          <tr>
+            <td><span class="inline-code">GoogleService-Info.plist</span></td>
+            <td><span class="inline-code">apps/mobile/ios/MoovizMobile/</span></td>
+            <td>הגדרות Firebase ל-iOS — <strong>gitignored, חובה להורדה מ-Firebase Console</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>SMTP (מיילים)</h3>
+    <table>
+      <thead><tr><th>פרמטר</th><th>ערך</th></tr></thead>
+      <tbody>
+        <tr><td>שרת</td><td><span class="inline-code">smtp.hostinger.com</span></td></tr>
+        <tr><td>פורט</td><td>465 (SSL)</td></tr>
+        <tr><td>כתובת שולח</td><td><span class="inline-code">admin@mooviz.co.il</span></td></tr>
+        <tr><td>פרוטוקול</td><td>SSL/TLS</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 14. BUILD & DEPLOY                                           -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-build">
+    <h2><span class="section-num">14</span> בנייה ופריסה</h2>
+
+    <h3>Android</h3>
+    <div class="card card-gold">
+      <h4>בניית APK חתום</h4>
+      <pre><code>cd apps/mobile/android
+./gradlew assembleRelease</code></pre>
+      <p>
+        פלט: <span class="inline-code">apps/mobile/android/app/build/outputs/apk/release/mooviz-{version}.apk</span>
+      </p>
+      <table>
+        <thead><tr><th>פרמטר</th><th>ערך</th></tr></thead>
+        <tbody>
+          <tr><td>compileSdk</td><td>34</td></tr>
+          <tr><td>minSdk</td><td>24 (Android 7.0)</td></tr>
+          <tr><td>targetSdk</td><td>34</td></tr>
+          <tr><td>AGP</td><td>8.5</td></tr>
+          <tr><td>Hermes</td><td>מופעל</td></tr>
+          <tr><td>יישור דפים</td><td>16KB (נדרש מ-Android 15)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>iOS</h3>
+    <div class="card card-gold">
+      <h4>בניית Archive + TestFlight</h4>
+      <pre><code># התקנת תלויות
+cd apps/mobile/ios
+pod install
+
+# פתיחה ב-Xcode
+open MoovizMobile.xcworkspace
+
+# Xcode: Product → Archive → Distribute App → App Store Connect</code></pre>
+      <table>
+        <thead><tr><th>פרמטר</th><th>ערך</th></tr></thead>
+        <tbody>
+          <tr><td>iOS Deployment Target</td><td>14.0</td></tr>
+          <tr><td>Firebase iOS SDK</td><td>11.11</td></tr>
+          <tr><td>CocoaPods</td><td>modular_headers סלקטיבי</td></tr>
+          <tr><td>Hermes</td><td>מופעל</td></tr>
+          <tr><td>APNs</td><td>נדרש לאימות OTP + push</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Cloud Functions</h3>
+    <div class="card card-gold">
+      <h4>פריסת פונקציות</h4>
+      <pre><code># עדכון חבילה משותפת (אם שונתה)
+cd shared &amp;&amp; pnpm build &amp;&amp; pnpm pack
+cp mooviz-shared-1.0.0.tgz ../functions/
+cd ../functions &amp;&amp; pnpm install
+
+# בנייה ופריסה
+cd functions
+npm run build
+firebase deploy --only functions --project mooviz-app-9b766   # פיתוח
+firebase deploy --only functions --project mooviz-prod          # ייצור</code></pre>
+      <div class="card card-highlight mt-8">
+        <strong>חשוב:</strong> כאשר מעדכנים validators או types ב-<span class="inline-code">shared/</span>,
+        חובה לבנות מחדש את ה-tgz ולהתקין מחדש ב-functions. ה-predeploy script לא מעדכן את <span class="inline-code">node_modules/@mooviz/shared</span>.
+      </div>
+    </div>
+
+    <h3>ממשק ניהול</h3>
+    <div class="card card-gold">
+      <h4>בנייה ופריסה</h4>
+      <pre><code># בנייה
+cd apps/admin
+npx vite build --mode production        # פיתוח
+npx vite build --mode mooviz-prod       # ייצור
+
+# פריסה
+firebase deploy --only hosting --project mooviz-app-9b766  # פיתוח
+firebase deploy --only hosting --project mooviz-prod        # ייצור</code></pre>
+    </div>
+
+    <h3>Firestore Rules + Storage Rules</h3>
+    <pre><code># פריסת כללי אבטחה
+firebase deploy --only firestore:rules --project mooviz-app-9b766
+firebase deploy --only storage --project mooviz-app-9b766</code></pre>
+
+    <h3>Metro (שרת פיתוח מקומי)</h3>
+    <pre><code># הפעלת שרת Metro
+cd apps/mobile
+node ../../node_modules/react-native/cli.js start
+
+# הרצה על Android
+node ../../node_modules/react-native/cli.js run-android
+
+# הרצה על iOS
+node ../../node_modules/react-native/cli.js run-ios</code></pre>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 15. LIMITATIONS & FUTURE WORK                                -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-limitations">
+    <h2><span class="section-num">15</span> מגבלות ידועות ועבודה עתידית</h2>
+
+    <h3>מגבלות ידועות</h3>
+    <table>
+      <thead>
+        <tr><th>נושא</th><th>חומרה</th><th>תיאור</th><th>פתרון מוצע</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>עיבוד תשלומים</td>
+          <td><span class="badge badge-orange">בינונית</span></td>
+          <td>אין עיבוד תשלומים באפליקציה — רק deep links חיצוניים ל-Bit/PayBox/העברה בנקאית</td>
+          <td>אינטגרציית Stripe/PayPal/קרדיגארד בגרסה עתידית</td>
+        </tr>
+        <tr>
+          <td>הגשה לחנויות</td>
+          <td><span class="badge badge-red">גבוהה</span></td>
+          <td>הגשה ל-App Store ו-Google Play ממתינה — נדרש חשבון מפתח של הלקוח</td>
+          <td>פתיחת חשבון Apple Developer + Google Play Console</td>
+        </tr>
+        <tr>
+          <td>Firestore Rules</td>
+          <td><span class="badge badge-orange">בינונית</span></td>
+          <td>חלק מהשדות עדיין ניתנים לכתיבה ישירה מהלקוח</td>
+          <td>סיום RBAC מלא ברמת שדה — M4 P0</td>
+        </tr>
+        <tr>
+          <td>פרסומות</td>
+          <td><span class="badge badge-gray">נמוכה</span></td>
+          <td>תמיכה בפרסומות interstitial ב-backlog</td>
+          <td>אינטגרציית AdMob בגרסה עתידית</td>
+        </tr>
+        <tr>
+          <td>אנליטיקס</td>
+          <td><span class="badge badge-gray">נמוכה</span></td>
+          <td>אירועי אנליטיקס (GA4/Amplitude) טרם הוטמעו</td>
+          <td>הטמעת Firebase Analytics / Amplitude SDK</td>
+        </tr>
+        <tr>
+          <td>OTP ב-iOS</td>
+          <td><span class="badge badge-orange">בינונית</span></td>
+          <td>בדיקת OTP דורשת מכשיר פיזי + תעודת APNs</td>
+          <td>הגדרת APNs key ב-Firebase Console</td>
+        </tr>
+        <tr>
+          <td>adminActions</td>
+          <td><span class="badge badge-gray">נמוכה</span></td>
+          <td>אוסף ללא כללי אבטחה מוגדרים</td>
+          <td>הוספת rules מתאימים</td>
+        </tr>
+        <tr>
+          <td>משתמשי Glide</td>
+          <td><span class="badge badge-gray">נמוכה</span></td>
+          <td>נהגים ממוגרציית Glide יש להם <span class="inline-code">driverUnlocked: true</span> ללא KYC תקין</td>
+          <td>החלטה: איפוס או "grandfather" clause</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>עבודה עתידית (Roadmap)</h3>
+    <table>
+      <thead>
+        <tr><th>עדיפות</th><th>משימה</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-red">P0</span></td>
+          <td>הגשה לחנויות</td>
+          <td>App Store + Google Play — דורש חשבון מפתח, צילומי מסך, מדיניות פרטיות</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-red">P0</span></td>
+          <td>הגדרות ייצור</td>
+          <td>הגדרת פרויקט Firebase ייצור, מפתחות חתימה, Firebase App Check</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-red">P0</span></td>
+          <td>RBAC מלא</td>
+          <td>סיום כללי Firestore — חסימת כתיבה ישירה לכל השדות המוגנים</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">P1</span></td>
+          <td>עיבוד תשלומים</td>
+          <td>אינטגרציית ספק תשלומים (Stripe/PayPal/קרדיגארד)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">P1</span></td>
+          <td>עריכת/מחיקת משלוח</td>
+          <td>שולח יכול לערוך משלוח ב-NEW או למחוק</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">P1</span></td>
+          <td>מדיניות פרטיות</td>
+          <td>דף מדיניות פרטיות + תנאי שימוש — נדרש לחנויות</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">P2</span></td>
+          <td>פרסומות</td>
+          <td>AdMob interstitial — מונטיזציה</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">P2</span></td>
+          <td>אנליטיקס</td>
+          <td>Firebase Analytics + Amplitude — מעקב שימוש</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">P2</span></td>
+          <td>בדיקות אוטומטיות</td>
+          <td>Jest unit tests + Detox E2E tests</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gray">P3</span></td>
+          <td>תמיכה רב-שפתית</td>
+          <td>אנגלית + ערבית (מעבר לעברית)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gray">P3</span></td>
+          <td>CI/CD מלא</td>
+          <td>GitHub Actions / EAS Build אוטומטי</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- HOOKS REFERENCE                                              -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section>
+    <h2>נספח א' — Hooks מותאמים (14)</h2>
+
+    <p>
+      כל ה-hooks נמצאים ב-<span class="inline-code">apps/mobile/src/hooks/</span>.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>Hook</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="inline-code">useAuth</span></td>
+          <td>useAuth.ts</td>
+          <td>ניהול אימות — login, register, logout, מצב מחובר, פרופיל משתמש</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useDelivery</span></td>
+          <td>useDelivery.ts</td>
+          <td>פעולות משלוח — יצירה, עניין, בחירה, אישור, ביטול, דירוג</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useChat</span></td>
+          <td>useChat.ts</td>
+          <td>צ'אט בזמן אמת — האזנה להודעות, שליחה, שיתוף מיקום</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useChatList</span></td>
+          <td>useChatList.ts</td>
+          <td>רשימת צ'אטים — cached user/delivery lookups, מונה הודעות שלא נקראו</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useFirestore</span></td>
+          <td>useFirestore.ts</td>
+          <td>wrapper כללי ל-onSnapshot queries</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useLocation</span></td>
+          <td>useLocation.ts</td>
+          <td>קבלת מיקום נוכחי + הרשאות</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useDriverLocationTracking</span></td>
+          <td>useDriverLocationTracking.ts</td>
+          <td>מעקב מיקום נהג — שתי רמות: idle (5 דק') + active (1 דק')</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useDriverAvailability</span></td>
+          <td>useDriverAvailability.ts</td>
+          <td>ניהול זמינות נהג — toggle + סנכרון Firestore (לא מתאפס ב-unmount)</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useDriverEarnings</span></td>
+          <td>useDriverEarnings.ts</td>
+          <td>חישוב הכנסות נהג — <span class="inline-code">get()</span> עם <span class="inline-code">limit(200)</span></td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useSenderExpenses</span></td>
+          <td>useSenderExpenses.ts</td>
+          <td>חישוב הוצאות שולח — <span class="inline-code">get()</span> עם <span class="inline-code">limit(200)</span></td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useNotifications</span></td>
+          <td>useNotifications.ts</td>
+          <td>FCM — רישום token, הרשאת Android 13+ POST_NOTIFICATIONS, טיפול בהתראות</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useNetworkStatus</span></td>
+          <td>useNetworkStatus.ts</td>
+          <td>מעקב חיבור רשת — מציג OfflineBanner אוטומטית</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useSound</span></td>
+          <td>useSound.tsx</td>
+          <td>ניגון צלילים — crash-proof עם kill switch, preloading</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">useInAppReview</span></td>
+          <td>useInAppReview.ts</td>
+          <td>בקשת דירוג באפליקציה (in-app review)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SERVICES REFERENCE                                           -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>נספח ב' — שירותים (11)</h2>
+
+    <p>
+      כל השירותים נמצאים ב-<span class="inline-code">apps/mobile/src/services/</span>.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>שירות</th><th>קובץ</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="inline-code">firebase</span></td>
+          <td>firebase.ts</td>
+          <td>אתחול Firebase SDK — auth, firestore, storage, functions</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">auth</span></td>
+          <td>auth.ts</td>
+          <td>פונקציות אימות — login, register, verifyPhone, linkCredential</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">chat</span></td>
+          <td>chat.ts</td>
+          <td>שירות צ'אט — שליחה, האזנה, סימון כנקרא, batch writes</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">storage</span></td>
+          <td>storage.ts</td>
+          <td>העלאת קבצים ל-Cloud Storage — דחיסה, progress callback</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">notifications</span></td>
+          <td>notifications.ts</td>
+          <td>רישום FCM, הגדרת channels (Android), טיפול ב-background/foreground</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">navigation</span></td>
+          <td>navigation.ts</td>
+          <td>שירות ניווט גלובלי — deep linking, navigation ref</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">geohash</span></td>
+          <td>geohash.ts</td>
+          <td>חישוב geohash + חיפוש קרבה</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">analytics</span></td>
+          <td>analytics.ts</td>
+          <td>wrapper לאירועי אנליטיקס (עתידי)</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">encryption</span></td>
+          <td>encryption.ts</td>
+          <td>קריאה לפונקציות הצפנה בצד שרת</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">offlineQueue</span></td>
+          <td>offlineQueue.ts</td>
+          <td>תור פעולות offline — שמירה וביצוע כשחוזר חיבור</td>
+        </tr>
+        <tr>
+          <td><span class="inline-code">sound</span></td>
+          <td>sound.ts</td>
+          <td>ניגון צלילים — crash-proof, preloading, kill switch</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- APPENDIX: KEY COMMANDS                                       -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section>
+    <h2>נספח ג' — פקודות מפתח</h2>
+
+    <h3>פיתוח מקומי</h3>
+    <pre><code># התקנת תלויות (שורש המונו-ריפו)
+pnpm install
+
+# הפעלת שרת Metro
+cd apps/mobile
+node ../../node_modules/react-native/cli.js start
+
+# הרצה על Android
+node ../../node_modules/react-native/cli.js run-android
+
+# הרצה על iOS (דורש Mac + Xcode)
+cd ios &amp;&amp; pod install &amp;&amp; cd ..
+node ../../node_modules/react-native/cli.js run-ios
+
+# הפעלת ממשק ניהול
+cd apps/admin
+pnpm dev</code></pre>
+
+    <h3>בנייה</h3>
+    <pre><code># Android APK חתום
+cd apps/mobile/android
+./gradlew assembleRelease
+
+# iOS Archive (ב-Xcode)
+# Product → Archive → Distribute App
+
+# ממשק ניהול
+cd apps/admin
+npx vite build --mode production</code></pre>
+
+    <h3>פריסה</h3>
+    <pre><code># Cloud Functions
+cd functions &amp;&amp; npm run build
+firebase deploy --only functions --project mooviz-app-9b766
+
+# Firestore Rules
+firebase deploy --only firestore:rules --project mooviz-app-9b766
+
+# Storage Rules
+firebase deploy --only storage --project mooviz-app-9b766
+
+# ממשק ניהול (Hosting)
+cd apps/admin
+firebase deploy --only hosting --project mooviz-app-9b766
+
+# הכל ביחד
+firebase deploy --project mooviz-app-9b766</code></pre>
+
+    <h3>עדכון חבילה משותפת</h3>
+    <pre><code># אחרי שינוי בתיקיית shared/
+cd shared
+pnpm build
+pnpm pack
+cp mooviz-shared-1.0.0.tgz ../functions/
+cd ../functions
+pnpm install
+npm run build
+firebase deploy --only functions</code></pre>
+
+    <h3>ניפוי שגיאות</h3>
+    <pre><code># לוגי Cloud Functions
+firebase functions:log --project mooviz-app-9b766
+
+# אימות gcloud (אם expired)
+gcloud auth login
+
+# בדיקת Firestore Rules
+firebase emulators:start --only firestore</code></pre>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- APPENDIX: RTL GUIDELINES                                     -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>נספח ד' — הנחיות RTL</h2>
+
+    <div class="card card-highlight">
+      <p>
+        האפליקציה בנויה עברית-ראשון עם תמיכה מלאה ב-RTL.
+        <span class="inline-code">I18nManager.forceRTL(true)</span> מוגדר בעת אתחול.
+      </p>
+    </div>
+
+    <h3>כללים עיקריים</h3>
+    <ul>
+      <li><strong>אין</strong> להוסיף <span class="inline-code">scaleX: -1</span>, <span class="inline-code">direction: 'ltr'</span>, או מערכים הפוכים ל-<span class="inline-code">FlatList</span> אופקי</li>
+      <li>להשתמש ב-<span class="inline-code">scrollToIndex(0)</span> ב-mount כש-<span class="inline-code">isRTL</span> פעיל</li>
+      <li>אמולטור לא שווה ערך למכשיר פיזי עם הגדרות עברית — לבדוק על מכשיר אמיתי</li>
+      <li>כל ה-layouts חייבים לתמוך ב-RTL — להשתמש ב-<span class="inline-code">start/end</span> במקום <span class="inline-code">left/right</span></li>
+      <li>מפות, גרפים וקוד (code blocks) נשארים LTR</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- APPENDIX: CONTACT & HANDOFF                                  -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section>
+    <h2>נספח ה' — פרטי קשר ומסירה</h2>
+
+    <h3>צוות פיתוח — KAL Solutions Group</h3>
+    <table>
+      <thead>
+        <tr><th>תפקיד</th><th>שם</th><th>אימייל</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CTO / אחראי טכני</strong></td>
+          <td>תמיר קונורטוב</td>
+          <td><span class="inline-code">tamir@kal.solutions</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>רשימת מסירה</h3>
+    <table>
+      <thead>
+        <tr><th>פריט</th><th>מיקום</th><th>הערות</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>קוד מקור</td>
+          <td>GitHub (private repo)</td>
+          <td>גישה תועבר לאחר תשלום M4</td>
+        </tr>
+        <tr>
+          <td>פרויקט Firebase (פיתוח)</td>
+          <td><span class="inline-code">mooviz-app-9b766</span></td>
+          <td>בעלות KAL — יועבר ללקוח</td>
+        </tr>
+        <tr>
+          <td>פרויקט Firebase (ייצור)</td>
+          <td><span class="inline-code">mooviz-prod</span></td>
+          <td>בעלות הלקוח</td>
+        </tr>
+        <tr>
+          <td>APK חתום</td>
+          <td><span class="inline-code">apps/mobile/android/app/build/outputs/apk/release/</span></td>
+          <td>גרסה 1.1.7</td>
+        </tr>
+        <tr>
+          <td>google-services.json</td>
+          <td>Firebase Console → Project Settings</td>
+          <td>gitignored — חובה להוריד ידנית</td>
+        </tr>
+        <tr>
+          <td>GoogleService-Info.plist</td>
+          <td>Firebase Console → Project Settings</td>
+          <td>gitignored — חובה להוריד ידנית</td>
+        </tr>
+        <tr>
+          <td>Keystore (Android signing)</td>
+          <td>מסירה נפרדת</td>
+          <td>נדרש לעדכוני Play Store</td>
+        </tr>
+        <tr>
+          <td>Apple Developer Account</td>
+          <td>הלקוח</td>
+          <td>נדרש ל-App Store + APNs</td>
+        </tr>
+        <tr>
+          <td>תיעוד</td>
+          <td><span class="inline-code">docs/</span></td>
+          <td>ארכיטקטורה, מדריכים, סיכומי QA</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card card-highlight">
+      <h4>לפני הפעלה בייצור — רשימת בדיקות</h4>
+      <ol>
+        <li>שינוי סיסמאות admin (כל 3 החשבונות)</li>
+        <li>הגדרת <span class="inline-code">.env.production</span> עם פרטי mooviz-prod</li>
+        <li>הורדת <span class="inline-code">google-services.json</span> + <span class="inline-code">GoogleService-Info.plist</span> של ייצור</li>
+        <li>הגדרת APNs key ב-Firebase Console (נדרש ל-iOS OTP + push)</li>
+        <li>פריסת Cloud Functions לפרויקט ייצור</li>
+        <li>פריסת Firestore Rules + Storage Rules לייצור</li>
+        <li>בדיקת SMTP (שליחת מייל מממשק הניהול)</li>
+        <li>בדיקת Google Maps API key (billing מופעל)</li>
+        <li>הגשה ל-App Store + Google Play</li>
+        <li>הפעלת Firebase App Check (אופציונלי — מומלץ)</li>
+      </ol>
+    </div>
+  </section>
+
+</div><!-- .container -->
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                        -->
+<!-- ============================================================ -->
+<footer>
+  <div class="container">
+    <p>
+      <span class="footer-brand">MOOVIZ</span> — מסמך מסירה טכני
+      &nbsp;&bull;&nbsp;
+      <span class="footer-brand">KAL Solutions Group</span>
+      &nbsp;&bull;&nbsp;
+      מרץ 2026
+    </p>
+    <p class="mt-8">
+      כל הזכויות שמורות &copy; 2026 ג.מ. מוביז תוכנה בע"מ + KAL Solutions Group
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

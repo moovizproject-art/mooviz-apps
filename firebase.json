@@ -22,11 +22,15 @@
         "destination": "/privacy.html"
       },
       {
-        "source": "/admin/**",
-        "destination": "/admin/index.html"
+        "source": "/support",
+        "destination": "/support.html"
       },
       {
-        "source": "**",
+        "source": "/delete-account",
+        "destination": "/delete-account.html"
+      },
+      {
+        "source": "/admin/**",
         "destination": "/admin/index.html"
       }
     ]
