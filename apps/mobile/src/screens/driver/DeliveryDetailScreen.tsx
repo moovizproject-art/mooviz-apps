@@ -36,6 +36,7 @@ import { strings } from '../../i18n/strings';
 import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import { DriverConfirmBanner } from '../../components/DriverConfirmBanner';
 import { SenderProfileModal } from '../../components/SenderProfileModal';
+import { ReportModal } from '../../components/ReportModal';
 import Geolocation from 'react-native-geolocation-service';
 
 /** Haversine distance in km between two lat/lng points */
@@ -187,6 +188,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [justRated, setJustRated] = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [reportVisible, setReportVisible] = useState(false);
   const [loadingSteps, setLoadingSteps] = useState<string[]>(['sendingRequest', 'almostDone']);
 
   const handleProofCapture = useCallback(async (photoUri: string) => {
@@ -821,9 +823,25 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
       )}
 
+      {/* ── 10. Report sender ── */}
+      <TouchableOpacity
+        style={[styles.reportBtn, { borderColor: colors.textTertiary }]}
+        onPress={() => setReportVisible(true)}
+      >
+        <Text style={[styles.reportBtnText, { color: colors.textSecondary }]}>🚩 {t('report.reportSender')}</Text>
+      </TouchableOpacity>
+
     </ScrollView>
 
     {/* Modals */}
+    <ReportModal
+      visible={reportVisible}
+      onClose={() => setReportVisible(false)}
+      reportedUserId={delivery.senderId}
+      reportedUserName={(delivery as any).senderName || ''}
+      deliveryId={delivery.id}
+      reportedRole="sender"
+    />
     <ProofCamera
       visible={proofModalVisible}
       onCapture={handleProofCapture}
@@ -1184,5 +1202,18 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 4,
     writingDirection: 'rtl',
+  },
+  reportBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  reportBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -94,6 +94,17 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           if (doc.exists) {
             const data = doc.data();
 
+            // Check single-device session — if another device logged in, force logout here
+            const localSession = await AsyncStorage.getItem('@session_token');
+            if (localSession && data?.sessionToken && data.sessionToken !== localSession) {
+              console.log('[useAuth] Session invalidated — another device logged in');
+              await auth().signOut();
+              setCurrentUser(null);
+              setFirebaseUser(null);
+              setIsLoading(false);
+              return;
+            }
+
             // Check session expiry — 30 days if "remember me", 1 day otherwise
             const lastLogin = safeToDate(data?.lastLoginAt);
             if (lastLogin) {

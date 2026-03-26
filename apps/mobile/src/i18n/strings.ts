@@ -709,6 +709,33 @@ export const strings = {
     cityPlaceholder: { he: 'בחר עיר...', en: 'Select city...' } as LocaleStrings,
   },
 
+  // ── Reports ──
+  report: {
+    title: { he: 'דיווח על משתמש', en: 'Report user' } as LocaleStrings,
+    reporting: { he: 'מדווח על:', en: 'Reporting:' } as LocaleStrings,
+    issueType: { he: 'סוג הבעיה', en: 'Issue type' } as LocaleStrings,
+    details: { he: 'פרטים נוספים (אופציונלי)', en: 'Additional details (optional)' } as LocaleStrings,
+    detailsPlaceholder: { he: 'תאר את הבעיה...', en: 'Describe the issue...' } as LocaleStrings,
+    submit: { he: 'שלח דיווח', en: 'Submit report' } as LocaleStrings,
+    submitted: { he: 'דיווח נשלח', en: 'Report submitted' } as LocaleStrings,
+    submittedMessage: { he: 'תודה, הדיווח שלך נשלח לצוות שלנו לבדיקה.', en: 'Thank you, your report has been sent to our team for review.' } as LocaleStrings,
+    submitError: { he: 'שגיאה בשליחת הדיווח', en: 'Error submitting report' } as LocaleStrings,
+    selectCategory: { he: 'בחר סוג בעיה', en: 'Select an issue type' } as LocaleStrings,
+    reportDriver: { he: 'דווח על נהג', en: 'Report driver' } as LocaleStrings,
+    reportSender: { he: 'דווח על שולח', en: 'Report sender' } as LocaleStrings,
+    cat_harassment: { he: 'הטרדה או התנהגות לא הולמת', en: 'Harassment or inappropriate behavior' } as LocaleStrings,
+    cat_harassment_desc: { he: 'שפה פוגענית, איומים, או התנהגות מטרידה', en: 'Offensive language, threats, or harassing behavior' } as LocaleStrings,
+    cat_fraud: { he: 'הונאה או רמאות', en: 'Fraud or scam' } as LocaleStrings,
+    cat_fraud_desc: { he: 'תשלום לא התקבל, מחיר שונה ממה שסוכם, או גניבה', en: 'Payment not received, price changed, or theft' } as LocaleStrings,
+    cat_damage: { he: 'נזק לפריט', en: 'Item damage' } as LocaleStrings,
+    cat_damage_desc: { he: 'הפריט הגיע שבור, פגום, או לא שלם', en: 'Item arrived broken, damaged, or incomplete' } as LocaleStrings,
+    cat_no_show: { he: 'לא הגיע / לא זמין', en: 'No show / unavailable' } as LocaleStrings,
+    cat_no_show_desc: { he: 'הצד השני לא הגיע לנקודת האיסוף או לא ענה', en: 'Other party did not show up or was unreachable' } as LocaleStrings,
+    cat_other: { he: 'בעיה אחרת', en: 'Other issue' } as LocaleStrings,
+    cat_other_desc: { he: 'בעיה שלא מתאימה לקטגוריות למעלה', en: 'An issue that doesn\'t fit the categories above' } as LocaleStrings,
+    sessionExpired: { he: 'חשבונך התחבר ממכשיר אחר. אנא התחבר שוב.', en: 'Your account logged in from another device. Please log in again.' } as LocaleStrings,
+  },
+
   // ── Error Boundary ──
   errorBoundary: {
     title: { he: 'אופס! משהו השתבש', en: 'Oops! Something went wrong' } as LocaleStrings,

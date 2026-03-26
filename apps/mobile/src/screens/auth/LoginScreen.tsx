@@ -118,10 +118,14 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
       // Set flag BEFORE signIn so RootNavigator knows OTP is required
       setForceOtp(true);
       const cred = await signInWithEmail(email, password);
-      // Stamp login time + clear OTP timestamp
+      // Generate unique session token — other devices will be forced out
+      const sessionToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      await AsyncStorage.setItem('@session_token', sessionToken);
+      // Stamp login time + session token + clear OTP timestamp
       await firestore().collection('users').doc(cred.user.uid).update({
         lastLoginAt: firestore.FieldValue.serverTimestamp(),
         lastOtpAt: firestore.FieldValue.delete(),
+        sessionToken,
       }).catch(() => {});
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };

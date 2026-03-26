@@ -37,6 +37,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 import { InterestedDriversList } from '../../components/InterestedDriversList';
+import { ReportModal } from '../../components/ReportModal';
 import { DriverProfileModal } from '../../components/DriverProfileModal';
 import { strings } from '../../i18n/strings';
 
@@ -118,6 +119,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [cancelAlertVisible, setCancelAlertVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   const carAlert = useCarAlert();
   const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
   const [proofGalleryIndex, setProofGalleryIndex] = useState(0);
@@ -990,7 +992,26 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             )}
           </View>
         )}
+
+        {/* Report driver button — visible when driver is assigned */}
+        {delivery.driverId && (
+          <TouchableOpacity
+            style={[styles.reportBtn, { borderColor: colors.textTertiary }]}
+            onPress={() => setReportVisible(true)}
+          >
+            <Text style={[styles.reportBtnText, { color: colors.textSecondary }]}>🚩 {t('report.reportDriver')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      <ReportModal
+        visible={reportVisible}
+        onClose={() => setReportVisible(false)}
+        reportedUserId={delivery.driverId || ''}
+        reportedUserName={(delivery as any).driverName || ''}
+        deliveryId={delivery.id}
+        reportedRole="driver"
+      />
 
       {profileDriverUid && (() => {
         const driver = (delivery as any).interestedDrivers?.find((d: any) => d.uid === profileDriverUid);
@@ -1425,6 +1446,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#E53935',
+  },
+  reportBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  reportBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   cancelDisabledNote: {
     paddingVertical: 10,
