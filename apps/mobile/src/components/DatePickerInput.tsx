@@ -97,6 +97,13 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
         </View>
       </View>
 
+      {/* Hint: explain toggle */}
+      <Text style={[styles.scheduleHint, { color: colors.textTertiary }]}>
+        {isAsap
+          ? t('form.asapHint')
+          : t('form.scheduledHint')}
+      </Text>
+
       {!isAsap && (
         <>
           {/* Date picker button */}
@@ -185,6 +192,7 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
 
 const styles = StyleSheet.create({
   container: { marginBottom: 16 },
+  scheduleHint: { fontSize: 12, marginBottom: 8 },
   asapRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   asapToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   label: { fontSize: 14, fontWeight: '600' },

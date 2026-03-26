@@ -39,6 +39,8 @@
 	<!-- Location — מיקום -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>MOOVIZ צריך גישה למיקום שלך כדי למצוא משלוחים קרובים אליך</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>MOOVIZ צריך מעקב מיקום ברקע למעקב משלוחים בזמן אמת</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>MOOVIZ צריך מעקב מיקום ברקע למעקב משלוחים בזמן אמת</string>
 
@@ -57,6 +59,20 @@
 				<string>mooviz</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.797576157589-5qt70klmhetemhhj5cedufemom7dlaa0</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Background modes — מצבי רקע -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
 	</array>
 
 	<key>UILaunchStoryboardName</key>

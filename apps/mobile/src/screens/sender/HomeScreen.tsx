@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClientTabScreenProps } from '../../navigation/types';
+import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelivery } from '../../hooks/useDelivery';
 import { formatCurrency } from '../../utils/formatters';
@@ -78,6 +79,30 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
   const { expenses } = useSenderExpenses(currentUser?.uid);
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [expensesTab, setExpensesTab] = useState<string>('thisWeek');
+
+  // Track unread chats for home screen banner
+  const [unreadChats, setUnreadChats] = useState(0);
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = firestore()
+      .collection('chats')
+      .where('participants', 'array-contains', currentUser.uid)
+      .onSnapshot(
+        (snap) => {
+          let count = 0;
+          snap.docs.forEach((doc) => {
+            const d = doc.data();
+            if (!d.lastMessage || d.lastSenderId === currentUser.uid || d.lastSenderId === 'system' || d.closed) return;
+            const lastRead = d.lastReadBy?.[currentUser.uid!]?.toDate?.()?.getTime() ?? 0;
+            const lastMsg = d.lastMessageAt?.toDate?.()?.getTime() ?? 0;
+            if (lastMsg > lastRead) count++;
+          });
+          setUnreadChats(count);
+        },
+        () => setUnreadChats(0),
+      );
+    return unsub;
+  }, [currentUser?.uid]);
 
   const recentDeliveries = deliveries.slice(0, 5);
   const fullName = currentUser?.fullName || '';
@@ -150,6 +175,23 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
           {t('common.tagline')}
         </Text>
       </View>
+
+      {/* Unread chat banner */}
+      {unreadChats > 0 && (
+        <TouchableOpacity
+          style={[styles.unreadBanner, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}
+          onPress={() => navigation.navigate('SenderTabs', { screen: 'Chat' })}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.unreadDot, { backgroundColor: colors.error }]}>
+            <Text style={styles.unreadDotText}>{unreadChats}</Text>
+          </View>
+          <Text style={[styles.unreadText, { color: colors.primary }]}>
+            {t('home.unreadChats', { count: String(unreadChats) })}
+          </Text>
+          <Text style={[styles.unreadArrow, { color: colors.primary }]}>{'<'}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -380,6 +422,38 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     textAlign: 'center',
     marginBottom: 0,
+  },
+  unreadBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+  },
+  unreadDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadDotText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  unreadText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    marginStart: SPACING.sm,
+  },
+  unreadArrow: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   // ── 3D Card ──
   sectionCard: {

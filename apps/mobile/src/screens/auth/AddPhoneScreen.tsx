@@ -42,25 +42,7 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Pre-fill phone from Firebase Auth or Firestore (but do NOT auto-send OTP)
-  useEffect(() => {
-    const fbUser = auth().currentUser;
-    if (!fbUser) return;
-
-    // If phone already linked in Firebase Auth (2FA re-verification)
-    if (fbUser.phoneNumber) {
-      setPhone(fbUser.phoneNumber);
-      return;
-    }
-
-    // Otherwise check Firestore for saved phone (first-time linking)
-    firestore().collection('users').doc(fbUser.uid).get().then((doc) => {
-      const savedPhone = doc.data()?.phone;
-      if (savedPhone && validatePhone(savedPhone)) {
-        setPhone(savedPhone);
-      }
-    }).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // No pre-fill — let user type their number fresh to avoid confusion
 
   // Pulse animation while loading
   useEffect(() => {
@@ -135,14 +117,13 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
         <View style={styles.formSection}>
           <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.phone')}</Text>
           <TextInput
-            style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary }]}
+            style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.textPrimary, writingDirection: 'ltr', textAlign: 'left' }]}
             value={phone}
             onChangeText={setPhone}
             placeholder="050-1234567"
             placeholderTextColor={colors.textTertiary}
             keyboardType="phone-pad"
             autoComplete="tel"
-            textAlign="right"
             editable={!isLoading}
           />
           <Text style={[styles.hint, { color: colors.textTertiary }]}>{t('auth.phoneHint')}</Text>

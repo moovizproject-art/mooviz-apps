@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ActionSheetIOS,
   Linking,
 } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 
@@ -79,6 +80,24 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   });
   const [showPickupMap, setShowPickupMap] = useState(false);
   const [showDestinationMap, setShowDestinationMap] = useState(false);
+  const [mapInitialLocation, setMapInitialLocation] = useState<{ latitude: number; longitude: number } | undefined>(undefined);
+
+  const openMapAtMyLocation = useCallback((target: 'pickup' | 'destination') => {
+    Geolocation.getCurrentPosition(
+      (pos) => {
+        setMapInitialLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        if (target === 'pickup') setShowPickupMap(true);
+        else setShowDestinationMap(true);
+      },
+      () => {
+        // Fallback: open map without initial location
+        setMapInitialLocation(undefined);
+        if (target === 'pickup') setShowPickupMap(true);
+        else setShowDestinationMap(true);
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+    );
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -189,19 +208,19 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
 
   const handleSubmit = async (): Promise<void> => {
     if (!form.pickup) {
-      carAlert.show('error', t('common.error'), t('delivery.errorPickup'));
+      carAlert.show('error', t('form.validationError'), t('delivery.errorPickup'));
       return;
     }
     if (!form.destination) {
-      carAlert.show('error', t('common.error'), t('delivery.errorDestination'));
+      carAlert.show('error', t('form.validationError'), t('delivery.errorDestination'));
       return;
     }
     if (!form.itemDescription.trim()) {
-      carAlert.show('error', t('common.error'), t('delivery.errorDescription'));
+      carAlert.show('error', t('form.validationError'), t('delivery.errorDescription'));
       return;
     }
     if (!form.suggestedPrice || parseFloat(form.suggestedPrice) <= 0) {
-      carAlert.show('error', t('common.error'), t('delivery.errorPrice'));
+      carAlert.show('error', t('form.validationError'), t('delivery.errorPrice'));
       return;
     }
 
@@ -231,7 +250,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       setLoadingStep(2);
       await new Promise(r => setTimeout(r, 800));
       setLoadingVisible(false);
-      carAlert.show('success', t('common.success'), t('delivery.createdSuccess'), [
+      carAlert.show('success', t('form.deliveryCreated'), t('delivery.createdSuccess'), [
         { text: t('common.confirm'), onPress: () => {
           // Go back to home feed after creating a delivery
           navigation.goBack();
@@ -240,7 +259,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     } catch (e: any) {
       setLoadingVisible(false);
       const msg = e?.message || e?.userInfo?.message || t('delivery.createError');
-      carAlert.show('error', t('common.error'), msg);
+      carAlert.show('error', t('form.deliveryError'), msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -284,16 +303,20 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           label={t('form.pickupAddress')}
           required
           placeholder={t('form.pickupPlaceholder')}
-          onPress={() => setShowPickupMap(true)}
+          onPress={() => { setMapInitialLocation(undefined); setShowPickupMap(true); }}
           displayValue={form.pickup?.address}
+          rightIcon="📍"
+          onRightIconPress={() => openMapAtMyLocation('pickup')}
         />
         {showPickupMap && (
           <MapPicker
+            initialLocation={mapInitialLocation}
             onLocationSelect={(point) => {
               updateField('pickup', point);
               setShowPickupMap(false);
+              setMapInitialLocation(undefined);
             }}
-            onCancel={() => setShowPickupMap(false)}
+            onCancel={() => { setShowPickupMap(false); setMapInitialLocation(undefined); }}
           />
         )}
 
@@ -302,16 +325,20 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
           label={t('form.destination')}
           required
           placeholder={t('form.destinationPlaceholder')}
-          onPress={() => setShowDestinationMap(true)}
+          onPress={() => { setMapInitialLocation(undefined); setShowDestinationMap(true); }}
           displayValue={form.destination?.address}
+          rightIcon="📍"
+          onRightIconPress={() => openMapAtMyLocation('destination')}
         />
         {showDestinationMap && (
           <MapPicker
+            initialLocation={mapInitialLocation}
             onLocationSelect={(point) => {
               updateField('destination', point);
               setShowDestinationMap(false);
+              setMapInitialLocation(undefined);
             }}
-            onCancel={() => setShowDestinationMap(false)}
+            onCancel={() => { setShowDestinationMap(false); setMapInitialLocation(undefined); }}
           />
         )}
 

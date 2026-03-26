@@ -36,7 +36,9 @@ service cloud.firestore {
                   'fcmToken', 'fcmTokens', 'location', 'updatedAt',
                   'driverSettings', 'notificationSettings',
                   'lastOtpAt', 'lastLoginAt', 'lastTokenUpdate', 'autoCreated',
-                  'acceptedTermsAt']);
+                  'acceptedTermsAt',
+                  'kycDocumentURL', 'kycIdURL', 'platform',
+                  'driverAvailable', 'driverPrefs']);
     }
 
     // Allowed fields for delivery sender updates

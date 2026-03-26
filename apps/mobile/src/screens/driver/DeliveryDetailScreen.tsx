@@ -297,7 +297,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       carAlert.show('success', t('common.success'), t('driver.interestSent'));
     } catch (err) {
       setLoadingVisible(false);
-      carAlert.show('error', t('common.error'), t('driver.interestError'));
+      const msg = (err as Error).message || t('driver.interestError');
+      carAlert.show('error', t('common.error'), msg);
     }
   };
 

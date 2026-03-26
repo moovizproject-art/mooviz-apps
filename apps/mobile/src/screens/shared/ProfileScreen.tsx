@@ -7,8 +7,10 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Image,
 } from 'react-native';
 import { RatingsHistoryModal } from '../../components/RatingsHistoryModal';
+import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
 import firestore from '@react-native-firebase/firestore';
@@ -47,6 +49,20 @@ export function ProfileScreen(): React.JSX.Element {
   const [ownPhotoUri, setOwnPhotoUri] = useState<string | null>(null);
   const [ratingsModalVisible, setRatingsModalVisible] = useState(false);
   const [ratingsModalMode, setRatingsModalMode] = useState<'sender' | 'driver'>('sender');
+  const [kycGalleryVisible, setKycGalleryVisible] = useState(false);
+  const [kycGalleryIndex, setKycGalleryIndex] = useState(0);
+  const [kycLicenseUrl, setKycLicenseUrl] = useState<string | null>(null);
+  const [kycIdUrl, setKycIdUrl] = useState<string | null>(null);
+
+  // Load KYC document URLs from Storage (read-only viewing)
+  React.useEffect(() => {
+    if (!currentUser?.uid) return;
+    const uid = currentUser.uid;
+    storage().ref(`kyc/${uid}/license.jpg`).getDownloadURL()
+      .then(setKycLicenseUrl).catch(() => {});
+    storage().ref(`kyc/${uid}/id.jpg`).getDownloadURL()
+      .then(setKycIdUrl).catch(() => {});
+  }, [currentUser?.uid]);
 
   // Load own profile photo — once on mount, not on every currentUser change
   const photoLoaded = React.useRef(false);
@@ -344,6 +360,50 @@ export function ProfileScreen(): React.JSX.Element {
           )}
         </View>
 
+        {/* KYC Documents (read-only) */}
+        {(kycLicenseUrl || kycIdUrl) && (
+          <View style={[styles.kycSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {t('kyc.title')}
+              </Text>
+              <View style={[styles.kycStatusBadge, {
+                backgroundColor: currentUser?.kycStatus === 'approved' ? colors.success + '20' : colors.warning + '20',
+              }]}>
+                <Text style={[styles.kycStatusText, {
+                  color: currentUser?.kycStatus === 'approved' ? colors.success : colors.warning,
+                }]}>
+                  {currentUser?.kycStatus === 'approved' ? t('kyc.approved') : t('kyc.pending')}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.kycDocsRow}>
+              {kycLicenseUrl && (
+                <TouchableOpacity
+                  style={[styles.kycThumb, { borderColor: colors.border }]}
+                  onPress={() => { setKycGalleryIndex(0); setKycGalleryVisible(true); }}
+                >
+                  <Image source={{ uri: kycLicenseUrl }} style={styles.kycThumbImage} resizeMode="cover" />
+                  <Text style={[styles.kycThumbLabel, { color: colors.textSecondary }]}>
+                    {t('kyc.license')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {kycIdUrl && (
+                <TouchableOpacity
+                  style={[styles.kycThumb, { borderColor: colors.border }]}
+                  onPress={() => { setKycGalleryIndex(kycLicenseUrl ? 1 : 0); setKycGalleryVisible(true); }}
+                >
+                  <Image source={{ uri: kycIdUrl }} style={styles.kycThumbImage} resizeMode="cover" />
+                  <Text style={[styles.kycThumbLabel, { color: colors.textSecondary }]}>
+                    {t('kyc.idCard')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Change password */}
         <TouchableOpacity
           style={[styles.changePasswordButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -381,6 +441,12 @@ export function ProfileScreen(): React.JSX.Element {
           mode={ratingsModalMode}
         />
       )}
+      <ImageGalleryModal
+        visible={kycGalleryVisible}
+        images={[kycLicenseUrl, kycIdUrl].filter(Boolean) as string[]}
+        initialIndex={kycGalleryIndex}
+        onClose={() => setKycGalleryVisible(false)}
+      />
     </View>
   );
 }
@@ -562,5 +628,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     marginBottom: 16,
+  },
+  kycSection: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    marginHorizontal: 24,
+    marginBottom: 24,
+  },
+  kycStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  kycStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  kycDocsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  kycThumb: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  kycThumbImage: {
+    width: '100%',
+    height: 100,
+  },
+  kycThumbLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingVertical: 6,
   },
 });

@@ -17,6 +17,8 @@ interface ThemedInputProps extends Omit<TextInputProps, 'style'> {
   onPress?: () => void;
   displayValue?: string;
   icon?: string;
+  rightIcon?: string;
+  onRightIconPress?: () => void;
 }
 
 export function ThemedInput({
@@ -25,6 +27,8 @@ export function ThemedInput({
   onPress,
   displayValue,
   icon,
+  rightIcon,
+  onRightIconPress,
   ...inputProps
 }: ThemedInputProps): React.JSX.Element {
   const { colors } = useTheme();
@@ -62,9 +66,15 @@ export function ThemedInput({
                 color: displayValue ? colors.textPrimary : colors.inputPlaceholder,
               },
             ]}
+            numberOfLines={1}
           >
             {displayValue || inputProps.placeholder || ''}
           </Text>
+          {displayValue && (
+            <Text style={[styles.changeHint, { color: colors.primary }]}>
+              {t('common.change')}
+            </Text>
+          )}
         </TouchableOpacity>
       );
     }
@@ -92,7 +102,14 @@ export function ThemedInput({
   return (
     <View style={styles.fieldGroup}>
       <View style={styles.labelRow}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+        <View style={styles.labelLeft}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+          {rightIcon && onRightIconPress && (
+            <TouchableOpacity onPress={onRightIconPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={[styles.rightIcon, { color: colors.primary }]}>{rightIcon}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {required && (
           <Text style={[styles.required, { color: colors.textSecondary }]}>
             {t('form.required')}
@@ -113,6 +130,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
+  },
+  labelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  rightIcon: {
+    fontSize: 20,
   },
   label: {
     ...TYPOGRAPHY.bodyBold,
@@ -146,5 +171,10 @@ const styles = StyleSheet.create({
   inputText: {
     flex: 1,
     ...TYPOGRAPHY.body,
+  },
+  changeHint: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginStart: SPACING.sm,
   },
 });

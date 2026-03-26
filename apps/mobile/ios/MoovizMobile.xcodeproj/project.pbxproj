@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BB000001000000000000SND1 /* driver_interested.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000SND1 /* driver_interested.mp3 */; };
+		BB000002000000000000SND2 /* error.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000002000000000000SND2 /* error.mp3 */; };
+		BB000003000000000000SND3 /* new_delivery.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000003000000000000SND3 /* new_delivery.mp3 */; };
+		BB000004000000000000SND4 /* payment.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000004000000000000SND4 /* payment.mp3 */; };
+		BB000005000000000000SND5 /* question.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000005000000000000SND5 /* question.mp3 */; };
+		BB000006000000000000SND6 /* success.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000006000000000000SND6 /* success.mp3 */; };
 		00E356F31AD99517003FC87E /* MoovizMobileTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* MoovizMobileTests.m */; };
 		03858D5FFBD4C6C0D840F305 /* libPods-MoovizMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 17641B562CA4F7DD1968DB8F /* libPods-MoovizMobile.a */; };
 		09D47917A5F53C23601BFA4C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3751F83600424B445B542A25 /* GoogleService-Info.plist */; };
@@ -41,7 +47,7 @@
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = MoovizMobile/main.m; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = MoovizMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		17641B562CA4F7DD1968DB8F /* libPods-MoovizMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MoovizMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		2D2F94F7E3121C40BACC2A45 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = MoovizMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2D2F94F7E3121C40BACC2A45 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = MoovizMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3751F83600424B445B542A25 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "MoovizMobile/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-MoovizMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MoovizMobile.debug.xcconfig"; path = "Target Support Files/Pods-MoovizMobile/Pods-MoovizMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-MoovizMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MoovizMobile.release.xcconfig"; path = "Target Support Files/Pods-MoovizMobile/Pods-MoovizMobile.release.xcconfig"; sourceTree = "<group>"; };
@@ -49,6 +55,12 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MoovizMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		89C6BE57DB24E9ADA2F236DE /* Pods-MoovizMobile-MoovizMobileTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MoovizMobile-MoovizMobileTests.release.xcconfig"; path = "Target Support Files/Pods-MoovizMobile-MoovizMobileTests/Pods-MoovizMobile-MoovizMobileTests.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		AA000001000000000000SND1 /* driver_interested.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = driver_interested.mp3; path = MoovizMobile/driver_interested.mp3; sourceTree = "<group>"; };
+		AA000002000000000000SND2 /* error.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = error.mp3; path = MoovizMobile/error.mp3; sourceTree = "<group>"; };
+		AA000003000000000000SND3 /* new_delivery.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = new_delivery.mp3; path = MoovizMobile/new_delivery.mp3; sourceTree = "<group>"; };
+		AA000004000000000000SND4 /* payment.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = payment.mp3; path = MoovizMobile/payment.mp3; sourceTree = "<group>"; };
+		AA000005000000000000SND5 /* question.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = question.mp3; path = MoovizMobile/question.mp3; sourceTree = "<group>"; };
+		AA000006000000000000SND6 /* success.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = success.mp3; path = MoovizMobile/success.mp3; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,6 +204,7 @@
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
 				83406E64A761524FC6C03ACB /* [CP-User] [RNFB] Core Configuration */,
+				DCD30DCC5C3B0DAD178B2250 /* [CP-User] [RNFB] Crashlytics Configuration */,
 			);
 			buildRules = (
 			);
@@ -254,6 +267,12 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				FF088B9570AFB4FEA8EC050C /* PrivacyInfo.xcprivacy in Resources */,
 				09D47917A5F53C23601BFA4C /* GoogleService-Info.plist in Resources */,
+				BB000001000000000000SND1 /* driver_interested.mp3 in Resources */,
+				BB000002000000000000SND2 /* error.mp3 in Resources */,
+				BB000003000000000000SND3 /* new_delivery.mp3 in Resources */,
+				BB000004000000000000SND4 /* payment.mp3 in Resources */,
+				BB000005000000000000SND5 /* question.mp3 in Resources */,
+				BB000006000000000000SND6 /* success.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,6 +385,20 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MoovizMobile-MoovizMobileTests/Pods-MoovizMobile-MoovizMobileTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		DCD30DCC5C3B0DAD178B2250 /* [CP-User] [RNFB] Crashlytics Configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+				"$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "[CP-User] [RNFB] Crashlytics Configuration";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/usr/bin/env bash\n#\n# Copyright (c) 2016-present Invertase Limited & Contributors\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this library except in compliance with the License.\n# You may obtain a copy of the License at\n#\n#   http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n#\nset -e\n\nif [[ ${PODS_ROOT} ]]; then\n  echo \"info: Exec FirebaseCrashlytics Run from Pods\"\n  \"${PODS_ROOT}/FirebaseCrashlytics/run\"\nelse\n  echo \"info: Exec FirebaseCrashlytics Run from framework\"\n  \"${PROJECT_DIR}/FirebaseCrashlytics.framework/run\"\nfi\n";
 		};
 		E235C05ADACE081382539298 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -488,15 +521,22 @@
 			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-MoovizMobile.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_ENTITLEMENTS = MoovizMobile/MoovizMobile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 118;
+				DEVELOPMENT_TEAM = 3USMNP695K;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = MoovizMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.8;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -504,6 +544,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.mooviz.app;
 				PRODUCT_NAME = MoovizMobile;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -515,14 +556,21 @@
 			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-MoovizMobile.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_ENTITLEMENTS = MoovizMobile/MoovizMobile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 118;
+				DEVELOPMENT_TEAM = 3USMNP695K;
 				INFOPLIST_FILE = MoovizMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.8;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -530,6 +578,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.mooviz.app;
 				PRODUCT_NAME = MoovizMobile;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -619,10 +668,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -706,10 +752,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;

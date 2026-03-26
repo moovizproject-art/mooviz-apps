@@ -325,7 +325,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
           deliveryId: input.deliveryId,
           targetUserId: input.targetUserId,
           rating: input.rating,
-          comment: input.comment || null,
+          comment: input.comment || '',
         });
       } catch (err) {
         console.error('[useDelivery] submitRating failed:', err);

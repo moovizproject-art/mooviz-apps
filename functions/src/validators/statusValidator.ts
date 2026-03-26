@@ -103,9 +103,10 @@ export async function assertUserRole(
     requiredRole === "driver" && userData.driverUnlocked === true && activeMode === "driver";
 
   if (effectiveRole !== requiredRole && !isDualModeDriver) {
+    const roleNames: Record<string, string> = { driver: "נהג", sender: "שולח" };
     throw new HttpsError(
       "permission-denied",
-      `This action requires the '${requiredRole}' role`
+      `פעולה זו דורשת תפקיד ${roleNames[requiredRole] || requiredRole}`
     );
   }
 
@@ -128,7 +129,7 @@ export async function assertUserActive(
   if (userData?.status !== "active") {
     throw new HttpsError(
       "permission-denied",
-      "Your account is not active"
+      "החשבון שלך אינו פעיל"
     );
   }
 }
@@ -150,14 +151,15 @@ export async function assertDriverApproved(
   if (userData?.status !== "active") {
     throw new HttpsError(
       "permission-denied",
-      "Your account is not active"
+      "החשבון שלך אינו פעיל"
     );
   }
 
-  if (userData?.kycStatus !== "approved") {
+  // Glide-migrated drivers have driverUnlocked but no KYC — grandfather them
+  if (userData?.kycStatus !== "approved" && !userData?.driverUnlocked) {
     throw new HttpsError(
       "permission-denied",
-      "Your KYC verification must be approved to perform this action"
+      "יש לאשר את אימות הזהות (KYC) לפני ביצוע פעולה זו"
     );
   }
 }

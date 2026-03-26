@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { setAnalyticsUser, clearAnalyticsUser } from '../services/analytics';
@@ -244,6 +245,26 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const logout = useCallback(async (): Promise<void> => {
     try {
       await clearAnalyticsUser().catch(() => {});
+
+      // Remove FCM token from Firestore BEFORE signing out (prevents cross-user token reuse)
+      const uid = auth().currentUser?.uid;
+      if (uid) {
+        try {
+          const token = await messaging().getToken();
+          if (token) {
+            await firestore().collection('users').doc(uid).update({
+              fcmTokens: firestore.FieldValue.arrayRemove(token),
+            });
+            console.log('[useAuth] FCM token removed from Firestore');
+          }
+          // Delete the token from the device so next user gets a fresh one
+          await messaging().deleteToken();
+          console.log('[useAuth] FCM token deleted from device');
+        } catch (tokenErr) {
+          console.warn('[useAuth] FCM token cleanup failed (non-critical):', tokenErr);
+        }
+      }
+
       await auth().signOut();
       // Terminate Firestore then clear cache to prevent stale data on next login
       try {

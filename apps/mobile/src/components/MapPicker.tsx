@@ -54,7 +54,7 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
   const { colors } = useTheme();
   const { t } = useI18n();
 
-  const [mode, setMode] = useState<PickerMode>('search');
+  const [mode, setMode] = useState<PickerMode>(initialLocation ? 'map' : 'search');
   const [query, setQuery] = useState('');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);

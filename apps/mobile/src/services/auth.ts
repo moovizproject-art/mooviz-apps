@@ -8,10 +8,8 @@ import firestore from '@react-native-firebase/firestore';
 // messaging import removed — not currently used
 
 /** Detect iOS Simulator — verifyPhoneNumber crashes without APNs */
-const isIOSSimulator = Platform.OS === 'ios' && (
-  NativeModules.PlatformConstants?.interfaceIdiom === 'simulator' ||
-  __DEV__ && !NativeModules.RNFBMessagingModule?.isDeviceRegisteredForRemoteMessages
-);
+const isIOSSimulator = Platform.OS === 'ios' &&
+  NativeModules.PlatformConstants?.interfaceIdiom === 'simulator';
 
 /** Detect Android Emulator — SMS OTP can't be received */
 const isAndroidEmulator = Platform.OS === 'android' && __DEV__ && (
@@ -20,6 +18,47 @@ const isAndroidEmulator = Platform.OS === 'android' && __DEV__ && (
   NativeModules.PlatformConstants?.Model?.includes('sdk') ||
   NativeModules.PlatformConstants?.Model?.includes('Emulator')
 );
+
+/**
+ * Ensure APNs is ready on iOS before calling verifyPhoneNumber.
+ * Firebase phone auth requires an APNs token — without it,
+ * PhoneAuthProvider.verifyPhoneNumber crashes with EXC_BREAKPOINT.
+ *
+ * This function:
+ * 1. Requests notification permission if not yet granted
+ * 2. Registers for remote messages if needed
+ * 3. Waits for the APNs token (with timeout)
+ */
+async function ensureAPNsReady(): Promise<boolean> {
+  if (Platform.OS !== 'ios') return true;
+  try {
+    const messaging = require('@react-native-firebase/messaging').default;
+
+    // Request permission first (no-op if already granted)
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+      authStatus === 1 /* AUTHORIZED */ ||
+      authStatus === 2 /* PROVISIONAL */;
+    if (!enabled) return false;
+
+    // Register for remote messages
+    if (!messaging().isDeviceRegisteredForRemoteMessages) {
+      await messaging().registerDeviceForRemoteMessages();
+    }
+
+    // Wait for APNs token with retry (it can take a moment after registration)
+    for (let i = 0; i < 5; i++) {
+      const apnsToken = await messaging().getAPNSToken();
+      if (apnsToken) return true;
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    return false;
+  } catch (err) {
+    console.error('[ensureAPNsReady] Failed:', err);
+    return false;
+  }
+}
 
 // ──────────────────────────────────────────────
 // Error sanitizer — prevent Hermes crash on native errors
@@ -133,6 +172,19 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   if (isIOSSimulator || isAndroidEmulator) {
     console.warn(`[sendPhoneOTP] Emulator detected (${Platform.OS}) — returning test verificationId.`);
     return 'simulator-test-verification-id';
+  }
+
+  // iOS: verifyPhoneNumber crashes with EXC_BREAKPOINT if APNs token is missing.
+  // Ensure permissions + APNs registration before calling to avoid native crash.
+  if (Platform.OS === 'ios') {
+    const apnsReady = await ensureAPNsReady();
+    if (!apnsReady) {
+      console.error('[sendPhoneOTP] APNs token not available — cannot verify phone on iOS');
+      throw Object.assign(
+        new Error('Push notifications not configured. Please enable notifications for MOOVIZ in Settings and try again.'),
+        { code: 'auth/apns-not-available' },
+      );
+    }
   }
 
   // On Android, verifyPhoneNumber waits for auto-verification before resolving.
@@ -301,6 +353,7 @@ export function mapFirebaseAuthError(code: string): string {
     'auth/captcha-check-failed': 'בדיקת reCAPTCHA נכשלה.',
     'auth/sms-region-not-enabled': 'שליחת SMS לא מופעלת לאזור זה. יש להפעיל ב-Firebase Console.',
     'auth/timeout': 'אימות הטלפון נכשל. אנא נסה שוב.',
+    'auth/apns-not-available': 'התראות לא מוגדרות. אנא אפשר התראות עבור MOOVIZ בהגדרות ונסה שוב.',
   };
   // Handle SMS region error (code 17006)
   if (code.includes('17006') || code.includes('region')) {
