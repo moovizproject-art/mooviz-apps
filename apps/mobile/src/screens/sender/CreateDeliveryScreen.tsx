@@ -11,6 +11,7 @@ import {
   PermissionsAndroid,
   ActionSheetIOS,
   Linking,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -327,7 +328,11 @@ export function CreateDeliveryScreen({ navigation, route }: Props): React.JSX.El
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       <ScreenHeader
         title={isEditMode ? strings.edit.editDelivery.he : t('form.newDeliveries')}
         onBack={() => navigation.goBack()}
@@ -337,6 +342,7 @@ export function CreateDeliveryScreen({ navigation, route }: Props): React.JSX.El
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         {/* Title */}
         <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
@@ -659,7 +665,7 @@ export function CreateDeliveryScreen({ navigation, route }: Props): React.JSX.El
         }}
         onCancel={() => setLoadingVisible(false)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -53,7 +53,9 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const carAlert = useCarAlert();
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const hiddenInputRef = useRef<TextInput | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
+  const [useHiddenInput, setUseHiddenInput] = useState<boolean>(true);
 
   // Scale animation for each digit box
   const scaleAnims = useRef(
@@ -121,29 +123,33 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     return () => clearInterval(timer);
   }, [resendTimer]);
 
+  // Hidden input captures paste + iOS autofill, then distributes to visual boxes
+  const handleHiddenInput = (text: string): void => {
+    const digits = text.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH);
+    if (!digits) return;
+    const newCode = new Array(OTP_LENGTH).fill('');
+    digits.split('').forEach((d, i) => {
+      newCode[i] = d;
+      animateSettle(i);
+    });
+    setCode(newCode);
+    setError(null);
+    if (newCode.every((d) => d.length === 1)) {
+      handleVerify(newCode.join(''));
+    }
+  };
+
   const handleDigitChange = (text: string, index: number): void => {
     const digits = text.replace(/[^0-9]/g, '');
 
     // Handle paste: if multiple digits received, distribute across fields
     if (digits.length > 1) {
-      const pastedDigits = digits.slice(0, OTP_LENGTH).split('');
-      const newCode = [...code];
-      pastedDigits.forEach((d, i) => {
-        if (i < OTP_LENGTH) {
-          newCode[i] = d;
-          animateSettle(i);
-        }
-      });
-      setCode(newCode);
-      setError(null);
-      // Focus last filled field
-      const lastIdx = Math.min(pastedDigits.length - 1, OTP_LENGTH - 1);
-      inputRefs.current[lastIdx]?.focus();
-      if (newCode.every((d) => d.length === 1)) {
-        handleVerify(newCode.join(''));
-      }
+      handleHiddenInput(digits);
       return;
     }
+
+    // Switch to per-box mode once user types manually
+    setUseHiddenInput(false);
 
     const digit = digits;
     const newCode = [...code];
@@ -247,37 +253,38 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
 
         {/* OTP form */}
         <View style={styles.formSection}>
-          {/* OTP digit inputs — use row-reverse so RTL flips it back to LTR order (1→6) */}
-          <View style={[styles.otpRow, I18nManager.isRTL && { flexDirection: 'row-reverse' }]}>
-            {code.map((digit, index) => (
-              <Animated.View
-                key={index}
-                style={{ transform: [{ scale: scaleAnims[index] }] }}
-              >
-                <TextInput
-                  ref={(ref) => { inputRefs.current[index] = ref; }}
-                  style={[
-                    styles.otpInput,
-                    { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surface },
-                    focusedIndex === index && !digit && { borderColor: colors.primary, borderWidth: 2.5 },
-                    digit ? { borderColor: colors.primary, backgroundColor: colors.primary + '10' } : null,
-                    error ? { borderColor: colors.error } : null,
-                  ]}
-                  value={digit}
-                  onChangeText={(text) => handleDigitChange(text, index)}
-                  onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
-                  onFocus={() => animateFocus(index)}
-                  onBlur={() => animateSettle(index)}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  textAlign="center"
-                  textContentType={Platform.OS === 'ios' ? 'oneTimeCode' : undefined}
-                  selectTextOnFocus
-                  editable={!isVerifying && !isSending}
-                />
-              </Animated.View>
-            ))}
-          </View>
+          {/* Single OTP input — avoids RTL digit-box issues */}
+          <TextInput
+            ref={hiddenInputRef}
+            style={[
+              styles.otpSingleInput,
+              {
+                borderColor: error ? colors.error : colors.primary,
+                color: colors.textPrimary,
+                backgroundColor: colors.surface,
+              },
+            ]}
+            value={code.join('')}
+            onChangeText={(text) => {
+              const digits = text.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH);
+              const newCode = new Array(OTP_LENGTH).fill('');
+              digits.split('').forEach((d, i) => { newCode[i] = d; });
+              setCode(newCode);
+              setError(null);
+              if (newCode.every((d) => d.length === 1)) {
+                handleVerify(newCode.join(''));
+              }
+            }}
+            keyboardType="number-pad"
+            maxLength={OTP_LENGTH}
+            textAlign="center"
+            textContentType={Platform.OS === 'ios' ? 'oneTimeCode' : undefined}
+            autoComplete={Platform.OS === 'android' ? 'sms-otp' : undefined}
+            placeholder="000000"
+            placeholderTextColor={colors.textTertiary}
+            autoFocus
+            editable={!isVerifying && !isSending}
+          />
 
           {error && (
             <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
@@ -415,6 +422,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 24,
     fontWeight: '700',
+  },
+  otpSingleInput: {
+    height: 60,
+    borderWidth: 2,
+    borderRadius: 16,
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 16,
+    paddingHorizontal: 24,
+    direction: 'ltr',
+    writingDirection: 'ltr',
   },
   errorText: {
     fontSize: 13,

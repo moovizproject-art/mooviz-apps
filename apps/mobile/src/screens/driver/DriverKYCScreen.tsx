@@ -31,7 +31,7 @@ const logo = require('../../assets/logo.png');
 
 export function DriverKYCScreen(): React.JSX.Element {
   const navigation = useNavigation();
-  const { currentUser } = useAuth();
+  const { currentUser, refreshUserDoc } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
   const carAlert = useCarAlert();
@@ -44,6 +44,23 @@ export function DriverKYCScreen(): React.JSX.Element {
   const [acceptedTerms, setAcceptedTerms] = useState(currentUser?.kycStatus === 'pending');
   const [isUploading, setIsUploading] = useState(false);
   const [kycStatus, setKycStatus] = useState<KycStatus>(currentUser?.kycStatus || 'pending');
+
+  // Listen for KYC status changes in real-time (admin approval/rejection)
+  useEffect(() => {
+    if (!uid) return;
+    const unsub = firestore().collection('users').doc(uid).onSnapshot((doc) => {
+      const data = doc.data();
+      if (data?.kycStatus && data.kycStatus !== kycStatus) {
+        setKycStatus(data.kycStatus);
+        // Refresh auth context so the rest of the app sees the update
+        refreshUserDoc().catch(() => {});
+        if (data.kycStatus === 'approved') {
+          carAlert.show('success', t('kyc.title'), t('kyc.approvedMessage'));
+        }
+      }
+    }, () => {});
+    return unsub;
+  }, [uid]);
 
   // Load previously uploaded KYC images from Storage
   useEffect(() => {
