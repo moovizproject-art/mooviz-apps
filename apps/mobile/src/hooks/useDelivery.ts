@@ -125,6 +125,17 @@ interface CreateDeliveryInput {
   notes: string;
 }
 
+export interface EditDeliveryInput {
+  pickup?: { latitude: number; longitude: number; address: string };
+  destination?: { latitude: number; longitude: number; address: string };
+  itemDescription?: string;
+  itemSize?: string;
+  suggestedPrice?: number;
+  scheduledDate?: string | null;
+  timeRange?: string | null;
+  notes?: string;
+}
+
 interface RatingInput {
   deliveryId: string;
   targetUserId: string;
@@ -149,6 +160,8 @@ interface UseDeliveryResult {
   cancelSelectedDriver: (deliveryId: string) => Promise<void>;
   withdrawFromInterest: (deliveryId: string) => Promise<void>;
   cancelDelivery: (deliveryId: string, reason?: string) => Promise<void>;
+  editDelivery: (deliveryId: string, updates: EditDeliveryInput) => Promise<void>;
+  deleteDelivery: (deliveryId: string) => Promise<void>;
 }
 
 /**
@@ -395,6 +408,26 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     }
   }, []);
 
+  const editDelivery = useCallback(async (deliveryId: string, updates: EditDeliveryInput) => {
+    try {
+      const fn = functions().httpsCallable('editDelivery');
+      await fn({ deliveryId, ...updates });
+    } catch (err) {
+      console.error('[useDelivery] editDelivery failed:', err);
+      throw new Error((err as any)?.message || 'Edit delivery failed');
+    }
+  }, []);
+
+  const deleteDelivery = useCallback(async (deliveryId: string) => {
+    try {
+      const fn = functions().httpsCallable('cancelDelivery');
+      await fn({ deliveryId, reason: 'deleted_by_sender' });
+    } catch (err) {
+      console.error('[useDelivery] deleteDelivery failed:', err);
+      throw new Error((err as any)?.message || 'Delete delivery failed');
+    }
+  }, []);
+
   const confirmPayment = useCallback(async (deliveryId: string, paymentPhotoURL?: string) => {
     try {
       // All payment confirmations MUST go through Cloud Functions for server-side validation
@@ -423,6 +456,8 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     cancelSelectedDriver,
     withdrawFromInterest,
     cancelDelivery,
+    editDelivery,
+    deleteDelivery,
   };
 }
 

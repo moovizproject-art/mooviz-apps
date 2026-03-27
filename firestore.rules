@@ -23,9 +23,15 @@ service cloud.firestore {
     // (only Cloud Functions can set these)
     function noProtectedFields() {
       return !request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['role', 'status', 'kycStatus', 'driverUnlocked',
+        .hasAny(['role', 'status', 'driverUnlocked',
                  'profilePhotoPath', 'profilePhotoUpdatedAt',
                  'ratingAsDriver', 'ratingAsSender', 'completedDeliveries']);
+    }
+
+    // Clients can only set kycStatus to 'pending' (admin/CF sets approved/rejected)
+    function kycStatusOnlyPending() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['kycStatus'])
+        || request.resource.data.kycStatus == 'pending';
     }
 
     // Allowed fields for user self-update
@@ -33,12 +39,13 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['fullName', 'nickname', 'phone', 'city', 'activeMode',
                   'gender', 'ageRange',
-                  'fcmToken', 'fcmTokens', 'location', 'updatedAt',
+                  'fcmToken', 'fcmTokens', 'location', 'locationUpdatedAt', 'updatedAt',
                   'driverSettings', 'notificationSettings',
                   'lastOtpAt', 'lastLoginAt', 'lastTokenUpdate', 'autoCreated',
                   'acceptedTermsAt', 'sessionToken',
-                  'kycDocumentURL', 'kycIdURL', 'platform',
-                  'driverAvailable', 'driverPrefs']);
+                  'kycDocumentURL', 'kycIdURL', 'kycStatus', 'platform',
+                  'driverAvailable', 'driverPrefs',
+                  'profilePhotoURL']);
     }
 
     // Allowed fields for delivery sender updates
@@ -75,8 +82,8 @@ service cloud.firestore {
       // Users can create their own profile with valid role only
       allow create: if isOwner(userId) && validRole();
 
-      // Users can update their own profile (restricted fields only)
-      allow update: if isOwner(userId) && noProtectedFields() && allowedUserUpdateFields();
+      // Users can update their own profile (restricted fields only, kycStatus can only be 'pending')
+      allow update: if isOwner(userId) && noProtectedFields() && allowedUserUpdateFields() && kycStatusOnlyPending();
 
       // Admins can read/write all
       allow read, create, update: if isAdmin();

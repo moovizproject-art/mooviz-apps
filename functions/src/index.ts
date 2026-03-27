@@ -11,6 +11,7 @@ export { onMessageCreate } from "./triggers/chatTrigger";
 // ─── Callable Functions ─────────────────────────────────────────────
 export {
   createDelivery,
+  editDelivery,
   expressInterest,
   selectDriver,
   confirmSelection,

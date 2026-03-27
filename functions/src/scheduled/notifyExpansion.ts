@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getNearbyDriverTokensMultiLocation } from "../services/geohashService";
 import { sendPushNotification } from "../services/notificationService";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 
@@ -38,7 +39,7 @@ export const notifyExpansion = onSchedule(
       now.toMillis() - 5 * 60 * 1000
     );
 
-    console.log(`[notifyExpansion] Running at ${now.toDate().toISOString()}`);
+    logger.info("notifyExpansion: running", { timestamp: now.toDate().toISOString() });
 
     // Find deliveries eligible for expansion.
     // Uses single inequality (lastNotifyExpansion) to avoid multi-inequality index requirement.
@@ -57,11 +58,11 @@ export const notifyExpansion = onSchedule(
     });
 
     if (eligibleDocs.length === 0) {
-      console.log("[notifyExpansion] No deliveries to expand");
+      logger.info("notifyExpansion: no deliveries to expand");
       return;
     }
 
-    console.log(`[notifyExpansion] Found ${eligibleDocs.length} deliveries to expand`);
+    logger.info("notifyExpansion: found deliveries to expand", { count: eligibleDocs.length });
 
     for (const doc of eligibleDocs) {
       try {
@@ -80,7 +81,7 @@ export const notifyExpansion = onSchedule(
         const pickupLng = (pickup?.lng ?? pickup?.longitude) as number | undefined;
 
         if (!pickupGeohash || !pickupLat || !pickupLng) {
-          console.warn(`[notifyExpansion] Delivery ${deliveryId} missing pickup coords`);
+          logger.warn("notifyExpansion: delivery missing pickup coords", { deliveryId });
           continue;
         }
 
@@ -134,13 +135,16 @@ export const notifyExpansion = onSchedule(
           lastNotifyExpansion: now,
         });
 
-        console.log(
-          `[notifyExpansion] Delivery ${deliveryId}: radius ${currentRadius}→${newRadius}km, ` +
-          `${newDrivers.length} new drivers notified (total: ${newNotifiedList.length}), ` +
-          `expansion ${expansionCount}/${MAX_EXPANSIONS}`
-        );
+        logger.info("notifyExpansion: delivery expanded", {
+          deliveryId,
+          oldRadius: currentRadius,
+          newRadius,
+          newDriversNotified: newDrivers.length,
+          totalNotified: newNotifiedList.length,
+          expansion: `${expansionCount}/${MAX_EXPANSIONS}`,
+        });
       } catch (error) {
-        console.error(`[notifyExpansion] Error processing delivery ${doc.id}:`, error);
+        logger.error("notifyExpansion: error processing delivery", { deliveryId: doc.id, error: String(error) });
       }
     }
   }

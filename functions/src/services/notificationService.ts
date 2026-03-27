@@ -4,6 +4,7 @@ import {
   NOTIFICATION_TEMPLATES,
   interpolateTemplate,
 } from "@mooviz/shared";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -28,7 +29,7 @@ export async function sendPushNotification(
     } else {
       const userDoc = await db.collection("users").doc(userId).get();
       if (!userDoc.exists) {
-        console.warn(`sendPushNotification: user ${userId} not found`);
+        logger.warn("sendPushNotification: user not found", { userId });
         return false;
       }
       const userData = userDoc.data();
@@ -49,7 +50,7 @@ export async function sendPushNotification(
     tokens = tokens.filter((t, i) => tokens.indexOf(t) === i);
 
     if (tokens.length === 0) {
-      console.warn(`sendPushNotification: no FCM tokens for user ${userId}`);
+      logger.warn("sendPushNotification: no FCM tokens for user", { userId });
       return false;
     }
 
@@ -78,7 +79,7 @@ export async function sendPushNotification(
     };
 
     const response = await messaging.sendEachForMulticast(multicastMessage);
-    console.log(`Push notification sent to user ${userId}: ${response.successCount}/${tokens.length} succeeded`);
+    logger.info("Push notification sent", { userId, successCount: response.successCount, totalTokens: tokens.length });
 
     // Clean up invalid tokens
     if (response.failureCount > 0) {
@@ -92,13 +93,13 @@ export async function sendPushNotification(
           ) {
             invalidTokens.push(tokens[idx]);
           } else {
-            console.warn(`FCM error for user ${userId}, token index ${idx}: ${code} — ${resp.error.message}`);
+            logger.warn("FCM error for user", { userId, tokenIndex: idx, code, errorMessage: resp.error.message });
           }
         }
       });
 
       if (invalidTokens.length > 0) {
-        console.warn(`Removing ${invalidTokens.length} invalid FCM token(s) for user ${userId}`);
+        logger.warn("Removing invalid FCM tokens", { userId, count: invalidTokens.length });
         await db.collection("users").doc(userId).update({
           fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens),
         });
@@ -107,7 +108,7 @@ export async function sendPushNotification(
 
     return response.successCount > 0;
   } catch (error: unknown) {
-    console.error(`Failed to send push notification to user ${userId}:`, error);
+    logger.error("Failed to send push notification", { userId, error: String(error) });
     return false;
   }
 }
@@ -124,7 +125,7 @@ export async function sendDeliveryNotification(
 ): Promise<void> {
   const template = NOTIFICATION_TEMPLATES[event];
   if (!template) {
-    console.error(`Unknown notification event: ${event}`);
+    logger.error("Unknown notification event", { event });
     return;
   }
 
@@ -136,7 +137,7 @@ export async function sendDeliveryNotification(
     // Fallback: read from Firestore
     const deliveryDoc = await db.collection("deliveries").doc(deliveryId).get();
     if (!deliveryDoc.exists) {
-      console.error(`Delivery ${deliveryId} not found for notification`);
+      logger.error("Delivery not found for notification", { deliveryId });
       return;
     }
     delivery = deliveryDoc.data()!;
@@ -208,7 +209,7 @@ export async function sendDeliveryNotification(
     ? recipients.filter((id) => id !== actorId)
     : recipients;
 
-  console.log(`sendDeliveryNotification: event=${event}, recipients=[${filteredRecipients.join(",")}], actorId=${actorId}, title="${title}"`);
+  logger.info("sendDeliveryNotification", { event, recipients: filteredRecipients, actorId, title });
 
   // Map event to custom sound file (must exist in Android res/raw/ without extension)
   const EVENT_SOUNDS: Record<string, string> = {
@@ -229,5 +230,5 @@ export async function sendDeliveryNotification(
     )
   );
 
-  console.log(`sendDeliveryNotification: results=[${results.join(",")}]`);
+  logger.info("sendDeliveryNotification results", { event, results });
 }

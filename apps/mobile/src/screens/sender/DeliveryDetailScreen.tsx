@@ -106,7 +106,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
-  const { getDeliveryById, isLoading, confirmPayment, selectDriver, cancelSelectedDriver, cancelDelivery } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
+  const { getDeliveryById, isLoading, confirmPayment, selectDriver, cancelSelectedDriver, cancelDelivery, deleteDelivery } = useDelivery({ userId: currentUser?.uid, role: 'sender' });
   const delivery = getDeliveryById(deliveryId);
 
   const [driverProfile, setDriverProfile] = useState<any>(null);
@@ -119,6 +119,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [cancelAlertVisible, setCancelAlertVisible] = useState(false);
+  const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const carAlert = useCarAlert();
   const [proofGalleryVisible, setProofGalleryVisible] = useState(false);
@@ -294,6 +295,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const driverRating = driverProfile?.ratingAsDriver?.average || delivery.driverRating;
   const driverPhone = driverProfile?.phone;
   const completedTrips = driverProfile?.completedDeliveries;
+
+  const canEditOrDelete = delivery.status === 'new'
+    && delivery.senderId === currentUser?.uid
+    && (delivery.interestedDrivers?.filter((d: any) => d.status !== 'withdrawn')?.length ?? 0) === 0;
 
   const canEditMedia = ['new', 'pending'].includes(delivery.status) && delivery.senderId === currentUser?.uid;
   const canAddImage = canEditMedia && imageCount < 5;
@@ -892,8 +897,73 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         onCancel={() => setLoadingVisible(false)}
       />
 
-      {/* ── 7. Secondary Actions (Cancel / Rate) ── */}
+      {/* ── 7. Secondary Actions (Edit / Delete / Cancel / Rate) ── */}
       <View style={styles.secondaryActions}>
+        {canEditOrDelete && (
+          <View style={styles.editDeleteRow}>
+            <TouchableOpacity
+              style={[styles.editBtn, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                const pickupLat = delivery.pickup?.lat ?? delivery.pickup?.latitude;
+                const pickupLng = delivery.pickup?.lng ?? delivery.pickup?.longitude;
+                const destLat = delivery.destination?.lat ?? delivery.destination?.latitude;
+                const destLng = delivery.destination?.lng ?? delivery.destination?.longitude;
+                navigation.navigate('CreateDelivery', {
+                  editDeliveryId: delivery.id,
+                  editData: {
+                    pickup: pickupLat && pickupLng ? { latitude: pickupLat, longitude: pickupLng, address: delivery.pickup?.address || '' } : undefined,
+                    destination: destLat && destLng ? { latitude: destLat, longitude: destLng, address: delivery.destination?.address || '' } : undefined,
+                    itemDescription: delivery.item?.description || delivery.itemDescription || '',
+                    itemSize: delivery.item?.size || delivery.itemSize || 'small',
+                    suggestedPrice: delivery.price ?? delivery.suggestedPrice ?? 0,
+                    scheduledDate: (() => {
+                      const raw = (delivery as any).pickupDate ?? delivery.scheduledDate;
+                      if (!raw || raw === 'asap') return 'asap';
+                      if (raw?.toDate) return raw.toDate().toISOString();
+                      if (typeof raw === 'string') return raw;
+                      if (raw?._seconds) return new Date(raw._seconds * 1000).toISOString();
+                      return null;
+                    })(),
+                    timeRange: (delivery as any).timeRange || null,
+                    notes: delivery.notes || '',
+                  },
+                });
+              }}
+            >
+              <Text style={styles.editBtnText}>{strings.edit.editDelivery.he}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.deleteBtn, { borderColor: '#E53935' }]}
+              onPress={() => setDeleteAlertVisible(true)}
+            >
+              <Text style={styles.deleteBtnText}>{strings.edit.deleteDelivery.he}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <AppAlert
+          visible={deleteAlertVisible}
+          icon="🗑️"
+          title={strings.edit.deleteDelivery.he}
+          message={strings.edit.confirmDelete.he}
+          buttons={[
+            { text: strings.common.back.he, style: 'cancel' },
+            {
+              text: strings.deliveryExtra.deleteAction.he,
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await deleteDelivery(delivery.id);
+                  carAlert.show('success', strings.common.success.he, strings.edit.deleteSuccess.he, [
+                    { text: strings.common.confirm.he, onPress: () => navigation.goBack() },
+                  ]);
+                } catch (e: any) {
+                  carAlert.show('error', strings.common.error.he, e.message);
+                }
+              },
+            },
+          ]}
+          onDismiss={() => setDeleteAlertVisible(false)}
+        />
         {canCancel && (
           <TouchableOpacity
             style={[styles.cancelBtn, { borderColor: '#E53935' }]}
@@ -1434,6 +1504,35 @@ const styles = StyleSheet.create({
   // ── Secondary Actions ──
   secondaryActions: {
     gap: 12,
+  },
+  editDeleteRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  editBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  editBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  deleteBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 2,
+    backgroundColor: 'transparent',
+  },
+  deleteBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#E53935',
   },
   cancelBtn: {
     borderRadius: 12,

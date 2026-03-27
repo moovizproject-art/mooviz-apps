@@ -5,6 +5,7 @@ import {
   StatusEntry,
   TIMEOUT_ELIGIBLE_STATUSES,
 } from "@mooviz/shared";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 
@@ -22,7 +23,7 @@ export const timeoutCleanup = onSchedule(
   async () => {
     const now = admin.firestore.Timestamp.now();
 
-    console.log(`Running timeout cleanup at ${now.toDate().toISOString()}`);
+    logger.info("Running timeout cleanup", { timestamp: now.toDate().toISOString() });
 
     let totalProcessed = 0;
     let totalCancelled = 0;
@@ -37,13 +38,11 @@ export const timeoutCleanup = onSchedule(
         .get();
 
       if (snapshot.empty) {
-        console.log(`No timed-out deliveries with status '${status}'`);
+        logger.info("No timed-out deliveries for status", { status });
         continue;
       }
 
-      console.log(
-        `Found ${snapshot.size} timed-out deliveries with status '${status}'`
-      );
+      logger.info("Found timed-out deliveries", { status, count: snapshot.size });
 
       // Use batched writes for efficiency
       const batches: FirebaseFirestore.WriteBatch[] = [];
@@ -122,10 +121,7 @@ export const timeoutCleanup = onSchedule(
       await Promise.all(batches.map((batch) => batch.commit()));
     }
 
-    console.log(
-      `Timeout cleanup complete: ${totalProcessed} processed, ` +
-        `${totalCancelled} cancelled, ${totalReverted} reverted to 'new'`
-    );
+    logger.info("Timeout cleanup complete", { totalProcessed, totalCancelled, totalReverted });
 
     // awaiting_payment timeout: 48h → send reminder; 72h → auto-complete
     const awaitingPaymentQuery = db
@@ -173,7 +169,7 @@ export const timeoutCleanup = onSchedule(
             });
           }
         });
-        console.log(`[timeoutCleanup] Auto-completed ${doc.id} after ${hoursWaiting}h in awaiting_payment`);
+        logger.info("timeoutCleanup: auto-completed awaiting_payment", { deliveryId: doc.id, hoursWaiting });
       } else {
         // 48h+ but <72h: send reminder notification
         try {
@@ -182,9 +178,9 @@ export const timeoutCleanup = onSchedule(
             hoursWaiting: String(hoursWaiting),
           });
         } catch (err) {
-          console.error(`[timeoutCleanup] Payment reminder failed for ${doc.id}:`, err);
+          logger.error("timeoutCleanup: payment reminder failed", { deliveryId: doc.id, error: String(err) });
         }
-        console.log(`[timeoutCleanup] Sent payment reminder for ${doc.id} (${hoursWaiting}h)`);
+        logger.info("timeoutCleanup: sent payment reminder", { deliveryId: doc.id, hoursWaiting });
       }
     }
   }

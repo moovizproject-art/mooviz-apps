@@ -113,7 +113,19 @@ export type RootStackParamList = {
   PhoneOTP: { phoneNumber: string; verificationId: string; mode?: 'register' | 'login' | 'addPhone' };
   SenderTabs: NavigatorScreenParams<SenderTabsParamList>;
   DriverTabs: NavigatorScreenParams<DriverTabsParamList>;
-  CreateDelivery: undefined;
+  CreateDelivery: {
+    editDeliveryId?: string;
+    editData?: {
+      pickup?: { latitude: number; longitude: number; address: string };
+      destination?: { latitude: number; longitude: number; address: string };
+      itemDescription?: string;
+      itemSize?: string;
+      suggestedPrice?: number;
+      scheduledDate?: string | null;
+      timeRange?: string | null;
+      notes?: string;
+    };
+  } | undefined;
   DriverKYC: undefined;
   SenderDeliveryDetail: { deliveryId: string };
   DriverDeliveryDetail: { deliveryId: string };

@@ -205,6 +205,7 @@
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
 				83406E64A761524FC6C03ACB /* [CP-User] [RNFB] Core Configuration */,
 				DCD30DCC5C3B0DAD178B2250 /* [CP-User] [RNFB] Crashlytics Configuration */,
+				FB1A2B3C4D5E6F7089ABCDEF /* [CP-User] Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
@@ -434,6 +435,23 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MoovizMobile-MoovizMobileTests/Pods-MoovizMobile-MoovizMobileTests-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		FB1A2B3C4D5E6F7089ABCDEF /* [CP-User] Upload Crashlytics dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "[CP-User] Upload Crashlytics dSYMs";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/FirebaseCrashlytics/upload-symbols\" -gsp \"${PROJECT_DIR}/GoogleService-Info.plist\" -p ios \"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -526,7 +544,7 @@
 				CODE_SIGN_ENTITLEMENTS = MoovizMobile/MoovizMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 119;
+				CURRENT_PROJECT_VERSION = 120;
 				DEVELOPMENT_TEAM = 3USMNP695K;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = MoovizMobile/Info.plist;
@@ -535,7 +553,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.9;
+				MARKETING_VERSION = 1.2.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -561,7 +579,7 @@
 				CODE_SIGN_ENTITLEMENTS = MoovizMobile/MoovizMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 119;
+				CURRENT_PROJECT_VERSION = 120;
 				DEVELOPMENT_TEAM = 3USMNP695K;
 				INFOPLIST_FILE = MoovizMobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
@@ -569,7 +587,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.9;
+				MARKETING_VERSION = 1.2.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",

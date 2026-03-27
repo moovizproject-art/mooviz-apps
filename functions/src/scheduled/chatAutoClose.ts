@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 
@@ -19,7 +20,7 @@ export const chatAutoClose = onSchedule(
   },
   async () => {
     const now = admin.firestore.Timestamp.now();
-    console.log(`Running chat auto-close at ${now.toDate().toISOString()}`);
+    logger.info("Running chat auto-close", { timestamp: now.toDate().toISOString() });
 
     const snapshot = await db
       .collection("chats")
@@ -29,11 +30,11 @@ export const chatAutoClose = onSchedule(
       .get();
 
     if (snapshot.empty) {
-      console.log("No chats to close");
+      logger.info("No chats to close");
       return;
     }
 
-    console.log(`Found ${snapshot.size} chats to close`);
+    logger.info("Found chats to close", { count: snapshot.size });
 
     const closeChat = async (chatDoc: FirebaseFirestore.QueryDocumentSnapshot): Promise<boolean> => {
       try {
@@ -57,7 +58,7 @@ export const chatAutoClose = onSchedule(
 
         return true;
       } catch (error) {
-        console.error(`  [FAIL] Chat ${chatDoc.id}:`, error);
+        logger.error("Failed to close chat", { chatId: chatDoc.id, error: String(error) });
         return false;
       }
     };
@@ -71,6 +72,6 @@ export const chatAutoClose = onSchedule(
       closed += results.filter(Boolean).length;
     }
 
-    console.log(`Chat auto-close complete: ${closed} chats closed`);
+    logger.info("Chat auto-close complete", { closed });
   }
 );

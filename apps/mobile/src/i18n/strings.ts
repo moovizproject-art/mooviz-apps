@@ -654,6 +654,19 @@ export const strings = {
     addedToEarnings: { he: 'נוסף לרווחים', en: 'Added to earnings' } as LocaleStrings,
   },
 
+  // ── Edit / Delete Delivery ──
+  edit: {
+    editDelivery: { he: 'עריכת משלוח', en: 'Edit delivery' } as LocaleStrings,
+    deleteDelivery: { he: 'מחיקת משלוח', en: 'Delete delivery' } as LocaleStrings,
+    confirmDelete: { he: 'האם אתה בטוח שברצונך למחוק משלוח זה?\nפעולה זו אינה ניתנת לביטול.', en: 'Are you sure you want to delete this delivery?\nThis action cannot be undone.' } as LocaleStrings,
+    deleteSuccess: { he: 'המשלוח נמחק בהצלחה', en: 'Delivery deleted successfully' } as LocaleStrings,
+    editSuccess: { he: 'המשלוח עודכן בהצלחה', en: 'Delivery updated successfully' } as LocaleStrings,
+    editError: { he: 'שגיאה בעדכון המשלוח', en: 'Error updating delivery' } as LocaleStrings,
+    cannotEdit: { he: 'לא ניתן לערוך משלוח כאשר נהגים כבר הביעו עניין', en: 'Cannot edit delivery when drivers have already expressed interest' } as LocaleStrings,
+    updateDelivery: { he: 'עדכן משלוח', en: 'Update delivery' } as LocaleStrings,
+    updatingDelivery: { he: 'מעדכן משלוח...', en: 'Updating delivery...' } as LocaleStrings,
+  },
+
   // ── Driver Onboarding Steps ──
   driverOnboarding: {
     radarTitle: { he: 'רדאר', en: 'Radar' } as LocaleStrings,

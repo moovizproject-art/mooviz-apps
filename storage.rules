@@ -3,9 +3,14 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Max file size: 5MB
+    // Max file size: 5MB (images)
     function maxSize() {
       return 5 * 1024 * 1024;
+    }
+
+    // Max file size: 50MB (video)
+    function maxVideoSize() {
+      return 50 * 1024 * 1024;
     }
 
     // Only image content types
@@ -105,10 +110,12 @@ service firebase.storage {
     // ───────────────────────────────────────────────
     match /deliveries/{ownerId}/{fileName} {
       allow read: if isAuthenticated();
+      // Images: 5MB max, Video: 50MB max
       allow write: if isAuthenticated()
         && request.auth.uid == ownerId
         && isMedia()
-        && request.resource.size < maxSize();
+        && ((isImage() && request.resource.size < maxSize())
+         || (!isImage() && request.resource.size < maxVideoSize()));
     }
 
     // ───────────────────────────────────────────────

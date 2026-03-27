@@ -13,6 +13,7 @@ import {
 } from "@mooviz/shared";
 import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
 import { getNearbyDriverTokensMultiLocation } from "../services/geohashService";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 
@@ -67,7 +68,7 @@ export const onDeliveryCreate = onDocumentCreated(
   async (event) => {
     const snapshot = event.data;
     if (!snapshot) {
-      console.error("onDeliveryCreate: no data in event");
+      logger.error("onDeliveryCreate: no data in event");
       return;
     }
 
@@ -76,17 +77,14 @@ export const onDeliveryCreate = onDocumentCreated(
 
     // Skip if already fully initialized by the createDelivery callable
     if (data.timeoutAt) {
-      console.log(`onDeliveryCreate: ${deliveryId} already initialized by callable — skipping`);
+      logger.info("onDeliveryCreate: already initialized by callable, skipping", { deliveryId });
       return;
     }
 
     // Validate the delivery data
     const validation = validateDeliveryCreate(data);
     if (!validation.valid) {
-      console.error(
-        `Invalid delivery data for ${deliveryId}:`,
-        validation.errors
-      );
+      logger.error("Invalid delivery data", { deliveryId, errors: validation.errors });
       // Mark as cancelled due to invalid data
       const cancelNow = admin.firestore.Timestamp.now();
       await snapshot.ref.update({
@@ -193,9 +191,7 @@ export const onDeliveryCreate = onDocumentCreated(
           })
         );
 
-        console.log(
-          `Notified ${nearbyDrivers.length} nearby drivers for delivery ${deliveryId} (excluded sender ${data.senderId})`
-        );
+        logger.info("Notified nearby drivers for new delivery", { deliveryId, count: nearbyDrivers.length, excludedSender: data.senderId });
       }
 
       // Set expansion tracking fields for widening-net notifications
@@ -206,7 +202,7 @@ export const onDeliveryCreate = onDocumentCreated(
         lastNotifyExpansion: admin.firestore.Timestamp.now(),
       });
     } catch (error) {
-      console.error("Failed to notify nearby drivers:", error);
+      logger.error("Failed to notify nearby drivers", { deliveryId, error: String(error) });
       // Non-critical, don't fail the trigger
     }
   }
@@ -224,7 +220,7 @@ export const onDeliveryUpdate = onDocumentUpdated(
   async (event) => {
     const change = event.data;
     if (!change) {
-      console.error("onDeliveryUpdate: no data in event");
+      logger.error("onDeliveryUpdate: no data in event");
       return;
     }
 
@@ -248,9 +244,7 @@ export const onDeliveryUpdate = onDocumentUpdated(
 
       // Guard: if BOTH before and after are terminal, don't revert (avoids infinite loop)
       if (TERMINAL_STATUSES.includes(before.status) && TERMINAL_STATUSES.includes(after.status)) {
-        console.warn(
-          `[onDeliveryUpdate] Skipping revert — both statuses are terminal: ${before.status} → ${after.status} on ${deliveryId}`
-        );
+        logger.warn("onDeliveryUpdate: skipping revert, both statuses terminal", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
         return;
       }
 
@@ -259,15 +253,11 @@ export const onDeliveryUpdate = onDocumentUpdated(
       if (!allowed || !allowed.includes(after.status)) {
         // Don't revert if the before-status is also terminal (would cause infinite loop)
         if (TERMINAL_STATUSES.includes(before.status)) {
-          console.warn(
-            `[onDeliveryUpdate] Skipping revert — before-status '${before.status}' is terminal, cannot revert ${after.status} on ${deliveryId}`
-          );
+          logger.warn("onDeliveryUpdate: skipping revert, before-status is terminal", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
           return;
         }
         // REVERT invalid transition — defense against direct client writes
-        console.warn(
-          `[onDeliveryUpdate] REVERTED invalid transition ${before.status} → ${after.status} on ${deliveryId}`
-        );
+        logger.warn("onDeliveryUpdate: REVERTED invalid transition", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
         await change.after.ref.update({ status: before.status });
         return;
       }
@@ -298,9 +288,7 @@ async function handleStatusChange(
   const oldStatus = before.status;
   const newStatus = after.status;
 
-  console.log(
-    `Delivery ${deliveryId} status changed: ${oldStatus} -> ${newStatus}`
-  );
+  logger.info("Delivery status changed", { deliveryId, oldStatus, newStatus });
 
   // Map status changes to notification events
   // NOTE: Notifications for statuses handled by callable functions
@@ -322,10 +310,7 @@ async function handleStatusChange(
         {}
       );
     } catch (error) {
-      console.error(
-        `Failed to send notification for delivery ${deliveryId}:`,
-        error
-      );
+      logger.error("Failed to send notification for delivery", { deliveryId, newStatus, error: String(error) });
     }
   }
 
@@ -405,10 +390,7 @@ async function handleStatusChange(
           .collection("chats").doc(chatId)
           .update(chatUpdate);
       } catch (error) {
-        console.error(
-          `Failed to create system message for delivery ${deliveryId}:`,
-          error
-        );
+        logger.error("Failed to create system message for delivery", { deliveryId, newStatus, error: String(error) });
       }
     }
   }

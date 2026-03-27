@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { sendPushNotification } from "../services/notificationService";
 import { getNearbyDriverTokensMultiLocation } from "../services/geohashService";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 
@@ -23,7 +24,7 @@ export const selectionTimeout = onSchedule(
 
     if (snapshot.empty) return;
 
-    console.log(`[selectionTimeout] Found ${snapshot.size} expired selections`);
+    logger.info("selectionTimeout: found expired selections", { count: snapshot.size });
 
     for (const doc of snapshot.docs) {
       try {
@@ -90,14 +91,14 @@ export const selectionTimeout = onSchedule(
                     }
                   )
                 )
-              ).then(() => console.log(`[selectionTimeout] re-notified ${nearbyDrivers.length} nearby drivers for ${doc.id}`))
+              ).then(() => logger.info("selectionTimeout: re-notified nearby drivers", { deliveryId: doc.id, count: nearbyDrivers.length }))
             )
-            .catch((err) => console.error(`[selectionTimeout] nearby driver notification failed for ${doc.id}:`, err));
+            .catch((err) => logger.error("selectionTimeout: nearby driver notification failed", { deliveryId: doc.id, error: String(err) }));
         }
 
-        console.log(`[selectionTimeout] Expired selection for delivery ${doc.id}, driver ${selectedDriverId}`);
+        logger.info("selectionTimeout: expired selection processed", { deliveryId: doc.id, selectedDriverId });
       } catch (error) {
-        console.error(`[selectionTimeout] Error processing ${doc.id}:`, error);
+        logger.error("selectionTimeout: error processing delivery", { deliveryId: doc.id, error: String(error) });
       }
     }
   }

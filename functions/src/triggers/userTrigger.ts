@@ -5,6 +5,7 @@ import {
 } from "firebase-functions/v2/firestore";
 import { User } from "@mooviz/shared";
 import { sendPushNotification } from "../services/notificationService";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 
@@ -18,7 +19,7 @@ export const onUserCreate = onDocumentCreated(
   async (event) => {
     const snapshot = event.data;
     if (!snapshot) {
-      console.error("onUserCreate: no data in event");
+      logger.error("onUserCreate: no data in event");
       return;
     }
 
@@ -93,7 +94,7 @@ export const onUserCreate = onDocumentCreated(
         createdAt: now,
       });
 
-    console.log(`User ${userId} created with activeMode '${(data as Record<string, unknown>).activeMode || "client"}'`);
+    logger.info("User created", { userId, activeMode: (data as Record<string, unknown>).activeMode || "client" });
   }
 );
 
@@ -107,7 +108,7 @@ export const onUserUpdate = onDocumentUpdated(
   async (event) => {
     const change = event.data;
     if (!change) {
-      console.error("onUserUpdate: no data in event");
+      logger.error("onUserUpdate: no data in event");
       return;
     }
 
@@ -135,7 +136,7 @@ async function handleKycStatusChange(
   oldStatus: string,
   newStatus: string
 ): Promise<void> {
-  console.log(`User ${userId} KYC status: ${oldStatus} -> ${newStatus}`);
+  logger.info("User KYC status changed", { userId, oldStatus, newStatus });
 
   const now = admin.firestore.Timestamp.now();
   let title: string;
@@ -189,7 +190,7 @@ async function handleAccountStatusChange(
   oldStatus: string,
   newStatus: string
 ): Promise<void> {
-  console.log(`User ${userId} account status: ${oldStatus} -> ${newStatus}`);
+  logger.info("User account status changed", { userId, oldStatus, newStatus });
 
   if (newStatus === "suspended" || newStatus === "blocked") {
     const now = admin.firestore.Timestamp.now();

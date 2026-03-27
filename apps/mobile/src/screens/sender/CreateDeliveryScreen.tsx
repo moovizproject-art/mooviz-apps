@@ -56,9 +56,9 @@ const isVideoUri = (uri: string): boolean => {
   return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.includes('video');
 };
 
-export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
+export function CreateDeliveryScreen({ navigation, route }: Props): React.JSX.Element {
   const { currentUser } = useAuth();
-  const { createDelivery } = useDelivery({
+  const { createDelivery, editDelivery } = useDelivery({
     userId: currentUser?.uid,
     role: 'sender',
   });
@@ -66,17 +66,39 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   const { t } = useI18n();
   const carAlert = useCarAlert();
 
-  const [form, setForm] = useState<DeliveryForm>({
-    pickup: null,
-    destination: null,
-    itemDescription: '',
-    itemSize: 'small',
-    mediaUris: [],
-    suggestedPrice: '',
-    scheduledDate: null,
-    isAsap: true,
-    notes: '',
-    timeRange: null,
+  // Edit mode: pre-fill from route params
+  const editDeliveryId = route.params?.editDeliveryId;
+  const editData = route.params?.editData;
+  const isEditMode = !!editDeliveryId;
+
+  const [form, setForm] = useState<DeliveryForm>(() => {
+    if (editData) {
+      const isAsap = !editData.scheduledDate || editData.scheduledDate === 'asap';
+      return {
+        pickup: editData.pickup ? { latitude: editData.pickup.latitude, longitude: editData.pickup.longitude, address: editData.pickup.address } : null,
+        destination: editData.destination ? { latitude: editData.destination.latitude, longitude: editData.destination.longitude, address: editData.destination.address } : null,
+        itemDescription: editData.itemDescription || '',
+        itemSize: (editData.itemSize as DeliveryForm['itemSize']) || 'small',
+        mediaUris: [],
+        suggestedPrice: editData.suggestedPrice ? String(editData.suggestedPrice) : '',
+        scheduledDate: !isAsap && editData.scheduledDate ? new Date(editData.scheduledDate) : null,
+        isAsap,
+        notes: editData.notes || '',
+        timeRange: editData.timeRange || null,
+      };
+    }
+    return {
+      pickup: null,
+      destination: null,
+      itemDescription: '',
+      itemSize: 'small',
+      mediaUris: [],
+      suggestedPrice: '',
+      scheduledDate: null,
+      isAsap: true,
+      notes: '',
+      timeRange: null,
+    };
   });
   const [showPickupMap, setShowPickupMap] = useState(false);
   const [showDestinationMap, setShowDestinationMap] = useState(false);
@@ -228,38 +250,61 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
     setLoadingStep(0);
     try {
       setIsSubmitting(true);
-      // Step 0: uploading images (handled inside createDelivery)
-      setLoadingStep(0);
-      // Step 1: creating delivery (Cloud Function / Firestore write)
-      setLoadingStep(1);
-      await createDelivery({
-        senderId: currentUser!.uid,
-        senderName: currentUser!.fullName,
-        senderPhotoUrl: currentUser!.profilePhotoURL,
-        senderRating: currentUser!.ratingAsSender?.average ?? 0,
-        pickup: form.pickup,
-        destination: form.destination,
-        itemDescription: form.itemDescription,
-        itemSize: form.itemSize,
-        mediaUris: form.mediaUris,
-        suggestedPrice: parseFloat(form.suggestedPrice) || 0,
-        scheduledDate: form.isAsap ? 'asap' : (form.scheduledDate ? form.scheduledDate.toISOString() : null),
-        timeRange: form.isAsap ? null : (form.timeRange ?? null),
-        notes: form.notes,
-      });
-      setLoadingStep(2);
-      await new Promise(r => setTimeout(r, 800));
-      setLoadingVisible(false);
-      carAlert.show('success', t('form.deliveryCreated'), t('delivery.createdSuccess'), [
-        { text: t('common.confirm'), onPress: () => {
-          // Go back to home feed after creating a delivery
-          navigation.goBack();
-        }},
-      ]);
+
+      if (isEditMode && editDeliveryId) {
+        // Edit mode: call editDelivery callable
+        setLoadingStep(1);
+        await editDelivery(editDeliveryId, {
+          pickup: form.pickup || undefined,
+          destination: form.destination || undefined,
+          itemDescription: form.itemDescription,
+          itemSize: form.itemSize,
+          suggestedPrice: parseFloat(form.suggestedPrice) || 0,
+          scheduledDate: form.isAsap ? 'asap' : (form.scheduledDate ? form.scheduledDate.toISOString() : null),
+          timeRange: form.isAsap ? null : (form.timeRange ?? null),
+          notes: form.notes,
+        });
+        setLoadingStep(2);
+        await new Promise(r => setTimeout(r, 800));
+        setLoadingVisible(false);
+        carAlert.show('success', strings.common.success.he, strings.edit.editSuccess.he, [
+          { text: t('common.confirm'), onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        // Create mode
+        // Step 0: uploading images (handled inside createDelivery)
+        setLoadingStep(0);
+        // Step 1: creating delivery (Cloud Function / Firestore write)
+        setLoadingStep(1);
+        await createDelivery({
+          senderId: currentUser!.uid,
+          senderName: currentUser!.fullName,
+          senderPhotoUrl: currentUser!.profilePhotoURL,
+          senderRating: currentUser!.ratingAsSender?.average ?? 0,
+          pickup: form.pickup,
+          destination: form.destination,
+          itemDescription: form.itemDescription,
+          itemSize: form.itemSize,
+          mediaUris: form.mediaUris,
+          suggestedPrice: parseFloat(form.suggestedPrice) || 0,
+          scheduledDate: form.isAsap ? 'asap' : (form.scheduledDate ? form.scheduledDate.toISOString() : null),
+          timeRange: form.isAsap ? null : (form.timeRange ?? null),
+          notes: form.notes,
+        });
+        setLoadingStep(2);
+        await new Promise(r => setTimeout(r, 800));
+        setLoadingVisible(false);
+        carAlert.show('success', t('form.deliveryCreated'), t('delivery.createdSuccess'), [
+          { text: t('common.confirm'), onPress: () => {
+            // Go back to home feed after creating a delivery
+            navigation.goBack();
+          }},
+        ]);
+      }
     } catch (e: any) {
       setLoadingVisible(false);
-      const msg = e?.message || e?.userInfo?.message || t('delivery.createError');
-      carAlert.show('error', t('form.deliveryError'), msg);
+      const msg = e?.message || e?.userInfo?.message || (isEditMode ? strings.edit.editError.he : t('delivery.createError'));
+      carAlert.show('error', isEditMode ? strings.edit.editError.he : t('form.deliveryError'), msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -284,7 +329,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
-        title={t('form.newDeliveries')}
+        title={isEditMode ? strings.edit.editDelivery.he : t('form.newDeliveries')}
         onBack={() => navigation.goBack()}
         rightElement={infoButton}
       />
@@ -295,7 +340,7 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
       >
         {/* Title */}
         <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
-          {t('form.addDelivery')}
+          {isEditMode ? strings.edit.editDelivery.he : t('form.addDelivery')}
         </Text>
 
         {/* Pickup */}
@@ -500,7 +545,9 @@ export function CreateDeliveryScreen({ navigation }: Props): React.JSX.Element {
             disabled={isSubmitting}
           >
             <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
-              {isSubmitting ? t('form.creatingDelivery') : t('common.submit')}
+              {isSubmitting
+                ? (isEditMode ? strings.edit.updatingDelivery.he : t('form.creatingDelivery'))
+                : (isEditMode ? strings.edit.updateDelivery.he : t('common.submit'))}
             </Text>
           </TouchableOpacity>
         </View>

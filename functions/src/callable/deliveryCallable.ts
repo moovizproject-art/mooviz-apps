@@ -15,6 +15,7 @@ import {
 } from "../validators/statusValidator";
 import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
 import { getNearbyDriverTokensMultiLocation, encodeGeohash } from "../services/geohashService";
+import { logger } from "../utils/logger";
 
 const db = admin.firestore();
 const GEOHASH_PRECISION = 7;
@@ -52,9 +53,9 @@ function renotifyNearbyDrivers(
             }
           )
         )
-      ).then(() => console.log(`${context}: notified ${nearbyDrivers.length} nearby drivers`))
+      ).then(() => logger.info("Renotified nearby drivers", { context, count: nearbyDrivers.length }))
     )
-    .catch((err: unknown) => console.error(`${context}: nearby driver notification failed:`, err));
+    .catch((err: unknown) => logger.error("Nearby driver renotification failed", { context, error: String(err) }));
 }
 
 /**
@@ -208,7 +209,7 @@ export const createDelivery = onCall(async (request) => {
   } catch (err: unknown) {
     // Re-throw HttpsError (duplicate found), but swallow index errors
     if (err instanceof HttpsError) throw err;
-    console.warn("createDelivery: duplicate check skipped (index building?):", (err as Error).message);
+    logger.warn("createDelivery: duplicate check skipped (index building?)", { error: (err as Error).message });
   }
 
   // --- Sender info (already fetched by assertUserRole) ---
@@ -279,7 +280,7 @@ export const createDelivery = onCall(async (request) => {
   const docRef = await db.collection("deliveries").add(deliveryDoc);
   const deliveryId = docRef.id;
 
-  console.log(`createDelivery: ${deliveryId} created by ${uid}`);
+  logger.info("Delivery created", { deliveryId, senderId: uid });
 
   // --- Notify nearby drivers (fire-and-forget — don't block response) ---
   // Uses multi-location matching: checks driver's live GPS, home address, and work address
@@ -312,10 +313,153 @@ export const createDelivery = onCall(async (request) => {
             notifiedDrivers: driversOnly.map((d) => d.uid),
           });
         }
-        console.log(`createDelivery: notified ${driversOnly.length} nearby drivers (multi-location, excluded sender)`);
+        logger.info("createDelivery: notified nearby drivers", { deliveryId, count: driversOnly.length });
       })
-      .catch((err) => console.error("createDelivery: nearby driver notification failed:", err));
+      .catch((err) => logger.error("createDelivery: nearby driver notification failed", { deliveryId, error: String(err) }));
   }
+
+  return { success: true, deliveryId };
+});
+
+/**
+ * Edit an existing delivery.
+ * Only the sender can edit, and only when status === 'new' and no drivers have expressed interest.
+ * Re-computes geohash if pickup/destination changes.
+ */
+export const editDelivery = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { deliveryId, ...updates } = request.data;
+  if (!deliveryId || typeof deliveryId !== "string") {
+    throw new HttpsError("invalid-argument", "deliveryId is required");
+  }
+
+  const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
+
+  // Only the sender can edit
+  if (delivery.senderId !== uid) {
+    throw new HttpsError("permission-denied", "רק השולח יכול לערוך את המשלוח");
+  }
+
+  // Only editable when status is 'new'
+  if (delivery.status !== "new") {
+    throw new HttpsError("failed-precondition", "ניתן לערוך משלוח רק כשהסטטוס הוא חדש");
+  }
+
+  // No interested drivers
+  const interested: any[] = (delivery as any).interestedDrivers || [];
+  const activeInterested = interested.filter((d: any) => d.status !== "withdrawn");
+  if (activeInterested.length > 0) {
+    throw new HttpsError("failed-precondition", "לא ניתן לערוך משלוח כאשר נהגים כבר הביעו עניין");
+  }
+
+  // Build update object
+  const updateFields: Record<string, unknown> = {};
+
+  // --- Pickup ---
+  if (updates.pickup) {
+    const pickupLat = updates.pickup.lat ?? updates.pickup.latitude;
+    const pickupLng = updates.pickup.lng ?? updates.pickup.longitude;
+    if (typeof pickupLat !== "number" || typeof pickupLng !== "number") {
+      throw new HttpsError("invalid-argument", "pickup must have valid lat/lng");
+    }
+    const pickupGeohash = encodeGeohash(pickupLat, pickupLng, GEOHASH_PRECISION);
+    updateFields["pickup"] = {
+      address: updates.pickup.address ?? "",
+      city: updates.pickup.city ?? "",
+      lat: pickupLat,
+      lng: pickupLng,
+      geohash: pickupGeohash,
+    };
+  }
+
+  // --- Destination ---
+  if (updates.destination) {
+    const destLat = updates.destination.lat ?? updates.destination.latitude;
+    const destLng = updates.destination.lng ?? updates.destination.longitude;
+    if (typeof destLat !== "number" || typeof destLng !== "number") {
+      throw new HttpsError("invalid-argument", "destination must have valid lat/lng");
+    }
+    const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
+    updateFields["destination"] = {
+      address: updates.destination.address ?? "",
+      city: updates.destination.city ?? "",
+      lat: destLat,
+      lng: destLng,
+      geohash: destGeohash,
+    };
+  }
+
+  // --- Item ---
+  if (updates.itemDescription !== undefined || updates.itemSize !== undefined) {
+    const currentItem = delivery.item || {};
+    updateFields["item"] = {
+      description: updates.itemDescription ?? (currentItem as any).description ?? "",
+      type: (currentItem as any).type ?? "general",
+      size: updates.itemSize ?? (currentItem as any).size ?? "",
+      photoURL: (currentItem as any).photoURL ?? "",
+    };
+  }
+
+  // --- Price ---
+  if (updates.suggestedPrice !== undefined || updates.price !== undefined) {
+    const price = typeof updates.price === "number" ? updates.price
+      : typeof updates.suggestedPrice === "number" ? updates.suggestedPrice : null;
+    if (price !== null) {
+      if (price <= 0) {
+        throw new HttpsError("invalid-argument", "price must be a positive number");
+      }
+      updateFields["price"] = price;
+    }
+  }
+
+  // --- Scheduled date ---
+  if (updates.scheduledDate !== undefined) {
+    const rawDate = updates.scheduledDate;
+    if (!rawDate || rawDate === "asap") {
+      updateFields["pickupDate"] = "asap";
+    } else if (typeof rawDate === "string") {
+      const ms = Date.parse(rawDate);
+      if (isNaN(ms)) {
+        throw new HttpsError("invalid-argument", "Invalid date format");
+      }
+      updateFields["pickupDate"] = admin.firestore.Timestamp.fromMillis(ms);
+    }
+  }
+
+  // --- Time range ---
+  if (updates.timeRange !== undefined) {
+    const VALID_TIME_RANGES = ["morning", "afternoon", "evening", "night"];
+    updateFields["timeRange"] = typeof updates.timeRange === "string" && VALID_TIME_RANGES.includes(updates.timeRange)
+      ? updates.timeRange
+      : null;
+  }
+
+  // --- Notes ---
+  if (updates.notes !== undefined) {
+    updateFields["notes"] = updates.notes ?? "";
+  }
+
+  if (Object.keys(updateFields).length === 0) {
+    throw new HttpsError("invalid-argument", "No fields to update");
+  }
+
+  // Add status history entry and timestamp
+  const now = admin.firestore.Timestamp.now();
+  updateFields["updatedAt"] = now;
+  updateFields["statusHistory"] = admin.firestore.FieldValue.arrayUnion({
+    status: "new" as DeliveryStatus,
+    timestamp: now,
+    actor: uid,
+    note: "Delivery edited by sender",
+  });
+
+  await ref.update(updateFields);
+
+  logger.info("Delivery edited", { deliveryId, senderId: uid });
 
   return { success: true, deliveryId };
 });
@@ -410,7 +554,7 @@ export const expressInterest = onCall(async (request) => {
     "נהג חדש מעוניין",
     `${driverName} רוצה לאסוף את המשלוח שלך`,
     { event: "driver_interested", deliveryId, driverName }
-  ).catch((err: unknown) => console.error("expressInterest notification failed:", err));
+  ).catch((err: unknown) => logger.error("expressInterest notification failed", { deliveryId, error: String(err) }));
 
   return { success: true };
 });
@@ -466,9 +610,9 @@ export const selectDriver = onCall(async (request) => {
   });
 
   sendPushNotification(driverUid, "השולח בחר בך!", "אשר את המשלוח תוך 15 דקות", { event: "driver_selected", deliveryId })
-    .catch((err: unknown) => console.error("selectDriver notification failed:", err));
+    .catch((err: unknown) => logger.error("selectDriver notification failed", { deliveryId, driverUid, error: String(err) }));
 
-  console.log(`selectDriver: sender ${uid} selected driver ${driverUid} for delivery ${deliveryId}`);
+  logger.info("Driver selected by sender", { deliveryId, senderId: uid, driverUid });
   return { success: true };
 });
 
@@ -539,9 +683,9 @@ export const confirmSelection = onCall(async (request) => {
   });
 
   sendPushNotification(senderId, "הנהג אישר!", `המשלוח שויך ל-${driverName}`, { event: "driver_confirmed", deliveryId })
-    .catch((err: unknown) => console.error("confirmSelection notification failed:", err));
+    .catch((err: unknown) => logger.error("confirmSelection notification failed", { deliveryId, error: String(err) }));
 
-  console.log(`confirmSelection: driver ${uid} confirmed for delivery ${deliveryId}`);
+  logger.info("Driver confirmed selection", { deliveryId, driverId: uid });
   return { success: true };
 });
 
@@ -590,12 +734,12 @@ export const declineSelection = onCall(async (request) => {
   });
 
   sendPushNotification(senderId, "הנהג דחה", "בחר נהג אחר מהרשימה", { event: "driver_declined", deliveryId })
-    .catch((err: unknown) => console.error("declineSelection notification failed:", err));
+    .catch((err: unknown) => logger.error("declineSelection notification failed", { deliveryId, error: String(err) }));
 
   // Re-notify nearby drivers (exclude the declined driver)
   renotifyNearbyDrivers(delivery, deliveryId, [uid], "declineSelection");
 
-  console.log(`declineSelection: driver ${uid} declined for delivery ${deliveryId}`);
+  logger.info("Driver declined selection", { deliveryId, driverId: uid });
   return { success: true };
 });
 
@@ -674,12 +818,12 @@ export const cancelSelectedDriver = onCall(async (request) => {
   });
 
   sendPushNotification(cancelledDriverId, "השולח ביטל את הבחירה", "המשלוח הוחזר לרשימה", { event: "selection_cancelled", deliveryId })
-    .catch((err: unknown) => console.error("cancelSelectedDriver notification failed:", err));
+    .catch((err: unknown) => logger.error("cancelSelectedDriver notification failed", { deliveryId, error: String(err) }));
 
   // Re-notify nearby drivers (exclude the cancelled driver and sender)
   renotifyNearbyDrivers(delivery, deliveryId, [cancelledDriverId, uid], "cancelSelectedDriver");
 
-  console.log(`cancelSelectedDriver: sender ${uid} cancelled driver ${cancelledDriverId} for delivery ${deliveryId}`);
+  logger.info("Sender cancelled selected driver", { deliveryId, senderId: uid, cancelledDriverId });
   return { success: true };
 });
 
@@ -715,7 +859,7 @@ export const withdrawFromInterest = onCall(async (request) => {
     });
   });
 
-  console.log(`withdrawFromInterest: driver ${uid} withdrew from delivery ${deliveryId}`);
+  logger.info("Driver withdrew from interest", { deliveryId, driverId: uid });
   return { success: true };
 });
 
@@ -732,7 +876,7 @@ export const approveDriver = onCall(async (request) => {
   }
 
   const { deliveryId } = request.data;
-  console.log(`approveDriver: sender ${uid} approving delivery ${deliveryId}`);
+  logger.info("Sender approving driver", { deliveryId, senderId: uid });
   await assertUserRole(db, uid, "sender");
 
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
@@ -1147,7 +1291,7 @@ export const withdrawInterest = onCall(async (request) => {
   // Validate transition
   assertValidTransition(delivery.status, "new", "driver", uid);
 
-  console.log(`withdrawInterest: driver ${uid} withdrawing from delivery ${deliveryId}`);
+  logger.info("Driver withdrawing interest", { deliveryId, driverId: uid });
 
   await updateDeliveryStatus(
     ref,
@@ -1171,7 +1315,7 @@ export const withdrawInterest = onCall(async (request) => {
       { event: "driver_withdrew", deliveryId }
     );
   } catch (notifErr: unknown) {
-    console.error("withdrawInterest: sender notification failed:", notifErr);
+    logger.error("withdrawInterest: sender notification failed", { deliveryId, error: String(notifErr) });
   }
 
   // Re-notify nearby drivers (exclude the withdrawing driver)
@@ -1309,7 +1453,7 @@ export const submitRating = onCall(async (request) => {
     transaction.update(ref, deliveryUpdate);
   });
 
-  console.log(`submitRating: ${callerRole} ${uid} rated ${targetUserId} with ${rating} for delivery ${deliveryId}`);
+  logger.info("Rating submitted", { deliveryId, callerRole, fromUserId: uid, targetUserId, rating });
 
   return { success: true };
 });
