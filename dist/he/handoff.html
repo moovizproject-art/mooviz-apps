@@ -500,6 +500,7 @@
     <h2>תוכן עניינים</h2>
     <ol>
       <li><a href="#sec-executive">תקציר מנהלים</a></li>
+      <li><a href="#sec-hardening" style="color:#22C55E;font-weight:700;">חיזוק ייצור v1.2.0 (14 פריטים תוקנו)</a></li>
       <li><a href="#sec-stack">ערימת טכנולוגיות</a></li>
       <li><a href="#sec-architecture">סקירת ארכיטקטורה</a></li>
       <li><a href="#sec-structure">מבנה תיקיות</a></li>
@@ -618,6 +619,38 @@
   </section>
 
   <!-- ============================================================ -->
+  <!-- PRODUCTION HARDENING v1.2.0                                  -->
+  <!-- ============================================================ -->
+  <div class="page-break"></div>
+  <section id="sec-hardening">
+    <h2><span class="section-num" style="background:#22C55E;">&#10003;</span> חיזוק ייצור v1.2.0</h2>
+
+    <p>14 פריטים תוקנו בספרינט חיזוק הייצור (v1.2.0). כל פריט מסומן גם בתג <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">תוקן</span> בסעיף הרלוונטי במסמך זה.</p>
+
+    <table>
+      <thead>
+        <tr><th>#</th><th>פריט</th><th>סטטוס</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>שימוש חוזר בטוקן FCM / התראות בין משתמשים &mdash; logout מנקה token</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>2</td><td>הרשאות מיקום חסרות ב-iOS &mdash; NSLocationAlwaysUsageDescription + UIBackgroundModes נוספו</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>3</td><td>העלאת KYC נדחית &mdash; kycDocumentURL/kycIdURL נוספו לכללי Firestore, הגבלת kycStatus ל-pending בלבד</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>4</td><td>העלאת תמונת פרופיל חסומה &mdash; profilePhotoURL נוסף ל-allowedUserUpdateFields</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>5</td><td>עדכון מיקום נהג חסום &mdash; locationUpdatedAt נוסף ל-allowedUserUpdateFields</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>6</td><td>מגבלת גודל וידאו (5MB) &mdash; הוגדל ל-50MB עבור וידאו בכללי Storage</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>7</td><td>אכיפת מכשיר יחיד &mdash; sessionToken בכניסה, נבדק בהפעלת האפליקציה</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>8</td><td>מערכת דיווח חסרה &mdash; ReportModal עם 5 קטגוריות, מחובר לממשק ניהול</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>9</td><td>עריכת/מחיקת משלוח לפני שיוך &mdash; editDelivery callable + UI</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>10</td><td>לוגים מובנים &mdash; firebase-functions/logger עם נתונים מובנים</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>11</td><td>העלאת dSYM ל-Crashlytics &mdash; שלב בנייה ב-Xcode נוסף</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>12</td><td>כיסוי בדיקות &mdash; 122 בדיקות יחידה: statusValidator + deliveryCallable + firestoreRules</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>13</td><td>חיזוק כללי Firestore &mdash; הגבלות ברמת שדה, adminActions נעול, שדות מוגנים נאכפים</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+        <tr><td>14</td><td>דיווח באפליקציה חסר &mdash; רכיב ReportModal, 5 סוגי בעיות עב+אנ</td><td style="color:#22C55E;font-weight:700;">&#10003; תוקן</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
   <!-- 2. TECHNOLOGY STACK                                          -->
   <!-- ============================================================ -->
   <div class="page-break"></div>
@@ -692,7 +725,7 @@
           <td><strong>אחסון</strong></td>
           <td>Firebase Cloud Storage</td>
           <td>—</td>
-          <td>תמונות, וידאו, מסמכי KYC — מקסימום 5MB</td>
+          <td>תמונות, וידאו, מסמכי KYC — מקסימום 5MB (50MB לווידאו) <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
         </tr>
         <tr>
           <td><strong>התראות</strong></td>
@@ -1478,8 +1511,8 @@
     <h3>ניהול סשן</h3>
     <div class="card card-gold">
       <ul>
-        <li><strong>מכשיר יחיד:</strong> שדה <span class="inline-code">sessionToken</span> מאפשר אכיפת חיבור ממכשיר אחד בלבד</li>
-        <li><strong>FCM cleanup:</strong> בעת logout — <span class="inline-code">removeFCMToken</span> מסיר את הטוקן של המכשיר המנותק</li>
+        <li><strong>מכשיר יחיד:</strong> שדה <span class="inline-code">sessionToken</span> מאפשר אכיפת חיבור ממכשיר אחד בלבד <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></li>
+        <li><strong>FCM cleanup:</strong> בעת logout — <span class="inline-code">removeFCMToken</span> מסיר את הטוקן של המכשיר המנותק <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></li>
       </ul>
     </div>
 
@@ -1493,7 +1526,7 @@
           <td><span class="inline-code">users</span></td>
           <td>בעלים בלבד (פרופיל עצמי); נהגים יכולים לקרוא פרטים בסיסיים</td>
           <td>בעלים — שדות מוגבלים; admin — הכל</td>
-          <td><span class="inline-code">role</span>, <span class="inline-code">status</span>, <span class="inline-code">kycStatus</span> מוגנים מכתיבת לקוח</td>
+          <td><span class="inline-code">role</span>, <span class="inline-code">status</span>, <span class="inline-code">kycStatus</span> מוגנים מכתיבת לקוח. kycDocumentURL/kycIdURL ו-profilePhotoURL בשדות מותרים. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
         </tr>
         <tr>
           <td><span class="inline-code">deliveries</span></td>
@@ -1532,7 +1565,7 @@
           <td><span class="inline-code">users/{uid}/kyc/*</span></td>
           <td>בעלים + admin</td>
           <td>בעלים בלבד</td>
-          <td>מקס 5MB, <span class="inline-code">image/jpeg</span> או <span class="inline-code">image/png</span></td>
+          <td>מקס 5MB, <span class="inline-code">image/jpeg</span> או <span class="inline-code">image/png</span>. kycDocumentURL/kycIdURL נוספו לכללי Firestore <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
         </tr>
         <tr>
           <td><span class="inline-code">users/{uid}/profile/*</span></td>
@@ -1544,7 +1577,7 @@
           <td><span class="inline-code">deliveries/{id}/*</span></td>
           <td>משתתפים + admin</td>
           <td>משתתפים בלבד</td>
-          <td>מקס 5MB, תמונות + וידאו</td>
+          <td>מקס 5MB תמונות, 50MB וידאו <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
         </tr>
       </tbody>
     </table>
@@ -1558,7 +1591,7 @@
         <li><strong>בדיקת KYC:</strong> <span class="inline-code">assertDriverApproved()</span> — רק נהגים עם KYC מאושר יכולים לפעול</li>
         <li><strong>Transactions:</strong> פעולות קריטיות (ביטול, אישור בחירה) עטופות ב-Firestore transactions</li>
         <li><strong>HTTPS בכל מקום:</strong> כל התקשורת מוצפנת</li>
-        <li><strong>ללא PII בלוגים:</strong> מידע אישי לא נכתב ליומני מערכת</li>
+        <li><strong>ללא PII בלוגים:</strong> מידע אישי לא נכתב ליומני מערכת. Cloud Functions משתמשים ב-<span class="inline-code">firebase-functions/logger</span> עם נתונים מובנים <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></li>
       </ul>
     </div>
   </section>
@@ -1833,7 +1866,7 @@
           <thead><tr><th>רכיב</th><th>תיאור</th></tr></thead>
           <tbody>
             <tr><td><span class="inline-code">ChatDeliveryBanner</span></td><td>באנר משלוח בראש הצ'אט</td></tr>
-            <tr><td><span class="inline-code">ReportModal</span></td><td>דיווח על משתמש</td></tr>
+            <tr><td><span class="inline-code">ReportModal</span> <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td><td>דיווח על משתמש — 5 קטגוריות (הטרדה, הונאה, נזק, אי-הגעה, אחר) עם תוויות עב+אנ, מחובר לממשק ניהול</td></tr>
           </tbody>
         </table>
       </div>
@@ -2144,10 +2177,10 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
           <td>פתיחת חשבון Apple Developer + Google Play Console</td>
         </tr>
         <tr>
-          <td>Firestore Rules</td>
+          <td>Firestore Rules <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
           <td><span class="badge badge-orange">בינונית</span></td>
-          <td>חלק מהשדות עדיין ניתנים לכתיבה ישירה מהלקוח</td>
-          <td>סיום RBAC מלא ברמת שדה — M4 P0</td>
+          <td>הגבלות ברמת שדה נוספו, adminActions נעול, שדות מוגנים נאכפים</td>
+          <td>הושלם בחיזוק ייצור v1.2.0</td>
         </tr>
         <tr>
           <td>פרסומות</td>
@@ -2170,8 +2203,8 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
         <tr>
           <td>adminActions</td>
           <td><span class="badge badge-gray">נמוכה</span></td>
-          <td>אוסף ללא כללי אבטחה מוגדרים</td>
-          <td>הוספת rules מתאימים</td>
+          <td>אוסף ללא כללי אבטחה מוגדרים — נעול כעת <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
+          <td>adminActions נעול בכללי Firestore</td>
         </tr>
         <tr>
           <td>משתמשי Glide</td>
@@ -2200,8 +2233,8 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
         </tr>
         <tr>
           <td><span class="badge badge-red">P0</span></td>
-          <td>RBAC מלא</td>
-          <td>סיום כללי Firestore — חסימת כתיבה ישירה לכל השדות המוגנים</td>
+          <td>RBAC מלא <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
+          <td>הגבלות ברמת שדה, adminActions נעול, שדות מוגנים נאכפים</td>
         </tr>
         <tr>
           <td><span class="badge badge-orange">P1</span></td>
@@ -2210,8 +2243,8 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
         </tr>
         <tr>
           <td><span class="badge badge-orange">P1</span></td>
-          <td>עריכת/מחיקת משלוח</td>
-          <td>שולח יכול לערוך משלוח ב-NEW או למחוק</td>
+          <td>עריכת/מחיקת משלוח <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
+          <td>editDelivery callable + UI — שולח יכול לערוך/למחוק לפני שיוך נהג</td>
         </tr>
         <tr>
           <td><span class="badge badge-orange">P1</span></td>
@@ -2230,8 +2263,8 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
         </tr>
         <tr>
           <td><span class="badge badge-gold">P2</span></td>
-          <td>בדיקות אוטומטיות</td>
-          <td>Jest unit tests + Detox E2E tests</td>
+          <td>בדיקות אוטומטיות <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
+          <td>122 בדיקות יחידה: statusValidator + deliveryCallable + firestoreRules</td>
         </tr>
         <tr>
           <td><span class="badge badge-gray">P3</span></td>
@@ -2291,12 +2324,12 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
         <tr>
           <td><span class="inline-code">useLocation</span></td>
           <td>useLocation.ts</td>
-          <td>קבלת מיקום נוכחי + הרשאות</td>
+          <td>קבלת מיקום נוכחי + הרשאות. iOS: NSLocationAlwaysUsageDescription + UIBackgroundModes נוספו <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
         </tr>
         <tr>
           <td><span class="inline-code">useDriverLocationTracking</span></td>
           <td>useDriverLocationTracking.ts</td>
-          <td>מעקב מיקום נהג — שתי רמות: idle (5 דק') + active (1 דק')</td>
+          <td>מעקב מיקום נהג — שתי רמות: idle (5 דק') + active (1 דק'). locationUpdatedAt נוסף ל-allowedUserUpdateFields <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">תוקן</span></td>
         </tr>
         <tr>
           <td><span class="inline-code">useDriverAvailability</span></td>

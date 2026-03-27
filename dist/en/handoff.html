@@ -499,6 +499,7 @@
   <h2 style="font-size: 20px; margin-bottom: 16px;">Table of Contents</h2>
   <ol>
     <li><a href="#executive-summary">Executive Summary</a></li>
+    <li><a href="#production-hardening" style="color:#22C55E;font-weight:700;">Production Hardening v1.2.0 (14 items fixed)</a></li>
     <li><a href="#technology-stack">Technology Stack</a></li>
     <li><a href="#architecture">Architecture Overview</a></li>
     <li><a href="#directory-structure">Directory Structure</a></li>
@@ -606,6 +607,44 @@
 </table>
 
 
+<!-- ==================== PRODUCTION HARDENING v1.2.0 ==================== -->
+<div class="page-break"></div>
+
+<div class="header-bar" style="margin: 0 -24px;">
+  <div class="header-inner">
+    <img src="../images/mooviz-logo.jpg" alt="MOOVIZ" class="header-logo">
+    <span class="header-title">Production Hardening v1.2.0</span>
+    <img src="../images/kal-logo.png" alt="KAL Solutions" class="header-logo-right">
+  </div>
+</div>
+
+<h1 class="section-title" id="production-hardening">Production Hardening v1.2.0</h1>
+
+<p>The following 14 items were resolved in the production hardening sprint (v1.2.0). Each item is also marked with a <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">FIXED</span> badge in the relevant section of this document.</p>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Item</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>FCM token reuse / cross-user notifications &mdash; logout clears token</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>2</td><td>iOS missing location permissions &mdash; NSLocationAlwaysUsageDescription + UIBackgroundModes added</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>3</td><td>KYC upload permission denied &mdash; kycDocumentURL/kycIdURL added to Firestore rules, kycStatus pending-only constraint</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>4</td><td>Profile photo upload blocked &mdash; profilePhotoURL added to allowedUserUpdateFields</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>5</td><td>Driver location updates blocked &mdash; locationUpdatedAt added to allowedUserUpdateFields</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>6</td><td>Video upload size limit (5MB) &mdash; increased to 50MB for video in storage rules</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>7</td><td>Single device session enforcement &mdash; sessionToken on login, checked on app start</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>8</td><td>Report system missing &mdash; ReportModal with 5 categories, wired to admin</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>9</td><td>Edit/delete delivery before assignment &mdash; editDelivery callable + UI</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>10</td><td>Structured logging &mdash; firebase-functions/logger with structured data</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>11</td><td>Crashlytics dSYM upload &mdash; Xcode build phase added</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>12</td><td>Test coverage &mdash; 122 unit tests: statusValidator + deliveryCallable + firestoreRules</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>13</td><td>Firestore rules hardening &mdash; field-level restrictions, adminActions locked, protected fields enforced</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+    <tr><td>14</td><td>No in-app reporting &mdash; ReportModal component, 5 issue types HE+EN</td><td style="color:#22C55E;font-weight:700;">&#10003; Fixed</td></tr>
+  </tbody>
+</table>
+
+
 <!-- ==================== 2. TECHNOLOGY STACK ==================== -->
 <div class="page-break"></div>
 
@@ -682,7 +721,7 @@
       <td>Storage</td>
       <td>Firebase Cloud Storage</td>
       <td>&mdash;</td>
-      <td>Images, videos, KYC documents; 5MB max per file</td>
+      <td>Images, videos, KYC documents; 5MB max per file (50MB for video) <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
     </tr>
     <tr>
       <td>Push Notifications</td>
@@ -863,7 +902,7 @@ Admin Dashboard (React SPA)
       <td>Users can be both sender and driver. <code>activeMode</code> field toggles between roles without separate accounts.</td>
     </tr>
     <tr>
-      <td>Session token enforcement</td>
+      <td>Session token enforcement <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
       <td>Single-device login via <code>sessionToken</code> field. New login invalidates previous sessions.</td>
     </tr>
   </tbody>
@@ -1608,7 +1647,7 @@ Admin Dashboard (React SPA)
     </ul>
   </li>
   <li><strong>Two-Factor:</strong> Users must verify both email and phone number to complete profile.</li>
-  <li><strong>Session Management:</strong> <code>sessionToken</code> field enforces single-device login. New login on another device invalidates previous session.</li>
+  <li><strong>Session Management:</strong> <code>sessionToken</code> field enforces single-device login. New login on another device invalidates previous session. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
   <li><strong>Language:</strong> <code>auth.languageCode = 'he'</code> set before sending verification/reset emails for Hebrew templates.</li>
 </ul>
 
@@ -1623,7 +1662,7 @@ Admin Dashboard (React SPA)
       <td><code>users</code></td>
       <td>Own profile + admin</td>
       <td>Own non-protected fields + admin</td>
-      <td>Protected fields (role, status, kycStatus) cannot be client-written</td>
+      <td>Protected fields (role, status, kycStatus) cannot be client-written. kycDocumentURL/kycIdURL and profilePhotoURL in allowed fields. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
     </tr>
     <tr>
       <td><code>deliveries</code></td>
@@ -1655,11 +1694,11 @@ Admin Dashboard (React SPA)
 <h2>9.3 &nbsp; Storage Security Rules</h2>
 
 <ul>
-  <li><strong>KYC Documents:</strong> Only the document owner can upload. Admin can read. Path: <code>kyc/{userId}/*</code></li>
+  <li><strong>KYC Documents:</strong> Only the document owner can upload. Admin can read. Path: <code>kyc/{userId}/*</code>. kycDocumentURL/kycIdURL added to Firestore rules with kycStatus pending-only constraint. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
   <li><strong>Profile Photos:</strong> Owner upload only. Authenticated read. Path: <code>profiles/{userId}/*</code></li>
   <li><strong>Delivery Media:</strong> Sender/driver upload. Authenticated read. Path: <code>deliveries/{deliveryId}/*</code></li>
-  <li><strong>File Size Limit:</strong> 5MB maximum per file</li>
-  <li><strong>Content Type:</strong> Restricted to <code>image/jpeg</code> and <code>image/png</code></li>
+  <li><strong>File Size Limit:</strong> 5MB maximum per image file; 50MB for video <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
+  <li><strong>Content Type:</strong> Restricted to <code>image/jpeg</code> and <code>image/png</code> (plus <code>video/*</code> for delivery media)</li>
 </ul>
 
 <h2>9.4 &nbsp; Server-Side Validation</h2>
@@ -1680,7 +1719,7 @@ Admin Dashboard (React SPA)
   <li>No PII in Cloud Function logs</li>
   <li>HTTPS enforced on all connections</li>
   <li>KYC documents accessible only via time-limited signed URLs (<code>getAuthorizedPhoto</code>)</li>
-  <li>FCM tokens are per-device; removed on logout via <code>removeFCMToken</code></li>
+  <li>FCM tokens are per-device; removed on logout via <code>removeFCMToken</code> <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
   <li><code>google-services.json</code> and <code>.env</code> files are gitignored</li>
 </ul>
 
@@ -1909,7 +1948,7 @@ Admin Dashboard (React SPA)
     <tr><td><code>ProofCamera</code></td><td>Camera capture component for proof photos (pickup/delivery). Validates and compresses before upload.</td></tr>
     <tr><td><code>RatingStars</code></td><td>Interactive star rating input (1-5) and display-only mode.</td></tr>
     <tr><td><code>RatingsHistoryModal</code></td><td>Modal showing user's rating history with comments.</td></tr>
-    <tr><td><code>ReportModal</code></td><td>Report form modal: category selector, description input. Creates report document in Firestore.</td></tr>
+    <tr><td><code>ReportModal</code> <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td><td>Report form modal: 5 category types (harassment, fraud, damage, no_show, other) with HE+EN labels. Creates report document in Firestore and wired to admin dashboard.</td></tr>
     <tr><td><code>ScreenHeader</code></td><td>Consistent screen header with back button, title, and optional right actions.</td></tr>
     <tr><td><code>SelectionCountdown</code></td><td>Animated countdown timer for the 15-minute driver selection confirmation window.</td></tr>
     <tr><td><code>SenderOnboarding</code></td><td>Onboarding flow for new senders explaining how to create deliveries.</td></tr>
@@ -1978,7 +2017,7 @@ Admin Dashboard (React SPA)
     <tr>
       <td><code>useDriverLocationTracking</code></td>
       <td><code>hooks/useDriverLocationTracking.ts</code></td>
-      <td>Two-tier GPS tracking: idle mode (5min intervals, 200m distance filter) and active delivery mode (1min intervals, 50m filter). Syncs to Firestore with geohash.</td>
+      <td>Two-tier GPS tracking: idle mode (5min intervals, 200m distance filter) and active delivery mode (1min intervals, 50m filter). Syncs to Firestore with geohash. locationUpdatedAt added to allowedUserUpdateFields. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
     </tr>
     <tr>
       <td><code>useFirestore</code></td>
@@ -1993,7 +2032,7 @@ Admin Dashboard (React SPA)
     <tr>
       <td><code>useLocation</code></td>
       <td><code>hooks/useLocation.ts</code></td>
-      <td>Current device location with permission handling. Used for initial map centering and distance calculations.</td>
+      <td>Current device location with permission handling. iOS: NSLocationAlwaysUsageDescription + UIBackgroundModes added. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
     </tr>
     <tr>
       <td><code>useNetworkStatus</code></td>
@@ -2361,14 +2400,14 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
       <td>These drivers bypass KYC checks via the grandfather clause in <code>assertDriverApproved()</code>.</td>
     </tr>
     <tr>
-      <td>Firestore Rules</td>
-      <td>Some delivery fields still allow direct client writes. <code>adminActions</code> collection has no security rules.</td>
-      <td>Full RBAC lockdown is a P0 item for production hardening.</td>
+      <td>Firestore Rules <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
+      <td>Field-level restrictions added, adminActions locked, protected fields enforced.</td>
+      <td>Full RBAC lockdown completed in v1.2.0 production hardening.</td>
     </tr>
     <tr>
-      <td>Edit/Delete Delivery</td>
-      <td>No ability to edit or delete a delivery after creation.</td>
-      <td>Users must cancel and recreate. Feature deferred to post-launch.</td>
+      <td>Edit/Delete Delivery <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
+      <td>editDelivery callable function + UI implemented. Senders can edit/delete before driver assignment.</td>
+      <td>Resolved in v1.2.0 production hardening.</td>
     </tr>
     <tr>
       <td>Store Submissions</td>
@@ -2411,9 +2450,9 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
       <td>Apple App Store + Google Play Store submission with required assets, screenshots, privacy policy.</td>
     </tr>
     <tr>
-      <td>Full RBAC Lockdown</td>
+      <td>Full RBAC Lockdown <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
       <td><span class="badge badge-red">P0</span></td>
-      <td>Complete Firestore security rules hardening. Remove direct client write access to protected fields.</td>
+      <td>Complete Firestore security rules hardening. Field-level restrictions, adminActions locked, protected fields enforced.</td>
     </tr>
     <tr>
       <td>Bug Triage</td>
@@ -2431,9 +2470,9 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
       <td>Ad integration for monetization (post-launch).</td>
     </tr>
     <tr>
-      <td>Edit/Delete Delivery</td>
+      <td>Edit/Delete Delivery <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></td>
       <td><span class="badge badge-orange">P1</span></td>
-      <td>Allow senders to edit delivery details or delete before driver assignment.</td>
+      <td>editDelivery callable + UI implemented. Senders can edit/delete before driver assignment.</td>
     </tr>
     <tr>
       <td>Payment Integration</td>
@@ -2468,8 +2507,9 @@ node ../../node_modules/react-native/cli.js run-ios</code></pre>
 <ul>
   <li><strong>Shared package architecture:</strong> The <code>@mooviz/shared</code> package should be split into <code>@mooviz/types</code> (platform-agnostic) and <code>@mooviz/server-utils</code> (firebase-admin dependent) to eliminate the server SDK friction on the client.</li>
   <li><strong>Firestore index management:</strong> Some compound queries require manually created Firestore indexes. These should be documented in <code>firestore.indexes.json</code>.</li>
-  <li><strong>Error tracking:</strong> No Sentry/Crashlytics integration for production crash reporting. Firebase Crashlytics SDK is installed but not fully configured.</li>
-  <li><strong>Test coverage:</strong> No automated test suite (unit, integration, or E2E). Testing has been manual QA rounds.</li>
+  <li><strong>Error tracking:</strong> Firebase Crashlytics configured with dSYM upload build phase in Xcode. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
+  <li><strong>Structured logging:</strong> Cloud Functions use <code>firebase-functions/logger</code> with structured data. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
+  <li><strong>Test coverage:</strong> 122 unit tests covering statusValidator, deliveryCallable, and firestoreRules. <span style="background:#22C55E;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-inline-start:8px;">FIXED</span></li>
   <li><strong>Rate limiting:</strong> Cloud Functions have basic rate limiting but no WAF or advanced DDoS protection.</li>
 </ul>
 
