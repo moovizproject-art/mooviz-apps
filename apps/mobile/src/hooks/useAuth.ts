@@ -277,6 +277,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       }
 
       await auth().signOut();
+      // Clear all per-user state so next user gets fresh experience
+      await AsyncStorage.multiRemove([
+        '@onboarding_complete',
+        '@driver_onboarding_done',
+        '@sender_onboarding_done',
+        '@session_token',
+        '@remember_me',
+        '@sound_enabled',
+      ]).catch(() => {});
       // Terminate Firestore then clear cache to prevent stale data on next login
       try {
         await firestore().terminate();

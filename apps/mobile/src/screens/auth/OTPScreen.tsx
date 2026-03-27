@@ -122,7 +122,30 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   }, [resendTimer]);
 
   const handleDigitChange = (text: string, index: number): void => {
-    const digit = text.replace(/[^0-9]/g, '');
+    const digits = text.replace(/[^0-9]/g, '');
+
+    // Handle paste: if multiple digits received, distribute across fields
+    if (digits.length > 1) {
+      const pastedDigits = digits.slice(0, OTP_LENGTH).split('');
+      const newCode = [...code];
+      pastedDigits.forEach((d, i) => {
+        if (i < OTP_LENGTH) {
+          newCode[i] = d;
+          animateSettle(i);
+        }
+      });
+      setCode(newCode);
+      setError(null);
+      // Focus last filled field
+      const lastIdx = Math.min(pastedDigits.length - 1, OTP_LENGTH - 1);
+      inputRefs.current[lastIdx]?.focus();
+      if (newCode.every((d) => d.length === 1)) {
+        handleVerify(newCode.join(''));
+      }
+      return;
+    }
+
+    const digit = digits;
     const newCode = [...code];
     newCode[index] = digit;
     setCode(newCode);

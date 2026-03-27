@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOOVIZ v1.2.1 — מסמך לבודק</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #1B1C1D; line-height: 1.7; padding: 24px; }
+  .container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #D2AC47; padding-bottom: 20px; margin-bottom: 24px; }
+  .header img { height: 48px; }
+  h1 { font-size: 26px; color: #D2AC47; margin-bottom: 8px; }
+  h2 { font-size: 20px; color: #1B1C1D; margin: 24px 0 12px; border-right: 4px solid #D2AC47; padding-right: 12px; }
+  h3 { font-size: 16px; color: #555; margin: 16px 0 8px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; margin-inline-start: 6px; }
+  .new { background: #22C55E; color: #fff; }
+  .fix { background: #3B82F6; color: #fff; }
+  .critical { background: #EF4444; color: #fff; }
+  .change { background: #F59E0B; color: #fff; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th { background: #D2AC47; color: #fff; padding: 10px 12px; text-align: right; font-size: 13px; }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+  tr:hover { background: #f8f8f8; }
+  .test-case { background: #f0f7ff; border: 1px solid #d0e3ff; border-radius: 10px; padding: 16px; margin: 12px 0; }
+  .test-case h4 { color: #1a73e8; margin-bottom: 8px; font-size: 14px; }
+  .test-case ol { padding-right: 20px; font-size: 13px; }
+  .test-case li { margin-bottom: 4px; }
+  .env-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; direction: ltr; display: inline-block; }
+  .version { font-size: 48px; font-weight: 800; color: #D2AC47; text-align: center; margin: 20px 0; }
+  footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; }
+  @media print { body { padding: 0; } .container { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <img src="images/mooviz-logo.jpg" alt="MOOVIZ" onerror="this.style.display='none'">
+  <div>
+    <div style="font-size:12px;color:#999">QA Testing Notes</div>
+    <div style="font-size:14px;font-weight:700">27 מרץ 2026</div>
+  </div>
+  <img src="images/kal-logo.png" alt="KAL" onerror="this.style.display='none'">
+</div>
+
+<div class="version">v1.2.1</div>
+<h1>מסמך בדיקות — שינויים מ-v1.1.7</h1>
+<p style="color:#666;margin-bottom:24px">מסמך זה מפרט את כל השינויים שנעשו מאז v1.1.7 ועד v1.2.1. כל סעיף כולל תיאור השינוי ומקרה בדיקה.</p>
+
+<div class="env-box">
+  <strong>⚠️ שימו לב:</strong> גרסה זו מחוברת ל-<strong>Firebase Production</strong> (mooviz-prod). כל הנתונים הם אמיתיים. יש ליצור משתמשים חדשים לצורך בדיקות.
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>🔐 אבטחה ואימות</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>ניקוי FCM Token בהתנתקות</td><td><span class="badge critical">קריטי</span></td><td>בעבר, אם 2 משתמשים התחברו מאותו מכשיר, המשתמש השני קיבל הודעות push של הראשון. עכשיו ההתנתקות מוחקת את הטוקן.</td></tr>
+<tr><td>מכשיר יחיד (Single Device)</td><td><span class="badge new">חדש</span></td><td>התחברות ממכשיר חדש מנתקת אוטומטית את המכשיר הקודם.</td></tr>
+<tr><td>KYC אישורי העלאה</td><td><span class="badge fix">תיקון</span></td><td>העלאת מסמכי KYC נחסמה בגלל חוקי Firestore חסרים. תוקן.</td></tr>
+<tr><td>תמונת פרופיל</td><td><span class="badge fix">תיקון</span></td><td>העלאת תמונת פרופיל נחסמה. תוקן.</td></tr>
+<tr><td>עדכון מיקום נהג</td><td><span class="badge fix">תיקון</span></td><td>שדה locationUpdatedAt חסר מחוקי Firestore. תוקן.</td></tr>
+<tr><td>איפוס Onboarding</td><td><span class="badge fix">תיקון</span></td><td>אחרי התנתקות, משתמש חדש לא ראה את מסך ההדרכה. עכשיו ההתנתקות מאפסת את כל מצב ה-Onboarding.</td></tr>
+</table>
+
+<div class="test-case">
+  <h4>🧪 בדיקה: FCM Token + מכשיר יחיד</h4>
+  <ol>
+    <li>התחבר עם משתמש A ממכשיר 1</li>
+    <li>שלח משלוח כדי לוודא שהתראות עובדות</li>
+    <li>התחבר עם אותו משתמש A ממכשיר 2</li>
+    <li><strong>צפוי:</strong> מכשיר 1 מתנתק אוטומטית</li>
+    <li>צור פעולה שמשגרת הודעת push</li>
+    <li><strong>צפוי:</strong> רק מכשיר 2 מקבל את ההודעה</li>
+  </ol>
+</div>
+
+<div class="test-case">
+  <h4>🧪 בדיקה: איפוס Onboarding</h4>
+  <ol>
+    <li>התנתק מהחשבון</li>
+    <li>לחץ "הירשם" (רישום חדש)</li>
+    <li><strong>צפוי:</strong> מסך Onboarding מופיע (3 עמודים של הדרכה)</li>
+    <li>השלם את ההדרכה ולאחר מכן את הרישום</li>
+    <li><strong>צפוי:</strong> הכל עובד כצפוי</li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>📱 iOS — הרשאות</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>הרשאת מיקום "תמיד"</td><td><span class="badge fix">תיקון</span></td><td>נוסף NSLocationAlwaysUsageDescription — חיוני למעקב מיקום ברקע</td></tr>
+<tr><td>מצבי רקע</td><td><span class="badge critical">קריטי</span></td><td>נוספו UIBackgroundModes: location, remote-notification, fetch. <strong>בלי זה iOS לא מקבל הודעות push ברקע!</strong></td></tr>
+</table>
+
+<div class="test-case">
+  <h4>🧪 בדיקה: הודעות iOS ברקע</h4>
+  <ol>
+    <li>התחבר כנהג ב-iOS</li>
+    <li>סגור את האפליקציה (רקע)</li>
+    <li>ממכשיר אחר, צור משלוח באזור של הנהג</li>
+    <li><strong>צפוי:</strong> הודעת push מגיעה למכשיר ה-iOS גם כשהאפליקציה ברקע</li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>✏️ יצירת ועריכת משלוח</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>עריכת משלוח</td><td><span class="badge new">חדש</span></td><td>אפשר לערוך פרטי משלוח כל עוד הסטטוס "חדש" ואין נהגים מעוניינים</td></tr>
+<tr><td>מחיקת משלוח</td><td><span class="badge new">חדש</span></td><td>אפשר למחוק משלוח באותם תנאים</td></tr>
+<tr><td>סמל מפה על שדות כתובת</td><td><span class="badge new">חדש</span></td><td>סמל 📍 ליד שדות כתובת — לחיצה פותחת מפה במיקום הנוכחי</td></tr>
+<tr><td>כפתור "שנה" על כתובת שנבחרה</td><td><span class="badge change">שינוי</span></td><td>אחרי בחירת כתובת, מוצג כפתור כחול "שנה" להבהרה שאפשר ללחוץ</td></tr>
+<tr><td>רמז ASAP/עתידי</td><td><span class="badge new">חדש</span></td><td>טקסט אפור מתחת למתג מסביר שאפשר לעבור בין "בהקדם" ל"תאריך עתידי"</td></tr>
+<tr><td>טקסט מפה</td><td><span class="badge fix">תיקון</span></td><td>"גרור את הסיכה" → "לחץ על המפה לבחירת המיקום המדויק"</td></tr>
+<tr><td>העלאת וידאו</td><td><span class="badge fix">תיקון</span></td><td>מגבלת גודל הועלתה מ-5MB ל-50MB לסרטוני וידאו</td></tr>
+</table>
+
+<div class="test-case">
+  <h4>🧪 בדיקה: עריכת משלוח</h4>
+  <ol>
+    <li>צור משלוח חדש</li>
+    <li>כנס לפרטי המשלוח</li>
+    <li><strong>צפוי:</strong> כפתורי "ערוך" ו"מחק" מוצגים</li>
+    <li>לחץ "ערוך" — שנה את הכתובת או המחיר</li>
+    <li><strong>צפוי:</strong> הטופס ממולא מראש, אפשר לשנות ולשמור</li>
+    <li>עכשיו בקש מנהג להביע עניין</li>
+    <li>חזור לפרטי המשלוח</li>
+    <li><strong>צפוי:</strong> כפתורי עריכה/מחיקה נעלמים</li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>📊 UX ושפה</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>כפתור CTA</td><td><span class="badge change">שינוי</span></td><td>"בואו נתחיל" → "התחל משלוח"</td></tr>
+<tr><td>טאב נהג</td><td><span class="badge change">שינוי</span></td><td>"העבודות שלי" → "המשלוחים שלי"</td></tr>
+<tr><td>באנר צ'אט</td><td><span class="badge new">חדש</span></td><td>באנר במסך הבית של השולח עם מספר הודעות שלא נקראו</td></tr>
+<tr><td>כותרות התראות</td><td><span class="badge change">שינוי</span></td><td>כותרות קונטקסטואליות: "שדה חסר", "משלוח נוצר", "שגיאה ביצירת משלוח"</td></tr>
+<tr><td>כותרות הסבר</td><td><span class="badge change">שינוי</span></td><td>מסכי הסבר מקבלים כותרת "הסבר — ..." (למשל "הסבר — יצירת משלוח")</td></tr>
+<tr><td>KYC בפרופיל</td><td><span class="badge new">חדש</span></td><td>מסמכי KYC מוצגים בפרופיל (קריאה בלבד) עם גלריית תמונות</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>🚩 מערכת דיווחים</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>דיווח על נהג</td><td><span class="badge new">חדש</span></td><td>כפתור "דווח על נהג" במסך פרטי משלוח של השולח</td></tr>
+<tr><td>דיווח על שולח</td><td><span class="badge new">חדש</span></td><td>כפתור "דווח על שולח" במסך פרטי משלוח של הנהג</td></tr>
+<tr><td>5 קטגוריות</td><td><span class="badge new">חדש</span></td><td>הטרדה, הונאה, נזק לפריט, לא הגיע, אחר + טקסט חופשי</td></tr>
+</table>
+
+<div class="test-case">
+  <h4>🧪 בדיקה: דיווח</h4>
+  <ol>
+    <li>כנס לפרטי משלוח עם נהג מוקצה</li>
+    <li>גלול למטה ולחץ "דווח על נהג"</li>
+    <li>בחר קטגוריה וכתוב תיאור</li>
+    <li>שלח</li>
+    <li><strong>צפוי:</strong> הודעת הצלחה, הדיווח מופיע בממשק הניהול</li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>🔢 OTP — תיקון הדבקה ב-RTL</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>הדבקת קוד OTP</td><td><span class="badge fix">תיקון</span></td><td>בעבר, הדבקת קוד 6 ספרות ב-RTL מילאה רק את השדה האחרון. עכשיו הספרות מתפזרות לכל 6 השדות.</td></tr>
+</table>
+
+<div class="test-case">
+  <h4>🧪 בדיקה: OTP הדבקה</h4>
+  <ol>
+    <li>התחבר עם חשבון שדורש OTP</li>
+    <li>קבל SMS עם קוד</li>
+    <li>לחץ על שדה ה-OTP הראשון</li>
+    <li>הדבק את הקוד מה-clipboard</li>
+    <li><strong>צפוי:</strong> כל 6 הספרות מתמלאות אוטומטית והאימות מתחיל</li>
+    <li><strong>נסה גם:</strong> אוטו-fill של iOS (oneTimeCode) — אותו תוצאה צפויה</li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>🏗️ תשתית ייצור</h2>
+
+<table>
+<tr><th>שינוי</th><th>סוג</th><th>תיאור</th></tr>
+<tr><td>Firebase Production</td><td><span class="badge critical">קריטי</span></td><td>האפליקציה עכשיו מחוברת ל-mooviz-prod (Android + iOS)</td></tr>
+<tr><td>Structured Logging</td><td><span class="badge new">חדש</span></td><td>כל 27 Cloud Functions משתמשות בלוגים מובנים (JSON) במקום console.log</td></tr>
+<tr><td>Crashlytics iOS</td><td><span class="badge new">חדש</span></td><td>dSYM upload מוגדר — קריסות iOS יופיעו ב-Firebase Console</td></tr>
+<tr><td>122 בדיקות יחידה</td><td><span class="badge new">חדש</span></td><td>74 בדיקות מכונת מצבים + 48 בדיקות Cloud Functions</td></tr>
+<tr><td>Firestore Rules</td><td><span class="badge fix">תיקון</span></td><td>חיזוק אבטחה: הגבלת שדות, kycStatus רק pending, adminActions נעול</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>📋 רשימת בדיקות מהירה</h2>
+
+<table>
+<tr><th>#</th><th>בדיקה</th><th>✓</th></tr>
+<tr><td>1</td><td>הרשמה חדשה — onboarding מופיע</td><td>☐</td></tr>
+<tr><td>2</td><td>OTP — הדבקת קוד עובדת ב-RTL</td><td>☐</td></tr>
+<tr><td>3</td><td>OTP — auto-fill של iOS עובד</td><td>☐</td></tr>
+<tr><td>4</td><td>יצירת משלוח — כפתור "התחל משלוח"</td><td>☐</td></tr>
+<tr><td>5</td><td>יצירת משלוח — סמל 📍 פותח מפה במיקום שלי</td><td>☐</td></tr>
+<tr><td>6</td><td>עריכת משלוח (סטטוס חדש, אין מעוניינים)</td><td>☐</td></tr>
+<tr><td>7</td><td>מחיקת משלוח (אותם תנאים)</td><td>☐</td></tr>
+<tr><td>8</td><td>העלאת וידאו > 5MB למשלוח</td><td>☐</td></tr>
+<tr><td>9</td><td>KYC — העלאת מסמכים עובדת</td><td>☐</td></tr>
+<tr><td>10</td><td>KYC — צפייה בפרופיל (קריאה בלבד)</td><td>☐</td></tr>
+<tr><td>11</td><td>תמונת פרופיל — שינוי עובד</td><td>☐</td></tr>
+<tr><td>12</td><td>נהג — "המשלוחים שלי" (לא "העבודות")</td><td>☐</td></tr>
+<tr><td>13</td><td>צ'אט — באנר "הודעות שמחכות" במסך הבית</td><td>☐</td></tr>
+<tr><td>14</td><td>דיווח — דיווח על נהג מפרטי משלוח</td><td>☐</td></tr>
+<tr><td>15</td><td>דיווח — דיווח על שולח מפרטי משלוח</td><td>☐</td></tr>
+<tr><td>16</td><td>iOS — הודעות push ברקע</td><td>☐</td></tr>
+<tr><td>17</td><td>iOS — הרשאת מיקום "תמיד"</td><td>☐</td></tr>
+<tr><td>18</td><td>מכשיר יחיד — התחברות ממכשיר שני מנתקת ראשון</td><td>☐</td></tr>
+<tr><td>19</td><td>התנתקות + רישום חדש — onboarding מופיע</td><td>☐</td></tr>
+<tr><td>20</td><td>רמז ASAP/עתידי מוצג בתאריך איסוף</td><td>☐</td></tr>
+</table>
+
+<footer>
+  MOOVIZ v1.2.1 (build 121) — Production Build<br>
+  © 2026 KAL Solutions Group | נבנה עבור ג.מ. מוביז תוכנה בע"מ
+</footer>
+
+</div>
+</body>
+</html>
