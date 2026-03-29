@@ -20,8 +20,8 @@ import {
   I18nManager,
   StatusBar,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useI18n } from '../../i18n/I18nContext';
 import { useSound } from '../../hooks/useSound';
 
 const logo = require('../../assets/logo.png');
@@ -41,14 +41,14 @@ interface OnboardingScreenProps {
 }
 
 interface BulletItem {
-  text: string;
+  textKey: string;
   icon: string;
 }
 
 interface PageData {
   key: string;
-  title: string;
-  subtitle: string;
+  titleKey: string;
+  subtitleKey: string;
   bullets?: BulletItem[];
   isLast?: boolean;
 }
@@ -56,37 +56,37 @@ interface PageData {
 const PAGES: PageData[] = [
   {
     key: 'getStarted',
-    title: 'בואו נתחיל!',
-    subtitle: 'הצטרפו לקהילת MOOVIZ עוד היום',
+    titleKey: 'onboarding.welcome',
+    subtitleKey: 'onboarding.welcomeTagline',
   },
   {
     key: 'driver',
-    title: 'הרוויחו בדרך שלך',
-    subtitle: 'מצאו משלוחים קרובים, עבדו לפי הלו"ז שלכם',
+    titleKey: 'onboarding.driverTitle',
+    subtitleKey: 'onboarding.driverSubtitle',
     bullets: [
-      { text: 'מצא משלוחים בקרבתך', icon: '🔍' },
-      { text: 'עבוד לפי הזמנים שלך', icon: '🕐' },
-      { text: 'קבל תשלום ישיר ומהיר', icon: '💳' },
+      { textKey: 'onboarding.driverBullet1', icon: '🔍' },
+      { textKey: 'onboarding.driverBullet2', icon: '🕐' },
+      { textKey: 'onboarding.driverBullet3', icon: '💳' },
     ],
   },
   {
     key: 'sender',
-    title: 'שלח חבילה בקלות',
-    subtitle: 'פרסמו משלוח בשניות, נהגים מהאזור יציעו מחיר',
+    titleKey: 'onboarding.senderTitle',
+    subtitleKey: 'onboarding.senderSubtitle',
     bullets: [
-      { text: 'פרסם משלוח תוך שניות', icon: '⚡' },
-      { text: 'נהגים מהאזור יציעו מחיר', icon: '📢' },
-      { text: 'עקוב אחרי המשלוח בזמן אמת', icon: '📍' },
+      { textKey: 'onboarding.senderBullet1', icon: '⚡' },
+      { textKey: 'onboarding.senderBullet2', icon: '📢' },
+      { textKey: 'onboarding.senderBullet3', icon: '📍' },
     ],
   },
   {
     key: 'community',
-    title: 'ברוכים הבאים לקהילה',
-    subtitle: 'הקהילה שמחברת בין שולחים לנהגים',
+    titleKey: 'onboarding.communityTitle',
+    subtitleKey: 'onboarding.communitySubtitle',
     bullets: [
-      { text: 'שכנים עוזרים לשכנים', icon: '🤝' },
-      { text: 'מהיר, בטוח ובמחיר הוגן', icon: '🛡️' },
-      { text: 'זמין בכל רגע, בכל מקום', icon: '🌐' },
+      { textKey: 'onboarding.welcomeBullet1', icon: '🤝' },
+      { textKey: 'onboarding.welcomeBullet2', icon: '🛡️' },
+      { textKey: 'onboarding.welcomeBullet3', icon: '🌐' },
     ],
     isLast: true,
   },
@@ -95,6 +95,7 @@ const PAGES: PageData[] = [
 const BLUE = '#3366FF';
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.JSX.Element {
+  const { t } = useI18n();
   const { play } = useSound();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -159,17 +160,16 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
         {/* Dark gradient overlay */}
         <View style={styles.darkOverlay} />
 
-        {/* Top bar: logo right, skip left */}
+        {/* Top bar: logo RIGHT, skip LEFT (explicit for RTL) */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={handleComplete} style={styles.skipBtn}>
-            <Text style={styles.skipText}>דלג</Text>
-          </TouchableOpacity>
           <View style={styles.logoRow}>
-            <Text style={styles.logoText}>mooviz</Text>
-            <View style={styles.logoIconBg}>
-              <Image source={logo} style={styles.logoIcon} resizeMode="contain" />
-            </View>
+            <Image source={logo} style={styles.realLogo} resizeMode="contain" />
           </View>
+          {!item.isLast ? (
+            <TouchableOpacity onPress={handleComplete} style={styles.skipBtn}>
+              <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
+            </TouchableOpacity>
+          ) : <View style={{ width: 50 }} />}
         </View>
 
         {/* Content area — title, subtitle, glass cards */}
@@ -180,30 +180,22 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
             transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
           },
         ]}>
-          <Text style={styles.pageTitle}>{item.title}</Text>
-          <Text style={styles.pageSubtitle}>{item.subtitle}</Text>
+          <View style={styles.textBlock}>
+            <Text style={styles.pageTitle}>{t(item.titleKey)}</Text>
+            <Text style={styles.pageSubtitle}>{t(item.subtitleKey)}</Text>
+          </View>
 
           {item.bullets && (
             <View style={styles.bulletList}>
               {item.bullets.map((bullet, i) => (
-                <GlassCard key={i} icon={bullet.icon} text={bullet.text} />
+                <GlassCard key={i} icon={bullet.icon} text={t(bullet.textKey)} />
               ))}
             </View>
           )}
         </Animated.View>
 
-        {/* Bottom bar: button left, dots right */}
+        {/* Bottom bar: dots RIGHT, button LEFT (visual RTL) */}
         <View style={styles.bottomBar}>
-          <TouchableOpacity
-            style={styles.nextButton}
-            onPress={handleNext}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.nextButtonText}>
-              {item.isLast ? 'בואו נתחיל!' : 'הבא'}
-            </Text>
-            <Text style={styles.nextButtonArrow}>←</Text>
-          </TouchableOpacity>
           <View style={styles.dotsRow}>
             {PAGES.map((_, i) => (
               <View
@@ -215,6 +207,16 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
               />
             ))}
           </View>
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={handleNext}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.nextButtonArrow}>←</Text>
+            <Text style={styles.nextButtonText}>
+              {item.isLast ? t('onboarding.getStarted') : t('onboarding.next')}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ImageBackground>
     </View>
@@ -240,22 +242,11 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
   );
 }
 
-/** Glassmorphism feature card */
+/** Glassmorphism feature card — pure RN, no native blur dependency */
 function GlassCard({ icon, text }: { icon: string; text: string }): React.JSX.Element {
   return (
     <View style={styles.glassCardOuter}>
-      {Platform.OS === 'ios' ? (
-        <BlurView
-          style={styles.glassBlur}
-          blurType="dark"
-          blurAmount={20}
-          reducedTransparencyFallbackColor="rgba(255,255,255,0.1)"
-        />
-      ) : null}
-      <View style={[
-        styles.glassCardInner,
-        Platform.OS === 'android' && { backgroundColor: 'rgba(255,255,255,0.12)' },
-      ]}>
+      <View style={styles.glassCardInner}>
         <Text style={styles.glassText}>{text}</Text>
         <View style={styles.glassIconBg}>
           <Text style={styles.glassIcon}>{icon}</Text>
@@ -304,25 +295,10 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  logoText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  logoIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: BLUE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoIcon: {
-    width: 20,
-    height: 20,
+  realLogo: {
+    width: 140,
+    height: 45,
     tintColor: '#FFFFFF',
   },
 
@@ -332,24 +308,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 28,
     zIndex: 5,
+    direction: 'rtl',
+  },
+  textBlock: {
+    width: '100%',
+    alignItems: 'flex-end',
+    marginBottom: 20,
   },
   pageTitle: {
     color: '#FFFFFF',
     fontSize: 34,
     fontWeight: '900',
-    textAlign: 'right',
-    marginBottom: 8,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
+    marginBottom: 8,
   },
   pageSubtitle: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 15,
     fontWeight: '400',
-    textAlign: 'right',
     lineHeight: 22,
-    marginBottom: 20,
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -363,17 +342,15 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  glassBlur: {
-    ...StyleSheet.absoluteFillObject,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   glassCardInner: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 16,
     paddingHorizontal: 18,
+    gap: 12,
   },
   glassText: {
     color: '#FFFFFF',
@@ -381,6 +358,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   glassIconBg: {
     width: 38,
@@ -389,7 +367,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(51,102,255,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
   },
   glassIcon: {
     fontSize: 18,

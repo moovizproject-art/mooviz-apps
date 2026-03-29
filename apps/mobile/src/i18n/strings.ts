@@ -493,31 +493,30 @@ export const strings = {
 
   // ── Onboarding ──
   onboarding: {
-    // Slide 1: Get Started (packages photo)
-    welcome: { he: 'בואו נתחיל!', en: "Let's get started!" } as LocaleStrings,
-    welcomeTagline: { he: 'הצטרפו לקהילת MOOVIZ עוד היום', en: 'Join the MOOVIZ community today' } as LocaleStrings,
-    // Slide 2: Earn your way (driver photo)
-    driverTitle: { he: 'הרוויחו בדרך שלך', en: 'Earn on your way' } as LocaleStrings,
-    driverSubtitle: { he: 'מצאו משלוחים קרובים, עבדו לפי הלו"ז שלכם', en: 'Find nearby deliveries, work on your schedule' } as LocaleStrings,
-    driverBullet1: { he: 'מצא משלוחים בקרבתך', en: 'Find deliveries near you' } as LocaleStrings,
-    driverBullet2: { he: 'עבוד לפי הזמנים שלך', en: 'Work on your schedule' } as LocaleStrings,
-    driverBullet3: { he: 'קבל תשלום ישיר ומהיר', en: 'Get paid directly and fast' } as LocaleStrings,
-    // Slide 3: Send easily (dark packages photo)
-    senderTitle: { he: 'שלח חבילה בקלות', en: 'Send a package easily' } as LocaleStrings,
-    senderSubtitle: { he: 'פרסמו משלוח בשניות, נהגים מהאזור יציעו מחיר', en: 'Post in seconds, local drivers will bid' } as LocaleStrings,
-    senderBullet1: { he: 'פרסם משלוח תוך שניות', en: 'Post a delivery in seconds' } as LocaleStrings,
-    senderBullet2: { he: 'נהגים מהאזור יציעו מחיר', en: 'Local drivers will offer prices' } as LocaleStrings,
-    senderBullet3: { he: 'עקוב אחרי המשלוח בזמן אמת', en: 'Track your delivery in real time' } as LocaleStrings,
-    // Slide 4: Welcome to community (handshake photo)
-    communityTitle: { he: 'ברוכים הבאים לקהילה', en: 'Welcome to the community' } as LocaleStrings,
-    communitySubtitle: { he: 'הקהילה שמחברת בין שולחים לנהגים', en: 'The community connecting senders with drivers' } as LocaleStrings,
-    communityBullet1: { he: 'שכנים עוזרים לשכנים', en: 'Neighbors helping neighbors' } as LocaleStrings,
-    communityBullet2: { he: 'מהיר, בטוח ובמחיר הוגן', en: 'Fast, safe, and fairly priced' } as LocaleStrings,
-    communityBullet3: { he: 'זמין בכל רגע, בכל מקום', en: 'Available anytime, anywhere' } as LocaleStrings,
-    // Old keys kept for compat
-    welcomeBullet1: { he: 'שכנים עוזרים לשכנים', en: 'Neighbors helping neighbors' } as LocaleStrings,
+    // Slide 1: Welcome
+    welcome: { he: 'ברוכים הבאים', en: 'Welcome' } as LocaleStrings,
+    welcomeTagline: { he: 'הקהילה שמחברת בין שולחים לנהגים', en: 'The community connecting senders with drivers' } as LocaleStrings,
+    welcomeBullet1: { he: 'מחברים בין אנשים', en: 'Connecting people' } as LocaleStrings,
     welcomeBullet2: { he: 'מהיר, בטוח ובמחיר הוגן', en: 'Fast, safe, and fairly priced' } as LocaleStrings,
     welcomeBullet3: { he: 'זמין בכל רגע, בכל מקום', en: 'Available anytime, anywhere' } as LocaleStrings,
+    // Slide 2: Sender
+    senderTitle: { he: 'שלח חבילה בקלות', en: 'Send a package easily' } as LocaleStrings,
+    senderSubtitle: { he: 'פרסם משלוח ומצא נהג באזורך', en: 'Post a delivery and find a driver nearby' } as LocaleStrings,
+    senderBullet1: { he: 'פרסם משלוח תוך שניות', en: 'Post a delivery in seconds' } as LocaleStrings,
+    senderBullet2: { he: 'אתה קובע את המחיר', en: 'You choose the price' } as LocaleStrings,
+    senderBullet3: { he: 'עקוב אחרי המשלוח בזמן אמת', en: 'Track your delivery in real time' } as LocaleStrings,
+    // Slide 3: Driver
+    driverTitle: { he: 'תרוויח בדרך שלך', en: 'Earn on your way' } as LocaleStrings,
+    driverSubtitle: { he: 'הפוך את הנסיעה שלך להכנסה', en: 'Turn your drive into income' } as LocaleStrings,
+    driverBullet1: { he: 'מצא משלוחים בקרבתך', en: 'Find deliveries near you' } as LocaleStrings,
+    driverBullet2: { he: 'עבוד לפי הזמנים שלך', en: 'Work on your schedule' } as LocaleStrings,
+    driverBullet3: { he: 'קבע את צורת התשלום', en: 'You choose the payment method' } as LocaleStrings,
+    // Slide 4: Community
+    communityTitle: { he: 'ברוכים הבאים לקהילה', en: 'Welcome to the community' } as LocaleStrings,
+    communitySubtitle: { he: 'הקהילה שמחברת בין שולחים לנהגים', en: 'The community connecting senders with drivers' } as LocaleStrings,
+    communityBullet1: { he: 'שכנים למען שכנים', en: 'Neighbors helping neighbors' } as LocaleStrings,
+    communityBullet2: { he: 'מהיר, בטוח ובמחיר הוגן', en: 'Fast, safe, and fairly priced' } as LocaleStrings,
+    communityBullet3: { he: 'זמין בכל רגע, בכל מקום', en: 'Available anytime, anywhere' } as LocaleStrings,
     getStarted: { he: 'בואו נתחיל!', en: "Let's go!" } as LocaleStrings,
     getStartedSubtitle: { he: 'הצטרפו לקהילת MOOVIZ עוד היום', en: 'Join the MOOVIZ community today' } as LocaleStrings,
     next: { he: 'הבא', en: 'Next' } as LocaleStrings,
