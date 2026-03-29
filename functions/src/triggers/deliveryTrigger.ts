@@ -380,10 +380,19 @@ async function handleStatusChange(
           chatUpdate.closed = false;
         }
 
-        // If delivery is cancelled, close chat immediately
+        // If delivery is cancelled by sender, close chat immediately
+        // If reverted to "new" (driver cancel), keep chat open 8 hours
         if (newStatus === "cancelled") {
           chatUpdate.closed = true;
           chatUpdate.closedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (newStatus === "new" && oldStatus !== "new") {
+          // Driver cancelled or declined — keep chat open 8 hours for sender to see messages
+          const closeAt = admin.firestore.Timestamp.fromMillis(
+            Date.now() + 8 * 60 * 60 * 1000
+          );
+          chatUpdate.chatCloseAt = closeAt;
+          chatUpdate.closed = false;
         }
 
         await admin.firestore()

@@ -96,6 +96,7 @@ interface DeliveryData {
   timeRange?: string | null;
   distance?: number;
   driverName?: string;
+  driverVehicleType?: string;
   interestedDrivers?: { uid: string; status?: string }[];
   ratedBySender?: boolean;
   ratedByDriver?: boolean;
@@ -226,7 +227,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
           {/* Driver name (if assigned) */}
           {delivery.driverName ? (
             <Text style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
-              🚛 {delivery.driverName}
+              {({ bicycle: '🚲', bike: '🏍', car: '🚗', truck: '🚚' } as Record<string, string>)[delivery.driverVehicleType || 'car'] || '🚗'} {delivery.driverName}
             </Text>
           ) : null}
 

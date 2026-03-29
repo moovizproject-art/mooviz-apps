@@ -13,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
+import auth from '@react-native-firebase/auth';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 
 const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
@@ -67,7 +68,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const { t } = useI18n();
   const carAlert = useCarAlert();
   const { currentUser } = useAuth();
-  const { expressInterest, withdrawInterest, confirmPayment, confirmSelection, declineSelection, cancelDelivery } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
+  const { expressInterest, withdrawInterest, withdrawFromInterest, confirmPayment, confirmSelection, declineSelection, cancelDelivery } = useDelivery({ userId: currentUser?.uid, role: 'driver' });
   const { checkAndPromptReview } = useInAppReview();
 
   // Direct document listener — works for ANY delivery regardless of driverId
@@ -197,12 +198,24 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     setLoadingSteps(['uploadingProof', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
     try {
       const url = await uploadProofPhoto(deliveryId, proofType, photoUri);
-      if (proofType === 'pickup') {
-        const fn = functions().httpsCallable('confirmPickup');
-        await fn({ deliveryId, pickupPhotoURL: url });
-      } else {
-        const fn = functions().httpsCallable('confirmDelivery');
-        await fn({ deliveryId, deliveryPhotoURL: url });
+      const fnName = proofType === 'pickup' ? 'confirmPickup' : 'confirmDelivery';
+      const fnData = proofType === 'pickup'
+        ? { deliveryId, pickupPhotoURL: url }
+        : { deliveryId, deliveryPhotoURL: url };
+
+      // Try callable, retry once on stale token
+      const fn = functions().httpsCallable(fnName);
+      try {
+        await fn(fnData);
+      } catch (callErr: any) {
+        const code = (callErr?.code || callErr?.message || '').toLowerCase();
+        if (code.includes('unauthenticated')) {
+          const user = auth().currentUser;
+          if (user) {
+            await user.getIdToken(true);
+            await fn(fnData); // retry
+          } else { throw callErr; }
+        } else { throw callErr; }
       }
       setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
       carAlert.show(
@@ -212,7 +225,11 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       );
     } catch (err: any) {
       setLoadingVisible(false);
-      carAlert.show('error', t('common.error'), err.message || t('driver.statusUpdateError'));
+      const code = (err?.code || err?.message || '').toLowerCase();
+      const hebrewMsg = code.includes('unauthenticated')
+        ? 'נדרשת התחברות מחדש. אנא צא והתחבר שוב.'
+        : err.message || t('driver.statusUpdateError');
+      carAlert.show('error', t('common.error'), hebrewMsg);
     } finally {
       setProofUploading(false);
     }
@@ -233,6 +250,28 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
           try {
             await withdrawInterest(deliveryId);
+            setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
+            carAlert.show('success', t('common.success'), strings.driver.withdrawSuccess.he);
+          } catch (err) {
+            setLoadingVisible(false);
+            carAlert.show('error', t('common.error'), strings.driver.withdrawError.he);
+          }
+        },
+      },
+    ]);
+  };
+
+  /** Withdraw from interest list (before being selected/assigned) */
+  const handleWithdrawFromInterest = (): void => {
+    carAlert.show('info', strings.driver.withdrawInterest.he, strings.driver.withdrawConfirm.he, [
+      { text: strings.common.cancel.he, style: 'cancel' },
+      {
+        text: strings.driver.withdrawInterest.he,
+        style: 'destructive',
+        onPress: async () => {
+          setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
+          try {
+            await withdrawFromInterest(deliveryId);
             setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
             carAlert.show('success', t('common.success'), strings.driver.withdrawSuccess.he);
           } catch (err) {
@@ -480,7 +519,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         {isAvailable && !isMyJob && alreadyInterested && myInterestStatus === 'interested' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#E53935' }]}
-            onPress={handleWithdrawInterest}
+            onPress={handleWithdrawFromInterest}
           >
             <Text style={styles.actionButtonText}>{strings.driver.withdrawInterest.he}</Text>
           </TouchableOpacity>

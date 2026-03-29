@@ -1,8 +1,92 @@
 import { useCallback, useMemo } from 'react';
 import functions from '@react-native-firebase/functions';
+import auth from '@react-native-firebase/auth';
 
 import { useFirestore } from './useFirestore';
 import { getGeohashRange } from '../services/geohash';
+
+// ──────────────────────────────────────────────
+// Auth token refresh before callable invocations
+// ──────────────────────────────────────────────
+
+/**
+ * Call a Cloud Function with automatic retry on stale token.
+ *
+ * Firebase ID tokens expire every 60 minutes. The SDK refreshes them
+ * automatically, but this can fail silently when the app was backgrounded
+ * or the network blipped. When that happens the server receives
+ * `request.auth === null` → UNAUTHENTICATED.
+ *
+ * Strategy: try the call first (zero overhead on happy path). If we get
+ * an UNAUTHENTICATED error, force-refresh the token and retry once.
+ * The user stays logged in — no re-authentication needed.
+ */
+async function callFunction<T = unknown>(name: string, data?: Record<string, unknown>): Promise<T> {
+  const fn = functions().httpsCallable(name);
+  try {
+    const result = await fn(data || {});
+    return result.data as T;
+  } catch (err: unknown) {
+    const code = ((err as any)?.code || (err as any)?.message || '').toLowerCase();
+    const isAuthError = code.includes('unauthenticated') || code.includes('auth');
+
+    if (isAuthError) {
+      // Token may be stale — force refresh and retry once
+      const user = auth().currentUser;
+      if (user) {
+        console.log('[callFunction] UNAUTHENTICATED on', name, '— refreshing token and retrying');
+        try {
+          await user.getIdToken(true);
+          const retry = await fn(data || {});
+          return retry.data as T;
+        } catch (retryErr) {
+          console.error('[callFunction] Retry after token refresh failed:', retryErr);
+          throw retryErr;
+        }
+      }
+    }
+    throw err;
+  }
+}
+
+// ──────────────────────────────────────────────
+// Cloud Functions error → Hebrew mapper
+// ──────────────────────────────────────────────
+
+/**
+ * Map Firebase Cloud Functions HttpsError codes to Hebrew messages.
+ * The RN Firebase SDK exposes the code on `err.code` (e.g. "functions/unauthenticated")
+ * and sometimes on the raw message text (e.g. "UNAUTHENTICATED").
+ */
+function mapCallableError(err: unknown): string {
+  const raw = err as { code?: string; message?: string; details?: unknown };
+  const code = (raw?.code || '').toLowerCase();
+  const msg = (raw?.message || '').toLowerCase();
+
+  const hebrewErrors: Record<string, string> = {
+    'unauthenticated': 'נדרשת התחברות מחדש. אנא צא והתחבר שוב.',
+    'permission-denied': 'אין לך הרשאה לבצע פעולה זו.',
+    'not-found': 'הפריט לא נמצא.',
+    'already-exists': 'הפריט כבר קיים.',
+    'failed-precondition': 'לא ניתן לבצע את הפעולה במצב הנוכחי.',
+    'invalid-argument': 'נתונים לא תקינים.',
+    'unavailable': 'השירות לא זמין כרגע. נסה שוב.',
+    'resource-exhausted': 'יותר מדי בקשות. נסה שוב מאוחר יותר.',
+    'internal': 'שגיאה פנימית בשרת. נסה שוב.',
+    'deadline-exceeded': 'הבקשה נמשכה זמן רב מדי. נסה שוב.',
+    'cancelled': 'הבקשה בוטלה.',
+  };
+
+  // Check code field (e.g. "functions/unauthenticated" or "unauthenticated")
+  for (const [key, hebrew] of Object.entries(hebrewErrors)) {
+    if (code.includes(key) || msg.includes(key)) return hebrew;
+  }
+
+  // If the message is a Hebrew string from the server, keep it
+  if (raw?.message && /[\u0590-\u05FF]/.test(raw.message)) return raw.message;
+
+  return 'שגיאה לא צפויה. נסה שוב.';
+}
 
 // ──────────────────────────────────────────────
 // Types
@@ -265,8 +349,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
 
       // Call Cloud Function — server handles normalization, validation, geohash, notifications
       try {
-        const fn = functions().httpsCallable('createDelivery');
-        const result = await fn({
+        const result = await callFunction<{ deliveryId: string }>('createDelivery', {
           pickup: input.pickup,
           destination: input.destination,
           itemDescription: input.itemDescription,
@@ -279,10 +362,10 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
           notes: input.notes,
         });
 
-        return (result.data as { deliveryId: string }).deliveryId;
+        return result.deliveryId;
       } catch (err) {
         console.error('[useDelivery] createDelivery failed:', err);
-        throw new Error((err as any)?.message || 'Create delivery failed');
+        throw new Error(mapCallableError(err));
       }
     },
     [],
@@ -305,12 +388,10 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
   const expressInterest = useCallback(
     async (deliveryId: string, _driverId: string): Promise<void> => {
       try {
-        // Route through Cloud Function for proper status transition + notifications
-        const fn = functions().httpsCallable('expressInterest');
-        await fn({ deliveryId });
+        await callFunction('expressInterest', { deliveryId });
       } catch (err) {
         console.error('[useDelivery] expressInterest failed:', err);
-        throw new Error((err as any)?.message || 'Express interest failed');
+        throw new Error(mapCallableError(err));
       }
     },
     [],
@@ -319,11 +400,10 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
   const withdrawInterest = useCallback(
     async (deliveryId: string): Promise<void> => {
       try {
-        const fn = functions().httpsCallable('withdrawInterest');
-        await fn({ deliveryId });
+        await callFunction('withdrawInterest', { deliveryId });
       } catch (err) {
         console.error('[useDelivery] withdrawInterest failed:', err);
-        throw new Error((err as any)?.message || 'Withdraw interest failed');
+        throw new Error(mapCallableError(err));
       }
     },
     [],
@@ -332,9 +412,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
   const submitRating = useCallback(
     async (input: RatingInput): Promise<void> => {
       try {
-        // Route through Cloud Function for server-side validation + aggregate rating update
-        const fn = functions().httpsCallable('submitRating');
-        await fn({
+        await callFunction('submitRating', {
           deliveryId: input.deliveryId,
           targetUserId: input.targetUserId,
           rating: input.rating,
@@ -342,7 +420,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
         });
       } catch (err) {
         console.error('[useDelivery] submitRating failed:', err);
-        throw new Error((err as any)?.message || 'Rating submission failed');
+        throw new Error(mapCallableError(err));
       }
     },
     [],
@@ -350,92 +428,82 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
 
   const selectDriver = useCallback(async (deliveryId: string, driverUid: string) => {
     try {
-      const fn = functions().httpsCallable('selectDriver');
-      await fn({ deliveryId, driverUid });
+      await callFunction('selectDriver', { deliveryId, driverUid });
     } catch (err) {
       console.error('[useDelivery] selectDriver failed:', err);
-      throw new Error((err as any)?.message || 'Select driver failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const confirmSelection = useCallback(async (deliveryId: string) => {
     try {
-      const fn = functions().httpsCallable('confirmSelection');
-      await fn({ deliveryId });
+      await callFunction('confirmSelection', { deliveryId });
     } catch (err) {
       console.error('[useDelivery] confirmSelection failed:', err);
-      throw new Error((err as any)?.message || 'Confirm selection failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const declineSelection = useCallback(async (deliveryId: string) => {
     try {
-      const fn = functions().httpsCallable('declineSelection');
-      await fn({ deliveryId });
+      await callFunction('declineSelection', { deliveryId });
     } catch (err) {
       console.error('[useDelivery] declineSelection failed:', err);
-      throw new Error((err as any)?.message || 'Decline selection failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const cancelSelectedDriver = useCallback(async (deliveryId: string) => {
     try {
-      const fn = functions().httpsCallable('cancelSelectedDriver');
-      await fn({ deliveryId });
+      await callFunction('cancelSelectedDriver', { deliveryId });
     } catch (err) {
       console.error('[useDelivery] cancelSelectedDriver failed:', err);
-      throw new Error((err as any)?.message || 'Cancel selected driver failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const withdrawFromInterest = useCallback(async (deliveryId: string) => {
     try {
-      const fn = functions().httpsCallable('withdrawFromInterest');
-      await fn({ deliveryId });
+      await callFunction('withdrawFromInterest', { deliveryId });
     } catch (err) {
       console.error('[useDelivery] withdrawFromInterest failed:', err);
-      throw new Error((err as any)?.message || 'Withdraw from interest failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const cancelDelivery = useCallback(async (deliveryId: string, reason?: string) => {
     try {
-      const fn = functions().httpsCallable('cancelDelivery');
-      await fn({ deliveryId, reason });
+      await callFunction('cancelDelivery', { deliveryId, reason });
     } catch (err) {
       console.error('[useDelivery] cancelDelivery failed:', err);
-      throw new Error((err as any)?.message || 'Cancel delivery failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const editDelivery = useCallback(async (deliveryId: string, updates: EditDeliveryInput) => {
     try {
-      const fn = functions().httpsCallable('editDelivery');
-      await fn({ deliveryId, ...updates });
+      await callFunction('editDelivery', { deliveryId, ...updates });
     } catch (err) {
       console.error('[useDelivery] editDelivery failed:', err);
-      throw new Error((err as any)?.message || 'Edit delivery failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const deleteDelivery = useCallback(async (deliveryId: string) => {
     try {
-      const fn = functions().httpsCallable('cancelDelivery');
-      await fn({ deliveryId, reason: 'deleted_by_sender' });
+      await callFunction('cancelDelivery', { deliveryId, reason: 'deleted_by_sender' });
     } catch (err) {
       console.error('[useDelivery] deleteDelivery failed:', err);
-      throw new Error((err as any)?.message || 'Delete delivery failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 
   const confirmPayment = useCallback(async (deliveryId: string, paymentPhotoURL?: string) => {
     try {
-      // All payment confirmations MUST go through Cloud Functions for server-side validation
-      const fn = functions().httpsCallable('confirmPayment');
-      await fn({ deliveryId, paymentPhotoURL });
+      await callFunction('confirmPayment', { deliveryId, paymentPhotoURL });
     } catch (err) {
       console.error('[useDelivery] confirmPayment failed:', err);
-      throw new Error((err as any)?.message || 'Payment confirmation failed');
+      throw new Error(mapCallableError(err));
     }
   }, []);
 

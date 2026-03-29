@@ -430,7 +430,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   ]}
                 />
                 {step.active && (
-                  <Text style={styles.truckIcon}>🚛</Text>
+                  <Text style={styles.truckIcon}>{({ bicycle: '🚲', bike: '🏍', car: '🚗', truck: '🚚' } as Record<string, string>)[delivery?.driverVehicleType || 'car'] || '🚗'}</Text>
                 )}
                 <Text
                   style={[

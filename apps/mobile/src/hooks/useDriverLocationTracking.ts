@@ -172,25 +172,49 @@ export function useDriverLocationTracking(
     }
   }, []);
 
-  // ── Start idle mode (interval + getCurrentPosition) ──
+  // ── Start idle mode ──
+  // iOS: use watchPosition with significant changes so background updates work.
+  // Android: use interval + getCurrentPosition (background works with foreground service).
   const startIdleTracking = useCallback(async () => {
     stopTracking();
 
-    const granted = await requestLocationPermission();
-    if (!granted) {
-      setError('permission-denied');
-      return;
+    if (Platform.OS === 'ios') {
+      // iOS needs 'always' authorization for background location updates
+      const granted = await requestBackgroundLocationPermission();
+      if (!granted) {
+        // Fall back to foreground-only
+        const fgGranted = await requestLocationPermission();
+        if (!fgGranted) { setError('permission-denied'); return; }
+      }
+
+      // Fetch immediately
+      fetchOnce();
+
+      // Use watchPosition with low accuracy + large distance filter for battery-friendly
+      // background updates. This keeps the blue indicator but ensures geohash stays fresh.
+      watchIdRef.current = Geolocation.watchPosition(onPosition, onPositionError, {
+        enableHighAccuracy: false,
+        distanceFilter: 500, // Update every 500m movement
+        interval: LOCATION_IDLE_INTERVAL_MS,
+        fastestInterval: 60000,
+        showsBackgroundLocationIndicator: false,
+        forceRequestLocation: true,
+      });
+    } else {
+      const granted = await requestLocationPermission();
+      if (!granted) { setError('permission-denied'); return; }
+
+      // Fetch immediately
+      fetchOnce();
+
+      // Then every 5 minutes
+      intervalRef.current = setInterval(fetchOnce, LOCATION_IDLE_INTERVAL_MS);
     }
 
-    // Fetch immediately
-    fetchOnce();
-
-    // Then every 5 minutes
-    intervalRef.current = setInterval(fetchOnce, LOCATION_IDLE_INTERVAL_MS);
     setIsTracking(true);
     setError(null);
-    console.log('[LocationTracking] Started IDLE mode (every 5min)');
-  }, [stopTracking, fetchOnce]);
+    console.log(`[LocationTracking] Started IDLE mode (${Platform.OS === 'ios' ? 'watchPosition' : 'interval 5min'})`);
+  }, [stopTracking, fetchOnce, onPosition, onPositionError]);
 
   // ── Start active mode (watchPosition, high accuracy) ──
   const startActiveTracking = useCallback(async () => {

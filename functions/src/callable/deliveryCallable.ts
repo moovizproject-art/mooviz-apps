@@ -536,6 +536,7 @@ export const expressInterest = onCall(async (request) => {
       photoUrl: driverData.profilePhotoURL || null,
       rating: driverData.ratingAsDriver?.average ?? 0,
       completedDeliveries: driverData.completedDeliveries ?? 0,
+      vehicleType: driverData.driverPrefs?.vehicleType || "car",
       distanceKm: Math.round(distanceKm * 10) / 10,
       expressedAt: admin.firestore.Timestamp.now(),
       status: "interested",
@@ -596,6 +597,7 @@ export const selectDriver = onCall(async (request) => {
       driverName: selectedEntry?.name || "",
       driverPhotoUrl: selectedEntry?.photoUrl || null,
       driverRating: selectedEntry?.rating || 0,
+      driverVehicleType: selectedEntry?.vehicleType || "car",
       interestedDrivers: updated,
       selectedDriverId: driverUid,
       selectionExpiresAt: admin.firestore.Timestamp.fromMillis(now.toMillis() + SELECTION_TIMEOUT_MS),
@@ -1182,12 +1184,15 @@ export const cancelDelivery = onCall(async (request) => {
   const { ref } = await getDeliveryOrThrow(deliveryId);
 
   let cancellerNameHe = "";
+  let driverCancelled = false;
+  let deliverySnapshot: Delivery | null = null;
 
   // Use transaction to prevent race conditions (e.g. cancel + confirm at same time)
   await db.runTransaction(async (txn) => {
     const freshDoc = await txn.get(ref);
     const delivery = freshDoc.data() as Delivery;
     if (!delivery) throw new HttpsError("not-found", `Delivery ${deliveryId} not found`);
+    deliverySnapshot = delivery;
 
     // Verify the caller is either the sender or the assigned driver
     const isSender = delivery.senderId === uid;
@@ -1202,31 +1207,122 @@ export const cancelDelivery = onCall(async (request) => {
 
     const actorRole = isSender ? "sender" : "driver";
     cancellerNameHe = isSender ? "השולח" : "הנהג";
-
-    // Validate transition against fresh status
-    assertValidTransition(delivery.status, "cancelled", actorRole, uid);
+    driverCancelled = isDriver;
 
     const now = admin.firestore.Timestamp.now();
-    txn.update(ref, {
-      status: "cancelled",
-      cancelledBy: uid,
-      statusHistory: admin.firestore.FieldValue.arrayUnion({
+
+    if (driverCancelled) {
+      // ── DRIVER cancels pre-pickup: revert to "new", keep chat open 8h ──
+      // Validate driver can transition back to "new"
+      assertValidTransition(delivery.status, "new", actorRole, uid);
+
+      // Mark driver as cancelled in interestedDrivers list
+      const interested: any[] = delivery.interestedDrivers || [];
+      const updated = interested.map((d: any) =>
+        d.uid === uid ? { ...d, status: "cancelled" } : d
+      );
+
+      txn.update(ref, {
+        status: "new",
+        driverId: null,
+        driverName: null,
+        driverPhotoUrl: null,
+        driverRating: null,
+        selectedDriverId: null,
+        selectionExpiresAt: null,
+        interestedDrivers: updated,
+        statusHistory: admin.firestore.FieldValue.arrayUnion({
+          status: "new",
+          timestamp: now,
+          actor: uid,
+          note: reason ?? "Driver cancelled — delivery returned to new",
+        }),
+        updatedAt: now,
+      });
+    } else {
+      // ── SENDER cancels: truly cancel the delivery ──
+      assertValidTransition(delivery.status, "cancelled", actorRole, uid);
+
+      txn.update(ref, {
         status: "cancelled",
-        timestamp: now,
-        actor: uid,
-        note: reason ?? "Cancelled by user",
-      }),
-      updatedAt: now,
+        cancelledBy: uid,
+        statusHistory: admin.firestore.FieldValue.arrayUnion({
+          status: "cancelled",
+          timestamp: now,
+          actor: uid,
+          note: reason ?? "Cancelled by sender",
+        }),
+        updatedAt: now,
+      });
+    }
+  });
+
+  if (driverCancelled && deliverySnapshot) {
+    // Notify sender that driver cancelled
+    try {
+      await sendPushNotification(
+        (deliverySnapshot as Delivery).senderId,
+        "הנהג ביטל את המשלוח",
+        "הנהג ביטל — המשלוח חוזר לרשימה ופתוח לנהגים חדשים",
+        { event: "driver_cancelled", deliveryId }
+      );
+    } catch (err) {
+      logger.error("cancelDelivery: sender notification failed", { deliveryId, error: String(err) });
+    }
+
+    // Send chat message to sender about the cancellation
+    try {
+      const chatId = (deliverySnapshot as Delivery).chatId;
+      if (chatId) {
+        await admin.firestore().collection("chats").doc(chatId).collection("messages").add({
+          senderId: "system",
+          senderName: "מערכת",
+          text: "הנהג ביטל את המשלוח. המשלוח חוזר לרשימה ופתוח לנהגים חדשים. הצ'אט יישאר פתוח 8 שעות.",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          type: "system",
+        });
+        // Keep chat open for 8 hours
+        const closeAt = admin.firestore.Timestamp.fromMillis(
+          Date.now() + 8 * 60 * 60 * 1000
+        );
+        await admin.firestore().collection("chats").doc(chatId).update({
+          closed: false,
+          chatCloseAt: closeAt,
+        });
+      }
+    } catch (err) {
+      logger.error("cancelDelivery: chat message failed", { deliveryId, error: String(err) });
+    }
+
+    // Re-notify nearby drivers (exclude the cancelling driver)
+    renotifyNearbyDrivers(deliverySnapshot as Delivery, deliveryId, [uid], "cancelDelivery");
+  } else {
+    // Sender cancelled — notify driver and close chat
+    await sendDeliveryNotification(deliveryId, "delivery_cancelled", {
+      actorId: uid,
+      cancelledBy: cancellerNameHe,
     });
-  });
 
-  // Notify outside transaction
-  await sendDeliveryNotification(deliveryId, "delivery_cancelled", {
-    actorId: uid,
-    cancelledBy: cancellerNameHe,
-  });
+    // Send chat message to driver about sender cancellation
+    if (deliverySnapshot) {
+      try {
+        const chatId = (deliverySnapshot as Delivery).chatId;
+        if (chatId) {
+          await admin.firestore().collection("chats").doc(chatId).collection("messages").add({
+            senderId: "system",
+            senderName: "מערכת",
+            text: "השולח ביטל את המשלוח.",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            type: "system",
+          });
+        }
+      } catch (err) {
+        logger.error("cancelDelivery: chat message for sender cancel failed", { deliveryId, error: String(err) });
+      }
+    }
+  }
 
-  return { success: true, message: "Delivery cancelled successfully" };
+  return { success: true, message: driverCancelled ? "Delivery returned to new" : "Delivery cancelled" };
 });
 
 /**
