@@ -113,8 +113,9 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
-      // Persist remember me preference
+      // Persist remember me preference + login grace period to prevent session expiry race
       await AsyncStorage.setItem('@remember_me', rememberMe ? 'true' : 'false');
+      await AsyncStorage.setItem('@login_timestamp', Date.now().toString());
       // Set flag BEFORE signIn so RootNavigator knows OTP is required
       setForceOtp(true);
       const cred = await signInWithEmail(email, password);
