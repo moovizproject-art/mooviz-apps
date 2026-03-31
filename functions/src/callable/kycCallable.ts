@@ -38,11 +38,15 @@ export const reviewKYC = onCall(async (request) => {
 
   const now = admin.firestore.Timestamp.now();
 
-  // Update user KYC status
+  // Update user KYC status.
+  // When approved: unlock driver mode AND enable availability + set role,
+  // so the driver immediately appears in proximity queries for push notifications.
+  const isApproved = decision === "approved";
   const update: Record<string, unknown> = {
     kycStatus: decision,
-    driverUnlocked: decision === "approved",
+    driverUnlocked: isApproved,
     updatedAt: now,
+    ...(isApproved && { driverAvailable: true, role: "driver" }),
   };
 
   await userRef.update(update);

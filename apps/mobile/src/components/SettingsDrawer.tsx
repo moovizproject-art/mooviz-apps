@@ -48,8 +48,10 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
       // Already driver — switch back to sender
       await updateProfile({ activeMode: 'client' });
     } else if (driverUnlocked) {
-      // KYC approved — switch to driver mode
-      await updateProfile({ activeMode: 'driver' });
+      // KYC approved — switch to driver mode.
+      // Also set role to 'driver' and enable availability so the driver
+      // appears in proximity queries and receives new-delivery push notifications.
+      await updateProfile({ activeMode: 'driver', role: 'driver', driverAvailable: true } as any);
     } else {
       // KYC not done — go to KYC screen
       navigation.navigate('DriverKYC');
