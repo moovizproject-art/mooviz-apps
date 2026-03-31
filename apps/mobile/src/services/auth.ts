@@ -168,6 +168,9 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
   const normalized = normalizePhoneNumber(phone);
   console.log('[sendPhoneOTP] Sending to:', normalized);
 
+  // Set Hebrew so reCAPTCHA fallback (if triggered) renders in Hebrew
+  auth().languageCode = 'he';
+
   // Emulator bypass: iOS crashes without APNs, Android can't receive SMS.
   if (isIOSSimulator || isAndroidEmulator) {
     console.warn(`[sendPhoneOTP] Emulator detected (${Platform.OS}) — returning test verificationId.`);
