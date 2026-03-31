@@ -197,6 +197,13 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       setPrefs(merged);
       AsyncStorage.setItem(PREFS_KEY, JSON.stringify(merged));
       setPrefsLoaded(true);
+      // Ensure Firestore driverAvailable matches local isAvailable on every load.
+      // Fixes: fresh installs where driverAvailable was never written to Firestore.
+      if (currentUser?.uid) {
+        firestore().collection('users').doc(currentUser.uid).update({
+          driverAvailable: merged.isAvailable ?? true,
+        }).catch(() => {});
+      }
     });
     // Show onboarding on first visit
     shouldShowOnboarding().then((show) => {
@@ -215,6 +222,9 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
     if (!currentUser?.uid) return;
     try {
       await firestore().collection('users').doc(currentUser.uid).update({
+        // Sync the top-level driverAvailable flag so the Cloud Function
+        // proximity query includes/excludes this driver correctly.
+        driverAvailable: nextPrefs.isAvailable ?? true,
         driverPrefs: {
           homeAddress: nextPrefs.homeAddress,
           workAddress: nextPrefs.workAddress,
