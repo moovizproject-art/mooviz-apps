@@ -13,6 +13,12 @@
 		BB000004000000000000SND4 /* payment.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000004000000000000SND4 /* payment.mp3 */; };
 		BB000005000000000000SND5 /* question.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000005000000000000SND5 /* question.mp3 */; };
 		BB000006000000000000SND6 /* success.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA000006000000000000SND6 /* success.mp3 */; };
+		CC000001000000000000CAF1 /* driver_interested.caf in Resources */ = {isa = PBXBuildFile; fileRef = DD000001000000000000CAF1 /* driver_interested.caf */; };
+		CC000002000000000000CAF2 /* error.caf in Resources */ = {isa = PBXBuildFile; fileRef = DD000002000000000000CAF2 /* error.caf */; };
+		CC000003000000000000CAF3 /* new_delivery.caf in Resources */ = {isa = PBXBuildFile; fileRef = DD000003000000000000CAF3 /* new_delivery.caf */; };
+		CC000004000000000000CAF4 /* payment.caf in Resources */ = {isa = PBXBuildFile; fileRef = DD000004000000000000CAF4 /* payment.caf */; };
+		CC000005000000000000CAF5 /* question.caf in Resources */ = {isa = PBXBuildFile; fileRef = DD000005000000000000CAF5 /* question.caf */; };
+		CC000006000000000000CAF6 /* success.caf in Resources */ = {isa = PBXBuildFile; fileRef = DD000006000000000000CAF6 /* success.caf */; };
 		00E356F31AD99517003FC87E /* MoovizMobileTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* MoovizMobileTests.m */; };
 		03858D5FFBD4C6C0D840F305 /* libPods-MoovizMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 17641B562CA4F7DD1968DB8F /* libPods-MoovizMobile.a */; };
 		09D47917A5F53C23601BFA4C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3751F83600424B445B542A25 /* GoogleService-Info.plist */; };
@@ -61,6 +67,12 @@
 		AA000004000000000000SND4 /* payment.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = payment.mp3; path = MoovizMobile/payment.mp3; sourceTree = "<group>"; };
 		AA000005000000000000SND5 /* question.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = question.mp3; path = MoovizMobile/question.mp3; sourceTree = "<group>"; };
 		AA000006000000000000SND6 /* success.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = success.mp3; path = MoovizMobile/success.mp3; sourceTree = "<group>"; };
+		DD000001000000000000CAF1 /* driver_interested.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; name = driver_interested.caf; path = MoovizMobile/driver_interested.caf; sourceTree = "<group>"; };
+		DD000002000000000000CAF2 /* error.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; name = error.caf; path = MoovizMobile/error.caf; sourceTree = "<group>"; };
+		DD000003000000000000CAF3 /* new_delivery.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; name = new_delivery.caf; path = MoovizMobile/new_delivery.caf; sourceTree = "<group>"; };
+		DD000004000000000000CAF4 /* payment.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; name = payment.caf; path = MoovizMobile/payment.caf; sourceTree = "<group>"; };
+		DD000005000000000000CAF5 /* question.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; name = question.caf; path = MoovizMobile/question.caf; sourceTree = "<group>"; };
+		DD000006000000000000CAF6 /* success.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; name = success.caf; path = MoovizMobile/success.caf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -274,6 +286,12 @@
 				BB000004000000000000SND4 /* payment.mp3 in Resources */,
 				BB000005000000000000SND5 /* question.mp3 in Resources */,
 				BB000006000000000000SND6 /* success.mp3 in Resources */,
+				CC000001000000000000CAF1 /* driver_interested.caf in Resources */,
+				CC000002000000000000CAF2 /* error.caf in Resources */,
+				CC000003000000000000CAF3 /* new_delivery.caf in Resources */,
+				CC000004000000000000CAF4 /* payment.caf in Resources */,
+				CC000005000000000000CAF5 /* question.caf in Resources */,
+				CC000006000000000000CAF6 /* success.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -544,7 +562,7 @@
 				CODE_SIGN_ENTITLEMENTS = MoovizMobile/MoovizMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 127;
 				DEVELOPMENT_TEAM = 3USMNP695K;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = MoovizMobile/Info.plist;
@@ -553,7 +571,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.6;
+				MARKETING_VERSION = 1.2.7;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -579,7 +597,7 @@
 				CODE_SIGN_ENTITLEMENTS = MoovizMobile/MoovizMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 127;
 				DEVELOPMENT_TEAM = 3USMNP695K;
 				INFOPLIST_FILE = MoovizMobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
@@ -587,7 +605,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.6;
+				MARKETING_VERSION = 1.2.7;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",

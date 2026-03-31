@@ -71,7 +71,7 @@ export async function sendPushNotification(
       apns: {
         payload: {
           aps: {
-            sound: sound ? `${sound}.mp3` : "default",
+            sound: sound ? `${sound}.caf` : "default",
             badge: 1,
           },
         },

@@ -100,6 +100,7 @@ export function useDriverLocationTracking(
         const geohash = encodeGeohash(lat, lng, GEOHASH_PRECISION);
         await firestore().collection('users').doc(userId).update({
           location: { lat, lng, geohash },
+          locationUpdatedAt: firestore.FieldValue.serverTimestamp(),
         });
         if (isMountedRef.current) {
           setLastSyncAt(new Date());
@@ -173,8 +174,9 @@ export function useDriverLocationTracking(
   }, []);
 
   // ── Start idle mode ──
-  // iOS: use watchPosition with significant changes so background updates work.
-  // Android: use interval + getCurrentPosition (background works with foreground service).
+  // iOS: watchPosition only fires on distance changes (ignores `interval`),
+  // so we ALSO run a setInterval to force periodic syncs when the driver is stationary.
+  // Android: interval + getCurrentPosition (background works with foreground service).
   const startIdleTracking = useCallback(async () => {
     stopTracking();
 
@@ -190,16 +192,18 @@ export function useDriverLocationTracking(
       // Fetch immediately
       fetchOnce();
 
-      // Use watchPosition with low accuracy + large distance filter for battery-friendly
-      // background updates. This keeps the blue indicator but ensures geohash stays fresh.
+      // watchPosition for movement-based updates (fires when driver moves 200m)
       watchIdRef.current = Geolocation.watchPosition(onPosition, onPositionError, {
         enableHighAccuracy: false,
-        distanceFilter: 500, // Update every 500m movement
-        interval: LOCATION_IDLE_INTERVAL_MS,
-        fastestInterval: 60000,
+        distanceFilter: 200, // Reduced from 500m → 200m for better geohash accuracy
         showsBackgroundLocationIndicator: false,
         forceRequestLocation: true,
       });
+
+      // iOS ignores `interval` in watchPosition — so add a timer to guarantee
+      // periodic syncs even when the driver is completely stationary (e.g. at home on WiFi).
+      // This keeps the geohash fresh for new-delivery push targeting.
+      intervalRef.current = setInterval(fetchOnce, LOCATION_IDLE_INTERVAL_MS);
     } else {
       const granted = await requestLocationPermission();
       if (!granted) { setError('permission-denied'); return; }
@@ -213,7 +217,7 @@ export function useDriverLocationTracking(
 
     setIsTracking(true);
     setError(null);
-    console.log(`[LocationTracking] Started IDLE mode (${Platform.OS === 'ios' ? 'watchPosition' : 'interval 5min'})`);
+    console.log(`[LocationTracking] Started IDLE mode (${Platform.OS === 'ios' ? 'watchPosition+interval' : 'interval'} ${LOCATION_IDLE_INTERVAL_MS / 1000}s)`);
   }, [stopTracking, fetchOnce, onPosition, onPositionError]);
 
   // ── Start active mode (watchPosition, high accuracy) ──
