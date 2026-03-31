@@ -51,7 +51,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState<number>(RESEND_COOLDOWN_SECONDS);
   const [resendCount, setResendCount] = useState<number>(0);
-  const MAX_RESENDS = 3;
+  const MAX_RESENDS = 5;
   const carAlert = useCarAlert();
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
