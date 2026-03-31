@@ -32,7 +32,7 @@ const logo = require('../../assets/logo.png');
 type Props = NativeStackScreenProps<any, any>;
 
 const OTP_LENGTH = 6;
-const RESEND_COOLDOWN_SECONDS = 60;
+const RESEND_COOLDOWN_SECONDS = 120; // 2 minutes — reduces Firebase rate-limit triggers
 
 /**
  * OTPScreen -- 6-digit OTP verification for phone linking
@@ -50,6 +50,8 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
   const [isSending, setIsSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState<number>(RESEND_COOLDOWN_SECONDS);
+  const [resendCount, setResendCount] = useState<number>(0);
+  const MAX_RESENDS = 3;
   const carAlert = useCarAlert();
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -90,13 +92,18 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     }).start();
   }, [scaleAnims]);
 
-  const sendOTP = useCallback(async (): Promise<void> => {
+  const sendOTP = useCallback(async (isResend = false): Promise<void> => {
+    if (isResend && resendCount >= MAX_RESENDS) {
+      setError('הגעת למספר המקסימלי של שליחות חוזרות. אנא המתן 15 דקות ונסה שוב.');
+      return;
+    }
     try {
       setIsSending(true);
       setError(null);
       const vId = await sendPhoneOTP(phoneNumber);
       setVerificationId(vId);
       setResendTimer(RESEND_COOLDOWN_SECONDS);
+      if (isResend) setResendCount((c) => c + 1);
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };
       if (firebaseError.code) {
@@ -107,7 +114,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
     } finally {
       setIsSending(false);
     }
-  }, [phoneNumber, t]);
+  }, [phoneNumber, t, resendCount]);
 
   useEffect(() => {
     if (!verificationId) {
@@ -209,14 +216,18 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       await refreshUserDoc();
       carAlert.show('success', t('common.success'), t('auth.phoneVerified'));
     } catch (err: unknown) {
-      const firebaseError = err as { code?: string };
+      const firebaseError = err as { code?: string; message?: string };
       if (firebaseError.code) {
         setError(mapFirebaseAuthError(firebaseError.code));
       } else {
-        setError(t('auth.wrongCode'));
+        setError(firebaseError.message || t('auth.wrongCode'));
       }
-      setCode(new Array(OTP_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
+      // Don't clear code on credential-already-in-use — the code was correct,
+      // just the phone is taken. Clearing would confuse the user.
+      if (firebaseError.code !== 'auth/credential-already-in-use') {
+        setCode(new Array(OTP_LENGTH).fill(''));
+        inputRefs.current[0]?.focus();
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -311,10 +322,14 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
               <Text style={[styles.resendTimer, { color: colors.textSecondary }]}>
                 {t('auth.resendIn', { seconds: resendTimer })}
               </Text>
+            ) : resendCount >= MAX_RESENDS ? (
+              <Text style={[styles.resendTimer, { color: colors.error }]}>
+                הגעת למספר המקסימלי של שליחות. המתן 15 דקות.
+              </Text>
             ) : (
-              <TouchableOpacity onPress={sendOTP} disabled={isSending}>
+              <TouchableOpacity onPress={() => sendOTP(true)} disabled={isSending}>
                 <Text style={[styles.resendLink, { color: colors.primary }]}>
-                  {t('auth.resendCode')}
+                  {t('auth.resendCode')} ({MAX_RESENDS - resendCount})
                 </Text>
               </TouchableOpacity>
             )}
