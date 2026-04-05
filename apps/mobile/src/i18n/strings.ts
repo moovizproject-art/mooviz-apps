@@ -30,7 +30,7 @@ export const strings = {
 
   // ── Home Screen ──
   home: {
-    greeting: { he: 'היי {name} שמחים לראות אתכם שוב', en: 'Hey {name}, glad to see you again' } as LocaleStrings,
+    greeting: { he: 'היי {name} שמחים לראות אותך שוב', en: 'Hey {name}, glad to see you again' } as LocaleStrings,
     subtitle: { he: 'מחברים בין אנשים בדרך שלכם', en: 'Connecting people on your way' } as LocaleStrings,
     newDeliveryCta: { he: 'התחל משלוח', en: 'Start delivery' } as LocaleStrings,
     findNearby: { he: 'מצאו משלוחים קרובים', en: 'Find nearby deliveries' } as LocaleStrings,
