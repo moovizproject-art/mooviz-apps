@@ -69,9 +69,13 @@ export async function sendPushNotification(
         },
       },
       apns: {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
         payload: {
           aps: {
-            sound: sound ? `${sound}.caf` : "default",
+            sound: sound ?? "default",
             badge: 1,
           },
         },
