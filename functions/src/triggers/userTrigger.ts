@@ -3,11 +3,15 @@ import {
   onDocumentCreated,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore";
+import * as nodemailer from "nodemailer";
+import { defineSecret } from "firebase-functions/params";
 import { User } from "@mooviz/shared";
 import { sendPushNotification } from "../services/notificationService";
 import { logger } from "../utils/logger";
 
 const db = admin.firestore();
+const smtpUser = defineSecret("SMTP_USER");
+const smtpPass = defineSecret("SMTP_PASS");
 
 /**
  * Firestore onCreate trigger for users.
@@ -15,7 +19,7 @@ const db = admin.firestore();
  * - Creates a welcome notification
  */
 export const onUserCreate = onDocumentCreated(
-  "users/{userId}",
+  { document: "users/{userId}", secrets: [smtpUser, smtpPass] },
   async (event) => {
     const snapshot = event.data;
     if (!snapshot) {
@@ -95,6 +99,45 @@ export const onUserCreate = onDocumentCreated(
       });
 
     logger.info("User created", { userId, activeMode: (data as Record<string, unknown>).activeMode || "client" });
+
+    // BCC support@mooviz.co.il on every new registration
+    try {
+      const isFromOldSystem = !!(data as Record<string, unknown>).migratedFromGlide;
+      const fullName = ((data as Record<string, unknown>).fullName as string) || "לא צוין";
+      const phone = ((data as Record<string, unknown>).phone as string) || "לא צוין";
+      const email = ((data as Record<string, unknown>).email as string) || "לא צוין";
+      const activeMode = ((data as Record<string, unknown>).activeMode as string) || "client";
+
+      const transporter = nodemailer.createTransport({
+        host: "smtp.hostinger.com",
+        port: 465,
+        secure: true,
+        auth: { user: smtpUser.value(), pass: smtpPass.value() },
+      });
+
+      await transporter.sendMail({
+        from: `MOOVIZ <${smtpUser.value()}>`,
+        to: "support@mooviz.co.il",
+        subject: `🆕 משתמש חדש נרשם — ${fullName}`,
+        html: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #1a73e8;">משתמש חדש נרשם למערכת</h2>
+            <table style="border-collapse: collapse; width: 100%; max-width: 500px;">
+              <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold;">שם מלא</td><td style="padding:8px 12px;">${fullName}</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:bold;">טלפון</td><td style="padding:8px 12px;">${phone}</td></tr>
+              <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold;">אימייל</td><td style="padding:8px 12px;">${email}</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:bold;">תפקיד</td><td style="padding:8px 12px;">${activeMode === "driver" ? "נהג" : "שולח"}</td></tr>
+              <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold;">מקור</td><td style="padding:8px 12px;">${isFromOldSystem ? "⚠️ מערכת ישנה (Glide)" : "✅ משתמש חדש"}</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:bold;">UID</td><td style="padding:8px 12px;font-size:12px;color:#666;">${userId}</td></tr>
+            </table>
+          </div>
+        `,
+      });
+      logger.info("Support BCC email sent for new user", { userId });
+    } catch (emailErr) {
+      // Non-fatal — don't fail the trigger if SMTP is down
+      logger.warn("Failed to send support BCC email", { userId, error: String(emailErr) });
+    }
   }
 );
 
