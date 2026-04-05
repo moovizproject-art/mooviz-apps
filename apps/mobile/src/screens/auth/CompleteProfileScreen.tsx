@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,14 @@ export function CompleteProfileScreen(): React.JSX.Element {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+
+  // Auto-save and skip screen if fullName + phone already populated from registration
+  useEffect(() => {
+    if (currentUser?.fullName && currentUser?.phone) {
+      handleSave();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCityChange = (text: string) => {
     setCity(text);
