@@ -186,7 +186,8 @@ export const onDeliveryCreate = onDocumentCreated(
                 pickupCity,
                 destinationCity: destCity,
                 price,
-              }
+              },
+              "new_delivery"
             );
           })
         );

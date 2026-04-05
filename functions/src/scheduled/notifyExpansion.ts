@@ -116,7 +116,8 @@ export const notifyExpansion = onSchedule(
                   pickupCity,
                   destinationCity: destCity,
                   price,
-                }
+                },
+                "new_delivery"
               )
             )
           );
