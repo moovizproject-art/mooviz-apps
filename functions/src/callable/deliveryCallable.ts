@@ -115,6 +115,7 @@ export const createDelivery = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
 
+  logger.info("createDelivery: starting", { uid });
   const senderData = await assertUserRole(db, uid, "sender");
 
   const d = request.data;
@@ -223,6 +224,25 @@ export const createDelivery = onCall(async (request) => {
     now.toMillis() + DEFAULT_TIMEOUT_HOURS * 60 * 60 * 1000
   );
 
+  // Extract city from address string (Google format: "Street, City, Postal, Country")
+  function extractCity(address: string, fallbackCity?: string): string {
+    if (fallbackCity) return fallbackCity;
+    const parts = address.split(",").map((s: string) => s.trim());
+    // Israeli addresses: last part is "ישראל"/"Israel", second-to-last may be postal code
+    // City is usually the 2nd part for "Street, City, Country" or 2nd for "Street, City, Postal, Country"
+    if (parts.length >= 3) {
+      // Skip postal codes (digits only)
+      const candidate = parts[parts.length - 2];
+      if (/^\d+$/.test(candidate) && parts.length >= 4) return parts[parts.length - 3];
+      return candidate;
+    }
+    if (parts.length === 2) return parts[0]; // "City, Country"
+    return address;
+  }
+
+  const pickupCity = extractCity(pickupRaw.address ?? "", pickupRaw.city);
+  const destCity = extractCity(destRaw.address ?? "", destRaw.city);
+
   const deliveryDoc = {
     senderId: uid,
     senderName,
@@ -232,14 +252,14 @@ export const createDelivery = onCall(async (request) => {
     status: "new" as DeliveryStatus,
     pickup: {
       address: pickupRaw.address ?? "",
-      city: pickupRaw.city ?? "",
+      city: pickupCity,
       lat: pickupLat,
       lng: pickupLng,
       geohash: pickupGeohash,
     },
     destination: {
       address: destRaw.address ?? "",
-      city: destRaw.city ?? "",
+      city: destCity,
       lat: destLat,
       lng: destLng,
       geohash: destGeohash,
@@ -686,6 +706,32 @@ export const confirmSelection = onCall(async (request) => {
 
   sendPushNotification(senderId, "הנהג אישר!", `המשלוח שויך ל-${driverName}`, { event: "driver_confirmed", deliveryId })
     .catch((err: unknown) => logger.error("confirmSelection notification failed", { deliveryId, error: String(err) }));
+
+  // Notify non-selected interested drivers — only now that a driver has confirmed
+  try {
+    const deliverySnap = await db.collection("deliveries").doc(deliveryId).get();
+    const deliveryData = deliverySnap.data();
+    const interestedDrivers: any[] = deliveryData?.interestedDrivers || [];
+    const rejectedDriverIds = interestedDrivers
+      .filter((d: any) => d.uid !== uid && d.status !== "withdrawn" && d.status !== "cancelled")
+      .map((d: any) => d.uid as string);
+
+    await Promise.all(
+      rejectedDriverIds.map((driverId: string) =>
+        sendPushNotification(
+          driverId,
+          "המשלוח נלקח",
+          "נהג אחר קיבל את המשלוח הזה",
+          { event: "delivery_taken", deliveryId }
+        ).catch((err: unknown) => logger.warn("rejection notification failed", { driverId, error: String(err) }))
+      )
+    );
+    if (rejectedDriverIds.length > 0) {
+      logger.info("Notified rejected drivers after selection confirmed", { deliveryId, count: rejectedDriverIds.length });
+    }
+  } catch (err) {
+    logger.warn("Failed to notify rejected drivers", { deliveryId, error: String(err) });
+  }
 
   logger.info("Driver confirmed selection", { deliveryId, driverId: uid });
   return { success: true };
