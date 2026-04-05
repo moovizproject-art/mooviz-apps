@@ -39,19 +39,19 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
   const { soundEnabled, setSoundEnabled } = useSound();
   const navigation = useNavigation<any>();
   const driverUnlocked = currentUser?.driverUnlocked ?? false;
-  const activeMode = currentUser?.activeMode ?? 'sender';
+  const activeMode = currentUser?.activeMode ?? 'client';
   const isDriverMode = activeMode === 'driver';
 
   const handleModeSwitch = useCallback(async () => {
     onClose();
     if (isDriverMode) {
       // Already driver — switch back to sender
-      await updateProfile({ activeMode: 'client' });
+      await updateProfile({ activeMode: 'client', driverAvailable: false } as any);
     } else if (driverUnlocked) {
-      // KYC approved — switch to driver mode.
-      // Also set role to 'driver' and enable availability so the driver
+      // KYC approved — switch to driver mode + enable availability so the driver
       // appears in proximity queries and receives new-delivery push notifications.
-      await updateProfile({ activeMode: 'driver', role: 'driver', driverAvailable: true } as any);
+      // Note: role is set by KYC approval CF — don't write it here (Firestore rules block it).
+      await updateProfile({ activeMode: 'driver', driverAvailable: true } as any);
     } else {
       // KYC not done — go to KYC screen
       navigation.navigate('DriverKYC');
@@ -160,6 +160,18 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
             </View>
             <Text style={[styles.menuText, { color: colors.textPrimary }]}>
               {soundEnabled ? t('home.soundOn') : t('home.soundOff')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => Linking.openURL('mailto:support@mooviz.co.il')}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={styles.flagEmoji}>✉️</Text>
+            </View>
+            <Text style={[styles.menuText, { color: colors.textPrimary }]}>
+              {t('home.contactUs')}
             </Text>
           </TouchableOpacity>
 

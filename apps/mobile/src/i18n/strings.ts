@@ -57,6 +57,7 @@ export const strings = {
     switchMode: { he: 'החלף מצב משתמש', en: 'Switch user mode' } as LocaleStrings,
     settings: { he: 'הגדרות', en: 'Settings' } as LocaleStrings,
     unreadChats: { he: 'יש לך {count} הודעות שמחכות', en: 'You have {count} unread messages' } as LocaleStrings,
+    contactUs: { he: 'צרו קשר', en: 'Contact Us' } as LocaleStrings,
     findUsOn: { he: 'עקבו אחרינו', en: 'Find us on' } as LocaleStrings,
     darkMode: { he: 'מצב לילה', en: 'Dark Mode' } as LocaleStrings,
     lightMode: { he: 'מצב יום', en: 'Light Mode' } as LocaleStrings,
