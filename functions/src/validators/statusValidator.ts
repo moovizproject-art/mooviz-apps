@@ -89,6 +89,16 @@ export async function assertUserRole(
     throw new HttpsError("not-found", "User not found");
   }
   const userData = userDoc.data()!;
+
+  // Block suspended/blocked accounts from all delivery actions
+  const accountStatus = userData.status as string | undefined;
+  if (accountStatus === "suspended" || accountStatus === "blocked") {
+    throw new HttpsError(
+      "permission-denied",
+      "החשבון שלך מושעה. צור קשר עם התמיכה."
+    );
+  }
+
   const role = userData.role ?? "sender";
   const activeMode = userData.activeMode ?? "client";
 
@@ -97,8 +107,10 @@ export async function assertUserRole(
     return userData;
   }
 
-  // activeMode 'client' maps to 'sender' role
-  const effectiveRole = activeMode === "driver" ? "driver" : role;
+  // activeMode is the source of truth for what role the user is currently acting as.
+  // 'client' → sender, 'driver' → driver. The stored `role` field may be 'driver'
+  // after KYC approval even when the user switches back to sender mode.
+  const effectiveRole = activeMode === "driver" ? "driver" : "sender";
   const isDualModeDriver =
     requiredRole === "driver" && userData.driverUnlocked === true && activeMode === "driver";
 
