@@ -34,7 +34,7 @@ export const TRANSITION_ACTORS: Record<string, Array<UserRole | "system">> = {
   "awaiting_confirm -> cancelled": ["sender"],
   "pending -> waiting_for_pickup": ["sender"],
   "waiting_for_pickup -> picked_up": ["driver"],
-  "waiting_for_pickup -> new": ["sender"],
+  "waiting_for_pickup -> new": ["sender", "driver"],
   "waiting_for_pickup -> cancelled": ["sender", "driver"],
   "picked_up -> delivered": ["driver"],
   "delivered -> awaiting_payment": ["sender", "driver"],
