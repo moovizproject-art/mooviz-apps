@@ -581,6 +581,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 20,
+    writingDirection: 'rtl',
   },
   ownMessageText: {
     color: '#FFFFFF',
