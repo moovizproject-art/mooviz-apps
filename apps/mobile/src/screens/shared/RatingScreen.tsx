@@ -5,6 +5,9 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -63,7 +66,16 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.content}>
         {/* Title */}
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t('rating.howWasIt')}</Text>
@@ -73,7 +85,7 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
         <View style={styles.starsRow}>
           {Array.from({ length: STAR_COUNT }, (_, i) => i + 1).map((star) => (
             <TouchableOpacity key={star} onPress={() => setRating(star)} style={styles.starButton}>
-              <Text style={[styles.star, { color: colors.border }, star <= rating && styles.starActive]}>
+              <Text style={[styles.star, { color: colors.textSecondary }, star <= rating && styles.starActive]}>
                 {star <= rating ? '\u2605' : '\u2606'}
               </Text>
             </TouchableOpacity>
@@ -123,8 +135,9 @@ export function RatingScreen({ route, navigation }: Props): React.JSX.Element {
           <Text style={[styles.skipButtonText, { color: colors.textSecondary }]}>{t('rating.skip')}</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
       <CarAlert visible={carAlert.visible} type={carAlert.type} title={carAlert.title} message={carAlert.message} buttons={carAlert.buttons} onDismiss={carAlert.dismiss} />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -132,10 +145,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
-    flex: 1,
     paddingHorizontal: 24,
     paddingTop: 48,
+    paddingBottom: 48,
     alignItems: 'center',
   },
   title: {
