@@ -132,8 +132,9 @@ export const updateProfile = onCall(async (request) => {
 });
 
 /**
- * Add an FCM token to the user's fcmTokens array for push notifications.
- * Uses arrayUnion to avoid duplicates.
+ * Replace the user's FCM token with the latest one.
+ * Keeps only the single most recent token to prevent duplicate notifications
+ * when the same device re-installs the app and gets a new token.
  */
 export const updateFCMToken = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -157,12 +158,15 @@ export const updateFCMToken = onCall(async (request) => {
     throw new HttpsError("not-found", "User profile not found");
   }
 
+  // Replace entire fcmTokens array with just the latest token.
+  // This prevents duplicate push notifications on reinstall (old token stays valid
+  // on the OS until it expires, causing sendEachForMulticast to deliver twice).
   await userRef.update({
-    fcmTokens: admin.firestore.FieldValue.arrayUnion(fcmToken),
+    fcmTokens: [fcmToken],
     updatedAt: admin.firestore.Timestamp.now(),
   });
 
-  return { success: true, message: "FCM token added successfully" };
+  return { success: true, message: "FCM token updated successfully" };
 });
 
 /**
@@ -267,4 +271,67 @@ export const createUser = onCall(async (request) => {
   });
 
   return { success: true, message: "User profile created" };
+});
+
+/**
+ * One-time admin cleanup: trim every user's fcmTokens to the single most recent token.
+ * Removes stale tokens accumulated from reinstalls that cause duplicate push notifications.
+ * Admin-only (requires admin custom claim or the caller to be in the admin list).
+ */
+export const cleanupFCMTokens = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  // Restrict to admin UIDs
+  const adminDoc = await db.collection("adminActions").doc("config").get();
+  const adminUids: string[] = adminDoc.exists
+    ? (adminDoc.data()?.adminUids ?? [])
+    : [];
+  // Also allow the hardcoded admin emails via custom claims
+  const isAdmin =
+    adminUids.includes(uid) ||
+    request.auth?.token?.admin === true;
+
+  if (!isAdmin) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+
+  let processed = 0;
+  let trimmed = 0;
+  let last: FirebaseFirestore.DocumentSnapshot | null = null;
+
+  // Paginate in batches of 200
+  while (true) {
+    let query = db.collection("users").limit(200);
+    if (last) query = query.startAfter(last) as typeof query;
+
+    const snap = await query.get();
+    if (snap.empty) break;
+
+    const batch = db.batch();
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const tokens: string[] = Array.isArray(data.fcmTokens)
+        ? data.fcmTokens.filter((t: unknown) => typeof t === "string" && t.length > 0)
+        : [];
+
+      processed++;
+      if (tokens.length > 1) {
+        // Keep only the last token (most recently appended)
+        batch.update(doc.ref, {
+          fcmTokens: [tokens[tokens.length - 1]],
+          updatedAt: admin.firestore.Timestamp.now(),
+        });
+        trimmed++;
+      }
+    }
+
+    await batch.commit();
+    last = snap.docs[snap.docs.length - 1];
+    if (snap.docs.length < 200) break;
+  }
+
+  return { success: true, processed, trimmed };
 });

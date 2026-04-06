@@ -33,6 +33,7 @@ export {
   updateProfile,
   updateFCMToken,
   removeFCMToken,
+  cleanupFCMTokens,
 } from "./callable/userCallable";
 
 export { reviewKYC } from "./callable/kycCallable";
