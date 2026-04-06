@@ -195,12 +195,6 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                     ) : (
                       <StatusIndicator status={delivery.status} size="sm" />
                     )}
-                    {hasDrivers && (
-                      <View style={[styles.driverCountBadge, { backgroundColor: colors.primary + '15' }]}>
-                        <Image source={require('../assets/car.png')} style={styles.carIcon} />
-                        <Text style={[styles.driverCountText, { color: colors.primary }]}>{drivers.length}</Text>
-                      </View>
-                    )}
                   </>
                 );
               })()}
