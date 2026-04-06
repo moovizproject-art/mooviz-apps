@@ -92,7 +92,7 @@ export function CreateDeliveryScreen({ navigation, route }: Props): React.JSX.El
       pickup: null,
       destination: null,
       itemDescription: '',
-      itemSize: 'small',
+      itemSize: 'medium',
       mediaUris: [],
       suggestedPrice: '',
       scheduledDate: null,
