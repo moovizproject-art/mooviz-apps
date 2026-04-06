@@ -184,8 +184,13 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             if (dp.workAddress?.lat) saved.workAddress = dp.workAddress;
             if (dp.radiusKm) saved.radiusKm = dp.radiusKm;
             if (dp.deliverySizes && Array.isArray(dp.deliverySizes)) {
+              const VALID_SIZES = new Set(['small', 'medium', 'large', 'xlarge']);
               const sizes: Record<string, boolean> = { small: false, medium: false, large: false, xlarge: false };
-              dp.deliverySizes.forEach((s: string) => { sizes[s] = true; });
+              dp.deliverySizes.forEach((s: string) => {
+                // Normalize legacy keys ('envelope' → 'small') and skip unknown keys
+                const normalized = s === 'envelope' ? 'small' : s;
+                if (VALID_SIZES.has(normalized)) sizes[normalized] = true;
+              });
               saved.deliverySizes = sizes;
             }
           }
@@ -335,8 +340,8 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   /** Max size rank the driver can carry based on their deliverySizes prefs */
   const maxDriverSizeRank = useMemo(() => {
     const enabled = Object.entries(prefs.deliverySizes)
-      .filter(([_, v]) => v)
-      .map(([k]) => SIZE_RANK[k] ?? 0);
+      .filter(([k, v]) => v && SIZE_RANK[k] > 0)  // ignore unknown/legacy keys (rank 0)
+      .map(([k]) => SIZE_RANK[k]);
     return enabled.length > 0 ? Math.max(...enabled) : 1; // default: small only
   }, [prefs.deliverySizes]);
 
