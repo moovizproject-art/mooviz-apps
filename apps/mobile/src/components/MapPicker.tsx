@@ -10,6 +10,7 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 
@@ -110,19 +111,10 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
         setQuery(point.address);
         setMode('map');
       } else {
-        // No coords — let user confirm text only
-        onLocationSelect({
-          latitude: 0,
-          longitude: 0,
-          address: prediction.description,
-        });
+        Alert.alert('שגיאה', 'לא ניתן לאתר את הכתובת. נסה לבחור מהרשימה או הקש על המפה.');
       }
     } catch {
-      onLocationSelect({
-        latitude: 0,
-        longitude: 0,
-        address: prediction.description,
-      });
+      Alert.alert('שגיאה', 'בעיה בחיבור לשרת המפות. נסה שוב.');
     } finally {
       setLoading(false);
     }
@@ -136,13 +128,9 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
       setMode('map');
       return;
     }
-    // Otherwise submit text-only
-    onLocationSelect({
-      latitude: 0,
-      longitude: 0,
-      address: query.trim(),
-    });
-  }, [query, selectedPoint, onLocationSelect]);
+    // Free text without coords — force user to select from suggestions or tap map
+    Alert.alert('יש לבחור כתובת', 'בחר כתובת מהרשימה שמופיעה, או הקש על המפה כדי לסמן את המיקום.');
+  }, [query, selectedPoint]);
 
   // ── Map mode handlers ──
 
