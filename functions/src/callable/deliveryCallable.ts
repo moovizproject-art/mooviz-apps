@@ -132,11 +132,11 @@ export const createDelivery = onCall(async (request) => {
   const destLat = destRaw.lat ?? destRaw.latitude;
   const destLng = destRaw.lng ?? destRaw.longitude;
 
-  if (typeof pickupLat !== "number" || typeof pickupLng !== "number") {
-    throw new HttpsError("invalid-argument", "pickup must have valid lat/lng");
+  if (typeof pickupLat !== "number" || typeof pickupLng !== "number" || (pickupLat === 0 && pickupLng === 0)) {
+    throw new HttpsError("invalid-argument", "יש לבחור כתובת איסוף תקינה מהמפה");
   }
-  if (typeof destLat !== "number" || typeof destLng !== "number") {
-    throw new HttpsError("invalid-argument", "destination must have valid lat/lng");
+  if (typeof destLat !== "number" || typeof destLng !== "number" || (destLat === 0 && destLng === 0)) {
+    throw new HttpsError("invalid-argument", "יש לבחור כתובת יעד תקינה מהמפה");
   }
 
   // --- Normalize item ---

@@ -234,8 +234,16 @@ export function CreateDeliveryScreen({ navigation, route }: Props): React.JSX.El
       carAlert.show('error', t('form.validationError'), t('delivery.errorPickup'));
       return;
     }
+    if (form.pickup.latitude === 0 && form.pickup.longitude === 0) {
+      carAlert.show('error', t('form.validationError'), 'יש לבחור כתובת איסוף תקינה מהמפה');
+      return;
+    }
     if (!form.destination) {
       carAlert.show('error', t('form.validationError'), t('delivery.errorDestination'));
+      return;
+    }
+    if (form.destination.latitude === 0 && form.destination.longitude === 0) {
+      carAlert.show('error', t('form.validationError'), 'יש לבחור כתובת יעד תקינה מהמפה');
       return;
     }
     if (!form.itemDescription.trim()) {
