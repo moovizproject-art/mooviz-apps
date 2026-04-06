@@ -54,6 +54,14 @@ export async function sendPushNotification(
       return false;
     }
 
+    // Collapse key: deduplicates notifications when the user has multiple
+    // FCM tokens registered on the same device (e.g. after reinstall).
+    // iOS uses apns-collapse-id; Android uses notification.tag.
+    // Both keyed on event+deliveryId so same-event duplicates merge into one banner.
+    const collapseKey = data?.event && data?.deliveryId
+      ? `${data.event}_${data.deliveryId}`
+      : undefined;
+
     const multicastMessage: admin.messaging.MulticastMessage = {
       tokens,
       notification: {
@@ -63,15 +71,18 @@ export async function sendPushNotification(
       data: data ?? {},
       android: {
         priority: "high",
+        collapseKey: collapseKey,
         notification: {
           channelId: "mooviz_deliveries",
           sound: sound ?? "success",
+          tag: collapseKey,
         },
       },
       apns: {
         headers: {
           "apns-priority": "10",
           "apns-push-type": "alert",
+          ...(collapseKey ? { "apns-collapse-id": collapseKey } : {}),
         },
         payload: {
           aps: {
