@@ -16,11 +16,11 @@ import {
   Image,
   ImageBackground,
   ViewToken,
-  Platform,
   I18nManager,
   StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../../i18n/I18nContext';
 import { useSound } from '../../hooks/useSound';
 
@@ -97,6 +97,7 @@ const BLUE = '#3366FF';
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.JSX.Element {
   const { t } = useI18n();
   const { play } = useSound();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -161,7 +162,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
         <View style={styles.darkOverlay} />
 
         {/* Top bar: logo RIGHT, skip LEFT (explicit for RTL) */}
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 20) + 12 }]}>
           <View style={styles.logoRow}>
             <Image source={logo} style={styles.realLogo} resizeMode="contain" />
           </View>
@@ -195,7 +196,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.J
         </Animated.View>
 
         {/* Bottom bar: dots RIGHT, button LEFT (visual RTL) */}
-        <View style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={styles.dotsRow}>
             {PAGES.map((_, i) => (
               <View
@@ -280,7 +281,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
     zIndex: 10,
   },
   skipBtn: {
@@ -378,7 +378,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 44 : 28,
     zIndex: 10,
   },
   nextButton: {
