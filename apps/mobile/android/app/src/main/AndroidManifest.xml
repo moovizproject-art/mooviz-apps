@@ -31,6 +31,7 @@
       android:allowBackup="false"
       tools:replace="android:allowBackup"
       android:theme="@style/AppTheme"
+      android:extractNativeLibs="false"
       android:supportsRtl="true">
 
       <!-- Google Maps API key (loaded from react-native-config .env) -->

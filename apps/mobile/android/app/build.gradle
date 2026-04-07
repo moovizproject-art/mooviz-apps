@@ -88,7 +88,7 @@ android {
         applicationId "com.mooviz.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 133
+        versionCode 134
         versionName "1.0.0"
         manifestPlaceholders = [GOOGLE_MAPS_API_KEY: project.env.get("GOOGLE_MAPS_API_KEY", "")]
     }
@@ -119,6 +119,13 @@ android {
     applicationVariants.all { variant ->
         variant.outputs.all {
             outputFileName = "mooviz-${variant.versionName}.apk"
+        }
+    }
+
+    // Required for Android 15+ 16 KB memory page size support
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
         }
     }
 }
