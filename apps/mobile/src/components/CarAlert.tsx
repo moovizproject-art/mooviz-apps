@@ -72,10 +72,9 @@ export function CarAlert({ visible, type, title, message, buttons, onDismiss, so
     }
 
     // Play sound based on alert type (or override)
+    // Success and question sounds removed per UX decision — only errors play sound
     if (soundOverride) play(soundOverride);
-    else if (type === 'success') play('success');
     else if (type === 'error') play('error');
-    else play('question');
 
     // Modal entrance
     Animated.parallel([

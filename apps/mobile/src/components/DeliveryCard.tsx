@@ -3,8 +3,11 @@
  * Compact delivery card for feeds and lists.
  * Shows item, route, status, driver, date/time, and price.
  */
-import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, Pressable, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { ImageGalleryModal } from './ImageGalleryModal';
+
+const carIcon = require('../assets/car.png');
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,66 +15,16 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BRAND, BORDER_RADIUS, SPACING } from '../constants/design';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { StatusIndicator } from './StatusIndicator';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
-const SIZE_LABELS_HE: Record<string, string> = {
-  small: 'מעטפה',
-  medium: 'חבילה',
-  large: 'חבילה גדולה',
-  xlarge: 'משטח/ארגז',
-};
 const SIZE_ICONS: Record<string, string> = {
   small: '✉️',
   medium: '📦',
   large: '📦',
   xlarge: '🚚',
 };
-
-const TIME_RANGE_LABELS: Record<string, string> = {
-  morning: 'בוקר 08–12',
-  afternoon: 'צהריים 12–16',
-  evening: 'ערב 16–20',
-  night: 'לילה 20–24',
-};
-
-function formatPickupInfo(
-  pickupDate?: string | null | { _seconds?: number; toDate?: () => Date; seconds?: number },
-  scheduledDate?: string | null,
-  timeRange?: string | null,
-): string {
-  const raw = pickupDate ?? scheduledDate;
-
-  // ASAP
-  if (!raw || raw === 'asap') {
-    const rangeLabel = timeRange ? TIME_RANGE_LABELS[timeRange] : null;
-    return rangeLabel ? `בהקדם • ${rangeLabel}` : 'בהקדם';
-  }
-
-  // Parse date from various formats
-  let d: Date;
-  if (typeof raw === 'object' && raw !== null) {
-    if (typeof (raw as any).toDate === 'function') {
-      d = (raw as any).toDate();
-    } else if ((raw as any)._seconds) {
-      d = new Date((raw as any)._seconds * 1000);
-    } else if ((raw as any).seconds) {
-      d = new Date((raw as any).seconds * 1000);
-    } else {
-      return 'בהקדם';
-    }
-  } else if (typeof raw === 'string') {
-    d = new Date(raw);
-  } else {
-    return 'בהקדם';
-  }
-
-  if (isNaN(d.getTime())) return 'בהקדם';
-
-  const formatted = formatDate(d);
-  const rangeLabel = timeRange ? TIME_RANGE_LABELS[timeRange] : null;
-  return rangeLabel ? `${formatted} • ${rangeLabel}` : formatted;
-}
 
 interface RatingSummary {
   rating: number;
@@ -116,6 +69,13 @@ interface DeliveryCardProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const TIME_RANGE_KEY_MAP: Record<string, string> = {
+  morning: 'delivery.timeRangeMorning',
+  afternoon: 'delivery.timeRangeAfternoon',
+  evening: 'delivery.timeRangeEvening',
+  night: 'delivery.timeRangeNight',
+};
+
 export const DeliveryCard = React.memo(function DeliveryCard({
   delivery,
   onPress,
@@ -124,7 +84,59 @@ export const DeliveryCard = React.memo(function DeliveryCard({
   isUnread = false,
 }: DeliveryCardProps): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const scale = useSharedValue(1);
+  const [galleryVisible, setGalleryVisible] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const galleryImages = (() => {
+    const imgs: string[] = [];
+    if (delivery.mediaURLs?.length) imgs.push(...delivery.mediaURLs);
+    else if (delivery.photoUrl) imgs.push(delivery.photoUrl);
+    return imgs;
+  })();
+
+  const SIZE_LABELS: Record<string, string> = {
+    small: t('delivery.sizeSmall'),
+    medium: t('delivery.sizeMedium'),
+    large: t('delivery.sizeLarge'),
+    xlarge: t('delivery.sizeXLarge'),
+  };
+
+  const formatPickupInfo = (
+    pickupDate?: string | null | { _seconds?: number; toDate?: () => Date; seconds?: number },
+    scheduledDate?: string | null,
+    timeRange?: string | null,
+  ): string => {
+    const raw = pickupDate ?? scheduledDate;
+    const rangeKey = timeRange ? TIME_RANGE_KEY_MAP[timeRange] : null;
+    const rangeLabel = rangeKey ? t(rangeKey) : null;
+
+    if (!raw || raw === 'asap') {
+      return rangeLabel ? `${t('delivery.asap')} • ${rangeLabel}` : t('delivery.asap');
+    }
+
+    let d: Date;
+    if (typeof raw === 'object' && raw !== null) {
+      if (typeof (raw as any).toDate === 'function') {
+        d = (raw as any).toDate();
+      } else if ((raw as any)._seconds) {
+        d = new Date((raw as any)._seconds * 1000);
+      } else if ((raw as any).seconds) {
+        d = new Date((raw as any).seconds * 1000);
+      } else {
+        return t('delivery.asap');
+      }
+    } else if (typeof raw === 'string') {
+      d = new Date(raw);
+    } else {
+      return t('delivery.asap');
+    }
+
+    if (isNaN(d.getTime())) return t('delivery.asap');
+
+    const formatted = formatDate(d);
+    return rangeLabel ? `${formatted} • ${rangeLabel}` : formatted;
+  };
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -141,7 +153,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
   const itemDesc = delivery.item?.description || delivery.itemDescription;
   const pickupInfo = formatPickupInfo(delivery.pickupDate, delivery.scheduledDate, delivery.timeRange);
   const sizeKey = delivery.itemSize || delivery.item?.size || 'small';
-  const sizeLabel = SIZE_LABELS_HE[sizeKey] ?? SIZE_LABELS_HE.small;
+  const sizeLabel = SIZE_LABELS[sizeKey] ?? SIZE_LABELS.small;
   const sizeIcon = SIZE_ICONS[sizeKey] ?? SIZE_ICONS.small;
 
   return (
@@ -158,7 +170,9 @@ export const DeliveryCard = React.memo(function DeliveryCard({
           const mediaCount = delivery.mediaURLs?.length || (delivery.photoUrl ? 1 : 0);
           return thumbnailUrl ? (
             <View>
+              <TouchableOpacity onPress={() => { setGalleryIndex(0); setGalleryVisible(true); }} activeOpacity={0.85}>
               <Image source={{ uri: thumbnailUrl }} style={styles.thumb} />
+            </TouchableOpacity>
               {mediaCount > 1 && (
                 <View style={styles.mediaCountBadge}>
                   <Text style={styles.mediaCountText}>{mediaCount}</Text>
@@ -177,7 +191,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
           {/* Top row: item description + status */}
           <View style={styles.topRow}>
             <Text style={[styles.itemText, { color: colors.textPrimary }]} numberOfLines={1}>
-              {itemDesc || 'משלוח'}
+              {itemDesc || t('delivery.label')}
             </Text>
             <View style={styles.statusArea}>
               {(() => {
@@ -189,8 +203,9 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                 return (
                   <>
                     {hasDrivers && isWaiting ? (
-                      <View style={[styles.waitingBadge, { backgroundColor: '#FFF3E0' }]}>
-                        <Text style={styles.waitingText}>🕐 ממתין לתשובה</Text>
+                      <View style={[styles.driverCountBadge, { backgroundColor: '#E8F5E9' }]}>
+                        <Image source={carIcon} style={styles.carIcon} />
+                        <Text style={[styles.driverCountText, { color: '#2E7D32' }]}>{drivers.length}</Text>
                       </View>
                     ) : (
                       <StatusIndicator status={delivery.status} size="sm" />
@@ -275,7 +290,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
               <Text style={styles.distanceText}>{distanceLabel}</Text>
             ) : showDistance && delivery.distance != null ? (
               <Text style={styles.distanceText}>
-                {delivery.distance.toFixed(1)} ק״מ
+                {delivery.distance.toFixed(1)} {t('driver.km')}
               </Text>
             ) : <View />}
             {(delivery.price ?? delivery.suggestedPrice) != null && (
@@ -286,6 +301,14 @@ export const DeliveryCard = React.memo(function DeliveryCard({
           </View>
         </View>
       </View>
+      {galleryImages.length > 0 && (
+        <ImageGalleryModal
+          visible={galleryVisible}
+          images={galleryImages}
+          initialIndex={galleryIndex}
+          onClose={() => setGalleryVisible(false)}
+        />
+      )}
     </AnimatedPressable>
   );
 });

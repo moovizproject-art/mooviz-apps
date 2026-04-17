@@ -41,8 +41,29 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const autoSentRef = useRef(false);
 
-  // No pre-fill — let user type their number fresh to avoid confusion
+  // Pre-fill phone from Firestore (set during registration) and auto-send OTP
+  useEffect(() => {
+    if (autoSentRef.current) return;
+    const uid = auth().currentUser?.uid;
+    if (!uid) return;
+    firestore().collection('users').doc(uid).get().then((doc) => {
+      const savedPhone = doc.data()?.phone;
+      if (savedPhone && validatePhone(savedPhone)) {
+        autoSentRef.current = true;
+        setPhone(savedPhone);
+        // Auto-send OTP so user doesn't have to enter phone again
+        setIsLoading(true);
+        sendPhoneOTP(savedPhone).then((verificationId) => {
+          navigation.navigate('PhoneOTP', { phoneNumber: savedPhone, verificationId, mode: 'addPhone' as const });
+        }).catch(() => {
+          // Failed — let user manually enter and retry
+          setIsLoading(false);
+        });
+      }
+    }).catch(() => {});
+  }, [navigation]);
 
   // Pulse animation while loading
   useEffect(() => {
@@ -70,6 +91,22 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
 
     try {
       setIsLoading(true);
+
+      // Block if phone is already registered to a different user
+      const { normalizePhoneNumber } = require('../../services/auth');
+      const normalizedPhone = normalizePhoneNumber(phone);
+      const currentUid = auth().currentUser?.uid;
+      const existing = await firestore()
+        .collection('users')
+        .where('phone', '==', normalizedPhone)
+        .limit(1)
+        .get();
+      if (!existing.empty && existing.docs[0].id !== currentUid) {
+        setError(t('auth.phoneTakenByOther'));
+        setIsLoading(false);
+        return;
+      }
+
       const verificationId = await sendPhoneOTP(phone);
       const otpParams = { phoneNumber: phone, verificationId, mode: 'addPhone' as const };
       navigation.navigate('PhoneOTP', otpParams);

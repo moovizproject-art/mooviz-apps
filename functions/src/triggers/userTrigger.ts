@@ -164,6 +164,13 @@ export const onUserUpdate = onDocumentUpdated(
       await handleKycStatusChange(userId, before.kycStatus, after.kycStatus);
     }
 
+    // Notify admin when user uploads KYC document
+    const beforeKycUrl = (before as any).kycDocumentURL || "";
+    const afterKycUrl = (after as any).kycDocumentURL || "";
+    if (!beforeKycUrl && afterKycUrl) {
+      await notifyAdminKycSubmitted(userId, after);
+    }
+
     // Handle account status change
     if (before.status !== after.status) {
       await handleAccountStatusChange(userId, before.status, after.status);
@@ -284,5 +291,42 @@ async function handleAccountStatusChange(
       event: "account_reactivated",
       type: "account_status",
     });
+  }
+}
+
+/**
+ * Send email to admin when a user submits KYC documents.
+ */
+async function notifyAdminKycSubmitted(userId: string, user: User): Promise<void> {
+  try {
+    const smtpUserVal = smtpUser.value();
+    const smtpPassVal = smtpPass.value();
+    const transporter = nodemailer.createTransport({
+      host: "smtp.hostinger.com",
+      port: 465,
+      secure: true,
+      auth: { user: smtpUserVal, pass: smtpPassVal },
+    });
+    await transporter.sendMail({
+      from: `MOOVIZ <${smtpUserVal}>`,
+      to: "admin@mooviz.co.il",
+      subject: `אימות KYC חדש ממתין לאישור — ${user.fullName || userId}`,
+      html: `
+        <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px">
+          <h2 style="color:#1976D2">בקשת KYC חדשה</h2>
+          <p>משתמש חדש העלה מסמכי KYC ומחכה לאישור:</p>
+          <table style="border-collapse:collapse;width:100%">
+            <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold">שם</td><td style="padding:8px 12px">${user.fullName || "—"}</td></tr>
+            <tr><td style="padding:8px 12px;font-weight:bold">אימייל</td><td style="padding:8px 12px">${(user as any).email || "—"}</td></tr>
+            <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold">טלפון</td><td style="padding:8px 12px">${user.phone || "—"}</td></tr>
+            <tr><td style="padding:8px 12px;font-weight:bold">UID</td><td style="padding:8px 12px;font-size:12px;color:#666">${userId}</td></tr>
+          </table>
+          <p style="margin-top:16px"><a href="https://admin.mooviz.co.il/users/${userId}" style="background:#1976D2;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none">פתח בפאנל הניהול</a></p>
+        </div>
+      `,
+    });
+    logger.info("KYC admin notification sent", { userId });
+  } catch (err) {
+    logger.warn("Failed to send KYC admin email", { userId, error: String(err) });
   }
 }

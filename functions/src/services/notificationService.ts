@@ -86,8 +86,9 @@ export async function sendPushNotification(
         },
         payload: {
           aps: {
-            sound: sound ?? "default",
+            sound: "default",
             badge: 1,
+            "mutable-content": 1,
           },
         },
       },

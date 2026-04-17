@@ -47,7 +47,7 @@ function delay(ms: number): Promise<void> {
 export const sendBulkEmail = functions.onCall(
   {
     secrets: [smtpUser, smtpPass],
-    cors: ["https://mooviz-app-9b766.web.app", "https://admin.mooviz.app", "http://localhost:5174"],
+    cors: ["https://mooviz-app-9b766.web.app", "https://admin.mooviz.app", "https://admin.mooviz.co.il", "http://localhost:5174"],
   },
   async (request) => {
     // Validate caller is admin

@@ -32,6 +32,7 @@ export default function UsersPage() {
     role: roleFilter || undefined,
     status: statusFilter || undefined,
     kycStatus: kycFilter || undefined,
+    pageSize: 200,
   });
 
   const columns: Column<AppUser>[] = [
@@ -129,7 +130,6 @@ export default function UsersPage() {
           <option value="active">{t('users.active')}</option>
           <option value="suspended">{t('users.suspended')}</option>
           <option value="blocked">{t('users.blocked')}</option>
-          <option value="pending_kyc">{t('users.pendingKyc')}</option>
         </select>
 
         <select

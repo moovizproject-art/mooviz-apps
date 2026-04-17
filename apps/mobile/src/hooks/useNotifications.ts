@@ -278,7 +278,6 @@ export function useNotifications(): UseNotificationsResult {
           if (notifEvent === 'new_listing_nearby') playSound('new_delivery');
           else if (notifEvent === 'driver_interested') playSound('driver_interested');
           else if (notifEvent === 'payment_confirmed') playSound('payment');
-          else playSound('success');
         }
 
         const channelId = await ensureAndroidChannels();

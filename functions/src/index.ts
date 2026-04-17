@@ -7,6 +7,7 @@ admin.initializeApp();
 export { onDeliveryCreate, onDeliveryUpdate } from "./triggers/deliveryTrigger";
 export { onUserCreate, onUserUpdate } from "./triggers/userTrigger";
 export { onMessageCreate } from "./triggers/chatTrigger";
+export { onReportCreate, onReportUpdate } from "./triggers/reportTrigger";
 
 // ─── Callable Functions ─────────────────────────────────────────────
 export {
@@ -34,6 +35,7 @@ export {
   updateFCMToken,
   removeFCMToken,
   cleanupFCMTokens,
+  deleteAccount,
 } from "./callable/userCallable";
 
 export { reviewKYC } from "./callable/kycCallable";

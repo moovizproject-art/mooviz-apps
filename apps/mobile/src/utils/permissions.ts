@@ -57,6 +57,31 @@ export async function requestLocationPermission(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Show a standalone prominent disclosure before requesting background location.
+ * Required by Google Play User Data policy — must appear before the OS dialog.
+ */
+function showBackgroundLocationDisclosure(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert(
+      strings.permissions.backgroundLocationDisclosureTitle.he,
+      strings.permissions.backgroundLocationDisclosureBody.he,
+      [
+        {
+          text: strings.permissions.backgroundLocationDisclosureDecline.he,
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: strings.permissions.backgroundLocationDisclosureAccept.he,
+          onPress: () => resolve(true),
+        },
+      ],
+      { cancelable: false },
+    );
+  });
+}
+
 /** Request background location permission (for active delivery tracking) */
 export async function requestBackgroundLocationPermission(): Promise<boolean> {
   const foreground = await requestLocationPermission();
@@ -67,8 +92,12 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
     return status === 'granted';
   }
 
-  // Android 10+ needs separate background permission
+  // Android 10+ needs separate background permission.
+  // Google Play requires a prominent in-app disclosure BEFORE the OS dialog.
   if (Number(Platform.Version) >= 29) {
+    const accepted = await showBackgroundLocationDisclosure();
+    if (!accepted) return false;
+
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
       {
