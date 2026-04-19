@@ -10,6 +10,7 @@ import {
 import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { AvatarCircle } from './AvatarCircle';
 import { LoadingOverlay } from './LoadingOverlay';
 
@@ -21,6 +22,7 @@ interface DriverApprovalCardProps {
 
 export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: DriverApprovalCardProps): React.JSX.Element | null {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [driver, setDriver] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<'approve' | 'decline' | null>(null);
@@ -86,16 +88,21 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
 
   if (!driver) return null;
 
-  const displayName = driver.nickname || driver.fullName || 'נהג';
+  const displayName = driver.nickname || driver.fullName || t('driver.driverLabel');
   const rating = driver.ratingAsDriver?.average;
   const deliveries = driver.completedDeliveries;
   const vehicleIcons: Record<string, string> = { bicycle: '🚲', bike: '🏍', car: '🚗', truck: '🚚' };
-  const vehicleLabels: Record<string, string> = { bicycle: 'אופניים', bike: 'קטנוע', car: 'רכב', truck: 'משאית' };
+  const vehicleLabels: Record<string, string> = {
+    bicycle: t('driver.vehicleBicycle'),
+    bike: t('driver.vehicleBike'),
+    car: t('driver.vehicleCar'),
+    truck: t('driver.vehicleTruck'),
+  };
   const vehicleType = driver.vehicleType || driver.preferences?.vehicleType;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>נהג מעוניין במשלוח</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('driver.interestedInDelivery')}</Text>
 
       <View style={styles.driverRow}>
         <AvatarCircle
@@ -136,7 +143,7 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
           {actionLoading === 'approve' ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.btnText}>✓ אשר נהג</Text>
+            <Text style={styles.btnText}>✓ {t('driver.confirmDriver')}</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -147,7 +154,7 @@ export function DriverApprovalCard({ driverId, deliveryId, onActionComplete }: D
           {actionLoading === 'decline' ? (
             <ActivityIndicator color="#E53935" size="small" />
           ) : (
-            <Text style={[styles.declineBtnText]}>✗ דחה</Text>
+            <Text style={[styles.declineBtnText]}>✗ {t('driver.declineDriver')}</Text>
           )}
         </TouchableOpacity>
       </View>

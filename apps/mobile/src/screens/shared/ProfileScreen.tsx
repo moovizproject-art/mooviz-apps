@@ -14,6 +14,7 @@ import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
 import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 import { requestMediaLibraryPermission, requestCameraPermission } from '../../utils/permissions';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
@@ -163,9 +164,31 @@ export function ProfileScreen(): React.JSX.Element {
     ]);
   };
 
+  const handleDeleteAccount = (): void => {
+    Alert.alert(
+      t('home.deleteAccountConfirmTitle'),
+      t('home.deleteAccountConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('home.deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await functions().httpsCallable('deleteAccount')({});
+              await logout();
+            } catch {
+              Alert.alert('', t('home.deleteAccountError'));
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const senderRating = currentUser?.ratingAsSender ?? { average: 0, count: 0 };
   const driverRating = (currentUser as any)?.ratingAsDriver ?? { average: 0, count: 0 };
-  const hasDriverRating = currentUser?.role === 'driver' || currentUser?.driverUnlocked || driverRating.count > 0;
+  const hasDriverRating = currentUser?.driverUnlocked || driverRating.count > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -188,7 +211,7 @@ export function ProfileScreen(): React.JSX.Element {
             {currentUser?.fullName || t('profile.user')}
           </Text>
           <Text style={[styles.userRole, { color: colors.textSecondary }]}>
-            {currentUser?.role === 'driver'
+            {currentUser?.activeMode === 'driver' && currentUser?.driverUnlocked
               ? t('profile.driver')
               : currentUser?.driverUnlocked
                 ? t('profile.senderDriver')
@@ -420,6 +443,14 @@ export function ProfileScreen(): React.JSX.Element {
           <Text style={[styles.logoutButtonText, { color: colors.error }]}>{t('profile.logout')}</Text>
         </TouchableOpacity>
 
+        {/* Delete Account */}
+        <TouchableOpacity
+          style={[styles.deleteAccountButton, { backgroundColor: colors.surface, borderColor: '#E53935' }]}
+          onPress={handleDeleteAccount}
+        >
+          <Text style={[styles.deleteAccountText, { color: '#E53935' }]}>{t('home.deleteAccount')}</Text>
+        </TouchableOpacity>
+
         {/* Version */}
         <Text style={[styles.versionText, { color: colors.textTertiary }]}>v{APP_VERSION}</Text>
       </ScrollView>
@@ -620,6 +651,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
   },
   logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  deleteAccountButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    marginHorizontal: 24,
+    marginTop: 12,
+  },
+  deleteAccountText: {
     fontSize: 16,
     fontWeight: '700',
   },

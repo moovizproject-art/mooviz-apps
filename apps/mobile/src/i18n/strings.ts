@@ -864,6 +864,8 @@ export const strings = {
     tracking: { he: 'מעקב', en: 'Track' } as LocaleStrings,
     approve: { he: 'אשר', en: 'Approve' } as LocaleStrings,
     decline: { he: 'דחה', en: 'Decline' } as LocaleStrings,
+    acceptDelivery: { he: 'קח את המשלוח', en: 'Take delivery' } as LocaleStrings,
+    skipDelivery: { he: 'דלג', en: 'Skip' } as LocaleStrings,
     deliveriesAndAlerts: { he: 'משלוחים והתראות', en: 'Deliveries & alerts' } as LocaleStrings,
     deliveriesAndAlertsDesc: { he: 'התראות על משלוחים, צ׳אט ותשלומים', en: 'Delivery, chat, and payment notifications' } as LocaleStrings,
     chatMessages: { he: 'הודעות צ׳אט', en: 'Chat messages' } as LocaleStrings,

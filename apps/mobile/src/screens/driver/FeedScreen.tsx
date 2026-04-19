@@ -37,7 +37,6 @@ import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDraw
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/design';
 import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
 import { DriverOnboarding, shouldShowOnboarding } from '../../components/DriverOnboarding';
-import { strings } from '../../i18n/strings';
 import { AddressAutocomplete, GeoAddress } from '../../components/AddressAutocomplete';
 import LottieView from 'lottie-react-native';
 
@@ -68,20 +67,12 @@ const RADAR_SIZE = 135; // 25% smaller (was 180)
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const VEHICLE_TYPES = ['bicycle', 'bike', 'car', 'truck'] as const;
 const VEHICLE_ICONS = { bicycle: '\u{1F6B2}', bike: '\u{1F3CD}', car: '\u{1F697}', truck: '\u{1F69A}' };
-const VEHICLE_LABELS_HE: Record<string, string> = { bicycle: strings.driver.bicycle.he, bike: strings.driver.bike.he, car: strings.driver.car.he, truck: strings.driver.truck.he };
 const SIZE_OPTIONS = ['small', 'medium', 'large', 'xlarge'] as const;
 const SIZE_ICONS: Record<string, string> = { small: '✉️', medium: '📦', large: '📦📦', xlarge: '🚚' };
-const SIZE_LABELS_HE: Record<string, string> = { small: strings.driver.small.he, medium: strings.driver.medium.he, large: strings.driver.large.he, xlarge: strings.form.sizeOther.he };
 
 const PREFS_KEY = '@driver_preferences';
 
-const EARNINGS_TABS = [
-  { key: 'thisWeek', label: strings.earnings.thisWeek.he },
-  { key: 'lastWeek', label: strings.earnings.lastWeek.he },
-  { key: 'thisMonth', label: strings.earnings.thisMonth.he },
-  { key: 'lastMonth', label: strings.earnings.lastMonth.he },
-  { key: 'thisYear', label: strings.earnings.thisYear.he },
-] as const;
+const EARNINGS_TAB_KEYS = ['thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear'] as const;
 
 interface QuietHour {
   from: string; // "HH:MM"
@@ -129,6 +120,20 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { currentUser } = useAuth();
+
+  const VEHICLE_LABELS: Record<string, string> = {
+    bicycle: t('driver.bicycle'),
+    bike: t('driver.bike'),
+    car: t('driver.car'),
+    truck: t('driver.truck'),
+  };
+  const SIZE_LABELS: Record<string, string> = {
+    small: t('driver.small'),
+    medium: t('driver.medium'),
+    large: t('driver.large'),
+    xlarge: t('form.sizeOther'),
+  };
+  const EARNINGS_TABS = EARNINGS_TAB_KEYS.map((key) => ({ key, label: t(`earnings.${key}`) }));
   const drawer = useSettingsDrawer();
   const insets = useSafeAreaInsets();
 
@@ -618,7 +623,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       {currentDelivery && (
         <View style={[styles.section, { paddingHorizontal: SPACING.md }]}>
           <Text style={[styles.feedSectionTitle, { color: colors.textPrimary, marginBottom: SPACING.sm }]}>
-            📦 {strings.deliveryExtra.activeDelivery.he}
+            📦 {t('deliveryExtra.activeDelivery')}
           </Text>
           <DeliveryCard
             delivery={currentDelivery}
@@ -634,7 +639,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
           setEarningsOpen((prev) => !prev);
         }} style={styles.sectionRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            💰 הכנסות
+            {`💰 ${t('driver.earnings')}`}
           </Text>
           <View style={styles.collapseEndRow}>
             <Text style={[styles.earningsQuickTotal, { color: colors.success }]}>
@@ -677,21 +682,21 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                 <Text style={[styles.earningsValue, { color: colors.success }]}>
                   {formatCurrency(currentEarnings.total)}
                 </Text>
-                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{strings.commonExtra.total.he}</Text>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{t('commonExtra.total')}</Text>
               </View>
               <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
               <View style={styles.earningsItem}>
                 <Text style={[styles.earningsValue, { color: colors.primary }]}>
                   {currentEarnings.count}
                 </Text>
-                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{strings.home.deliveries.he}</Text>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{t('home.deliveries')}</Text>
               </View>
               <View style={[styles.earningsDivider, { backgroundColor: colors.border }]} />
               <View style={styles.earningsItem}>
                 <Text style={[styles.earningsValue, { color: colors.textPrimary }]}>
                   {formatCurrency(currentEarnings.avgPerDelivery)}
                 </Text>
-                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>ממוצע</Text>
+                <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>{t('driver.average')}</Text>
               </View>
             </View>
           </View>
@@ -706,7 +711,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             setTransactionsOpen((prev) => !prev);
           }} style={styles.sectionRow}>
             <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-              📋 עסקאות אחרונות
+              {`📋 ${t('driver.recentTransactions')}`}
             </Text>
             <View style={styles.collapseEndRow}>
               <Text style={[styles.earningsQuickTotal, { color: '#6366F1' }]}>
@@ -748,7 +753,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       <View style={[styles.sectionCard, styles.section, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.primary, borderStartWidth: 4, padding: SPACING.lg }]}>
         <Pressable onPress={toggleAdvanced} style={styles.sectionRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            ⚙️ הגדרות מתקדמות
+            {`⚙️ ${t('driver.advancedSettings')}`}
           </Text>
           <Text style={[styles.collapseArrow, { color: colors.textTertiary }]}>
             {advancedOpen ? '▼' : '◀'}
@@ -760,7 +765,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Delivery Sizes Card ── */}
             <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
-                {`📦 ${strings.deliveryExtra.deliverySizes.he}`}
+                {`📦 ${t('deliveryExtra.deliverySizes')}`}
               </Text>
               <View style={styles.squareButtonRow}>
                 {SIZE_OPTIONS.map((size) => {
@@ -798,7 +803,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                         styles.squareButtonLabel,
                         { color: active ? colors.textInverse : colors.textPrimary },
                       ]}>
-                        {SIZE_LABELS_HE[size] || t(`driver.${size}`)}
+                        {SIZE_LABELS[size] || t(`driver.${size}`)}
                       </Text>
                     </Pressable>
                   );
@@ -809,7 +814,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Vehicle Type Card ── */}
             <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
-                🚛 סוג רכב
+                {`🚛 ${t('driver.vehicleType')}`}
               </Text>
               <View style={styles.squareButtonRow}>
                 {VEHICLE_TYPES.map((type) => {
@@ -831,7 +836,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                         styles.squareButtonLabel,
                         { color: active ? colors.textInverse : colors.textPrimary },
                       ]}>
-                        {VEHICLE_LABELS_HE[type] || t(`driver.${type}`)}
+                        {VEHICLE_LABELS[type] || t(`driver.${type}`)}
                       </Text>
                     </Pressable>
                   );
@@ -873,10 +878,10 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
             {/* ── Quiet Hours Card ── */}
             <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
-                🔇 שעות שקט
+                {`🔇 ${t('driver.quietHours')}`}
               </Text>
               <Text style={[styles.innerCardHint, { color: colors.textTertiary }]}>
-                התראות יגיעו בשקט בשעות אלו
+                {t('driver.quietHoursHint')}
               </Text>
               {(prefs.quietHours || []).map((qh, index) => (
                 <View key={index} style={styles.quietHourRow}>
@@ -925,14 +930,14 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                 }}
                 style={[styles.addQuietHourBtn, { borderColor: colors.border }]}
               >
-                <Text style={[styles.addQuietHourText, { color: colors.primary }]}>+ הוסף שעות שקט</Text>
+                <Text style={[styles.addQuietHourText, { color: colors.primary }]}>{`+ ${t('driver.addQuietHours')}`}</Text>
               </TouchableOpacity>
             </View>
 
             {/* ── Addresses Card ── */}
             <View style={[styles.innerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.innerCardTitle, { color: colors.textPrimary }]}>
-                📍 כתובות מועדפות
+                {`📍 ${t('driver.favoriteAddresses')}`}
               </Text>
               <AddressAutocomplete
                 label={t('driver.homeAddress')}
@@ -949,7 +954,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
               />
               <Text style={[styles.addressHint, { color: colors.textTertiary }]}>{t('driver.addressHint')}</Text>
               {savedFlash && prefs.homeAddress && (
-                <Text style={styles.savedFlash}>✓ נשמר</Text>
+                <Text style={styles.savedFlash}>{`✓ ${t('driver.saved')}`}</Text>
               )}
             </View>
 
@@ -974,12 +979,12 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                     style={[styles.nicknameSaveBtn, { backgroundColor: colors.primary }]}
                     onPress={handleSaveNickname}
                   >
-                    <Text style={styles.nicknameSaveBtnText}>שמור</Text>
+                    <Text style={styles.nicknameSaveBtnText}>{t('driver.save')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
               {savedFlash && prefs.nickname.length > 0 && (
-                <Text style={styles.savedFlash}>✓ נשמר</Text>
+                <Text style={styles.savedFlash}>{`✓ ${t('driver.saved')}`}</Text>
               )}
             </View>
           </View>
@@ -1042,7 +1047,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                     style={styles.feedSectionTitleRow}
                   >
                     <Text style={[styles.feedSectionIcon]}>📍</Text>
-                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>המיקום שלי</Text>
+                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>{t('driver.myLocation')}</Text>
                     <View style={[styles.feedSectionBadge, { backgroundColor: colors.primary + '20' }]}>
                       <Text style={[styles.feedSectionBadgeText, { color: colors.primary }]}>{nearMeDeliveries.length}</Text>
                     </View>
@@ -1070,7 +1075,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                       delivery={item}
                       onPress={() => handleDeliveryPress(item.id)}
                       showDistance
-                      distanceLabel={`${item._distKm.toFixed(1)} ק״מ`}
+                      distanceLabel={`${item._distKm.toFixed(1)} ${t('driver.km')}`}
                     />
                   </View>
                 ))}
@@ -1086,7 +1091,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                     style={styles.feedSectionTitleRow}
                   >
                     <Text style={[styles.feedSectionIcon]}>🏠</Text>
-                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>ליד הבית</Text>
+                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>{t('driver.nearHome')}</Text>
                     <View style={[styles.feedSectionBadge, { backgroundColor: '#4CAF50' + '20' }]}>
                       <Text style={[styles.feedSectionBadgeText, { color: '#4CAF50' }]}>{nearHomeDeliveries.length}</Text>
                     </View>
@@ -1114,7 +1119,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                       delivery={item}
                       onPress={() => handleDeliveryPress(item.id)}
                       showDistance
-                      distanceLabel={`${item._distKm.toFixed(1)} ק״מ מהבית`}
+                      distanceLabel={`${item._distKm.toFixed(1)} ${t('driver.kmFromHome')}`}
                     />
                   </View>
                 ))}
@@ -1130,7 +1135,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                     style={styles.feedSectionTitleRow}
                   >
                     <Text style={[styles.feedSectionIcon]}>💼</Text>
-                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>ליד העבודה</Text>
+                    <Text style={[styles.feedSectionTitle, { color: colors.textPrimary }]}>{t('driver.nearWork')}</Text>
                     <View style={[styles.feedSectionBadge, { backgroundColor: '#FF9800' + '20' }]}>
                       <Text style={[styles.feedSectionBadgeText, { color: '#FF9800' }]}>{nearWorkDeliveries.length}</Text>
                     </View>
@@ -1158,7 +1163,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                       delivery={item}
                       onPress={() => handleDeliveryPress(item.id)}
                       showDistance
-                      distanceLabel={`${item._distKm.toFixed(1)} ק״מ מהעבודה`}
+                      distanceLabel={`${item._distKm.toFixed(1)} ${t('driver.kmFromWork')}`}
                     />
                   </View>
                 ))}

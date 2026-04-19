@@ -69,6 +69,7 @@ export interface User {
   gender?: 'male' | 'female' | '';
   ageRange?: string;
   migratedFrom?: string;
+  autoCreated?: boolean;
   acceptedTermsAt?: Date;
   lastOtpAt?: Date;
   createdAt: Date;

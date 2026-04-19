@@ -116,7 +116,7 @@ export const onUserCreate = onDocumentCreated(
       });
 
       await transporter.sendMail({
-        from: `MOOVIZ <${smtpUser.value()}>`,
+        from: `Mooviz Social Deliveries <${smtpUser.value()}>`,
         to: "support@mooviz.co.il",
         subject: `🆕 משתמש חדש נרשם — ${fullName}`,
         html: `
@@ -308,7 +308,7 @@ async function notifyAdminKycSubmitted(userId: string, user: User): Promise<void
       auth: { user: smtpUserVal, pass: smtpPassVal },
     });
     await transporter.sendMail({
-      from: `MOOVIZ <${smtpUserVal}>`,
+      from: `Mooviz Social Deliveries <${smtpUserVal}>`,
       to: "admin@mooviz.co.il",
       subject: `אימות KYC חדש ממתין לאישור — ${user.fullName || userId}`,
       html: `

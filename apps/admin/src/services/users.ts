@@ -110,9 +110,7 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
   if (params.status) {
     constraints.push(where('status', '==', params.status));
   }
-  if (params.kycStatus) {
-    constraints.push(where('kycStatus', '==', params.kycStatus));
-  }
+  // kycStatus filtered client-side — compound index not guaranteed in prod
 
   constraints.push(orderBy('createdAt', 'desc'));
   if (params.pageSize) {
@@ -126,7 +124,10 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
   const q = query(usersRef, ...constraints);
   const snapshot = await getDocs(q);
 
-  const users = snapshot.docs.map(normalizeUser);
+  let users = snapshot.docs.map(normalizeUser);
+  if (params.kycStatus) {
+    users = users.filter((u) => u.kycStatus === params.kycStatus);
+  }
   const lastDocSnap = snapshot.docs[snapshot.docs.length - 1] ?? null;
 
   return { users, lastDoc: lastDocSnap };

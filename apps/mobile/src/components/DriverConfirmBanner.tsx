@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { SelectionCountdown } from './SelectionCountdown';
 
 interface Props {
@@ -13,20 +14,21 @@ interface Props {
 
 export function DriverConfirmBanner({ expiresAt, onConfirm, onDecline, isLoading }: Props): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [expired, setExpired] = useState(false);
 
   if (expired) {
     return (
       <View style={[styles.container, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}>
-        <Text style={styles.expiredText}>⏱ פג תוקף הבחירה</Text>
+        <Text style={styles.expiredText}>⏱ {t('driver.selectionExpired')}</Text>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
-      <Text style={styles.title}>🔔 השולח בחר בך!</Text>
-      <SelectionCountdown expiresAt={expiresAt} label="אשר את המשלוח תוך" onExpired={() => setExpired(true)} />
+      <Text style={styles.title}>🔔 {t('driver.senderSelectedYou')}</Text>
+      <SelectionCountdown expiresAt={expiresAt} label={t('driver.confirmWithin')} onExpired={() => setExpired(true)} />
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[styles.confirmBtn, isLoading && styles.btnDisabled]}
@@ -36,7 +38,7 @@ export function DriverConfirmBanner({ expiresAt, onConfirm, onDecline, isLoading
           {isLoading ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
-            <Text style={styles.confirmBtnText}>✓ אשר</Text>
+            <Text style={styles.confirmBtnText}>✓ {t('driver.confirm')}</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -44,7 +46,7 @@ export function DriverConfirmBanner({ expiresAt, onConfirm, onDecline, isLoading
           onPress={onDecline}
           disabled={isLoading}
         >
-          <Text style={styles.declineBtnText}>✗ דחה</Text>
+          <Text style={styles.declineBtnText}>✗ {t('driver.decline')}</Text>
         </TouchableOpacity>
       </View>
     </View>

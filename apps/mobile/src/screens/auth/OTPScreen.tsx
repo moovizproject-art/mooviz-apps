@@ -217,14 +217,17 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       carAlert.show('success', t('common.success'), t('auth.phoneVerified'));
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };
-      if (firebaseError.code) {
-        setError(mapFirebaseAuthError(firebaseError.code));
+      const errorMsg = firebaseError.code
+        ? mapFirebaseAuthError(firebaseError.code)
+        : (firebaseError.message || t('auth.wrongCode'));
+
+      if (firebaseError.code === 'auth/credential-already-in-use') {
+        // Phone already linked to another account — show prominent alert
+        // Don't clear code (the OTP was correct, just the phone is taken)
+        carAlert.show('error', t('auth.phoneVerification'), errorMsg);
       } else {
-        setError(firebaseError.message || t('auth.wrongCode'));
-      }
-      // Don't clear code on credential-already-in-use — the code was correct,
-      // just the phone is taken. Clearing would confuse the user.
-      if (firebaseError.code !== 'auth/credential-already-in-use') {
+        // Other errors — show inline + clear code for retry
+        setError(errorMsg);
         setCode(new Array(OTP_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
       }

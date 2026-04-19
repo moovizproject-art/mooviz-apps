@@ -116,16 +116,20 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
       // Persist remember me preference + login grace period to prevent session expiry race
       await AsyncStorage.setItem('@remember_me', rememberMe ? 'true' : 'false');
       await AsyncStorage.setItem('@login_timestamp', Date.now().toString());
-      // Set flag BEFORE signIn so RootNavigator knows OTP is required
-      setForceOtp(true);
       const cred = await signInWithEmail(email, password);
+      // Only force OTP if phone not yet linked in Firebase Auth
+      if (!cred.user.phoneNumber) setForceOtp(true);
       // Generate unique session token — other devices will be forced out
       const sessionToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       await AsyncStorage.setItem('@session_token', sessionToken);
-      // Stamp login time + session token + clear OTP timestamp
+      // Stamp login time + session token
+      // If phone is already linked in Firebase Auth, preserve lastOtpAt so OTP gate is skipped
+      const otpUpdate = cred.user.phoneNumber
+        ? { lastOtpAt: firestore.FieldValue.serverTimestamp() }
+        : { lastOtpAt: firestore.FieldValue.delete() };
       await firestore().collection('users').doc(cred.user.uid).update({
         lastLoginAt: firestore.FieldValue.serverTimestamp(),
-        lastOtpAt: firestore.FieldValue.delete(),
+        ...otpUpdate,
         sessionToken,
       }).catch(() => {});
     } catch (err: unknown) {

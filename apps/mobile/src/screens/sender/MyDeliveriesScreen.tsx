@@ -162,14 +162,14 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
             {attentionCount > 0 && (
               <View style={[styles.attentionHeader, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
                 <Text style={[styles.attentionTitle, { color: colors.primary }]}>
-                  🔔 נהגים מחכים לתשובה ({attentionCount})
+                  🔔 {t('sender.driversWaiting')} ({attentionCount})
                 </Text>
               </View>
             )}
             {paymentCount > 0 && (
               <View style={[styles.attentionHeader, { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }]}>
                 <Text style={[styles.attentionTitle, { color: '#F57C00' }]}>
-                  💳 ממתינים לתשלום ({paymentCount})
+                  💳 {t('sender.paymentsWaiting')} ({paymentCount})
                 </Text>
               </View>
             )}

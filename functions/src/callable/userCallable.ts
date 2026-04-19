@@ -274,6 +274,33 @@ export const createUser = onCall(async (request) => {
 });
 
 /**
+ * Delete the authenticated user's account.
+ * Removes Firestore user document and Firebase Auth record.
+ * Active deliveries that pre-date deletion remain for admin audit.
+ */
+export const deleteAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const userDoc = await userRef.get();
+
+  if (!userDoc.exists) {
+    // Auth record may still exist — delete it anyway
+    await admin.auth().deleteUser(uid);
+    return { success: true };
+  }
+
+  // Delete Firestore document first, then Auth record
+  await userRef.delete();
+  await admin.auth().deleteUser(uid);
+
+  return { success: true };
+});
+
+/**
  * One-time admin cleanup: trim every user's fcmTokens to the single most recent token.
  * Removes stale tokens accumulated from reinstalls that cause duplicate push notifications.
  * Admin-only (requires admin custom claim or the caller to be in the admin list).

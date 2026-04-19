@@ -177,16 +177,12 @@ export async function sendPhoneOTP(phone: string): Promise<string> {
     return 'simulator-test-verification-id';
   }
 
-  // iOS: verifyPhoneNumber crashes with EXC_BREAKPOINT if APNs token is missing.
-  // Ensure permissions + APNs registration before calling to avoid native crash.
+  // iOS: try to ensure APNs is ready for silent push verification.
+  // If not available (user denied notifications), Firebase will fall back to reCAPTCHA.
   if (Platform.OS === 'ios') {
     const apnsReady = await ensureAPNsReady();
     if (!apnsReady) {
-      console.error('[sendPhoneOTP] APNs token not available — cannot verify phone on iOS');
-      throw Object.assign(
-        new Error('Push notifications not configured. Please enable notifications for MOOVIZ in Settings and try again.'),
-        { code: 'auth/apns-not-available' },
-      );
+      console.warn('[sendPhoneOTP] APNs not available — Firebase will use reCAPTCHA fallback');
     }
   }
 

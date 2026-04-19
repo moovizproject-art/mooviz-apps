@@ -111,10 +111,10 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
         setQuery(point.address);
         setMode('map');
       } else {
-        Alert.alert('שגיאה', 'לא ניתן לאתר את הכתובת. נסה לבחור מהרשימה או הקש על המפה.');
+        Alert.alert(t('common.error'), t('map.addressNotFound'));
       }
     } catch {
-      Alert.alert('שגיאה', 'בעיה בחיבור לשרת המפות. נסה שוב.');
+      Alert.alert(t('common.error'), t('map.mapsError'));
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
       return;
     }
     // Free text without coords — force user to select from suggestions or tap map
-    Alert.alert('יש לבחור כתובת', 'בחר כתובת מהרשימה שמופיעה, או הקש על המפה כדי לסמן את המיקום.');
+    Alert.alert(t('map.selectAddress'), t('map.selectAddressHint'));
   }, [query, selectedPoint]);
 
   // ── Map mode handlers ──

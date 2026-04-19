@@ -38,7 +38,7 @@ export function AppAlert({
   icon = '🚛',
   title,
   message,
-  buttons = [{ text: 'אישור', style: 'default' }],
+  buttons = [{ text: 'OK', style: 'default' }],
   onDismiss,
 }: AppAlertProps): React.JSX.Element {
   const { colors } = useTheme();

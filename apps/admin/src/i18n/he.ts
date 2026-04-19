@@ -4,7 +4,7 @@ const he: Record<string, string> = {
   'nav.users': 'משתמשים',
   'nav.deliveries': 'משלוחים',
   'nav.reports': 'דיווחים',
-  'nav.email': 'דוא"ל',
+  'nav.email': 'הודעות',
   'nav.settings': 'הגדרות',
   'nav.signOut': 'התנתק',
 

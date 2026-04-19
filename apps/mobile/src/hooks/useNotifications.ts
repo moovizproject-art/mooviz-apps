@@ -72,13 +72,13 @@ interface UseNotificationsResult {
 
 /** Create Android notification channels (required for Android 8+) */
 async function ensureAndroidChannels(): Promise<string> {
-  // Main channel — uses custom Mooviz sound
+  // Main channel — uses custom Mooviz sound (v2 forces fresh channel with new_delivery sound)
   await notifee.createChannel({
-    id: 'mooviz_deliveries',
+    id: 'mooviz_deliveries_v2',
     name: strings.notifications.deliveriesAndAlerts.he,
     description: strings.notifications.deliveriesAndAlertsDesc.he,
     importance: AndroidImportance.HIGH,
-    sound: 'success',
+    sound: 'new_delivery',
     vibration: true,
   });
 
@@ -90,7 +90,7 @@ async function ensureAndroidChannels(): Promise<string> {
     sound: 'question',
   });
 
-  return 'mooviz_deliveries';
+  return 'mooviz_deliveries_v2';
 }
 
 /** Set up iOS notification categories with action buttons */
@@ -115,6 +115,13 @@ async function setupNotificationCategories(): Promise<void> {
         { id: 'decline_driver', title: '✗ ' + strings.notifications.decline.he, destructive: true },
       ],
     },
+    {
+      id: 'delivery_interest',
+      actions: [
+        { id: 'accept_delivery', title: '✓ ' + strings.notifications.acceptDelivery.he, foreground: true },
+        { id: 'skip_delivery', title: '✗ ' + strings.notifications.skipDelivery.he, destructive: true },
+      ],
+    },
   ]);
 }
 
@@ -128,6 +135,14 @@ function getNotificationActions(notifEvent?: string): {
       return {
         androidActions: [{ title: strings.notifications.openChat.he, pressAction: { id: 'open_chat' } }],
         iosCategoryId: 'chat',
+      };
+    case 'new_listing_nearby':
+      return {
+        androidActions: [
+          { title: '✓ ' + strings.notifications.acceptDelivery.he, pressAction: { id: 'accept_delivery' } },
+          { title: '✗ ' + strings.notifications.skipDelivery.he, pressAction: { id: 'skip_delivery' } },
+        ],
+        iosCategoryId: 'delivery_interest',
       };
     case 'driver_interested':
       return {
@@ -228,8 +243,9 @@ export function useNotifications(): UseNotificationsResult {
   useEffect(() => {
     if (!currentUser?.uid || !fcmToken) return;
 
+    // Replace token list on every app start — ensures fresh token, clears stale ones
     firestore().collection('users').doc(currentUser.uid).update({
-      fcmTokens: firestore.FieldValue.arrayUnion(fcmToken),
+      fcmTokens: [fcmToken],
       lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
     }).then(() => {
       console.log('[useNotifications] Token saved to Firestore');
@@ -242,7 +258,8 @@ export function useNotifications(): UseNotificationsResult {
       setFcmToken(newToken);
       if (currentUser?.uid) {
         await firestore().collection('users').doc(currentUser.uid).update({
-          fcmTokens: firestore.FieldValue.arrayUnion(newToken),
+          fcmTokens: [newToken],
+          lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
         });
       }
     });
@@ -360,6 +377,21 @@ async function handleNotificationAction(actionId: string | undefined, data: Reco
   if (!deliveryId) return;
 
   switch (actionId) {
+    case 'accept_delivery': {
+      console.log('[NotifAction] Expressing interest in delivery:', deliveryId);
+      try {
+        const fn = functions().httpsCallable('expressInterest');
+        await fn({ deliveryId });
+        navigateFromNotification('DriverDeliveryDetail', { deliveryId });
+      } catch (err: any) {
+        console.error('[NotifAction] Accept delivery failed:', err.message);
+      }
+      break;
+    }
+    case 'skip_delivery': {
+      // Just dismiss — no action needed
+      break;
+    }
     case 'approve_driver': {
       console.log('[NotifAction] Approving driver for delivery:', deliveryId);
       try {

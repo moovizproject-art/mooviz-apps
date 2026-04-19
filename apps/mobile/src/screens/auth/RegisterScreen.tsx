@@ -18,8 +18,12 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
 import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
+
+/** Key used to pass registration data to useAuth auto-create (avoids race condition) */
+export const PENDING_REGISTRATION_KEY = '@pending_registration';
 
 const logo = require('../../assets/logo.png');
 
@@ -53,8 +57,6 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
   const [focusedField, setFocusedField] = useState<FormField | null>(null);
   const [showPasswordFields, setShowPasswordFields] = useState<Record<string, boolean>>({});
-  const [gender, setGender] = useState<'male' | 'female' | ''>('');
-  const [ageRange, setAgeRange] = useState<string>('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
   const [loadingVisible, setLoadingVisible] = useState(false);
@@ -106,6 +108,14 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       setLoadingStep(0);
       setLoadingVisible(true);
 
+      // Save registration data BEFORE creating Auth user — useAuth auto-create reads this
+      // to avoid race condition (onAuthStateChanged fires before createUserDocument)
+      await AsyncStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify({
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+      }));
+
       const credential = await registerWithEmail(form.email, form.password);
 
       // Try to create user doc — if it fails, the auto-create in useAuth will handle it
@@ -114,8 +124,6 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           fullName: form.fullName,
           email: form.email,
           phone: form.phone,
-          gender: gender || undefined,
-          ageRange: ageRange || undefined,
         });
       } catch (docErr) {
         // Firestore doc creation failed — write directly as fallback
@@ -303,58 +311,6 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           ref: phoneRef,
         })}
         {errors.phone && <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>}
-      </View>
-
-      {/* Gender */}
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.gender')}</Text>
-        <View style={styles.chipRow}>
-          {(['male', 'female'] as const).map((g) => (
-            <TouchableOpacity
-              key={g}
-              style={[
-                styles.chip,
-                { borderColor: colors.border, backgroundColor: colors.inputBg },
-                gender === g && { backgroundColor: colors.primary, borderColor: colors.primary },
-              ]}
-              onPress={() => setGender(gender === g ? '' : g)}
-            >
-              <Text style={[
-                styles.chipText,
-                { color: colors.textPrimary },
-                gender === g && { color: '#FFFFFF' },
-              ]}>
-                {t(`auth.${g}`)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Age range */}
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t('auth.ageRange')}</Text>
-        <View style={styles.chipRow}>
-          {['18-24', '25-34', '35-44', '45-54', '55+'].map((range) => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.chip,
-                { borderColor: colors.border, backgroundColor: colors.inputBg },
-                ageRange === range && { backgroundColor: colors.primary, borderColor: colors.primary },
-              ]}
-              onPress={() => setAgeRange(ageRange === range ? '' : range)}
-            >
-              <Text style={[
-                styles.chipText,
-                { color: colors.textPrimary },
-                ageRange === range && { color: '#FFFFFF' },
-              ]}>
-                {range}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
 
       {/* Terms of Service */}

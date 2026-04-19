@@ -173,11 +173,6 @@ export const DeliveryCard = React.memo(function DeliveryCard({
               <TouchableOpacity onPress={() => { setGalleryIndex(0); setGalleryVisible(true); }} activeOpacity={0.85}>
               <Image source={{ uri: thumbnailUrl }} style={styles.thumb} />
             </TouchableOpacity>
-              {mediaCount > 1 && (
-                <View style={styles.mediaCountBadge}>
-                  <Text style={styles.mediaCountText}>{mediaCount}</Text>
-                </View>
-              )}
             </View>
           ) : (
             <View style={[styles.thumb, styles.thumbPlaceholder, { backgroundColor: colors.border }]}>
@@ -203,7 +198,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                 return (
                   <>
                     {hasDrivers && isWaiting ? (
-                      <View style={[styles.driverCountBadge, { backgroundColor: '#E8F5E9' }]}>
+                      <View style={styles.driverCountBadge}>
                         <Image source={carIcon} style={styles.carIcon} />
                         <Text style={[styles.driverCountText, { color: '#2E7D32' }]}>{drivers.length}</Text>
                       </View>

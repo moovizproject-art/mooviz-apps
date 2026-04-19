@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 
 const STAR_GOLD = '#FFB800';
 const PAGE_SIZE = 20;
@@ -42,6 +43,7 @@ interface Props {
 
 export function RatingsHistoryModal({ visible, onClose, userId, mode }: Props): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [ratings, setRatings] = useState<RatingDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -205,7 +207,7 @@ export function RatingsHistoryModal({ visible, onClose, userId, mode }: Props): 
           </Text>
         ) : (
           <Text style={[styles.noCommentText, { color: colors.textSecondary }]}>
-            ללא תגובה
+            {t('rating.noComment')}
           </Text>
         )}
       </View>
@@ -220,21 +222,21 @@ export function RatingsHistoryModal({ visible, onClose, userId, mode }: Props): 
           onPress={onClose}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.closeButtonText}>{'\u2715'}</Text>
+          <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {mode === 'sender' ? '\uD83D\uDCE6 \u05D3\u05D9\u05E8\u05D5\u05D2\u05D9\u05DD \u05DB\u05E9\u05D5\u05DC\u05D7' : '\uD83D\uDE97 \u05D3\u05D9\u05E8\u05D5\u05D2\u05D9\u05DD \u05DB\u05E0\u05D4\u05D2'}
+          {mode === 'sender' ? `📦 ${t('rating.asSender')}` : `🚗 ${t('rating.asDriver')}`}
         </Text>
         <View style={styles.closeButtonPlaceholder} />
       </View>
 
       <View style={styles.averageContainer}>
         <Text style={styles.averageValue}>
-          {averageRating > 0 ? averageRating.toFixed(1) : '\u2014'}
+          {averageRating > 0 ? averageRating.toFixed(1) : '—'}
         </Text>
         {renderStars(Math.round(averageRating), 24)}
         <Text style={styles.totalCountText}>
-          {totalCount > 0 ? `${totalCount} \u05D3\u05D9\u05E8\u05D5\u05D2\u05D9\u05DD` : ''}
+          {totalCount > 0 ? `${totalCount} ${t('profile.ratingsCount')}` : ''}
         </Text>
       </View>
     </View>
@@ -244,9 +246,9 @@ export function RatingsHistoryModal({ visible, onClose, userId, mode }: Props): 
     if (loading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>{'\u2606'}</Text>
+        <Text style={styles.emptyIcon}>☆</Text>
         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          {'\u05D0\u05D9\u05DF \u05D3\u05D9\u05E8\u05D5\u05D2\u05D9\u05DD \u05E2\u05D3\u05D9\u05D9\u05DF'}
+          {t('rating.noRatingsYet')}
         </Text>
       </View>
     );

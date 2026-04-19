@@ -9,7 +9,12 @@ import {
   Dimensions,
   Linking,
   Image,
+  Alert,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
+import messaging from '@react-native-firebase/messaging';
+import functions from '@react-native-firebase/functions';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -35,9 +40,21 @@ interface SettingsDrawerProps {
 export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerProps): React.JSX.Element | null {
   const { colors, isDark, setMode: setThemeMode } = useTheme();
   const { t, locale, setLocale } = useI18n();
-  const { currentUser, updateProfile } = useAuth();
+  const { currentUser, updateProfile, logout } = useAuth();
   const { soundEnabled, setSoundEnabled } = useSound();
   const navigation = useNavigation<any>();
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+
+  // Check notification permission status on mount
+  React.useEffect(() => {
+    if (!visible) return;
+    messaging().hasPermission().then((status) => {
+      setNotificationsEnabled(
+        status === messaging.AuthorizationStatus.AUTHORIZED ||
+        status === messaging.AuthorizationStatus.PROVISIONAL,
+      );
+    }).catch(() => {});
+  }, [visible]);
   const driverUnlocked = currentUser?.driverUnlocked ?? false;
   const activeMode = currentUser?.activeMode ?? 'client';
   const isDriverMode = activeMode === 'driver';
@@ -62,6 +79,28 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
     onClose();
     navigation.navigate('Profile' as never);
   }, [navigation, onClose]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      t('home.deleteAccountConfirmTitle'),
+      t('home.deleteAccountConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('home.deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await functions().httpsCallable('deleteAccount')({});
+              await logout();
+            } catch {
+              Alert.alert('', t('home.deleteAccountError'));
+            }
+          },
+        },
+      ],
+    );
+  }, [t, logout]);
 
   if (!visible) return null;
 
@@ -165,6 +204,43 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
 
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={async () => {
+              if (notificationsEnabled) {
+                // Can't revoke programmatically — send user to system settings
+                Linking.openSettings();
+              } else {
+                // Try requesting permission first (Android 13+)
+                if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+                  const result = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+                  );
+                  setNotificationsEnabled(result === PermissionsAndroid.RESULTS.GRANTED);
+                  if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+                    Linking.openSettings();
+                    return;
+                  }
+                }
+                const authStatus = await messaging().requestPermission();
+                const enabled =
+                  authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+                  authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+                setNotificationsEnabled(enabled);
+                if (!enabled) {
+                  Linking.openSettings();
+                }
+              }
+            }}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: notificationsEnabled ? '#E8F5E9' : '#FFEBEE' }]}>
+              <Text style={styles.flagEmoji}>{notificationsEnabled ? '\u{1F514}' : '\u{1F515}'}</Text>
+            </View>
+            <Text style={[styles.menuText, { color: colors.textPrimary }]}>
+              {notificationsEnabled ? t('home.notificationsOn') : t('home.notificationsOff')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => Linking.openURL('mailto:support@mooviz.co.il')}
           >
             <View style={[styles.menuIconBg, { backgroundColor: '#E3F2FD' }]}>
@@ -172,6 +248,15 @@ export function SettingsDrawer({ visible, onClose, animValue }: SettingsDrawerPr
             </View>
             <Text style={[styles.menuText, { color: colors.textPrimary }]}>
               {t('home.contactUs')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+            <View style={[styles.menuIconBg, { backgroundColor: '#FFEBEE' }]}>
+              <Text style={styles.flagEmoji}>🗑️</Text>
+            </View>
+            <Text style={[styles.menuText, { color: '#E53935' }]}>
+              {t('home.deleteAccount')}
             </Text>
           </TouchableOpacity>
 

@@ -22,6 +22,9 @@ target 'MoovizMobile' do
   pod 'FirebaseMessagingInterop', :modular_headers => true
   pod 'GTMSessionFetcher', :modular_headers => true
   pod 'RecaptchaInterop', :modular_headers => true
+  pod 'FirebaseInstallations', :modular_headers => true
+  pod 'GoogleDataTransport', :modular_headers => true
+  pod 'nanopb', :modular_headers => true
 
   # Google Maps SDK for react-native-maps
   pod 'GoogleMaps'
@@ -42,15 +45,31 @@ target 'MoovizMobile' do
       :mac_catalyst_enabled => false,
     )
 
-    # Patch Firebase.h: replace #import <X/X-Swift.h> with @import X;
-    # The -Swift.h files don't exist as static headers (generated at compile time).
-    # @import works in ObjC .m files (all RNFirebase modules are .m).
-    # AppDelegate.mm imports FirebaseCore directly, not the umbrella.
+    # Patch Firebase.h:
+    #
+    # 1. Replace any #import <X/X-Swift.h> with @import X; (handles pods that already have them)
+    #
+    # 2. Inject @import FirebaseAuth; after the FirebaseAuth #import block.
+    #    FIRAuth is a Swift class — its @interface is ONLY available via the compiled Swift
+    #    module (@import FirebaseAuth), not from the ObjC stub headers. Firebase.h does not
+    #    include a -Swift.h for FirebaseAuth, so downstream pods like RNFBMessaging that call
+    #    [[FIRAuth authWithApp:...] would see only @class FIRAuth (forward decl) → build error.
+    #
+    # For pod targets: CocoaPods builds FirebaseAuth before RNFBMessaging, so
+    # PODS_CONFIGURATION_BUILD_DIR/FirebaseAuth/FirebaseAuth.modulemap exists when needed.
+    # For the app target: Pods-MoovizMobile xcconfig redirects Swift pod modulemaps to
+    # PODS_ROOT/Headers/Public (static paths) so fresh simulator builds don't fail.
     firebase_h = File.join(installer.sandbox.root, 'Firebase/CoreOnly/Sources/Firebase.h')
     if File.exist?(firebase_h)
       File.chmod(0644, firebase_h)
       content = File.read(firebase_h)
+      # Handle any -Swift.h imports that may exist (e.g. future SDK versions)
       content.gsub!(%r{^\s*#import\s+<(\w+)/\1-Swift\.h>}) { "    @import #{$1};" }
+      # Inject @import FirebaseAuth; so FIRAuth's full Swift-generated ObjC interface is available
+      content.gsub!(
+        '#import <FirebaseAuth/FirebaseAuth.h>',
+        "#import <FirebaseAuth/FirebaseAuth.h>\n    @import FirebaseAuth;"
+      )
       File.write(firebase_h, content)
     end
 
@@ -81,14 +100,62 @@ target 'MoovizMobile' do
       end
     end
 
-    # Strip -weak_framework FirebaseFirestoreInternal from xcconfig files
-    # (modular_headers causes CocoaPods to link it as a framework, but it's a static lib)
+    # Two-pass xcconfig fix:
+    #
+    # Pass 1 (ALL xcconfigs): strip -weak_framework FirebaseFirestoreInternal
+    #   modular_headers causes CocoaPods to link it as a framework, but it's a static lib.
+    #
+    # Pass 2 (APP TARGET xcconfigs only — Pods-MoovizMobile*): redirect Swift pod modulemaps
+    #   from PODS_CONFIGURATION_BUILD_DIR to PODS_ROOT/Headers/Public.
+    #
+    #   WHY app-target only:
+    #     Pod targets compile in dependency order — by the time FirebaseCrashlytics compiles,
+    #     FirebaseSessions is already built and its .modulemap exists in PODS_CONFIGURATION_BUILD_DIR.
+    #     But when the app target starts compiling, NO pods have been compiled yet, so every
+    #     "-fmodule-map-file=${PODS_CONFIGURATION_BUILD_DIR}/X/X.modulemap" is missing → error.
+    #     The static modulemap in PODS_ROOT/Headers/Public always exists (checked in at pod install).
+    #
+    #   WHY pod-target xcconfigs must NOT be redirected:
+    #     Swift pods (FirebaseSessions, FirebaseCoreInternal, etc.) expose ObjC types (protocols,
+    #     classes annotated @objc) only through the compiled .pcm module in PODS_CONFIGURATION_BUILD_DIR.
+    #     The static modulemap in Headers/Public only covers pure-ObjC headers — it doesn't include
+    #     Swift-generated interfaces. Redirecting a pod's own dependency to the static path makes
+    #     @import FirebaseSessions (for FIRSessionsSubscriber etc.) silently miss those types.
+
     Dir.glob(File.join(installer.sandbox.target_support_files_root, '**/*.xcconfig')).each do |path|
       content = File.read(path)
+      changed = false
       if content.include?('FirebaseFirestoreInternal')
         content.gsub!(/-weak_framework\s+"?FirebaseFirestoreInternal"?/, '')
-        File.write(path, content)
+        changed = true
       end
+      File.write(path, content) if changed
+    end
+
+    # Modulemap redirect: app target xcconfigs only
+    swift_pod_modulemaps = [
+      'FirebaseAuth',
+      'FirebaseCoreInternal',
+      'FirebaseCrashlytics',
+      'FirebaseFirestore',
+      'FirebaseFunctions',
+      'FirebaseRemoteConfigInterop',
+      'FirebaseSessions',
+      'FirebaseSharedSwift',
+      'FirebaseStorage',
+    ]
+    Dir.glob(File.join(installer.sandbox.target_support_files_root, 'Pods-MoovizMobile*/*.xcconfig')).each do |path|
+      content = File.read(path)
+      changed = false
+      swift_pod_modulemaps.each do |pod|
+        build_ref = "${PODS_CONFIGURATION_BUILD_DIR}/#{pod}/#{pod}.modulemap"
+        static_ref = "${PODS_ROOT}/Headers/Public/#{pod}/#{pod}.modulemap"
+        if content.include?(build_ref)
+          content.gsub!(build_ref, static_ref)
+          changed = true
+        end
+      end
+      File.write(path, content) if changed
     end
 
   end

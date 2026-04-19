@@ -33,7 +33,6 @@ import { ImageGalleryModal } from '../../components/ImageGalleryModal';
 import { useInAppReview } from '../../hooks/useInAppReview';
 import { ProofCamera } from '../../components/ProofCamera';
 import { uploadProofPhoto } from '../../services/storage';
-import { strings } from '../../i18n/strings';
 import { useDriverLocationTracking } from '../../hooks/useDriverLocationTracking';
 import { DriverConfirmBanner } from '../../components/DriverConfirmBanner';
 import { SenderProfileModal } from '../../components/SenderProfileModal';
@@ -227,7 +226,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       setLoadingVisible(false);
       const code = (err?.code || err?.message || '').toLowerCase();
       const hebrewMsg = code.includes('unauthenticated')
-        ? 'נדרשת התחברות מחדש. אנא צא והתחבר שוב.'
+        ? t('common.reloginRequired')
         : err.message || t('driver.statusUpdateError');
       carAlert.show('error', t('common.error'), hebrewMsg);
     } finally {
@@ -241,20 +240,20 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   }, []);
 
   const handleWithdrawInterest = (): void => {
-    carAlert.show('info', strings.driver.withdrawInterest.he, strings.driver.withdrawConfirm.he, [
-      { text: strings.common.cancel.he, style: 'cancel' },
+    carAlert.show('info', t('driver.withdrawInterest'), t('driver.withdrawConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: strings.driver.withdrawInterest.he,
+        text: t('driver.withdrawInterest'),
         style: 'destructive',
         onPress: async () => {
           setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
           try {
             await withdrawInterest(deliveryId);
             setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-            carAlert.show('success', t('common.success'), strings.driver.withdrawSuccess.he);
+            carAlert.show('success', t('common.success'), t('driver.withdrawSuccess'));
           } catch (err) {
             setLoadingVisible(false);
-            carAlert.show('error', t('common.error'), strings.driver.withdrawError.he);
+            carAlert.show('error', t('common.error'), t('driver.withdrawError'));
           }
         },
       },
@@ -263,20 +262,20 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   /** Withdraw from interest list (before being selected/assigned) */
   const handleWithdrawFromInterest = (): void => {
-    carAlert.show('info', strings.driver.withdrawInterest.he, strings.driver.withdrawConfirm.he, [
-      { text: strings.common.cancel.he, style: 'cancel' },
+    carAlert.show('info', t('driver.withdrawInterest'), t('driver.withdrawConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: strings.driver.withdrawInterest.he,
+        text: t('driver.withdrawInterest'),
         style: 'destructive',
         onPress: async () => {
           setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
           try {
             await withdrawFromInterest(deliveryId);
             setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-            carAlert.show('success', t('common.success'), strings.driver.withdrawSuccess.he);
+            carAlert.show('success', t('common.success'), t('driver.withdrawSuccess'));
           } catch (err) {
             setLoadingVisible(false);
-            carAlert.show('error', t('common.error'), strings.driver.withdrawError.he);
+            carAlert.show('error', t('common.error'), t('driver.withdrawError'));
           }
         },
       },
@@ -287,7 +286,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     try {
       setConfirmLoading(true);
       await confirmSelection(deliveryId);
-      carAlert.show('success', 'אושר!', 'המשלוח שויך אליך');
+      carAlert.show('success', t('common.success'), t('delivery.assignedSuccess'));
     } catch (err) {
       carAlert.show('error', t('common.error'), (err as Error).message);
     } finally {
@@ -299,7 +298,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     try {
       setConfirmLoading(true);
       await declineSelection(deliveryId);
-      carAlert.show('info', 'דחית', 'המשלוח הוחזר לשולח');
+      carAlert.show('info', t('common.success'), t('delivery.declinedSuccess'));
       navigation.goBack();
     } catch (err) {
       carAlert.show('error', t('common.error'), (err as Error).message);
@@ -309,21 +308,21 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   };
 
   const handleCancelDelivery = (): void => {
-    carAlert.show('info', strings.common.cancel.he, strings.driver.cancelConfirm?.he || 'האם אתה בטוח שברצונך לבטל את האיסוף?', [
-      { text: strings.common.cancel.he, style: 'cancel' },
+    carAlert.show('info', t('common.cancel'), t('driver.cancelConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: strings.common.confirm.he,
+        text: t('common.confirm'),
         style: 'destructive',
         onPress: async () => {
           setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
           try {
             await cancelDelivery(deliveryId);
             setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-            carAlert.show('success', t('common.success'), 'המשלוח בוטל בהצלחה');
+            carAlert.show('success', t('common.success'), t('delivery.cancelSuccess'));
             navigation.goBack();
           } catch (err) {
             setLoadingVisible(false);
-            carAlert.show('error', t('common.error'), (err as Error).message || 'שגיאה בביטול המשלוח');
+            carAlert.show('error', t('common.error'), (err as Error).message || t('delivery.cancelError'));
           }
         },
       },
@@ -356,10 +355,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           delivery?.pickup?.lat ?? delivery?.pickup?.latitude ?? 0,
           delivery?.pickup?.lng ?? delivery?.pickup?.longitude ?? 0,
         );
-        const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} ${strings.commonExtra.meters.he}` : `${distKm.toFixed(1)} ${strings.commonExtra.km.he}`;
-        carAlert.show('info', strings.driver.confirmPickup.he, strings.deliveryExtra.confirmPickupPrompt.he.replace('{dist}', distStr), [
-          { text: strings.common.cancel.he, style: 'cancel' },
-          { text: strings.driver.confirmPickup.he, onPress: () => doExpressInterest() },
+        const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} ${t('commonExtra.meters')}` : `${distKm.toFixed(1)} ${t('commonExtra.km')}`;
+        carAlert.show('info', t('driver.confirmPickup'), t('deliveryExtra.confirmPickupPrompt').replace('{dist}', distStr), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('driver.confirmPickup'), onPress: () => doExpressInterest() },
         ]);
       },
       () => {
@@ -452,7 +451,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         <View style={styles.itemHeader}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.itemTitle, { color: colors.textPrimary }]} numberOfLines={2}>
-              {delivery.itemDescription || strings.commonExtra.deliveryItem.he}
+              {delivery.itemDescription || t('commonExtra.deliveryItem')}
             </Text>
             <View style={[styles.sizeRow, { backgroundColor: colors.surfaceElevated }]}>
               <Text style={styles.sizeIcon}>{sizeInfo.icon}</Text>
@@ -521,13 +520,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             style={[styles.actionButton, { backgroundColor: '#E53935' }]}
             onPress={handleWithdrawFromInterest}
           >
-            <Text style={styles.actionButtonText}>{strings.driver.withdrawInterest.he}</Text>
+            <Text style={styles.actionButtonText}>{t('driver.withdrawInterest')}</Text>
           </TouchableOpacity>
         )}
 
         {isAvailable && !isMyJob && alreadyInterested && myInterestStatus !== 'interested' && (
           <View style={[styles.actionButton, { backgroundColor: '#9E9E9E' }]}>
-            <Text style={styles.actionButtonText}>אישור איסוף ✓</Text>
+            <Text style={styles.actionButtonText}>{t('delivery.confirmPickupDisabled')} ✓</Text>
           </View>
         )}
 
@@ -537,11 +536,11 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             style={[styles.actionButton, { backgroundColor: '#E53935' }]}
             onPress={handleWithdrawInterest}
           >
-            <Text style={styles.actionButtonText}>{strings.driver.withdrawInterest.he}</Text>
+            <Text style={styles.actionButtonText}>{t('driver.withdrawInterest')}</Text>
           </TouchableOpacity>
         )}
 
-        {isMyJob && delivery.status === 'waiting_for_pickup' && (
+        {isMyJob && delivery.status === 'waiting' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={() => openProofCamera('pickup')}
@@ -555,13 +554,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </TouchableOpacity>
         )}
 
-        {/* Cancel delivery — driver can cancel before pickup (waiting/matched only, pending uses withdraw) */}
-        {isMyJob && ['awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status) && (
+        {/* Cancel delivery — driver can cancel before pickup (waiting only, pending uses withdraw) */}
+        {isMyJob && delivery.status === 'waiting' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#E53935' }]}
             onPress={handleCancelDelivery}
           >
-            <Text style={styles.actionButtonText}>❌ ביטול משלוח</Text>
+            <Text style={styles.actionButtonText}>❌ {t('delivery.cancelDelivery')}</Text>
           </TouchableOpacity>
         )}
 
@@ -691,7 +690,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 6b. Proof Photos ── */}
       {proofImages.length > 0 && (
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{`📸 ${strings.deliveryExtra.deliveryProofs.he}`}</Text>
+          <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{`📸 ${t('deliveryExtra.deliveryProofs')}`}</Text>
           <View style={styles.proofRow}>
             {proofImages.map((proof, i) => (
               <TouchableOpacity
@@ -773,11 +772,11 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 7b. Awaiting payment — driver confirms receipt ── */}
       {isMyJob && delivery.status === 'awaiting_payment' && (
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderStartColor: colors.success, borderStartWidth: 3 }]}>
-          <Text style={[styles.sectionHeader, { color: colors.text }]}>💳 ממתין לתשלום</Text>
+          <Text style={[styles.sectionHeader, { color: colors.text }]}>{`💳 ${t('delivery.paymentWaiting')}`}</Text>
           {delivery.payment?.driverConfirmed ? (
             <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8 }}>
               <Text style={{ color: '#2E7D32', fontWeight: '600', textAlign: 'right' }}>
-                ✅ אישרת תשלום — ממתין לאישור השולח
+                {`✅ ${t('delivery.driverConfirmedPaymentDriver')}`}
               </Text>
             </View>
           ) : (
@@ -799,7 +798,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               {confirmLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.actionButtonText}>💰 אשר קבלת תשלום</Text>
+                <Text style={styles.actionButtonText}>{`💰 ${t('delivery.confirmPayment')}`}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -822,13 +821,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 9. Ratings summary — visible when both parties rated ── */}
       {delivery.ratedBySender && delivery.ratedByDriver && (
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>⭐ דירוגים</Text>
+          <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>{`⭐ ${t('delivery.ratingsSection')}`}</Text>
 
           {/* Driver's rating (about sender) */}
           {delivery.driverRatingGiven && (
             <View style={{ marginBottom: 12 }}>
               <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>
-                הדירוג שלך על השולח
+                {t('delivery.yourRatingOnSender')}
               </Text>
               <Text style={styles.ratingStarsGold}>
                 {'★'.repeat(delivery.driverRatingGiven.rating)}
@@ -846,7 +845,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           {delivery.senderRatingGiven && (
             <View>
               <Text style={[styles.ratingLabel, { color: colors.textSecondary }]}>
-                דירוג השולח עליך
+                {t('delivery.senderRatingOnYou')}
               </Text>
               <Text style={styles.ratingStarsGold}>
                 {'★'.repeat(delivery.senderRatingGiven.rating)}

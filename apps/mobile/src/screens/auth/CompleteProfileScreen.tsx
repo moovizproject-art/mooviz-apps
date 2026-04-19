@@ -11,7 +11,6 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { ISRAEL_CITIES } from '../../constants/cities';
 import firestore from '@react-native-firebase/firestore';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -34,12 +33,9 @@ export function CompleteProfileScreen(): React.JSX.Element {
 
   const [fullName, setFullName] = useState(currentUser?.fullName || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [city, setCity] = useState(currentUser?.city || '');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; phone?: string }>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
-  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
 
   // Auto-save and skip screen if fullName + phone already populated from registration
   useEffect(() => {
@@ -49,25 +45,7 @@ export function CompleteProfileScreen(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCityChange = (text: string) => {
-    setCity(text);
-    if (text.trim().length > 0) {
-      const filtered = ISRAEL_CITIES.filter(c => c.includes(text.trim()));
-      setCitySuggestions(filtered.slice(0, 5));
-      setShowCitySuggestions(filtered.length > 0);
-    } else {
-      setCitySuggestions([]);
-      setShowCitySuggestions(false);
-    }
-  };
-
-  const selectCity = (selectedCity: string) => {
-    setCity(selectedCity);
-    setShowCitySuggestions(false);
-  };
-
   const phoneRef = useRef<TextInput>(null);
-  const cityRef = useRef<TextInput>(null);
 
   const validate = (): boolean => {
     const newErrors: { fullName?: string; phone?: string } = {};
@@ -93,7 +71,6 @@ export function CompleteProfileScreen(): React.JSX.Element {
       await firestore().collection('users').doc(currentUser.uid).update({
         fullName: fullName.trim(),
         phone: normalizePhoneNumber(phone.trim()),
-        ...(city.trim() ? { city: city.trim() } : {}),
         autoCreated: firestore.FieldValue.delete(), // Clear the auto-created flag
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
@@ -201,35 +178,11 @@ export function CompleteProfileScreen(): React.JSX.Element {
           {renderInput('phone', phone, setPhone, '050-1234567', {
             keyboardType: 'phone-pad',
             ref: phoneRef,
-            nextRef: cityRef,
-          })}
-          {errors.phone && (
-            <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>
-          )}
-        </View>
-
-        {/* City (optional with autocomplete) */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.textPrimary }]}>
-            {t('profile.city')}
-          </Text>
-          {renderInput('city', city, handleCityChange, t('forms.cityPlaceholder'), {
-            ref: cityRef,
             returnKeyType: 'done',
             onSubmitEditing: handleSave,
           })}
-          {showCitySuggestions && (
-            <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {citySuggestions.map((suggestion) => (
-                <TouchableOpacity
-                  key={suggestion}
-                  style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
-                  onPress={() => selectCity(suggestion)}
-                >
-                  <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{suggestion}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          {errors.phone && (
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>
           )}
         </View>
 

@@ -73,7 +73,7 @@ export async function sendPushNotification(
         priority: "high",
         collapseKey: collapseKey,
         notification: {
-          channelId: "mooviz_deliveries",
+          channelId: "mooviz_deliveries_v2",
           sound: sound ?? "success",
           tag: collapseKey,
         },
@@ -86,9 +86,10 @@ export async function sendPushNotification(
         },
         payload: {
           aps: {
-            sound: "default",
+            sound: sound ? `${sound}.caf` : "default",
             badge: 1,
             "mutable-content": 1,
+            "interruption-level": "active",
           },
         },
       },

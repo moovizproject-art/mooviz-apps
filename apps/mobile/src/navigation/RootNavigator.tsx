@@ -288,6 +288,10 @@ function DriverTabs(): React.JSX.Element {
   );
 }
 
+// Module-level lock — avoids useRef (Hermes compatibility)
+let _phoneVerifLocked = false;
+let _prevFirebaseUid: string | undefined;
+
 /** Root navigator — switches between Auth, Verification, and App flows */
 export function RootNavigator(): React.JSX.Element {
   const { currentUser, firebaseUser, isLoading, forceOtp } = useAuth();
@@ -296,6 +300,11 @@ export function RootNavigator(): React.JSX.Element {
   const { t } = useI18n();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [firestoreTimeout, setFirestoreTimeout] = useState(false);
+  // Reset lock on logout/new login
+  if (_prevFirebaseUid !== firebaseUser?.uid) {
+    _prevFirebaseUid = firebaseUser?.uid;
+    _phoneVerifLocked = false;
+  }
 
   // Safety timeout: if firebaseUser exists but currentUser never loads,
   // stop waiting after 8s so the user doesn't get stuck on a spinner forever.
@@ -367,8 +376,10 @@ export function RootNavigator(): React.JSX.Element {
     const daysSinceOtp = (Date.now() - currentUser.lastOtpAt.getTime()) / (1000 * 60 * 60 * 24);
     return daysSinceOtp > 30;
   })();
-  // Keep old name for navigator conditions
-  const needsPhoneVerification = needsPhoneOtp;
+  // Lock the phone verification flow once entered — prevents race condition where
+  // currentUser loads with a fresh lastOtpAt mid-flow and removes PhoneOTP from the stack
+  if (needsPhoneOtp) _phoneVerifLocked = true;
+  const needsPhoneVerification = needsPhoneOtp || _phoneVerifLocked;
 
   // Debug logging for verification gates (PII redacted)
   if (firebaseUser) {
@@ -409,7 +420,7 @@ export function RootNavigator(): React.JSX.Element {
         </>
       ) : !currentUser ? (
         <Stack.Screen name="AuthStack" component={AuthStack} />
-      ) : !currentUser.fullName || !currentUser.phone ? (
+      ) : (!currentUser.fullName || !currentUser.phone) && currentUser.migratedFrom ? (
         <Stack.Screen name="CompleteProfile" component={withErrorBoundary(CompleteProfileScreen, 'CompleteProfile')} />
       ) : currentUser.migratedFrom && !currentUser.acceptedTermsAt ? (
         <Stack.Screen name="AcceptTerms" component={withErrorBoundary(AcceptTermsScreen, 'AcceptTerms')} />

@@ -10,7 +10,7 @@ export default function EmailPage() {
   const [mode, setMode] = useState<RecipientMode>('all');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [sendPush, setSendPush] = useState(false);
+  const [sendPush, setSendPush] = useState(true);
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -136,9 +136,6 @@ export default function EmailPage() {
                   <label
                     key={user.id}
                     className="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-4 py-2.5 last:border-b-0 hover:bg-gray-50"
-                    onClick={() =>
-                      mode === 'single' ? selectSingleUser(user.id) : undefined
-                    }
                   >
                     {mode === 'selected' && (
                       <input
@@ -151,6 +148,7 @@ export default function EmailPage() {
                     {mode === 'single' && (
                       <input
                         type="radio"
+                        name="singleUser"
                         checked={selectedIds.has(user.id)}
                         onChange={() => selectSingleUser(user.id)}
                         className="h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-500"

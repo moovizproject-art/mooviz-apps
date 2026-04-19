@@ -16,11 +16,11 @@ interface DatePickerInputProps {
   onTimeRangeChange?: (range: string | null) => void;
 }
 
-const TIME_RANGES = [
-  { key: 'morning', label: 'בוקר', hours: '08:00–12:00' },
-  { key: 'afternoon', label: 'צהריים', hours: '12:00–16:00' },
-  { key: 'evening', label: 'ערב', hours: '16:00–20:00' },
-  { key: 'night', label: 'לילה', hours: '20:00–24:00' },
+const TIME_RANGE_KEYS = [
+  { key: 'morning', labelKey: 'date.morning', hours: '08:00–12:00' },
+  { key: 'afternoon', labelKey: 'date.afternoon', hours: '12:00–16:00' },
+  { key: 'evening', labelKey: 'date.evening', hours: '16:00–20:00' },
+  { key: 'night', labelKey: 'date.night', hours: '20:00–24:00' },
 ];
 
 /** Generate next 60 days */
@@ -35,28 +35,31 @@ function generateDays(minDate: Date): Date[] {
   return days;
 }
 
-const HE_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-
-function formatDayLabel(date: Date): string {
-  const day = date.getDate();
-  const month = HE_MONTHS[date.getMonth()];
-  const weekDay = HE_DAYS[date.getDay()];
-  return `יום ${weekDay}, ${day} ${month}`;
+function formatDayLabel(date: Date, locale: string): string {
+  try {
+    return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'he-IL', {
+      weekday: 'long', day: 'numeric', month: 'long',
+    });
+  } catch {
+    return date.toLocaleDateString();
+  }
 }
 
-function formatDateShort(date: Date): string {
-  const day = date.getDate();
-  const month = HE_MONTHS[date.getMonth()];
-  const weekDay = HE_DAYS[date.getDay()];
-  return `${weekDay}, ${day} ${month}`;
+function formatDateShort(date: Date, locale: string): string {
+  try {
+    return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'he-IL', {
+      weekday: 'short', day: 'numeric', month: 'short',
+    });
+  } catch {
+    return date.toLocaleDateString();
+  }
 }
 
 export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, minimumDate, timeRange, onTimeRangeChange }: DatePickerInputProps): React.JSX.Element {
   const [modalVisible, setModalVisible] = useState(false);
   const [tempDate, setTempDate] = useState<Date | null>(null);
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const minDate = minimumDate || new Date();
 
   const days = React.useMemo(() => generateDays(minDate), [minDate.toDateString()]);
@@ -112,17 +115,17 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
             onPress={openPicker}
           >
             <Text style={[styles.pickerText, { color: value ? colors.textPrimary : colors.textSecondary }]}>
-              {value ? formatDateShort(value) : t('form.selectDate')}
+              {value ? formatDateShort(value, locale) : t('form.selectDate')}
             </Text>
             <Text style={styles.icon}>📅</Text>
           </TouchableOpacity>
 
           {/* Time range chips */}
           <Text style={[styles.rangeLabel, { color: colors.textPrimary }]}>
-            טווח שעות
+            {t('form.pickupTime')}
           </Text>
           <View style={styles.rangeRow}>
-            {TIME_RANGES.map((range) => {
+            {TIME_RANGE_KEYS.map((range) => {
               const isSelected = timeRange === range.key;
               return (
                 <TouchableOpacity
@@ -137,7 +140,7 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
                   onPress={() => onTimeRangeChange?.(isSelected ? null : range.key)}
                 >
                   <Text style={[styles.rangeChipLabel, { color: isSelected ? '#FFFFFF' : colors.textPrimary }]}>
-                    {range.label}
+                    {t(range.labelKey)}
                   </Text>
                   <Text style={[styles.rangeChipHours, { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textSecondary }]}>
                     {range.hours}
@@ -176,7 +179,7 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
                   >
                     <View style={[styles.dayDot, isSelected && { backgroundColor: colors.primary }]} />
                     <Text style={[styles.dayText, { color: colors.textPrimary }, isSelected && { color: colors.primary, fontWeight: '700' }]}>
-                      {formatDayLabel(item)}
+                      {formatDayLabel(item, locale)}
                     </Text>
                     {isSelected && <Text style={{ color: colors.primary, fontSize: 16 }}>✓</Text>}
                   </TouchableOpacity>

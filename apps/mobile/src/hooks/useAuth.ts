@@ -153,6 +153,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               gender: data?.gender || '',
               ageRange: data?.ageRange || '',
               migratedFrom: data?.migratedFrom,
+              autoCreated: data?.autoCreated || false,
               acceptedTermsAt: safeToDate(data?.acceptedTermsAt),
               lastOtpAt: safeToDate(data?.lastOtpAt),
               createdAt: safeToDate(data?.createdAt) || new Date(),
@@ -163,12 +164,21 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           } else {
             // User exists in Auth but not in Firestore — auto-create a minimal doc
             // This prevents users from being stuck after a failed registration
+            // Check AsyncStorage for pending registration data (set by RegisterScreen before Auth creation)
             console.warn('[useAuth] Auth user has no Firestore doc — auto-creating for', fbUser.uid);
+            let pendingReg: { fullName?: string; email?: string; phone?: string } = {};
+            try {
+              const raw = await AsyncStorage.getItem('@pending_registration');
+              if (raw) {
+                pendingReg = JSON.parse(raw);
+                await AsyncStorage.removeItem('@pending_registration');
+              }
+            } catch {}
             const autoProfile: Record<string, unknown> = {
               uid: fbUser.uid,
-              fullName: fbUser.displayName || '',
-              email: fbUser.email || '',
-              phone: fbUser.phoneNumber || '',
+              fullName: pendingReg.fullName || fbUser.displayName || '',
+              email: pendingReg.email || fbUser.email || '',
+              phone: pendingReg.phone || fbUser.phoneNumber || '',
               city: '',
               role: 'sender',
               activeMode: 'client',
@@ -294,13 +304,11 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         '@remember_me',
         '@sound_enabled',
       ]).catch(() => {});
-      // Terminate Firestore then clear cache to prevent stale data on next login
-      try {
-        await firestore().terminate();
-        await firestore().clearPersistence();
-      } catch (_) {
-        // Non-critical — cache will be refreshed by listeners on next login
-      }
+      // NOTE: Do NOT call firestore().terminate() here.
+      // On iOS, terminate() destructs native Swift Firestore objects. Calling firestore()
+      // again after terminate() returns the same partially-destructed instance, causing
+      // swift_isUniquelyReferenced_nonNull_native crashes (SIGSEGV) when async Firebase
+      // tasks complete. Security rules prevent cross-user data access even with local cache.
       setCurrentUser(null);
     } catch (error) {
       console.error('[useAuth] Logout error:', error);
@@ -319,7 +327,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       phone: data.phone || user.phoneNumber,
       profilePhotoURL: data.profilePhotoURL || '',
       role: 'sender',
-      activeMode: data.activeMode || 'client',
+      activeMode: 'client',
       driverAvailable: false,
       driverUnlocked: false,
       city: data.city || '',
@@ -380,6 +388,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         gender: data?.gender || '',
         ageRange: data?.ageRange || '',
         migratedFrom: data?.migratedFrom,
+        autoCreated: data?.autoCreated || false,
         acceptedTermsAt: safeToDate(data?.acceptedTermsAt),
         lastOtpAt: safeToDate(data?.lastOtpAt),
         createdAt: safeToDate(data?.createdAt) || new Date(),

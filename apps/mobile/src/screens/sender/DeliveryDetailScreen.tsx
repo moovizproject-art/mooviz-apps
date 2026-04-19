@@ -39,12 +39,14 @@ import { DriverApprovalCard } from '../../components/DriverApprovalCard';
 import { InterestedDriversList } from '../../components/InterestedDriversList';
 import { ReportModal } from '../../components/ReportModal';
 import { DriverProfileModal } from '../../components/DriverProfileModal';
-import { strings } from '../../i18n/strings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 
 /** Get 4 visible timeline steps based on current status (sliding window) */
-function getTimelineSteps(currentStatus: string): Array<{ key: string; label: string; completed: boolean; active: boolean }> {
+function getTimelineSteps(
+  currentStatus: string,
+  t: (key: string) => string,
+): Array<{ key: string; label: string; completed: boolean; active: boolean }> {
   const FULL_ORDER = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered', 'awaiting_payment', 'completed_paid'];
   const currentIndex = FULL_ORDER.indexOf(currentStatus);
 
@@ -54,33 +56,33 @@ function getTimelineSteps(currentStatus: string): Array<{ key: string; label: st
   if (currentIndex <= 1) {
     // Early phase: new, pending
     steps = [
-      { key: 'start', label: currentStatus === 'pending' ? 'ממתין לנהג' : 'חדש ✨', statuses: ['new', 'pending'] },
-      { key: 'confirm', label: 'ממתין לאיסוף', statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
-      { key: 'transit', label: 'נאסף', statuses: ['picked_up'] },
-      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
+      { key: 'start', label: currentStatus === 'pending' ? t('delivery.timelinePending') : t('delivery.timelineNew'), statuses: ['new', 'pending'] },
+      { key: 'confirm', label: t('delivery.timelineWaiting'), statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
+      { key: 'transit', label: t('delivery.timelinePickedUp'), statuses: ['picked_up'] },
+      { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
     ];
   } else if (currentIndex <= 3) {
     // Confirm/pickup phase
     steps = [
-      { key: 'confirm', label: currentStatus === 'awaiting_confirm' ? 'ממתין לאישור' : 'ממתין לאיסוף', statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
-      { key: 'transit', label: 'נאסף', statuses: ['picked_up'] },
-      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
-      { key: 'payment', label: 'תשלום', statuses: ['awaiting_payment', 'completed_paid'] },
+      { key: 'confirm', label: currentStatus === 'awaiting_confirm' ? t('status.awaitingConfirm') : t('delivery.timelineWaiting'), statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
+      { key: 'transit', label: t('delivery.timelinePickedUp'), statuses: ['picked_up'] },
+      { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
+      { key: 'payment', label: t('delivery.timelinePayment'), statuses: ['awaiting_payment', 'completed_paid'] },
     ];
   } else if (currentIndex <= 5) {
     // Transit/delivery phase
     steps = [
-      { key: 'transit', label: 'נאסף', statuses: ['picked_up'] },
-      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
-      { key: 'payment', label: 'ממתין לתשלום', statuses: ['awaiting_payment'] },
-      { key: 'done', label: 'הושלם', statuses: ['completed_paid'] },
+      { key: 'transit', label: t('delivery.timelinePickedUp'), statuses: ['picked_up'] },
+      { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
+      { key: 'payment', label: t('delivery.timelineAwaitingPayment'), statuses: ['awaiting_payment'] },
+      { key: 'done', label: t('delivery.timelineCompleted'), statuses: ['completed_paid'] },
     ];
   } else {
     // Payment/completion phase
     steps = [
-      { key: 'deliver', label: 'נמסר', statuses: ['delivered'] },
-      { key: 'payment', label: 'ממתין לתשלום', statuses: ['awaiting_payment'] },
-      { key: 'done', label: 'הושלם', statuses: ['completed_paid'] },
+      { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
+      { key: 'payment', label: t('delivery.timelineAwaitingPayment'), statuses: ['awaiting_payment'] },
+      { key: 'done', label: t('delivery.timelineCompleted'), statuses: ['completed_paid'] },
       { key: 'final', label: '✅', statuses: ['completed_paid'] },
     ];
   }
@@ -168,7 +170,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       setLoadingVisible(true);
       await selectDriver(delivery!.id, driverUid);
       setProfileModalVisible(false);
-      carAlert.show('success', t('common.success'), 'הנהג נבחר, ממתין לאישור');
+      carAlert.show('success', t('common.success'), t('delivery.driverSelectedMessage'));
     } catch (err) {
       carAlert.show('error', t('common.error'), (err as Error).message);
     } finally {
@@ -189,7 +191,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     }
   };
 
-  const timelineSteps = useMemo(() => getTimelineSteps(delivery?.status || 'new'), [delivery?.status]);
+  const timelineSteps = useMemo(() => getTimelineSteps(delivery?.status || 'new', t), [delivery?.status, t]);
 
   // Media: combine mediaURLs + single photoUrl (computed before hooks that depend on it)
   const mediaList: string[] = delivery?.mediaURLs?.length
@@ -226,19 +228,19 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       setMediaUploading(false);
     } catch (err: any) {
       setMediaUploading(false);
-      Alert.alert(strings.common.error.he, err.message || strings.errors.uploadFailed.he);
+      Alert.alert(t('common.error'), err.message || t('errors.uploadFailed'));
     }
   }, [delivery?.id, delivery?.senderId, mediaList, imageCount]);
 
   const handleDeleteMedia = useCallback((_url: string, index: number) => {
     if (!delivery) return;
     Alert.alert(
-      strings.deliveryExtra.deletePhoto.he,
-      strings.deliveryExtra.deletePhotoConfirm.he,
+      t('deliveryExtra.deletePhoto'),
+      t('deliveryExtra.deletePhotoConfirm'),
       [
-        { text: strings.common.cancel.he, style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: strings.deliveryExtra.deleteAction.he,
+          text: t('deliveryExtra.deleteAction'),
           style: 'destructive',
           onPress: async () => {
             const updated = mediaList.filter((_, i) => i !== index);
@@ -332,13 +334,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         });
         chatIdToUse = chatRef.id;
       } catch {
-        carAlert.show('error', '', 'שגיאה ביצירת צ׳אט');
+        carAlert.show('error', '', t('delivery.chatCreationError'));
         return;
       }
     }
 
     if (!chatIdToUse) {
-      carAlert.show('info', '', 'הצ׳אט יהיה זמין לאחר אישור הנהג');
+      carAlert.show('info', '', t('delivery.chatNotAvailable'));
       return;
     }
     navigation.navigate('ChatRoom', {
@@ -392,16 +394,21 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         </View>
 
         <View style={styles.detailRow}>
-          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>📅 מועד איסוף</Text>
+          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>📅 {t('delivery.pickupDate')}</Text>
           <Text style={[styles.detailValue, { color: colors.textPrimary }]}>
             {(() => {
               const raw = (delivery as any).pickupDate ?? delivery.scheduledDate;
-              if (!raw || raw === 'asap') return 'בהקדם';
+              if (!raw || raw === 'asap') return t('delivery.asap');
               const d = raw?.toDate ? raw.toDate() : typeof raw === 'string' ? new Date(raw) : raw?._seconds ? new Date(raw._seconds * 1000) : null;
-              if (!d || isNaN(d.getTime())) return 'בהקדם';
+              if (!d || isNaN(d.getTime())) return t('delivery.asap');
               return formatDate(d);
             })()}
-            {(delivery as any).timeRange ? ` • ${{ morning: 'בוקר 08–12', afternoon: 'צהריים 12–16', evening: 'ערב 16–20', night: 'לילה 20–24' }[(delivery as any).timeRange] || ''}` : ''}
+            {(delivery as any).timeRange ? ` • ${({
+              morning: t('delivery.timeRangeMorning'),
+              afternoon: t('delivery.timeRangeAfternoon'),
+              evening: t('delivery.timeRangeEvening'),
+              night: t('delivery.timeRangeNight'),
+            } as Record<string, string>)[(delivery as any).timeRange] || ''}` : ''}
           </Text>
         </View>
       </View>
@@ -479,7 +486,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             style={[styles.proofCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onLayout={(e) => { paymentSectionY.current = e.nativeEvent.layout.y; }}
           >
-            <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{strings.deliveryExtra.deliveryProofs.he}</Text>
+            <Text style={[styles.proofTitle, { color: colors.textPrimary }]}>{t('deliveryExtra.deliveryProofs')}</Text>
             <View style={styles.proofRow}>
               {delivery.proof?.pickupURL && (
                 <TouchableOpacity
@@ -487,7 +494,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   onPress={() => { setProofGalleryIndex(0); setProofGalleryVisible(true); }}
                 >
                   <Image source={{ uri: delivery.proof.pickupURL }} style={styles.proofThumb} />
-                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.pickupProof.he}</Text>
+                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>{t('deliveryExtra.pickupProof')}</Text>
                 </TouchableOpacity>
               )}
               {delivery.proof?.deliveryURL && (
@@ -499,7 +506,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   }}
                 >
                   <Image source={{ uri: delivery.proof.deliveryURL }} style={styles.proofThumb} />
-                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.deliveryProof.he}</Text>
+                  <Text style={[styles.proofLabel, { color: colors.textSecondary }]}>{t('deliveryExtra.deliveryProof')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -544,7 +551,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           {delivery.proof?.paymentURL && (
             <View style={styles.paymentProofRow}>
               <Image source={{ uri: delivery.proof.paymentURL }} style={styles.proofThumb} />
-              <Text style={[styles.proofLabel, { color: colors.success }]}>{strings.deliveryExtra.paymentProofUploaded.he}</Text>
+              <Text style={[styles.proofLabel, { color: colors.success }]}>{t('deliveryExtra.paymentProofUploaded')}</Text>
             </View>
           )}
 
@@ -557,7 +564,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   Linking.openURL('https://apps.apple.com/il/app/bit/id1080926498')
                 )}
               >
-                <Text style={styles.paymentAppBtnText}>{'💳 שלם ב-Bit'}</Text>
+                <Text style={styles.paymentAppBtnText}>{`💳 ${t('delivery.payBit')}`}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.paymentAppBtn, { backgroundColor: '#FF6B00' }]}
@@ -565,7 +572,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                   Linking.openURL('https://apps.apple.com/il/app/paybox/id1078498498')
                 )}
               >
-                <Text style={styles.paymentAppBtnText}>{'💳 שלם ב-PayBox'}</Text>
+                <Text style={styles.paymentAppBtnText}>{`💳 ${t('delivery.payPaybox')}`}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -595,18 +602,18 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 // Helper: show camera/gallery picker (step 2)
                 const showPhotoPicker = () => {
                   Alert.alert(
-                    '📸 צילום מסך תשלום',
-                    'בחר מקור תמונה',
+                    `📸 ${t('delivery.paymentScreenshot')}`,
+                    t('delivery.chooseImageSource'),
                     [
-                      { text: strings.common.cancel.he, style: 'cancel' },
+                      { text: t('common.cancel'), style: 'cancel' },
                       {
-                        text: '📷 ' + strings.common.takePhoto.he,
+                        text: '📷 ' + t('common.takePhoto'),
                         onPress: async () => {
                           try {
                             if (Platform.OS === 'android') {
                               const granted = await PermissionsAndroid.request(
                                 PermissionsAndroid.PERMISSIONS.CAMERA,
-                                { title: 'הרשאת מצלמה', message: 'נדרשת גישה למצלמה לצילום אישור תשלום', buttonPositive: 'אשר', buttonNegative: 'ביטול' },
+                                { title: t('permissions.cameraTitle'), message: t('delivery.cameraPermissionRequired'), buttonPositive: t('permissions.allow'), buttonNegative: t('common.cancel') },
                               );
                               if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
                             }
@@ -617,7 +624,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                         },
                       },
                       {
-                        text: '🖼 ' + (strings.common.chooseFromGallery?.he || 'בחר מהגלריה'),
+                        text: `🖼 ${t('delivery.fromGallery')}`,
                         onPress: async () => {
                           try {
                             const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.5, maxWidth: 960, maxHeight: 960, selectionLimit: 1 });
@@ -632,12 +639,12 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
                 // Step 1: Confirm without photo or attach proof
                 Alert.alert(
-                  strings.payment.confirmTitle.he,
-                  strings.deliveryExtra.confirmPaymentPrompt.he,
+                  t('payment.confirmTitle'),
+                  t('deliveryExtra.confirmPaymentPrompt'),
                   [
-                    { text: strings.common.cancel.he, style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: strings.deliveryExtra.confirmWithoutScreenshot.he,
+                      text: t('deliveryExtra.confirmWithoutScreenshot'),
                       onPress: async () => {
                         setLoadingSteps(['confirmingPayment', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
                         try {
@@ -651,7 +658,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                       },
                     },
                     {
-                      text: strings.deliveryExtra.uploadScreenshot.he,
+                      text: t('deliveryExtra.uploadScreenshot'),
                       onPress: showPhotoPicker,
                     },
                   ],
@@ -671,17 +678,17 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       {/* ── 2e. Awaiting Payment Banner ── */}
       {delivery.status === 'awaiting_payment' && (
         <View style={[styles.paymentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>{'💳 ממתין לתשלום'}</Text>
+          <Text style={[styles.paymentTitle, { color: colors.textPrimary }]}>{`💳 ${t('delivery.paymentWaiting')}`}</Text>
           {delivery.payment?.senderConfirmed ? (
             <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8 }}>
               <Text style={{ color: '#2E7D32', fontWeight: '600', textAlign: 'right' }}>
-                {'✅ אישרת תשלום — ממתין לאישור הנהג'}
+                {`✅ ${t('delivery.senderConfirmedPayment')}`}
               </Text>
             </View>
           ) : (
             <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 8 }}>
               <Text style={{ color: '#F57C00', fontWeight: '600', textAlign: 'right' }}>
-                {'הנהג אישר קבלת תשלום — תורך לאשר'}
+                {t('delivery.driverConfirmedPayment')}
               </Text>
             </View>
           )}
@@ -796,7 +803,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               onPress={handleChat}
             >
               <Text style={styles.driverBtnIcon}>💬</Text>
-              <Text style={styles.driverBtnLabel}>{strings.deliveryExtra.chatWithDriver.he}</Text>
+              <Text style={styles.driverBtnLabel}>{t('deliveryExtra.chatWithDriver')}</Text>
             </TouchableOpacity>
             {driverPhone && (
               <TouchableOpacity
@@ -814,7 +821,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
       <View style={styles.mediaSection}>
         <View style={styles.mediaTitleRow}>
           <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-            {strings.deliveryExtra.itemPhotos.he} ({imageCount}/5{hasVideo ? ` + ${strings.deliveryExtra.video.he}` : ''})
+            {t('deliveryExtra.itemPhotos')} ({imageCount}/5{hasVideo ? ` + ${t('deliveryExtra.video')}` : ''})
           </Text>
           {mediaUploading && <ActivityIndicator size="small" color={colors.primary} />}
         </View>
@@ -838,7 +845,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 {isVideo ? (
                   <View style={[styles.mediaThumb, { backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' }]}>
                     <Text style={{ fontSize: 28 }}>🎬</Text>
-                    <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>{strings.deliveryExtra.video.he}</Text>
+                    <Text style={{ color: '#fff', fontSize: 10, marginTop: 4 }}>{t('deliveryExtra.video')}</Text>
                   </View>
                 ) : (
                   <Image source={{ uri: url }} style={styles.mediaThumb} />
@@ -861,7 +868,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               onPress={() => handleAddMedia('photo')}
             >
               <Text style={[styles.mediaAddIcon, { color: colors.primary }]}>+</Text>
-              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.photo.he}</Text>
+              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>{t('deliveryExtra.photo')}</Text>
             </TouchableOpacity>
           )}
           {/* Add video button */}
@@ -871,7 +878,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               onPress={() => handleAddMedia('video')}
             >
               <Text style={[styles.mediaAddIcon, { color: colors.primary }]}>🎬</Text>
-              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>{strings.deliveryExtra.video.he}</Text>
+              <Text style={[styles.mediaAddLabel, { color: colors.textSecondary }]}>{t('deliveryExtra.video')}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -930,34 +937,34 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                 });
               }}
             >
-              <Text style={styles.editBtnText}>{strings.edit.editDelivery.he}</Text>
+              <Text style={styles.editBtnText}>{t('edit.editDelivery')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.deleteBtn, { borderColor: '#E53935' }]}
               onPress={() => setDeleteAlertVisible(true)}
             >
-              <Text style={styles.deleteBtnText}>{strings.edit.deleteDelivery.he}</Text>
+              <Text style={styles.deleteBtnText}>{t('edit.deleteDelivery')}</Text>
             </TouchableOpacity>
           </View>
         )}
         <AppAlert
           visible={deleteAlertVisible}
           icon="🗑️"
-          title={strings.edit.deleteDelivery.he}
-          message={strings.edit.confirmDelete.he}
+          title={t('edit.deleteDelivery')}
+          message={t('edit.confirmDelete')}
           buttons={[
-            { text: strings.common.back.he, style: 'cancel' },
+            { text: t('common.back'), style: 'cancel' },
             {
-              text: strings.deliveryExtra.deleteAction.he,
+              text: t('deliveryExtra.deleteAction'),
               style: 'destructive',
               onPress: async () => {
                 try {
                   await deleteDelivery(delivery.id);
-                  carAlert.show('success', strings.common.success.he, strings.edit.deleteSuccess.he, [
-                    { text: strings.common.confirm.he, onPress: () => navigation.goBack() },
+                  carAlert.show('success', t('common.success'), t('edit.deleteSuccess'), [
+                    { text: t('common.confirm'), onPress: () => navigation.goBack() },
                   ]);
                 } catch (e: any) {
-                  carAlert.show('error', strings.common.error.he, e.message);
+                  carAlert.show('error', t('common.error'), e.message);
                 }
               },
             },
@@ -969,24 +976,24 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             style={[styles.cancelBtn, { borderColor: '#E53935' }]}
             onPress={() => setCancelAlertVisible(true)}
           >
-            <Text style={styles.cancelBtnText}>{strings.deliveryExtra.cancelDelivery.he}</Text>
+            <Text style={styles.cancelBtnText}>{t('deliveryExtra.cancelDelivery')}</Text>
           </TouchableOpacity>
         )}
         <AppAlert
           visible={cancelAlertVisible}
           icon="🚛"
-          title={strings.deliveryExtra.cancelDelivery.he}
-          message={strings.deliveryExtra.cancelPrompt.he}
+          title={t('deliveryExtra.cancelDelivery')}
+          message={t('deliveryExtra.cancelPrompt')}
           buttons={[
-            { text: strings.common.back.he, style: 'cancel' },
+            { text: t('common.back'), style: 'cancel' },
             {
-              text: strings.deliveryExtra.cancelAction.he,
+              text: t('deliveryExtra.cancelAction'),
               style: 'destructive',
               onPress: async () => {
                 try {
                   await cancelDelivery(delivery.id);
                 } catch (e: any) {
-                  Alert.alert(strings.common.error.he, e.message);
+                  Alert.alert(t('common.error'), e.message);
                 }
               },
             },
@@ -996,7 +1003,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         {isPostPickup && (
           <View style={styles.cancelDisabledNote}>
             <Text style={[styles.cancelDisabledText, { color: colors.textSecondary }]}>
-              ⚠️ {strings.errors.cancelAfterPickup.he}
+              ⚠️ {t('errors.cancelAfterPickup')}
             </Text>
           </View>
         )}
@@ -1019,13 +1026,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
         {/* Ratings summary — visible when both parties rated */}
         {delivery.ratedBySender && delivery.ratedByDriver && (
           <View style={[styles.ratingsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.ratingsCardTitle, { color: colors.textPrimary }]}>⭐ דירוגים</Text>
+            <Text style={[styles.ratingsCardTitle, { color: colors.textPrimary }]}>{`⭐ ${t('delivery.ratingsSection')}`}</Text>
 
             {/* Sender's rating (about driver) */}
             {delivery.senderRatingGiven && (
               <View style={styles.ratingSummaryRow}>
                 <Text style={[styles.ratingSummaryLabel, { color: colors.textSecondary }]}>
-                  דירוג שלך על הנהג
+                  {t('delivery.yourRatingOnDriver')}
                 </Text>
                 <View style={styles.ratingStarsRow}>
                   <Text style={styles.ratingStarsGold}>
@@ -1045,7 +1052,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             {delivery.driverRatingGiven && (
               <View style={[styles.ratingSummaryRow, { marginTop: 12 }]}>
                 <Text style={[styles.ratingSummaryLabel, { color: colors.textSecondary }]}>
-                  דירוג הנהג עליך
+                  {t('delivery.driverRatingOnYou')}
                 </Text>
                 <View style={styles.ratingStarsRow}>
                   <Text style={styles.ratingStarsGold}>

@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { AvatarCircle } from './AvatarCircle';
 import { RatingsHistoryModal } from './RatingsHistoryModal';
 
@@ -33,6 +34,7 @@ export function DriverProfileModal({
   onSelect, selectionPending,
 }: Props): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [reviews, setReviews] = useState<ReviewDoc[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -84,27 +86,27 @@ export function DriverProfileModal({
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: '#FFB800' }]}>{driverRating.toFixed(1)}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>דירוג</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.rating')}</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: '#1a73e8' }]}>{driverCompletedDeliveries}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.deliveries')}</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: '#22c55e' }]}>{driverDistanceKm}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ק״מ ממך</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.kmAway')}</Text>
           </View>
         </View>
 
         <ScrollView style={styles.reviewsSection} contentContainerStyle={{ paddingBottom: 100 }}>
-          <Text style={[styles.reviewsTitle, { color: colors.textPrimary }]}>ביקורות אחרונות</Text>
+          <Text style={[styles.reviewsTitle, { color: colors.textPrimary }]}>{t('profile.recentReviews')}</Text>
 
           {loadingReviews ? (
             <ActivityIndicator style={{ marginTop: 20 }} color={colors.primary} />
           ) : reviews.length === 0 ? (
-            <Text style={[styles.noReviews, { color: colors.textSecondary }]}>אין ביקורות עדיין</Text>
+            <Text style={[styles.noReviews, { color: colors.textSecondary }]}>{t('profile.noReviews')}</Text>
           ) : (
             reviews.map((review) => (
               <View key={review.id} style={[styles.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -117,7 +119,7 @@ export function DriverProfileModal({
                     &quot;{review.comment}&quot;
                   </Text>
                 ) : (
-                  <Text style={[styles.noComment, { color: colors.textSecondary }]}>ללא תגובה</Text>
+                  <Text style={[styles.noComment, { color: colors.textSecondary }]}>{t('profile.noComment')}</Text>
                 )}
               </View>
             ))
@@ -125,7 +127,7 @@ export function DriverProfileModal({
 
           {totalReviews > 2 && (
             <TouchableOpacity onPress={() => setRatingsModalVisible(true)} style={styles.showAllBtn}>
-              <Text style={styles.showAllText}>הצג את כל {totalReviews} הביקורות ←</Text>
+              <Text style={styles.showAllText}>{t('profile.showAllReviews', { count: totalReviews })} ←</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -137,7 +139,7 @@ export function DriverProfileModal({
             disabled={selectionPending}
           >
             <Text style={styles.selectButtonText}>
-              {selectionPending ? 'ממתין לאישור נהג אחר...' : '✓ בחר נהג זה'}
+              {selectionPending ? t('profile.awaitingOtherDriver') : `✓ ${t('profile.selectDriver')}`}
             </Text>
           </TouchableOpacity>
         </View>

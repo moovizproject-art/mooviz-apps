@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { AvatarCircle } from './AvatarCircle';
 import { RatingsHistoryModal } from './RatingsHistoryModal';
 
@@ -29,6 +30,7 @@ export function SenderProfileModal({
   senderRating, senderCompletedDeliveries,
 }: Props): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [reviews, setReviews] = useState<ReviewDoc[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -96,31 +98,31 @@ export function SenderProfileModal({
             <Text style={[styles.statValue, { color: '#FFB800' }]}>
               {senderRating > 0 ? senderRating.toFixed(1) : '—'}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>דירוג</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.rating')}</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: '#1a73e8' }]}>{completedCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>משלוחים</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.deliveries')}</Text>
           </View>
           {memberSince ? (
             <>
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#22c55e', fontSize: 14 }]}>{memberSince}</Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>חבר מאז</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.memberSince')}</Text>
               </View>
             </>
           ) : null}
         </View>
 
         <ScrollView style={styles.reviewsSection} contentContainerStyle={{ paddingBottom: 60 }}>
-          <Text style={[styles.reviewsTitle, { color: colors.textPrimary }]}>ביקורות אחרונות</Text>
+          <Text style={[styles.reviewsTitle, { color: colors.textPrimary }]}>{t('profile.recentReviews')}</Text>
 
           {loadingReviews ? (
             <ActivityIndicator style={{ marginTop: 20 }} color={colors.primary} />
           ) : reviews.length === 0 ? (
-            <Text style={[styles.noReviews, { color: colors.textSecondary }]}>אין ביקורות עדיין</Text>
+            <Text style={[styles.noReviews, { color: colors.textSecondary }]}>{t('profile.noReviews')}</Text>
           ) : (
             reviews.map((review) => (
               <View key={review.id} style={[styles.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -133,7 +135,7 @@ export function SenderProfileModal({
                     &quot;{review.comment}&quot;
                   </Text>
                 ) : (
-                  <Text style={[styles.noComment, { color: colors.textSecondary }]}>ללא תגובה</Text>
+                  <Text style={[styles.noComment, { color: colors.textSecondary }]}>{t('profile.noComment')}</Text>
                 )}
               </View>
             ))
@@ -141,7 +143,7 @@ export function SenderProfileModal({
 
           {totalReviews > 2 && (
             <TouchableOpacity onPress={() => setRatingsModalVisible(true)} style={styles.showAllBtn}>
-              <Text style={styles.showAllText}>הצג את כל {totalReviews} הביקורות ←</Text>
+              <Text style={styles.showAllText}>{t('profile.showAllReviews', { count: totalReviews })} ←</Text>
             </TouchableOpacity>
           )}
         </ScrollView>

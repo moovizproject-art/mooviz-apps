@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 48,
-    transform: [{ scaleY: -1 }, { scaleX: I18nManager.isRTL ? -1 : 1 }], // Counteract inverted FlatList + RTL mirror
+    transform: [{ scaleY: -1 }], // Counteract inverted FlatList only — no scaleX (it mirrors Hebrew text)
   },
   emptyChatText: {
     fontSize: 15,

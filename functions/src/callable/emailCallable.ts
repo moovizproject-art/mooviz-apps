@@ -48,6 +48,7 @@ export const sendBulkEmail = functions.onCall(
   {
     secrets: [smtpUser, smtpPass],
     cors: ["https://mooviz-app-9b766.web.app", "https://admin.mooviz.app", "https://admin.mooviz.co.il", "http://localhost:5174"],
+    timeoutSeconds: 300,
   },
   async (request) => {
     // Validate caller is admin
@@ -129,7 +130,6 @@ export const sendBulkEmail = functions.onCall(
       return { sent: 0, errors: 0, message: "No valid recipients found" };
     }
 
-    // Create transporter
     const transporter = nodemailer.createTransport({
       host: "smtp.hostinger.com",
       port: 465,
@@ -138,6 +138,12 @@ export const sendBulkEmail = functions.onCall(
         user: smtpUser.value(),
         pass: smtpPass.value(),
       },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
+      logger: true,
+      debug: true,
     });
 
     let sentCount = 0;
@@ -150,14 +156,15 @@ export const sendBulkEmail = functions.onCall(
       const emailPromises = batch.map(async (recipient) => {
         try {
           await transporter.sendMail({
-            from: `MOOVIZ <${smtpUser.value()}>`,
+            from: `Mooviz Social Deliveries <${smtpUser.value()}>`,
             to: recipient.email,
             subject,
             html: safeHtmlBody,
           });
           sentCount++;
-        } catch {
+        } catch (smtpErr: unknown) {
           errorCount++;
+          console.error("SMTP send failed:", (smtpErr as Error)?.message);
         }
       });
 
@@ -194,16 +201,18 @@ export const sendBulkEmail = functions.onCall(
     }
 
     // Log admin action
+    const actionDetails: Record<string, unknown> = {
+      recipientCount: recipients.length,
+      subject,
+      sentCount,
+      errorCount,
+    };
+    if (sendPush) actionDetails.pushSent = pushSent;
+
     await db.collection("adminActions").add({
       adminId: request.auth.uid,
       action: "bulk_email",
-      details: {
-        recipientCount: recipients.length,
-        subject,
-        sentCount,
-        errorCount,
-        pushSent: sendPush ? pushSent : undefined,
-      },
+      details: actionDetails,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 

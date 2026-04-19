@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { AvatarCircle } from './AvatarCircle';
 import { SelectionCountdown } from './SelectionCountdown';
 
@@ -34,6 +35,7 @@ export function InterestedDriversList({
   onCancelSelection,
 }: Props): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   const visible = interestedDrivers.filter((d) => d.status !== 'withdrawn');
   const activeCount = visible.filter((d) => d.status === 'interested' || d.status === 'selected').length;
@@ -42,11 +44,11 @@ export function InterestedDriversList({
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: '#1a73e8' }]}>
       <Text style={[styles.header, { color: colors.textPrimary }]}>
-        🚗 נהגים מעוניינים ({activeCount})
+        🚗 {t('driver.interestedDrivers')} ({activeCount})
       </Text>
 
       {isSelectionPending && selectionExpiresAt && (
-        <SelectionCountdown expiresAt={selectionExpiresAt} label="ממתין לאישור הנהג" />
+        <SelectionCountdown expiresAt={selectionExpiresAt} label={t('driver.awaitingDriverConfirmation')} />
       )}
 
       {visible.map((driver) => {
@@ -81,11 +83,11 @@ export function InterestedDriversList({
                 {driver.name}
               </Text>
               <Text style={[styles.driverMeta, { color: colors.textSecondary }]}>
-                ⭐ {driver.rating.toFixed(1)} • {driver.completedDeliveries} משלוחים • {driver.distanceKm} ק״מ
+                ⭐ {driver.rating.toFixed(1)} • {driver.completedDeliveries} {t('driver.deliveriesCount')} • {driver.distanceKm} {t('driver.km')}
               </Text>
               {isStruck && (
                 <Text style={styles.struckLabel}>
-                  {driver.status === 'declined' ? 'דחה' : 'בוטל'}
+                  {driver.status === 'declined' ? t('driver.declined') : t('driver.cancelledStatus')}
                 </Text>
               )}
             </View>
@@ -95,17 +97,17 @@ export function InterestedDriversList({
                 onPress={() => onSelect(driver.uid)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.selectBtnText}>בחר</Text>
+                <Text style={styles.selectBtnText}>{t('driver.select')}</Text>
               </TouchableOpacity>
             )}
-            {isSelected && <Text style={styles.selectedLabel}>נבחר ✓</Text>}
+            {isSelected && <Text style={styles.selectedLabel}>{t('driver.selected')}</Text>}
           </TouchableOpacity>
         );
       })}
 
       {isSelectionPending && (
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancelSelection}>
-          <Text style={styles.cancelBtnText}>בטל בחירה</Text>
+          <Text style={styles.cancelBtnText}>{t('driver.cancelSelection')}</Text>
         </TouchableOpacity>
       )}
     </View>

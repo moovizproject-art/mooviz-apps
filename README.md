@@ -419,6 +419,22 @@ The platform meets SOC 2 Trust Service Criteria:
 
 ---
 
+## Handoff Package (`dist/`)
+
+The `dist/` folder (gitignored) contains the **client handoff bundle**:
+
+- `dist/config/` — All sensitive config files (env files, `google-services.json`, `GoogleService-Info.plist`)
+- `dist/diagrams/` — Architecture diagrams as `.drawio` (editable) + `.png` (images)
+- `dist/images/` — Branding assets (MOOVIZ logo, KAL logo)
+- `dist/en/handoff.html` — Handoff documentation (English)
+- `dist/he/handoff.html` — Handoff documentation (Hebrew)
+
+See `dist/README.md` for detailed setup instructions on placing config files after cloning.
+
+> **Note:** This folder must be delivered separately (USB, encrypted share) — it is never committed to git.
+
+---
+
 ## API Key & Secrets Management
 
 ### Gitignored Secrets
