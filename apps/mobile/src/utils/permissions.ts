@@ -7,7 +7,10 @@
 import { Alert, Linking, Platform, PermissionsAndroid } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import messaging from '@react-native-firebase/messaging';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { strings } from '../i18n/strings';
+
+const BG_LOCATION_DISCLOSURE_KEY = '@mooviz/bg_location_disclosure_accepted';
 
 // ──────────────────────────────────────────────
 // Location permissions — הרשאות מיקום
@@ -95,8 +98,20 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
   // Android 10+ needs separate background permission.
   // Google Play requires a prominent in-app disclosure BEFORE the OS dialog.
   if (Number(Platform.Version) >= 29) {
-    const accepted = await showBackgroundLocationDisclosure();
-    if (!accepted) return false;
+    // Short-circuit: OS already granted — no Alert, no dialog needed.
+    const alreadyGranted = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+    );
+    if (alreadyGranted) return true;
+
+    // Skip our custom Alert if the driver already acknowledged it in a prior session.
+    const previouslyAcknowledged =
+      (await AsyncStorage.getItem(BG_LOCATION_DISCLOSURE_KEY)) === 'true';
+    if (!previouslyAcknowledged) {
+      const accepted = await showBackgroundLocationDisclosure();
+      if (!accepted) return false;
+      await AsyncStorage.setItem(BG_LOCATION_DISCLOSURE_KEY, 'true');
+    }
 
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,

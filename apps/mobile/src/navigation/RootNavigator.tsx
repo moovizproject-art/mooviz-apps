@@ -377,8 +377,13 @@ export function RootNavigator(): React.JSX.Element {
     return daysSinceOtp > 30;
   })();
   // Lock the phone verification flow once entered — prevents race condition where
-  // currentUser loads with a fresh lastOtpAt mid-flow and removes PhoneOTP from the stack
-  if (needsPhoneOtp) _phoneVerifLocked = true;
+  // currentUser loads with a fresh lastOtpAt mid-flow and removes PhoneOTP from the stack.
+  // Release the lock only when verification is fully confirmed (phone linked + lastOtpAt written).
+  if (needsPhoneOtp) {
+    _phoneVerifLocked = true;
+  } else if (firebaseUser?.phoneNumber && currentUser?.lastOtpAt && !forceOtp) {
+    _phoneVerifLocked = false;
+  }
   const needsPhoneVerification = needsPhoneOtp || _phoneVerifLocked;
 
   // Debug logging for verification gates (PII redacted)

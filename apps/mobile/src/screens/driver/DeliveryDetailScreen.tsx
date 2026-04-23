@@ -540,7 +540,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </TouchableOpacity>
         )}
 
-        {isMyJob && delivery.status === 'waiting' && (
+        {isMyJob && delivery.status === 'waiting_for_pickup' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={() => openProofCamera('pickup')}
@@ -554,8 +554,8 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           </TouchableOpacity>
         )}
 
-        {/* Cancel delivery — driver can cancel before pickup (waiting only, pending uses withdraw) */}
-        {isMyJob && delivery.status === 'waiting' && (
+        {/* Cancel delivery — driver can cancel before pickup (waiting_for_pickup/awaiting_confirm only, pending uses withdraw) */}
+        {isMyJob && ['awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status) && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#E53935' }]}
             onPress={handleCancelDelivery}
