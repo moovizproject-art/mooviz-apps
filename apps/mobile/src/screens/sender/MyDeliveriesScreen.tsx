@@ -153,6 +153,7 @@ export function MyDeliveriesScreen({ navigation }: Props): React.JSX.Element {
                 delivery={item}
                 onPress={() => handleDeliveryPress(item.id)}
                 isUnread={(isAttention || isPayment) && !seenIds.current.has(item.id)}
+                showDriverCount
               />
             </View>
           );

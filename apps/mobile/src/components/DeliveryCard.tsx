@@ -65,6 +65,8 @@ interface DeliveryCardProps {
   distanceLabel?: string;
   /** Show bold border for unread/new notifications */
   isUnread?: boolean;
+  /** Show interested driver count badge — sender only, never show to drivers */
+  showDriverCount?: boolean;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -82,6 +84,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
   showDistance = false,
   distanceLabel,
   isUnread = false,
+  showDriverCount = false,
 }: DeliveryCardProps): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -190,9 +193,11 @@ export const DeliveryCard = React.memo(function DeliveryCard({
             </Text>
             <View style={styles.statusArea}>
               {(() => {
-                const drivers = delivery.interestedDrivers?.filter(
-                  (d) => d.status === 'interested' || d.status === 'confirmed'
-                ) ?? [];
+                const drivers = showDriverCount
+                  ? (delivery.interestedDrivers?.filter(
+                      (d) => d.status === 'interested' || d.status === 'confirmed'
+                    ) ?? [])
+                  : [];
                 const hasDrivers = drivers.length > 0;
                 const isWaiting = delivery.status === 'pending' || delivery.status === 'new';
                 return (

@@ -295,6 +295,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
             <DeliveryCard
               delivery={item}
               onPress={() => handleDeliveryPress(item.id)}
+              showDriverCount
             />
           </View>
         )}
