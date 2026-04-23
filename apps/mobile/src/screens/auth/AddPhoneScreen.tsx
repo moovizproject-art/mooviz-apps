@@ -46,6 +46,9 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
   // Pre-fill phone from Firestore (set during registration) and auto-send OTP
   useEffect(() => {
     if (autoSentRef.current) return;
+    // Phone already linked in Firebase Auth → we're in the Firestore race window
+    // (lastOtpAt hasn't written yet). Don't re-send — navigator will self-resolve.
+    if (auth().currentUser?.phoneNumber) return;
     const uid = auth().currentUser?.uid;
     if (!uid) return;
     firestore().collection('users').doc(uid).get().then((doc) => {
