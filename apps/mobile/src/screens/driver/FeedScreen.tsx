@@ -35,7 +35,7 @@ import { SkeletonCard } from '../../components/SkeletonLoader';
 import { EmptyState } from '../../components/EmptyState';
 import { SettingsDrawer, useSettingsDrawer } from '../../components/SettingsDrawer';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/design';
-import { requestLocationPermission, requestNotificationPermission } from '../../utils/permissions';
+import { requestLocationPermission, requestNotificationPermission, requestBackgroundLocationPermission } from '../../utils/permissions';
 import { DriverOnboarding, shouldShowOnboarding } from '../../components/DriverOnboarding';
 import { AddressAutocomplete, GeoAddress } from '../../components/AddressAutocomplete';
 import LottieView from 'lottie-react-native';
@@ -141,10 +141,15 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
   const firstName = fullName.split(' ')[0] || fullName;
 
   // Request permissions on first launch
+  const [bgLocationDenied, setBgLocationDenied] = useState(false);
   useEffect(() => {
     (async () => {
       await requestNotificationPermission();
       await requestLocationPermission();
+      // Check if driver has background ("always") location permission.
+      // Without it, geohash goes stale when app is backgrounded → driver misses nearby deliveries.
+      const hasBg = await requestBackgroundLocationPermission();
+      if (!hasBg) setBgLocationDenied(true);
     })();
   }, []);
 
@@ -1023,11 +1028,27 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
       >
         {renderHeader()}
 
-        {/* Location warning banner (non-blocking) */}
+        {/* Location error banner (non-blocking) */}
         {locationError && totalDeliveries === 0 && (
           <View style={[styles.locationBanner, { backgroundColor: '#FFF3E0', borderColor: '#FFB74D' }]}>
             <Text style={{ fontSize: 14, color: '#E65100' }}>📍 {t('driver.locationWarning')}</Text>
           </View>
+        )}
+
+        {/* Background location permission banner — shown when driver only has "while using" */}
+        {bgLocationDenied && (
+          <TouchableOpacity
+            style={[styles.locationBanner, { backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }]}
+            onPress={async () => {
+              const granted = await requestBackgroundLocationPermission();
+              if (granted) setBgLocationDenied(false);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ fontSize: 13, color: '#1565C0' }}>
+              📍 לקבלת התראות על משלוחים קרובים גם ברקע — אפשר מיקום &apos;תמיד&apos; בהגדרות
+            </Text>
+          </TouchableOpacity>
         )}
 
         {(isLoading || locationLoading) && totalDeliveries === 0 ? (
