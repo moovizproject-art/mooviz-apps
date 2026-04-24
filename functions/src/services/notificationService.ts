@@ -67,7 +67,10 @@ export async function sendPushNotification(
     // FCM tokens registered on the same device (e.g. after reinstall).
     // iOS uses apns-collapse-id; Android uses notification.tag.
     // Both keyed on event+deliveryId so same-event duplicates merge into one banner.
-    const collapseKey = data?.event && data?.deliveryId
+    // new_listing_nearby must NOT use a stable collapse key — APNs silently replaces
+    // the existing notification (no sound) if the same collapse-id arrives again.
+    // Each re-broadcast (expansion, renotify) must deliver independently with sound.
+    const collapseKey = data?.event && data?.deliveryId && data.event !== "new_listing_nearby"
       ? `${data.event}_${data.deliveryId}`
       : undefined;
 

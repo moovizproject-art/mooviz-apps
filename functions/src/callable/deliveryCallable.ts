@@ -50,7 +50,8 @@ function renotifyNearbyDrivers(
               pickupCity,
               destinationCity: destCity,
               price: String(delivery.price ?? 0),
-            }
+            },
+            "new_delivery"
           )
         )
       ).then(() => logger.info("Renotified nearby drivers", { context, count: nearbyDrivers.length }))
