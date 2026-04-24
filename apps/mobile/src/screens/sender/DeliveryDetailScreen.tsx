@@ -87,15 +87,15 @@ function getTimelineSteps(
     ];
   }
 
+  // At completed_paid all steps are done — mark everything completed so dots render green not blue
+  const allDone = currentStatus === 'completed_paid';
+
   return steps.map((step) => {
     const stepMaxIndex = Math.max(...step.statuses.map(s => FULL_ORDER.indexOf(s)));
     const stepMinIndex = Math.min(...step.statuses.map(s => FULL_ORDER.indexOf(s)));
-    return {
-      key: step.key,
-      label: step.label,
-      completed: currentIndex > stepMaxIndex,
-      active: currentIndex >= stepMinIndex && currentIndex <= stepMaxIndex,
-    };
+    const completed = allDone || currentIndex > stepMaxIndex;
+    const active = !completed && currentIndex >= stepMinIndex && currentIndex <= stepMaxIndex;
+    return { key: step.key, label: step.label, completed, active };
   });
 }
 
