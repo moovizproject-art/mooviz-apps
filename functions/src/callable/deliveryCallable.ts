@@ -672,17 +672,24 @@ export const confirmSelection = onCall(async (request) => {
     const updatedInterested = interested.map((d: any) => d.uid === uid ? { ...d, status: "confirmed" } : d);
     const now = admin.firestore.Timestamp.now();
 
-    // Create chat
-    const chatRef = db.collection("chats").doc();
-    txn.set(chatRef, {
-      deliveryId,
-      participants: [freshData.senderId, uid],
-      lastMessage: "",
-      lastMessageAt: now,
-      lastSenderId: "",
-      createdAt: now,
-      closed: false,
-    });
+    // Reuse existing chat if delivery previously had one (e.g. driver cancelled and restarted)
+    let chatIdToUse: string;
+    if (freshData.chatId) {
+      chatIdToUse = freshData.chatId;
+      txn.update(db.collection("chats").doc(freshData.chatId), { closed: false });
+    } else {
+      const chatRef = db.collection("chats").doc();
+      chatIdToUse = chatRef.id;
+      txn.set(chatRef, {
+        deliveryId,
+        participants: [freshData.senderId, uid],
+        lastMessage: "",
+        lastMessageAt: now,
+        lastSenderId: "",
+        createdAt: now,
+        closed: false,
+      });
+    }
 
     txn.update(ref, {
       status: "waiting_for_pickup",
@@ -693,7 +700,7 @@ export const confirmSelection = onCall(async (request) => {
       interestedDrivers: updatedInterested,
       selectedDriverId: null,
       selectionExpiresAt: null,
-      chatId: chatRef.id,
+      chatId: chatIdToUse,
       statusHistory: admin.firestore.FieldValue.arrayUnion({
         status: "waiting_for_pickup",
         timestamp: now,
@@ -949,27 +956,34 @@ export const approveDriver = onCall(async (request) => {
   const senderPhotoUrl = senderData?.profilePhotoURL || "";
   const senderRating = senderData?.ratingAsSender?.average ?? null;
 
-  // Create chat room between sender and driver
-  const chatRef = db.collection("chats").doc();
   const now = admin.firestore.Timestamp.now();
-  await chatRef.set({
-    deliveryId,
-    participants: [uid, delivery.driverId],
-    senderName,
-    driverName: delivery.driverName || "",
-    lastMessage: "צ'אט נוצר — משלוח אושר",
-    lastMessageAt: now,
-    closed: false,
-    createdAt: now,
-  });
+  let chatId: string;
 
-  // Add system message to chat
-  await chatRef.collection("messages").add({
-    type: "system",
-    text: "✅ המשלוח אושר — אפשר לתאם איסוף",
-    senderId: "system",
-    createdAt: now,
-  });
+  if (delivery.chatId) {
+    // Reopen existing chat (delivery previously had one — e.g. after driver cancel/revert)
+    chatId = delivery.chatId;
+    await db.collection("chats").doc(chatId).update({ closed: false });
+  } else {
+    // Create new chat room between sender and driver
+    const chatRef = db.collection("chats").doc();
+    chatId = chatRef.id;
+    await chatRef.set({
+      deliveryId,
+      participants: [uid, delivery.driverId],
+      senderName,
+      driverName: delivery.driverName || "",
+      lastMessage: "צ'אט נוצר — משלוח אושר",
+      lastMessageAt: now,
+      closed: false,
+      createdAt: now,
+    });
+    await chatRef.collection("messages").add({
+      type: "system",
+      text: "✅ המשלוח אושר — אפשר לתאם איסוף",
+      senderId: "system",
+      createdAt: now,
+    });
+  }
 
   await updateDeliveryStatus(
     ref,
@@ -977,7 +991,7 @@ export const approveDriver = onCall(async (request) => {
     uid,
     "Sender approved driver",
     {
-      chatId: chatRef.id,
+      chatId,
       senderName,
       senderPhotoUrl,
       senderRating,
