@@ -82,8 +82,8 @@ export const LOCATION_ACTIVE_INTERVAL_MS = 1 * 60 * 1000; // 1 minute
 export const LOCATION_DISTANCE_FILTER_IDLE = 200; // 200m for idle
 export const LOCATION_DISTANCE_FILTER_ACTIVE = 50; // 50m for active delivery
 
-/** App version */
-export const APP_VERSION = '1.0.2';
+/** App version — keep in sync with android/app/build.gradle versionName and ios/MoovizMobile.xcodeproj */
+export const APP_VERSION = '1.0.4';
 
 /** Deep link scheme */
 export const DEEP_LINK_SCHEME = 'mooviz://';
