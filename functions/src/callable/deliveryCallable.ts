@@ -1231,6 +1231,7 @@ export const cancelDelivery = onCall(async (request) => {
 
   let cancellerNameHe = "";
   let driverCancelled = false;
+  let withinSelectionWindow = false;
   let deliverySnapshot: Delivery | null = null;
 
   // Use transaction to prevent race conditions (e.g. cancel + confirm at same time)
@@ -1240,9 +1241,11 @@ export const cancelDelivery = onCall(async (request) => {
     if (!delivery) throw new HttpsError("not-found", `Delivery ${deliveryId} not found`);
     deliverySnapshot = delivery;
 
-    // Verify the caller is either the sender or the assigned driver
+    // Verify the caller is either the sender or the assigned driver.
+    // Also accept selectedDriverId in case driverId was cleared by a selection-timer expiry
+    // while the driver's UI snapshot was stale — prevents spurious permission-denied errors.
     const isSender = delivery.senderId === uid;
-    const isDriver = delivery.driverId === uid;
+    const isDriver = delivery.driverId === uid || delivery.selectedDriverId === uid;
 
     if (!isSender && !isDriver) {
       throw new HttpsError(
@@ -1253,18 +1256,33 @@ export const cancelDelivery = onCall(async (request) => {
 
     const actorRole = isSender ? "sender" : "driver";
     cancellerNameHe = isSender ? "השולח" : "הנהג";
-    driverCancelled = isDriver;
+    driverCancelled = isDriver && !isSender;
 
     const now = admin.firestore.Timestamp.now();
 
     if (driverCancelled) {
-      // ── DRIVER cancels pre-pickup: revert to "new", keep chat open 8h ──
-      // Validate driver can transition back to "new"
+      // ── DRIVER cancels pre-pickup: revert to "new" ──
+
+      // If a selection timer already reverted the delivery to "new", the driver only
+      // needs to mark themselves as cancelled in interestedDrivers — no status change.
+      if (delivery.status === "new") {
+        const interested: any[] = delivery.interestedDrivers || [];
+        const updated = interested.map((d: any) =>
+          d.uid === uid ? { ...d, status: "cancelled" } : d
+        );
+        txn.update(ref, { interestedDrivers: updated, updatedAt: now });
+        return;
+      }
+
       assertValidTransition(delivery.status, "new", actorRole, uid);
 
-      // Mark driver as cancelled in interestedDrivers list
+      // 30-minute window: if driver cancels quickly, other interested drivers are
+      // preserved so the sender can re-select without a full broadcast.
+      const selectionMs = (delivery.updatedAt as admin.firestore.Timestamp)?.toMillis?.() ?? Date.now();
+      withinSelectionWindow = Date.now() - selectionMs < 30 * 60 * 1000;
+
       const interested: any[] = delivery.interestedDrivers || [];
-      const updated = interested.map((d: any) =>
+      const updatedInterested = interested.map((d: any) =>
         d.uid === uid ? { ...d, status: "cancelled" } : d
       );
 
@@ -1276,7 +1294,8 @@ export const cancelDelivery = onCall(async (request) => {
         driverRating: null,
         selectedDriverId: null,
         selectionExpiresAt: null,
-        interestedDrivers: updated,
+        // Keep other interested drivers within the 30-min window; clear after.
+        interestedDrivers: withinSelectionWindow ? updatedInterested : [],
         statusHistory: admin.firestore.FieldValue.arrayUnion({
           status: "new",
           timestamp: now,
@@ -1340,7 +1359,25 @@ export const cancelDelivery = onCall(async (request) => {
       logger.error("cancelDelivery: chat message failed", { deliveryId, error: String(err) });
     }
 
-    // Re-notify nearby drivers (exclude the cancelling driver)
+    // Within the 30-min window: notify previously interested drivers that the
+    // delivery is available again so they can still be selected by the sender.
+    if (withinSelectionWindow) {
+      const prevInterested: any[] = (deliverySnapshot as Delivery).interestedDrivers?.filter(
+        (d: any) => d.uid !== uid && ["interested", "confirmed"].includes(d.status)
+      ) ?? [];
+      await Promise.allSettled(
+        prevInterested.map((d: any) =>
+          sendPushNotification(
+            d.uid,
+            "משלוח זמין שוב",
+            "משלוח שהתעניינת בו חזר לרשימה — השולח יכול עדיין לבחור אותך",
+            { event: "delivery_reopened", deliveryId }
+          )
+        )
+      );
+    }
+
+    // Broadcast to all nearby drivers (always, so new drivers can also see it)
     renotifyNearbyDrivers(deliverySnapshot as Delivery, deliveryId, [uid], "cancelDelivery");
   } else {
     // Sender cancelled — notify driver and close chat
