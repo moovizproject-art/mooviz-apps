@@ -9,6 +9,15 @@ import { logger } from "../utils/logger";
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+/** Must stay in sync with ANDROID_CHANNEL_IDS in useNotifications.ts */
+const ANDROID_CHANNEL_IDS: Record<string, string> = {
+  new_listing_nearby: "mooviz_new_delivery_v3",
+  driver_interested:  "mooviz_driver_interested_v3",
+  payment_confirmed:  "mooviz_payment_v3",
+  delivery_cancelled: "mooviz_error_v3",
+  new_chat_message:   "mooviz_chat",
+};
+
 /**
  * Send a push notification to a specific user by looking up their FCM token.
  */
@@ -73,7 +82,8 @@ export async function sendPushNotification(
         priority: "high",
         collapseKey: collapseKey,
         notification: {
-          channelId: "mooviz_deliveries_v2",
+          // Route to per-event channel so each event plays its own sound on Android 8+
+          channelId: ANDROID_CHANNEL_IDS[data?.event ?? ""] ?? "mooviz_success_v3",
           sound: sound ?? "success",
           tag: collapseKey,
         },
