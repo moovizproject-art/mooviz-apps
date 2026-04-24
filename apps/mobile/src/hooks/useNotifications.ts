@@ -13,7 +13,7 @@
  * - Approve/Decline action buttons on notification
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, AppState } from 'react-native';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, AndroidAction, EventType } from '@notifee/react-native';
 import firestore from '@react-native-firebase/firestore';
@@ -70,27 +70,69 @@ interface UseNotificationsResult {
   requestPermission: () => Promise<boolean>;
 }
 
-/** Create Android notification channels (required for Android 8+) */
-async function ensureAndroidChannels(): Promise<string> {
-  // Main channel — uses custom Mooviz sound (v2 forces fresh channel with new_delivery sound)
-  await notifee.createChannel({
-    id: 'mooviz_deliveries_v2',
-    name: strings.notifications.deliveriesAndAlerts.he,
-    description: strings.notifications.deliveriesAndAlertsDesc.he,
-    importance: AndroidImportance.HIGH,
-    sound: 'new_delivery',
-    vibration: true,
-  });
+/** Per-event Android channel IDs. Must match what notificationService.ts sends as channelId. */
+export const ANDROID_CHANNEL_IDS: Record<string, string> = {
+  new_listing_nearby: 'mooviz_new_delivery_v3',
+  driver_interested:  'mooviz_driver_interested_v3',
+  payment_confirmed:  'mooviz_payment_v3',
+  delivery_cancelled: 'mooviz_error_v3',
+  new_chat_message:   'mooviz_chat',
+  default:            'mooviz_success_v3',
+};
 
-  // Chat channel — uses question sound
-  await notifee.createChannel({
-    id: 'mooviz_chat',
-    name: strings.notifications.chatMessages.he,
-    importance: AndroidImportance.HIGH,
-    sound: 'question',
-  });
-
-  return 'mooviz_deliveries_v2';
+/** Create all Android notification channels (idempotent — safe to call on every launch) */
+async function ensureAndroidChannels(): Promise<void> {
+  await Promise.all([
+    notifee.createChannel({
+      id: 'mooviz_new_delivery_v3',
+      name: 'משלוחים חדשים',
+      importance: AndroidImportance.HIGH,
+      sound: 'new_delivery',
+      vibration: true,
+    }),
+    notifee.createChannel({
+      id: 'mooviz_driver_interested_v3',
+      name: 'נהגים מעוניינים',
+      importance: AndroidImportance.HIGH,
+      sound: 'driver_interested',
+      vibration: true,
+    }),
+    notifee.createChannel({
+      id: 'mooviz_payment_v3',
+      name: 'תשלומים',
+      importance: AndroidImportance.HIGH,
+      sound: 'payment',
+      vibration: true,
+    }),
+    notifee.createChannel({
+      id: 'mooviz_error_v3',
+      name: 'ביטולים ושגיאות',
+      importance: AndroidImportance.HIGH,
+      sound: 'error',
+      vibration: true,
+    }),
+    notifee.createChannel({
+      id: 'mooviz_success_v3',
+      name: strings.notifications.deliveriesAndAlerts.he,
+      description: strings.notifications.deliveriesAndAlertsDesc.he,
+      importance: AndroidImportance.HIGH,
+      sound: 'success',
+      vibration: true,
+    }),
+    notifee.createChannel({
+      id: 'mooviz_chat',
+      name: strings.notifications.chatMessages.he,
+      importance: AndroidImportance.HIGH,
+      sound: 'question',
+    }),
+    // Keep legacy channel so old messages still display correctly
+    notifee.createChannel({
+      id: 'mooviz_deliveries_v2',
+      name: 'עדכוני משלוח (ישן)',
+      importance: AndroidImportance.HIGH,
+      sound: 'new_delivery',
+    }),
+  ]);
 }
 
 /** Set up iOS notification categories with action buttons */
@@ -120,6 +162,13 @@ async function setupNotificationCategories(): Promise<void> {
       actions: [
         { id: 'accept_delivery', title: '✓ ' + strings.notifications.acceptDelivery.he, foreground: true },
         { id: 'skip_delivery', title: '✗ ' + strings.notifications.skipDelivery.he, destructive: true },
+      ],
+    },
+    {
+      id: 'sender_approved_confirm',
+      actions: [
+        { id: 'confirm_pickup', title: '✓ כן, בדרך!', foreground: true },
+        { id: 'cancel_delivery', title: '✗ לא יכול', destructive: true },
       ],
     },
   ]);
@@ -154,8 +203,11 @@ function getNotificationActions(notifEvent?: string): {
       };
     case 'sender_approved':
       return {
-        androidActions: [{ title: strings.notifications.viewDelivery.he, pressAction: { id: 'view_delivery' } }],
-        iosCategoryId: 'delivery',
+        androidActions: [
+          { title: '✓ כן, בדרך!', pressAction: { id: 'confirm_pickup' } },
+          { title: '✗ לא יכול', pressAction: { id: 'cancel_delivery' } },
+        ],
+        iosCategoryId: 'sender_approved_confirm',
       };
     case 'delivery_picked_up':
     case 'delivery_delivered':
@@ -207,6 +259,13 @@ export function useNotifications(): UseNotificationsResult {
       ensureAndroidChannels().catch(() => {});
     }
     setupNotificationCategories().catch(() => {});
+
+    // Reset iOS badge count when app opens and whenever it comes to foreground
+    notifee.setBadgeCount(0).catch(() => {});
+    const badgeSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') notifee.setBadgeCount(0).catch(() => {});
+    });
+    return () => badgeSub.remove();
   }, []);
 
   // Step 1: Request permission + get token ON MOUNT (no dependency on currentUser)
@@ -297,8 +356,8 @@ export function useNotifications(): UseNotificationsResult {
           else if (notifEvent === 'payment_confirmed') playSound('payment');
         }
 
-        const channelId = await ensureAndroidChannels();
-        const isChatNotif = notifEvent === 'new_chat_message';
+        await ensureAndroidChannels();
+        const eventChannelId = ANDROID_CHANNEL_IDS[notifEvent ?? ''] ?? ANDROID_CHANNEL_IDS.default;
         const { androidActions, iosCategoryId } = getNotificationActions(notifEvent);
 
         // Build notification config
@@ -307,7 +366,7 @@ export function useNotifications(): UseNotificationsResult {
           body: remoteMessage.notification.body || '',
           data: data as Record<string, string>,
           android: {
-            channelId: isChatNotif ? 'mooviz_chat' : channelId,
+            channelId: eventChannelId,
             smallIcon: 'ic_launcher',
             pressAction: { id: 'default' },
             importance: quietMode ? AndroidImportance.LOW : AndroidImportance.HIGH,
@@ -411,6 +470,23 @@ async function handleNotificationAction(actionId: string | undefined, data: Reco
         await fn({ deliveryId });
       } catch (err: any) {
         console.error('[NotifAction] Decline failed:', err.message);
+      }
+      break;
+    }
+    case 'confirm_pickup': {
+      // Driver tapped "כן, בדרך!" on sender_approved notification → navigate to delivery
+      console.log('[NotifAction] Driver confirmed on way to pickup:', deliveryId);
+      navigateFromNotification('DriverDeliveryDetail', { deliveryId });
+      break;
+    }
+    case 'cancel_delivery': {
+      // Driver tapped "לא יכול" on sender_approved notification → cancel the delivery
+      console.log('[NotifAction] Driver cancelling delivery from notification:', deliveryId);
+      try {
+        const fn = functions().httpsCallable('cancelDelivery');
+        await fn({ deliveryId });
+      } catch (err: any) {
+        console.error('[NotifAction] Cancel delivery failed:', err.message);
       }
       break;
     }
