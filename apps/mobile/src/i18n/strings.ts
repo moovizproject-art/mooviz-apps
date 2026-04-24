@@ -549,7 +549,7 @@ export const strings = {
   // ── Status ──
   status: {
     new: { he: 'חדש', en: 'New' } as LocaleStrings,
-    pending: { he: 'ממתין לאישור', en: 'Pending approval' } as LocaleStrings,
+    pending: { he: 'ממתין לבחירת נהג', en: 'Waiting for driver selection' } as LocaleStrings,
     awaitingConfirm: { he: 'ממתין לאישור נהג', en: 'Awaiting driver confirmation' } as LocaleStrings,
     waitingForPickup: { he: 'ממתין לאיסוף', en: 'Waiting for pickup' } as LocaleStrings,
     pickedUp: { he: 'נאסף', en: 'Picked up' } as LocaleStrings,
