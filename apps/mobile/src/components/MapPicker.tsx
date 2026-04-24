@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -66,6 +66,22 @@ export function MapPicker({ onLocationSelect, onCancel, initialLocation }: MapPi
   );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapRef = useRef<MapView>(null);
+
+  // Auto-geocode on mount when GPS coords are known but address is empty.
+  // This lets the user confirm immediately after "my location" opens the picker.
+  useEffect(() => {
+    if (selectedPoint && !selectedPoint.address && selectedPoint.latitude !== 0) {
+      setLoading(true);
+      reverseGeocode(selectedPoint.latitude, selectedPoint.longitude).then((address) => {
+        if (address) {
+          setSelectedPoint((prev) => prev ? { ...prev, address } : prev);
+          setQuery(address);
+        }
+        setLoading(false);
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Search / Autocomplete ──
 
