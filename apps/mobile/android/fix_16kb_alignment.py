@@ -172,7 +172,8 @@ def fix_libraries_in_directory(libs_dir):
             skipped += 1
     
     print(f"✅ Fixed {fixed} libraries, {skipped} skipped/already compliant")
-    return fixed > 0
+    # "already compliant" is also a success — only fail if nothing was found at all
+    return fixed > 0 or skipped > 0
 
 def main():
     """Main function."""
