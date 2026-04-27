@@ -604,7 +604,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                     await confirmPayment(delivery.id, url);
                     setPaymentUploading(false);
                     setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-                    carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                    carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'), undefined, 'payment');
                   } catch (e: any) {
                     setPaymentUploading(false);
                     setLoadingVisible(false);
@@ -663,7 +663,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
                         try {
                           await confirmPayment(delivery.id);
                           setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'));
+                          carAlert.show('success', t('payment.successTitle'), t('payment.senderConfirmedMsg'), undefined, 'payment');
                         } catch (e: any) {
                           setLoadingVisible(false);
                           carAlert.show('error', t('common.error'), e.message);

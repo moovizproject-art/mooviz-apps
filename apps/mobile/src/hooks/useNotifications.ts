@@ -72,12 +72,13 @@ interface UseNotificationsResult {
 
 /** Per-event Android channel IDs. Must match what notificationService.ts sends as channelId. */
 export const ANDROID_CHANNEL_IDS: Record<string, string> = {
-  new_listing_nearby: 'mooviz_new_delivery_v3',
-  driver_interested:  'mooviz_driver_interested_v3',
-  payment_confirmed:  'mooviz_payment_v4',  // v4 — bumped because v3 was cached with wrong sound on some devices
-  delivery_cancelled: 'mooviz_error_v3',
-  new_chat_message:   'mooviz_chat_v2',
-  default:            'mooviz_success_v3',
+  new_listing_nearby:      'mooviz_new_delivery_v3',
+  driver_interested:       'mooviz_driver_interested_v3',
+  payment_confirmed:       'mooviz_payment_v4',
+  awaiting_payment_notify: 'mooviz_payment_v4',
+  delivery_cancelled:      'mooviz_error_v3',
+  new_chat_message:        'mooviz_chat_v2',
+  default:                 'mooviz_success_v3',
 };
 
 /** Create all Android notification channels (idempotent — safe to call on every launch) */
@@ -368,7 +369,7 @@ export function useNotifications(): UseNotificationsResult {
         if (!quietMode) {
           if (notifEvent === 'new_listing_nearby') playSound('new_delivery');
           else if (notifEvent === 'driver_interested') playSound('driver_interested');
-          else if (notifEvent === 'payment_confirmed') playSound('payment');
+          else if (notifEvent === 'payment_confirmed' || notifEvent === 'awaiting_payment_notify') playSound('payment');
         }
 
         await ensureAndroidChannels();

@@ -771,7 +771,7 @@ const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pe
                 try {
                   await confirmPayment(delivery.id);
                   setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-                  carAlert.show('success', t('payment.successTitle'), t('payment.driverConfirmedMsg'));
+                  carAlert.show('success', t('payment.successTitle'), t('payment.driverConfirmedMsg'), undefined, 'payment');
                 } catch (e: any) {
                   setLoadingVisible(false);
                   carAlert.show('error', t('common.error'), e.message);
@@ -806,7 +806,7 @@ const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pe
                 try {
                   await confirmPayment(delivery.id);
                   setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
-                  carAlert.show('success', t('payment.successTitle'), t('payment.driverConfirmedMsg'));
+                  carAlert.show('success', t('payment.successTitle'), t('payment.driverConfirmedMsg'), undefined, 'payment');
                 } catch (e: any) {
                   setLoadingVisible(false);
                   carAlert.show('error', t('common.error'), e.message);
