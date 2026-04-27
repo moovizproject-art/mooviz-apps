@@ -9,6 +9,15 @@ import { logger } from "../utils/logger";
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+/** Must stay in sync with ANDROID_CHANNEL_IDS in useNotifications.ts */
+const ANDROID_CHANNEL_IDS: Record<string, string> = {
+  new_listing_nearby: "mooviz_new_delivery_v3",
+  driver_interested:  "mooviz_driver_interested_v3",
+  payment_confirmed:  "mooviz_payment_v4",
+  delivery_cancelled: "mooviz_error_v3",
+  new_chat_message:   "mooviz_chat_v2",
+};
+
 /**
  * Send a push notification to a specific user by looking up their FCM token.
  */
@@ -58,7 +67,10 @@ export async function sendPushNotification(
     // FCM tokens registered on the same device (e.g. after reinstall).
     // iOS uses apns-collapse-id; Android uses notification.tag.
     // Both keyed on event+deliveryId so same-event duplicates merge into one banner.
-    const collapseKey = data?.event && data?.deliveryId
+    // new_listing_nearby must NOT use a stable collapse key — APNs silently replaces
+    // the existing notification (no sound) if the same collapse-id arrives again.
+    // Each re-broadcast (expansion, renotify) must deliver independently with sound.
+    const collapseKey = data?.event && data?.deliveryId && data.event !== "new_listing_nearby"
       ? `${data.event}_${data.deliveryId}`
       : undefined;
 
@@ -73,7 +85,8 @@ export async function sendPushNotification(
         priority: "high",
         collapseKey: collapseKey,
         notification: {
-          channelId: "mooviz_deliveries_v2",
+          // Route to per-event channel so each event plays its own sound on Android 8+
+          channelId: ANDROID_CHANNEL_IDS[data?.event ?? ""] ?? "mooviz_success_v3",
           sound: sound ?? "success",
           tag: collapseKey,
         },
@@ -237,7 +250,7 @@ export async function sendDeliveryNotification(
     delivery_picked_up: "success",
     delivery_delivered: "success",
     delivery_cancelled: "error",
-    new_chat_message: "question",
+    new_chat_message: "success",
   };
   const soundName = EVENT_SOUNDS[event] ?? "success";
 

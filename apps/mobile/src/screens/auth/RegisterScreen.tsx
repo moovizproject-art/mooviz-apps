@@ -17,7 +17,8 @@ import { AuthStackParamList } from '../../navigation/RootNavigator';
 import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
-import { registerWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
+import firestore from '@react-native-firebase/firestore';
+import { registerWithEmail, signInWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
@@ -159,7 +160,36 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     } catch (err: unknown) {
       setLoadingVisible(false);
       const firebaseError = err as { code?: string };
-      if (firebaseError.code) {
+
+      if (firebaseError.code === 'auth/email-already-in-use') {
+        // Auth record exists but Firestore doc may have been deleted (partial account deletion).
+        // Try signing in — if successful and no doc, allow re-registration.
+        try {
+          const existingCred = await signInWithEmail(form.email, form.password);
+          const docSnap = await firestore().collection('users').doc(existingCred.user.uid).get();
+          if (!docSnap.exists) {
+            await createUserDocument(existingCred.user.uid, {
+              fullName: form.fullName,
+              email: form.email,
+              phone: form.phone,
+            });
+            setLoadingStep(1);
+            await new Promise(r => setTimeout(r, 600));
+            setLoadingVisible(false);
+            navigation.navigate('OTPVerification', {
+              phoneNumber: form.phone,
+              verificationId: '',
+              mode: 'register',
+            });
+            return;
+          } else {
+            // Full account exists — direct to login
+            carAlert.show('error', t('auth.registerError'), 'חשבון קיים עם כתובת זו — אנא התחבר');
+          }
+        } catch (_signInErr) {
+          carAlert.show('error', t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
+        }
+      } else if (firebaseError.code) {
         carAlert.show('error', t('auth.registerError'), mapFirebaseAuthError(firebaseError.code));
       } else {
         carAlert.show('error', t('auth.registerError'), t('auth.registerError'));

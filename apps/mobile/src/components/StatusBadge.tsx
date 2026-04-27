@@ -6,6 +6,7 @@ import { STATUS_CONFIG, DeliveryStatus } from '../constants/statusConfig';
 interface StatusBadgeProps {
   status: string;
   size?: 'small' | 'default';
+  labelOverride?: string;
 }
 
 /**
@@ -13,7 +14,7 @@ interface StatusBadgeProps {
  * Colored badge displaying the current delivery status.
  * תג צבעוני המציג את סטטוס המשלוח הנוכחי
  */
-export function StatusBadge({ status, size = 'default' }: StatusBadgeProps): React.JSX.Element {
+export function StatusBadge({ status, size = 'default', labelOverride }: StatusBadgeProps): React.JSX.Element {
   const config = STATUS_CONFIG[status as DeliveryStatus] || STATUS_CONFIG.pending;
   const isSmall = size === 'small';
 
@@ -33,7 +34,7 @@ export function StatusBadge({ status, size = 'default' }: StatusBadgeProps): Rea
           isSmall && styles.labelSmall,
         ]}
       >
-        {config.label}
+        {labelOverride ?? config.label}
       </Text>
     </View>
   );

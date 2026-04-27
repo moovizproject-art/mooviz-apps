@@ -50,7 +50,8 @@ function renotifyNearbyDrivers(
               pickupCity,
               destinationCity: destCity,
               price: String(delivery.price ?? 0),
-            }
+            },
+            "new_delivery"
           )
         )
       ).then(() => logger.info("Renotified nearby drivers", { context, count: nearbyDrivers.length }))
@@ -672,17 +673,24 @@ export const confirmSelection = onCall(async (request) => {
     const updatedInterested = interested.map((d: any) => d.uid === uid ? { ...d, status: "confirmed" } : d);
     const now = admin.firestore.Timestamp.now();
 
-    // Create chat
-    const chatRef = db.collection("chats").doc();
-    txn.set(chatRef, {
-      deliveryId,
-      participants: [freshData.senderId, uid],
-      lastMessage: "",
-      lastMessageAt: now,
-      lastSenderId: "",
-      createdAt: now,
-      closed: false,
-    });
+    // Reuse existing chat if delivery previously had one (e.g. driver cancelled and restarted)
+    let chatIdToUse: string;
+    if (freshData.chatId) {
+      chatIdToUse = freshData.chatId;
+      txn.update(db.collection("chats").doc(freshData.chatId), { closed: false });
+    } else {
+      const chatRef = db.collection("chats").doc();
+      chatIdToUse = chatRef.id;
+      txn.set(chatRef, {
+        deliveryId,
+        participants: [freshData.senderId, uid],
+        lastMessage: "",
+        lastMessageAt: now,
+        lastSenderId: "",
+        createdAt: now,
+        closed: false,
+      });
+    }
 
     txn.update(ref, {
       status: "waiting_for_pickup",
@@ -693,7 +701,7 @@ export const confirmSelection = onCall(async (request) => {
       interestedDrivers: updatedInterested,
       selectedDriverId: null,
       selectionExpiresAt: null,
-      chatId: chatRef.id,
+      chatId: chatIdToUse,
       statusHistory: admin.firestore.FieldValue.arrayUnion({
         status: "waiting_for_pickup",
         timestamp: now,
@@ -949,27 +957,34 @@ export const approveDriver = onCall(async (request) => {
   const senderPhotoUrl = senderData?.profilePhotoURL || "";
   const senderRating = senderData?.ratingAsSender?.average ?? null;
 
-  // Create chat room between sender and driver
-  const chatRef = db.collection("chats").doc();
   const now = admin.firestore.Timestamp.now();
-  await chatRef.set({
-    deliveryId,
-    participants: [uid, delivery.driverId],
-    senderName,
-    driverName: delivery.driverName || "",
-    lastMessage: "צ'אט נוצר — משלוח אושר",
-    lastMessageAt: now,
-    closed: false,
-    createdAt: now,
-  });
+  let chatId: string;
 
-  // Add system message to chat
-  await chatRef.collection("messages").add({
-    type: "system",
-    text: "✅ המשלוח אושר — אפשר לתאם איסוף",
-    senderId: "system",
-    createdAt: now,
-  });
+  if (delivery.chatId) {
+    // Reopen existing chat (delivery previously had one — e.g. after driver cancel/revert)
+    chatId = delivery.chatId;
+    await db.collection("chats").doc(chatId).update({ closed: false });
+  } else {
+    // Create new chat room between sender and driver
+    const chatRef = db.collection("chats").doc();
+    chatId = chatRef.id;
+    await chatRef.set({
+      deliveryId,
+      participants: [uid, delivery.driverId],
+      senderName,
+      driverName: delivery.driverName || "",
+      lastMessage: "צ'אט נוצר — משלוח אושר",
+      lastMessageAt: now,
+      closed: false,
+      createdAt: now,
+    });
+    await chatRef.collection("messages").add({
+      type: "system",
+      text: "✅ המשלוח אושר — אפשר לתאם איסוף",
+      senderId: "system",
+      createdAt: now,
+    });
+  }
 
   await updateDeliveryStatus(
     ref,
@@ -977,7 +992,7 @@ export const approveDriver = onCall(async (request) => {
     uid,
     "Sender approved driver",
     {
-      chatId: chatRef.id,
+      chatId,
       senderName,
       senderPhotoUrl,
       senderRating,
@@ -1231,6 +1246,7 @@ export const cancelDelivery = onCall(async (request) => {
 
   let cancellerNameHe = "";
   let driverCancelled = false;
+  let withinSelectionWindow = false;
   let deliverySnapshot: Delivery | null = null;
 
   // Use transaction to prevent race conditions (e.g. cancel + confirm at same time)
@@ -1240,11 +1256,40 @@ export const cancelDelivery = onCall(async (request) => {
     if (!delivery) throw new HttpsError("not-found", `Delivery ${deliveryId} not found`);
     deliverySnapshot = delivery;
 
-    // Verify the caller is either the sender or the assigned driver
+    // Verify the caller is either the sender or the assigned driver.
+    // Also accept selectedDriverId in case driverId was cleared by a selection-timer expiry
+    // while the driver's UI snapshot was stale — prevents spurious permission-denied errors.
+    // Additionally: selectionTimeout clears driverId/selectedDriverId and marks the driver
+    // as "declined" in interestedDrivers. Allow that driver to still cancel so they can
+    // clean up their state (the function body handles status="new" with an early return).
     const isSender = delivery.senderId === uid;
-    const isDriver = delivery.driverId === uid;
+    const wasTimedOut = delivery.status === "new" &&
+      ((delivery.interestedDrivers || []) as Array<{ uid: string; status: string }>)
+        .some((d) => d.uid === uid && d.status === "declined");
+    const isDriver = delivery.driverId === uid || delivery.selectedDriverId === uid || wasTimedOut;
+
+    logger.info("cancelDelivery: permission check", {
+      deliveryId,
+      callerUid: uid,
+      deliveryStatus: delivery.status,
+      senderId: delivery.senderId,
+      driverId: delivery.driverId ?? null,
+      selectedDriverId: delivery.selectedDriverId ?? null,
+      isSender,
+      isDriver,
+      wasTimedOut,
+      interestedDrivers: ((delivery.interestedDrivers || []) as Array<{ uid: string; status: string }>)
+        .map((d) => ({ uid: d.uid, status: d.status })),
+    });
 
     if (!isSender && !isDriver) {
+      logger.warn("cancelDelivery: PERMISSION DENIED", {
+        deliveryId,
+        callerUid: uid,
+        deliveryStatus: delivery.status,
+        driverId: delivery.driverId ?? null,
+        selectedDriverId: delivery.selectedDriverId ?? null,
+      });
       throw new HttpsError(
         "permission-denied",
         "Only the sender or assigned driver can cancel this delivery"
@@ -1253,18 +1298,39 @@ export const cancelDelivery = onCall(async (request) => {
 
     const actorRole = isSender ? "sender" : "driver";
     cancellerNameHe = isSender ? "השולח" : "הנהג";
-    driverCancelled = isDriver;
+    driverCancelled = isDriver && !isSender;
 
     const now = admin.firestore.Timestamp.now();
 
     if (driverCancelled) {
-      // ── DRIVER cancels pre-pickup: revert to "new", keep chat open 8h ──
-      // Validate driver can transition back to "new"
+      // ── DRIVER cancels pre-pickup: revert to "new" ──
+
+      // If a selection timer already reverted the delivery to "new", the driver only
+      // needs to mark themselves as cancelled in interestedDrivers — no status change.
+      if (delivery.status === "new") {
+        const interested: any[] = delivery.interestedDrivers || [];
+        const updated = interested.map((d: any) =>
+          d.uid === uid ? { ...d, status: "cancelled" } : d
+        );
+        txn.update(ref, { interestedDrivers: updated, updatedAt: now });
+        return;
+      }
+
       assertValidTransition(delivery.status, "new", actorRole, uid);
 
-      // Mark driver as cancelled in interestedDrivers list
+      logger.info("cancelDelivery: driver cancel approved", {
+        deliveryId,
+        driverUid: uid,
+        fromStatus: delivery.status,
+      });
+
+      // 30-minute window: if driver cancels quickly, other interested drivers are
+      // preserved so the sender can re-select without a full broadcast.
+      const selectionMs = (delivery.updatedAt as admin.firestore.Timestamp)?.toMillis?.() ?? Date.now();
+      withinSelectionWindow = Date.now() - selectionMs < 30 * 60 * 1000;
+
       const interested: any[] = delivery.interestedDrivers || [];
-      const updated = interested.map((d: any) =>
+      const updatedInterested = interested.map((d: any) =>
         d.uid === uid ? { ...d, status: "cancelled" } : d
       );
 
@@ -1276,7 +1342,8 @@ export const cancelDelivery = onCall(async (request) => {
         driverRating: null,
         selectedDriverId: null,
         selectionExpiresAt: null,
-        interestedDrivers: updated,
+        // Keep other interested drivers within the 30-min window; clear after.
+        interestedDrivers: withinSelectionWindow ? updatedInterested : [],
         statusHistory: admin.firestore.FieldValue.arrayUnion({
           status: "new",
           timestamp: now,
@@ -1340,7 +1407,25 @@ export const cancelDelivery = onCall(async (request) => {
       logger.error("cancelDelivery: chat message failed", { deliveryId, error: String(err) });
     }
 
-    // Re-notify nearby drivers (exclude the cancelling driver)
+    // Within the 30-min window: notify previously interested drivers that the
+    // delivery is available again so they can still be selected by the sender.
+    if (withinSelectionWindow) {
+      const prevInterested: any[] = (deliverySnapshot as Delivery).interestedDrivers?.filter(
+        (d: any) => d.uid !== uid && ["interested", "confirmed"].includes(d.status)
+      ) ?? [];
+      await Promise.allSettled(
+        prevInterested.map((d: any) =>
+          sendPushNotification(
+            d.uid,
+            "משלוח זמין שוב",
+            "משלוח שהתעניינת בו חזר לרשימה — השולח יכול עדיין לבחור אותך",
+            { event: "delivery_reopened", deliveryId }
+          )
+        )
+      );
+    }
+
+    // Broadcast to all nearby drivers (always, so new drivers can also see it)
     renotifyNearbyDrivers(deliverySnapshot as Delivery, deliveryId, [uid], "cancelDelivery");
   } else {
     // Sender cancelled — notify driver and close chat

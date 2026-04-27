@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
 import { UserUpdateData, validatePhone } from "@mooviz/shared";
 
 const db = admin.firestore();
@@ -287,15 +288,17 @@ export const deleteAccount = onCall(async (request) => {
   const userRef = db.collection("users").doc(uid);
   const userDoc = await userRef.get();
 
-  if (!userDoc.exists) {
-    // Auth record may still exist — delete it anyway
-    await admin.auth().deleteUser(uid);
-    return { success: true };
+  if (userDoc.exists) {
+    await userRef.delete();
   }
 
-  // Delete Firestore document first, then Auth record
-  await userRef.delete();
-  await admin.auth().deleteUser(uid);
+  // Delete Auth record — log failure but don't surface it to the client so the
+  // user isn't stuck. The mobile re-registration flow handles the orphaned-Auth case.
+  try {
+    await admin.auth().deleteUser(uid);
+  } catch (authErr: unknown) {
+    logger.warn("deleteAccount: Auth record deletion failed — orphaned Auth may need manual cleanup", { uid, error: String(authErr) });
+  }
 
   return { success: true };
 });

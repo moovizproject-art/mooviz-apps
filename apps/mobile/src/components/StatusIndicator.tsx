@@ -35,12 +35,14 @@ const STATUS_I18N_KEYS: Record<string, string> = {
 interface StatusIndicatorProps {
   status: string;
   size?: 'sm' | 'md';
+  /** Override the label text without changing the status or colors */
+  labelOverride?: string;
 }
 
-export function StatusIndicator({ status, size = 'md' }: StatusIndicatorProps): React.JSX.Element {
+export function StatusIndicator({ status, size = 'md', labelOverride }: StatusIndicatorProps): React.JSX.Element {
   const { t } = useI18n();
   const statusColors = STATUS_COLORS[status] || STATUS_COLORS.new;
-  const label = t(STATUS_I18N_KEYS[status] || 'status.new');
+  const label = labelOverride ?? t(STATUS_I18N_KEYS[status] || 'status.new');
 
   return (
     <View style={[

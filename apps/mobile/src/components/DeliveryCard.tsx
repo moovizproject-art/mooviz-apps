@@ -202,13 +202,20 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                 const isWaiting = delivery.status === 'pending' || delivery.status === 'new';
                 return (
                   <>
-                    {hasDrivers && isWaiting ? (
-                      <View style={styles.driverCountBadge}>
-                        <Image source={carIcon} style={styles.carIcon} />
-                        <Text style={[styles.driverCountText, { color: '#2E7D32' }]}>{drivers.length}</Text>
-                      </View>
+                    {hasDrivers && isWaiting && delivery.status === 'new' ? (
+                      <StatusIndicator
+                        status="pending"
+                        size="sm"
+                        labelOverride="ממתין לבחירת נהג"
+                      />
                     ) : (
                       <StatusIndicator status={delivery.status} size="sm" />
+                    )}
+                    {hasDrivers && (
+                      <View style={[styles.driverCountBadge, { backgroundColor: colors.primary + '15' }]}>
+                        <Image source={carIcon} style={styles.carIcon} />
+                        <Text style={[styles.driverCountText, { color: colors.primary }]}>{drivers.length}</Text>
+                      </View>
                     )}
                   </>
                 );

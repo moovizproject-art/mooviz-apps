@@ -2038,7 +2038,7 @@ packages:
         optional: true
 
   '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    resolution: {integrity: sha512-d8HsXqaehY6sxGN0yoyQstfFeZ2TkUIPIwPdz6JIns7jS+Ij0est6oGfGOshTfHbVQJqMZURi+/uGmAPGxM90g==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    resolution: {integrity: sha512-grwcmjpqcGO4C9Dm0RJNHJFN+1V6BV0do7AFiX+cH7dHYieN5mJSbYgFVuPhqh0eouMEINIiG3UwWkL+31BekQ==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
     version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':

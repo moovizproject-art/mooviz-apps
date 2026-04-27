@@ -337,6 +337,7 @@ export const strings = {
     timelinePayment: { he: 'תשלום', en: 'Payment' } as LocaleStrings,
     timelineAwaitingPayment: { he: 'ממתין לתשלום', en: 'Awaiting payment' } as LocaleStrings,
     timelineCompleted: { he: 'הושלם', en: 'Completed' } as LocaleStrings,
+    timelinePaid: { he: 'שולם', en: 'Paid' } as LocaleStrings,
     asap: { he: 'בהקדם', en: 'ASAP' } as LocaleStrings,
     pickupDate: { he: 'מועד איסוף', en: 'Pickup date' } as LocaleStrings,
     // Payment section
@@ -549,7 +550,7 @@ export const strings = {
   // ── Status ──
   status: {
     new: { he: 'חדש', en: 'New' } as LocaleStrings,
-    pending: { he: 'ממתין לאישור', en: 'Pending approval' } as LocaleStrings,
+    pending: { he: 'ממתין לבחירת נהג', en: 'Waiting for driver selection' } as LocaleStrings,
     awaitingConfirm: { he: 'ממתין לאישור נהג', en: 'Awaiting driver confirmation' } as LocaleStrings,
     waitingForPickup: { he: 'ממתין לאיסוף', en: 'Waiting for pickup' } as LocaleStrings,
     pickedUp: { he: 'נאסף', en: 'Picked up' } as LocaleStrings,
