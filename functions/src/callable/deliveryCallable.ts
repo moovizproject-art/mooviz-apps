@@ -876,6 +876,27 @@ export const cancelSelectedDriver = onCall(async (request) => {
   sendPushNotification(cancelledDriverId, "השולח ביטל את הבחירה", "המשלוח הוחזר לרשימה", { event: "selection_cancelled", deliveryId })
     .catch((err: unknown) => logger.error("cancelSelectedDriver notification failed", { deliveryId, error: String(err) }));
 
+  // Close old chat and clear chatId when sender cancels a confirmed driver (waiting_for_pickup).
+  // This prevents the next assigned driver from seeing stale message history.
+  if (delivery.chatId) {
+    try {
+      await admin.firestore().collection("chats").doc(delivery.chatId).collection("messages").add({
+        senderId: "system",
+        senderName: "מערכת",
+        text: "השולח ביטל את בחירת הנהג. המשלוח חוזר לרשימה.",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        type: "system",
+      });
+      await admin.firestore().collection("chats").doc(delivery.chatId).update({
+        closed: true,
+        chatCloseAt: admin.firestore.Timestamp.now(),
+      });
+      await admin.firestore().collection("deliveries").doc(deliveryId).update({ chatId: null });
+    } catch (err) {
+      logger.error("cancelSelectedDriver: chat close failed", { deliveryId, error: String(err) });
+    }
+  }
+
   // Re-notify nearby drivers (exclude the cancelled driver and sender)
   renotifyNearbyDrivers(delivery, deliveryId, [cancelledDriverId, uid], "cancelSelectedDriver");
 
@@ -1383,28 +1404,27 @@ export const cancelDelivery = onCall(async (request) => {
       logger.error("cancelDelivery: sender notification failed", { deliveryId, error: String(err) });
     }
 
-    // Send chat message to sender about the cancellation
+    // Close old chat and clear chatId from delivery so next selectDriver creates a fresh chat.
+    // Keeping the old chatId would cause the new driver to see old message history → crash.
     try {
       const chatId = (deliverySnapshot as Delivery).chatId;
       if (chatId) {
         await admin.firestore().collection("chats").doc(chatId).collection("messages").add({
           senderId: "system",
           senderName: "מערכת",
-          text: "הנהג ביטל את המשלוח. המשלוח חוזר לרשימה ופתוח לנהגים חדשים. הצ'אט יישאר פתוח 8 שעות.",
+          text: "הנהג ביטל את המשלוח. המשלוח חוזר לרשימה ופתוח לנהגים חדשים.",
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           type: "system",
         });
-        // Keep chat open for 8 hours
-        const closeAt = admin.firestore.Timestamp.fromMillis(
-          Date.now() + 8 * 60 * 60 * 1000
-        );
         await admin.firestore().collection("chats").doc(chatId).update({
-          closed: false,
-          chatCloseAt: closeAt,
+          closed: true,
+          chatCloseAt: admin.firestore.Timestamp.now(),
         });
+        // Detach chatId from delivery so selectDriver creates a fresh chat room
+        await admin.firestore().collection("deliveries").doc(deliveryId).update({ chatId: null });
       }
     } catch (err) {
-      logger.error("cancelDelivery: chat message failed", { deliveryId, error: String(err) });
+      logger.error("cancelDelivery: chat close failed", { deliveryId, error: String(err) });
     }
 
     // Within the 30-min window: notify previously interested drivers that the
