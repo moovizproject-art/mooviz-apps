@@ -13,9 +13,9 @@ const messaging = admin.messaging();
 const ANDROID_CHANNEL_IDS: Record<string, string> = {
   new_listing_nearby: "mooviz_new_delivery_v3",
   driver_interested:  "mooviz_driver_interested_v3",
-  payment_confirmed:  "mooviz_payment_v3",
+  payment_confirmed:  "mooviz_payment_v4",
   delivery_cancelled: "mooviz_error_v3",
-  new_chat_message:   "mooviz_chat",
+  new_chat_message:   "mooviz_chat_v2",
 };
 
 /**
@@ -250,7 +250,7 @@ export async function sendDeliveryNotification(
     delivery_picked_up: "success",
     delivery_delivered: "success",
     delivery_cancelled: "error",
-    new_chat_message: "question",
+    new_chat_message: "success",
   };
   const soundName = EVENT_SOUNDS[event] ?? "success";
 

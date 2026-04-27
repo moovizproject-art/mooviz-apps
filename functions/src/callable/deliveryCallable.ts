@@ -1259,10 +1259,37 @@ export const cancelDelivery = onCall(async (request) => {
     // Verify the caller is either the sender or the assigned driver.
     // Also accept selectedDriverId in case driverId was cleared by a selection-timer expiry
     // while the driver's UI snapshot was stale — prevents spurious permission-denied errors.
+    // Additionally: selectionTimeout clears driverId/selectedDriverId and marks the driver
+    // as "declined" in interestedDrivers. Allow that driver to still cancel so they can
+    // clean up their state (the function body handles status="new" with an early return).
     const isSender = delivery.senderId === uid;
-    const isDriver = delivery.driverId === uid || delivery.selectedDriverId === uid;
+    const wasTimedOut = delivery.status === "new" &&
+      ((delivery.interestedDrivers || []) as Array<{ uid: string; status: string }>)
+        .some((d) => d.uid === uid && d.status === "declined");
+    const isDriver = delivery.driverId === uid || delivery.selectedDriverId === uid || wasTimedOut;
+
+    logger.info("cancelDelivery: permission check", {
+      deliveryId,
+      callerUid: uid,
+      deliveryStatus: delivery.status,
+      senderId: delivery.senderId,
+      driverId: delivery.driverId ?? null,
+      selectedDriverId: delivery.selectedDriverId ?? null,
+      isSender,
+      isDriver,
+      wasTimedOut,
+      interestedDrivers: ((delivery.interestedDrivers || []) as Array<{ uid: string; status: string }>)
+        .map((d) => ({ uid: d.uid, status: d.status })),
+    });
 
     if (!isSender && !isDriver) {
+      logger.warn("cancelDelivery: PERMISSION DENIED", {
+        deliveryId,
+        callerUid: uid,
+        deliveryStatus: delivery.status,
+        driverId: delivery.driverId ?? null,
+        selectedDriverId: delivery.selectedDriverId ?? null,
+      });
       throw new HttpsError(
         "permission-denied",
         "Only the sender or assigned driver can cancel this delivery"
@@ -1290,6 +1317,12 @@ export const cancelDelivery = onCall(async (request) => {
       }
 
       assertValidTransition(delivery.status, "new", actorRole, uid);
+
+      logger.info("cancelDelivery: driver cancel approved", {
+        deliveryId,
+        driverUid: uid,
+        fromStatus: delivery.status,
+      });
 
       // 30-minute window: if driver cancels quickly, other interested drivers are
       // preserved so the sender can re-select without a full broadcast.
