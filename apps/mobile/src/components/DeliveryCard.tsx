@@ -67,6 +67,8 @@ interface DeliveryCardProps {
   isUnread?: boolean;
   /** Show interested driver count badge — sender only, never show to drivers */
   showDriverCount?: boolean;
+  /** Current viewer's uid — when set and viewer is in interestedDrivers, shows "waiting for sender" label */
+  viewerUserId?: string;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -85,6 +87,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
   distanceLabel,
   isUnread = false,
   showDriverCount = false,
+  viewerUserId,
 }: DeliveryCardProps): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -200,9 +203,20 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                   : [];
                 const hasDrivers = drivers.length > 0;
                 const isWaiting = delivery.status === 'pending' || delivery.status === 'new';
+                // Driver expressed interest: show "waiting for sender" label on their feed card
+                const viewerIsInterested = !!viewerUserId && delivery.status === 'new' &&
+                  (delivery.interestedDrivers ?? []).some(
+                    (d) => d.uid === viewerUserId && d.status === 'interested'
+                  );
                 return (
                   <>
-                    {hasDrivers && isWaiting && delivery.status === 'new' ? (
+                    {viewerIsInterested ? (
+                      <StatusIndicator
+                        status="pending"
+                        size="sm"
+                        labelOverride="ממתין לאישור שולח"
+                      />
+                    ) : hasDrivers && isWaiting && delivery.status === 'new' ? (
                       <StatusIndicator
                         status="pending"
                         size="sm"

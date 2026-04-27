@@ -1097,6 +1097,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                       onPress={() => handleDeliveryPress(item.id)}
                       showDistance
                       distanceLabel={`${item._distKm.toFixed(1)} ${t('driver.km')}`}
+                      viewerUserId={currentUser?.uid}
                     />
                   </View>
                 ))}
@@ -1141,6 +1142,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                       onPress={() => handleDeliveryPress(item.id)}
                       showDistance
                       distanceLabel={`${item._distKm.toFixed(1)} ${t('driver.kmFromHome')}`}
+                      viewerUserId={currentUser?.uid}
                     />
                   </View>
                 ))}
@@ -1185,6 +1187,7 @@ export function FeedScreen({ navigation }: Props): React.JSX.Element {
                       onPress={() => handleDeliveryPress(item.id)}
                       showDistance
                       distanceLabel={`${item._distKm.toFixed(1)} ${t('driver.kmFromWork')}`}
+                      viewerUserId={currentUser?.uid}
                     />
                   </View>
                 ))}
