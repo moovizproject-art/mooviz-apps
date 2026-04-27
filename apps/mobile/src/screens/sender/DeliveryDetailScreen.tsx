@@ -125,6 +125,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [cancelAlertVisible, setCancelAlertVisible] = useState(false);
+  const [cancelDriverAlertVisible, setCancelDriverAlertVisible] = useState(false);
   const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const carAlert = useCarAlert();
@@ -299,8 +300,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   // Find when delivery was marked as 'delivered' for car hide timer
   const deliveredAt = (delivery as any)?.statusHistory?.delivered ?? null;
-  // Cancel allowed only pre-pickup statuses
-  const canCancel = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status);
+  // Permanent cancel — only before a driver is confirmed and waiting for pickup
+  const canCancel = ['new', 'pending', 'awaiting_confirm'].includes(delivery.status);
+  // Cancel the assigned driver (returns delivery to pool as 'new'), available at waiting_for_pickup
+  const canCancelDriver = delivery.status === 'waiting_for_pickup' && !!delivery.driverId;
   const isPostPickup = ['picked_up', 'delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
   const showPayment = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status);
   const showRate = ['delivered', 'awaiting_payment', 'completed_paid'].includes(delivery.status) && !delivery.ratedBySender && !justRated;
@@ -983,6 +986,35 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
             },
           ]}
           onDismiss={() => setDeleteAlertVisible(false)}
+        />
+        {canCancelDriver && (
+          <TouchableOpacity
+            style={[styles.cancelBtn, { borderColor: '#E53935' }]}
+            onPress={() => setCancelDriverAlertVisible(true)}
+          >
+            <Text style={styles.cancelBtnText}>{t('deliveryExtra.cancelDriver')}</Text>
+          </TouchableOpacity>
+        )}
+        <AppAlert
+          visible={cancelDriverAlertVisible}
+          icon="🚛"
+          title={t('deliveryExtra.cancelDriver')}
+          message={t('deliveryExtra.cancelDriverPrompt')}
+          buttons={[
+            { text: t('common.back'), style: 'cancel' },
+            {
+              text: t('deliveryExtra.cancelDriverAction'),
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await cancelSelectedDriver(delivery.id);
+                } catch (e: any) {
+                  Alert.alert(t('common.error'), e.message);
+                }
+              },
+            },
+          ]}
+          onDismiss={() => setCancelDriverAlertVisible(false)}
         />
         {canCancel && (
           <TouchableOpacity

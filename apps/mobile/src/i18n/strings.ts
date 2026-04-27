@@ -783,6 +783,9 @@ export const strings = {
   deliveryExtra: {
     cancelDelivery: { he: 'ביטול משלוח', en: 'Cancel delivery' } as LocaleStrings,
     cancelAction: { he: 'בטל משלוח', en: 'Cancel delivery' } as LocaleStrings,
+    cancelDriver: { he: 'ביטול נהג', en: 'Cancel driver' } as LocaleStrings,
+    cancelDriverAction: { he: 'בטל נהג', en: 'Cancel driver' } as LocaleStrings,
+    cancelDriverPrompt: { he: 'ביטול הנהג יחזיר את המשלוח לרשימה.\nנהגים אחרים יוכלו לקחת אותו.\n\nהאם אתה בטוח?', en: 'Cancelling the driver will return the delivery to the pool.\nOther drivers will be able to take it.\n\nAre you sure?' } as LocaleStrings,
     deliveryProofs: { he: 'הוכחות משלוח', en: 'Delivery proofs' } as LocaleStrings,
     confirmPickupPrompt: { he: 'נקודת האיסוף נמצאת {dist} ממך.\nלהמשיך?', en: 'Pickup point is {dist} from you.\nContinue?' } as LocaleStrings,
     totalExpenses: { he: 'סה״כ עלויות משלוחים', en: 'Total delivery expenses' } as LocaleStrings,
