@@ -15,6 +15,14 @@ import { getReports, type ReportsQueryParams } from '../services/reports';
 export function useUsers(params: UsersQueryParams = {}) {
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
 
+  // Reset pagination cursor whenever filter params change
+  const filterKey = JSON.stringify({ role: params.role, status: params.status, kycStatus: params.kycStatus });
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setLastDoc(null);
+    setPrevFilterKey(filterKey);
+  }
+
   const queryResult = useQuery({
     queryKey: ['users', params],
     queryFn: async () => {

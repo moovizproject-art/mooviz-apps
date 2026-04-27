@@ -52,6 +52,10 @@ export interface UsersQueryParams {
   role?: UserRole;
   status?: UserStatus;
   kycStatus?: KycStatus;
+  /** When true, only return users with kycDocumentURL set (submitted docs, not just registered) */
+  kycSubmitted?: boolean;
+  /** When true, only return driverUnlocked=true users */
+  driverUnlocked?: boolean;
   search?: string;
   pageSize?: number;
   lastDoc?: DocumentSnapshot;
@@ -126,7 +130,15 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
 
   let users = snapshot.docs.map(normalizeUser);
   if (params.kycStatus) {
-    users = users.filter((u) => u.kycStatus === params.kycStatus);
+    if (params.kycStatus === 'pending') {
+      // "Pending" filter = submitted docs AND awaiting review, not just newly registered users
+      users = users.filter((u) => u.kycStatus === 'pending' && !!(u.kycDocumentURL || u.kycIdURL));
+    } else {
+      users = users.filter((u) => u.kycStatus === params.kycStatus);
+    }
+  }
+  if (params.driverUnlocked) {
+    users = users.filter((u) => u.driverUnlocked);
   }
   const lastDocSnap = snapshot.docs[snapshot.docs.length - 1] ?? null;
 

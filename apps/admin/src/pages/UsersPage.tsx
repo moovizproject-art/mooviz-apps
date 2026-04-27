@@ -21,17 +21,31 @@ const statusBadgeClass: Record<UserStatus, string> = {
   pending_kyc: 'bg-blue-100 text-blue-800',
 };
 
+// "userType" combines role + driverUnlocked into a meaningful admin filter:
+// 'sender'         = role === 'sender' (server-side)
+// 'driver'         = driverUnlocked === true (client-side: KYC-approved drivers)
+// 'pending_review' = kycStatus === 'pending' + has docs (client-side)
+type UserTypeFilter = '' | 'sender' | 'driver' | 'pending_review';
+
 export default function UsersPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
+  const [userTypeFilter, setUserTypeFilter] = useState<UserTypeFilter>('');
   const [statusFilter, setStatusFilter] = useState<UserStatus | ''>('');
   const [kycFilter, setKycFilter] = useState<KycStatus | ''>('');
 
+  // Map the userType selection to actual query params
+  const roleParam: UserRole | undefined =
+    userTypeFilter === 'sender' ? 'sender' : undefined;
+  const driverUnlockedParam = userTypeFilter === 'driver' ? true : undefined;
+  const kycStatusParam: KycStatus | undefined =
+    userTypeFilter === 'pending_review' ? 'pending' : (kycFilter || undefined);
+
   const { data: users, isLoading } = useUsers({
-    role: roleFilter || undefined,
+    role: roleParam,
     status: statusFilter || undefined,
-    kycStatus: kycFilter || undefined,
+    kycStatus: kycStatusParam,
+    driverUnlocked: driverUnlockedParam,
     pageSize: 200,
   });
 
@@ -55,27 +69,40 @@ export default function UsersPage() {
     {
       key: 'kycStatus',
       label: t('users.kyc'),
-      render: (user) => (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${kycBadgeClass[user.kycStatus]}`}
-        >
-          {user.kycStatus}
-        </span>
-      ),
+      render: (user) => {
+        const hasDocs = !!(user.kycDocumentURL || user.kycIdURL);
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${kycBadgeClass[user.kycStatus]}`}>
+              {user.kycStatus === 'pending' && hasDocs ? '⏳ ממתין לאישור' : user.kycStatus}
+            </span>
+            {user.kycStatus === 'pending' && !hasDocs && (
+              <span className="text-xs text-gray-400">לא הגיש מסמכים</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'activeMode',
-      label: t('users.activeMode'),
+      label: 'תפקיד',
       render: (user) => (
-        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-          user.activeMode === 'driver'
-            ? 'bg-green-100 text-green-700'
-            : user.activeMode === 'sender'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-500'
-        }`}>
-          {user.activeMode ?? 'N/A'}
-        </span>
+        <div className="flex flex-wrap gap-1">
+          {user.driverUnlocked && (
+            <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
+              נהג ✓
+            </span>
+          )}
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+            user.activeMode === 'driver'
+              ? 'bg-green-50 text-green-600'
+              : user.activeMode === 'sender'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-500'
+          }`}>
+            {user.activeMode === 'driver' ? 'נהג (פעיל)' : user.activeMode === 'sender' ? 'שולח' : user.role}
+          </span>
+        </div>
       ),
     },
     {
@@ -109,16 +136,21 @@ export default function UsersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* User-type quick filter — replaces the broken role dropdown */}
         <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as UserRole | '')}
+          value={userTypeFilter}
+          onChange={(e) => {
+            setUserTypeFilter(e.target.value as UserTypeFilter);
+            // Clear KYC dropdown when switching to pending_review (it's built-in)
+            if (e.target.value === 'pending_review') setKycFilter('');
+          }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         >
-          <option value="">{t('users.allRoles')}</option>
-          <option value="sender">{t('users.sender')}</option>
-          <option value="driver">{t('users.driver')}</option>
-          <option value="both">{t('users.both')}</option>
+          <option value="">כל המשתמשים</option>
+          <option value="sender">שולחים בלבד</option>
+          <option value="driver">נהגים מאושרים (KYC ✓)</option>
+          <option value="pending_review">⏳ ממתינים לאישור KYC</option>
         </select>
 
         <select
@@ -132,21 +164,24 @@ export default function UsersPage() {
           <option value="blocked">{t('users.blocked')}</option>
         </select>
 
-        <select
-          value={kycFilter}
-          onChange={(e) => setKycFilter(e.target.value as KycStatus | '')}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        >
-          <option value="">{t('users.allKyc')}</option>
-          <option value="pending">{t('users.pending')}</option>
-          <option value="approved">{t('users.approved')}</option>
-          <option value="rejected">{t('users.rejected')}</option>
-        </select>
+        {/* KYC filter — hidden when userType=pending_review (already implied) */}
+        {userTypeFilter !== 'pending_review' && (
+          <select
+            value={kycFilter}
+            onChange={(e) => setKycFilter(e.target.value as KycStatus | '')}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          >
+            <option value="">{t('users.allKyc')}</option>
+            <option value="pending">ממתין (הגיש מסמכים)</option>
+            <option value="approved">{t('users.approved')}</option>
+            <option value="rejected">{t('users.rejected')}</option>
+          </select>
+        )}
 
-        {(roleFilter || statusFilter || kycFilter) && (
+        {(userTypeFilter || statusFilter || kycFilter) && (
           <button
             onClick={() => {
-              setRoleFilter('');
+              setUserTypeFilter('');
               setStatusFilter('');
               setKycFilter('');
             }}
@@ -154,6 +189,11 @@ export default function UsersPage() {
           >
             {t('users.clearFilters')}
           </button>
+        )}
+
+        {/* Live count */}
+        {!isLoading && users && (
+          <span className="text-sm text-gray-400">{users.length} משתמשים</span>
         )}
       </div>
 

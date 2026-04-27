@@ -147,7 +147,7 @@ export const onUserCreate = onDocumentCreated(
  * - Sends appropriate notifications
  */
 export const onUserUpdate = onDocumentUpdated(
-  "users/{userId}",
+  { document: "users/{userId}", secrets: [smtpUser, smtpPass] },
   async (event) => {
     const change = event.data;
     if (!change) {
@@ -164,10 +164,14 @@ export const onUserUpdate = onDocumentUpdated(
       await handleKycStatusChange(userId, before.kycStatus, after.kycStatus);
     }
 
-    // Notify admin when user uploads KYC document
+    // Notify admin when user submits KYC documents:
+    // - First-time upload: kycDocumentURL transitions from empty to a URL
+    // - Re-submission after rejection: kycStatus flips back to 'pending' with docs already present
     const beforeKycUrl = (before as any).kycDocumentURL || "";
-    const afterKycUrl = (after as any).kycDocumentURL || "";
-    if (!beforeKycUrl && afterKycUrl) {
+    const afterKycUrl  = (after  as any).kycDocumentURL || "";
+    const firstUpload    = !beforeKycUrl && !!afterKycUrl;
+    const reSubmission   = before.kycStatus !== "pending" && after.kycStatus === "pending" && !!afterKycUrl;
+    if (firstUpload || reSubmission) {
       await notifyAdminKycSubmitted(userId, after);
     }
 
