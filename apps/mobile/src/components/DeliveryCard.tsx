@@ -203,7 +203,6 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                 return (
                   <>
                     {hasDrivers && isWaiting && delivery.status === 'new' ? (
-                      // new + interested drivers → contextual label; use pending (orange) colors
                       <StatusIndicator
                         status="pending"
                         size="sm"
@@ -211,6 +210,12 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                       />
                     ) : (
                       <StatusIndicator status={delivery.status} size="sm" />
+                    )}
+                    {hasDrivers && (
+                      <View style={[styles.driverCountBadge, { backgroundColor: colors.primary + '15' }]}>
+                        <Image source={carIcon} style={styles.carIcon} />
+                        <Text style={[styles.driverCountText, { color: colors.primary }]}>{drivers.length}</Text>
+                      </View>
                     )}
                   </>
                 );

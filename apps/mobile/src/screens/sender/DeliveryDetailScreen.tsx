@@ -46,6 +46,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SenderDeliveryDetail'>;
 function getTimelineSteps(
   currentStatus: string,
   t: (key: string) => string,
+  senderConfirmed?: boolean,
 ): Array<{ key: string; label: string; completed: boolean; active: boolean }> {
   const FULL_ORDER = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered', 'awaiting_payment', 'completed_paid'];
   const currentIndex = FULL_ORDER.indexOf(currentStatus);
@@ -54,7 +55,6 @@ function getTimelineSteps(
   let steps: Step[];
 
   if (currentIndex <= 1) {
-    // Early phase: new, pending
     steps = [
       { key: 'start', label: currentStatus === 'pending' ? t('delivery.timelinePending') : t('delivery.timelineNew'), statuses: ['new', 'pending'] },
       { key: 'confirm', label: t('delivery.timelineWaiting'), statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
@@ -62,7 +62,6 @@ function getTimelineSteps(
       { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
     ];
   } else if (currentIndex <= 3) {
-    // Confirm/pickup phase
     steps = [
       { key: 'confirm', label: currentStatus === 'awaiting_confirm' ? t('status.awaitingConfirm') : t('delivery.timelineWaiting'), statuses: ['awaiting_confirm', 'waiting_for_pickup'] },
       { key: 'transit', label: t('delivery.timelinePickedUp'), statuses: ['picked_up'] },
@@ -70,7 +69,6 @@ function getTimelineSteps(
       { key: 'payment', label: t('delivery.timelinePayment'), statuses: ['awaiting_payment', 'completed_paid'] },
     ];
   } else if (currentIndex <= 5) {
-    // Transit/delivery phase
     steps = [
       { key: 'transit', label: t('delivery.timelinePickedUp'), statuses: ['picked_up'] },
       { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
@@ -82,19 +80,25 @@ function getTimelineSteps(
     steps = [
       { key: 'deliver', label: t('delivery.timelineDelivered'), statuses: ['delivered'] },
       { key: 'payment', label: t('delivery.timelineAwaitingPayment'), statuses: ['awaiting_payment'] },
+      { key: 'paid', label: t('delivery.timelinePaid'), statuses: ['completed_paid'] },
       { key: 'done', label: t('delivery.timelineCompleted'), statuses: ['completed_paid'] },
-      { key: 'final', label: '✅', statuses: ['completed_paid'] },
     ];
   }
 
-  // At completed_paid all steps are done — mark everything completed so dots render green not blue
   const allDone = currentStatus === 'completed_paid';
 
   return steps.map((step) => {
     const stepMaxIndex = Math.max(...step.statuses.map(s => FULL_ORDER.indexOf(s)));
     const stepMinIndex = Math.min(...step.statuses.map(s => FULL_ORDER.indexOf(s)));
-    const completed = allDone || currentIndex > stepMaxIndex;
-    const active = !completed && currentIndex >= stepMinIndex && currentIndex <= stepMaxIndex;
+    let completed = allDone || currentIndex > stepMaxIndex;
+    let active = !completed && currentIndex >= stepMinIndex && currentIndex <= stepMaxIndex;
+
+    // When sender confirmed but driver hasn't: payment step → green, paid step → active
+    if (currentStatus === 'awaiting_payment' && senderConfirmed) {
+      if (step.key === 'payment') { completed = true; active = false; }
+      if (step.key === 'paid') { completed = false; active = true; }
+    }
+
     return { key: step.key, label: step.label, completed, active };
   });
 }
@@ -191,7 +195,11 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     }
   };
 
-  const timelineSteps = useMemo(() => getTimelineSteps(delivery?.status || 'new', t), [delivery?.status, t]);
+  const senderConfirmed = !!delivery?.payment?.senderConfirmed;
+  const timelineSteps = useMemo(
+    () => getTimelineSteps(delivery?.status || 'new', t, senderConfirmed),
+    [delivery?.status, t, senderConfirmed],
+  );
 
   // Media: combine mediaURLs + single photoUrl (computed before hooks that depend on it)
   const mediaList: string[] = delivery?.mediaURLs?.length
@@ -284,6 +292,11 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   const showLiveMap = ['awaiting_confirm', 'waiting_for_pickup', 'picked_up', 'delivered'].includes(delivery.status) && delivery.driverId;
 
+  const activeInterestCount = ((delivery as any).interestedDrivers || []).filter(
+    (d: any) => d.status === 'interested' || d.status === 'confirmed'
+  ).length;
+  const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pending' : delivery.status;
+
   // Find when delivery was marked as 'delivered' for car hide timer
   const deliveredAt = (delivery as any)?.statusHistory?.delivered ?? null;
   // Cancel allowed only pre-pickup statuses
@@ -362,7 +375,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           <Text style={[styles.summaryTitle, { color: colors.textPrimary }]}>
             {t('delivery.deliveryDetails')}
           </Text>
-          <StatusBadge status={delivery.status} />
+          <StatusBadge status={displayStatus} />
         </View>
 
         <View style={styles.detailRow}>

@@ -74,9 +74,9 @@ interface UseNotificationsResult {
 export const ANDROID_CHANNEL_IDS: Record<string, string> = {
   new_listing_nearby: 'mooviz_new_delivery_v3',
   driver_interested:  'mooviz_driver_interested_v3',
-  payment_confirmed:  'mooviz_payment_v3',
+  payment_confirmed:  'mooviz_payment_v4',  // v4 — bumped because v3 was cached with wrong sound on some devices
   delivery_cancelled: 'mooviz_error_v3',
-  new_chat_message:   'mooviz_chat',
+  new_chat_message:   'mooviz_chat_v2',
   default:            'mooviz_success_v3',
 };
 
@@ -98,11 +98,18 @@ async function ensureAndroidChannels(): Promise<void> {
       vibration: true,
     }),
     notifee.createChannel({
-      id: 'mooviz_payment_v3',
+      id: 'mooviz_payment_v4',
       name: 'תשלומים',
       importance: AndroidImportance.HIGH,
       sound: 'payment',
       vibration: true,
+    }),
+    // Legacy — keep so old payment notifications still display
+    notifee.createChannel({
+      id: 'mooviz_payment_v3',
+      name: 'תשלומים (ישן)',
+      importance: AndroidImportance.HIGH,
+      sound: 'payment',
     }),
     notifee.createChannel({
       id: 'mooviz_error_v3',
@@ -120,8 +127,16 @@ async function ensureAndroidChannels(): Promise<void> {
       vibration: true,
     }),
     notifee.createChannel({
-      id: 'mooviz_chat',
+      id: 'mooviz_chat_v2',
       name: strings.notifications.chatMessages.he,
+      importance: AndroidImportance.HIGH,
+      sound: 'success',
+      vibration: true,
+    }),
+    // Legacy chat channel — kept so old notifications still display
+    notifee.createChannel({
+      id: 'mooviz_chat',
+      name: strings.notifications.chatMessages.he + ' (ישן)',
       importance: AndroidImportance.HIGH,
       sound: 'question',
     }),

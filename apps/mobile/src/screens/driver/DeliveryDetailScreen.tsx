@@ -176,6 +176,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     activeDeliveryStatus: delivery?.status,
   });
 
+  // Optimistic interest state — overrides Firestore snapshot until it catches up
+  const [localInterestState, setLocalInterestState] = useState<'interested' | 'withdrawn' | null>(null);
+
   const [senderProfileVisible, setSenderProfileVisible] = useState(false);
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -271,6 +274,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
           try {
             await withdrawFromInterest(deliveryId);
+            setLocalInterestState('withdrawn');
             setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
             carAlert.show('success', t('common.success'), t('driver.withdrawSuccess'));
           } catch (err) {
@@ -333,6 +337,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     setLoadingSteps(['sendingRequest', 'almostDone']); setLoadingStep(0); setLoadingVisible(true);
     try {
       await expressInterest(deliveryId, currentUser!.uid);
+      setLocalInterestState('interested');
       setLoadingStep(1); await new Promise(r => setTimeout(r, 600)); setLoadingVisible(false);
       carAlert.show('success', t('common.success'), t('driver.interestSent'));
     } catch (err) {
@@ -404,12 +409,23 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   const isMyJob = delivery.driverId === currentUser?.uid;
   const isAvailable = delivery.status === 'new' || delivery.status === 'pending';
-  const alreadyInterested = ((delivery as any).interestedDrivers || []).some(
+  const snapshotAlreadyInterested = ((delivery as any).interestedDrivers || []).some(
     (d: any) => d.uid === currentUser?.uid && d.status !== 'withdrawn'
   );
-  const myInterestStatus = ((delivery as any).interestedDrivers || []).find(
+  const snapshotInterestStatus = ((delivery as any).interestedDrivers || []).find(
     (d: any) => d.uid === currentUser?.uid
   )?.status;
+  // Optimistic overrides — localInterestState wins until snapshot catches up
+  const alreadyInterested = localInterestState === 'interested' ? true
+    : localInterestState === 'withdrawn' ? false
+    : snapshotAlreadyInterested;
+  const myInterestStatus = localInterestState ?? snapshotInterestStatus;
+
+  // If delivery is 'new' but has interested drivers, show 'pending' badge (same as card)
+  const activeInterestCount = ((delivery as any).interestedDrivers || []).filter(
+    (d: any) => d.status === 'interested' || d.status === 'confirmed'
+  ).length;
+const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pending' : delivery.status;
 
   const pickupCoords = {
     latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
@@ -442,7 +458,10 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* ── 1. Status + ID header ── */}
       <View style={styles.statusRow}>
-        <StatusBadge status={delivery.status} />
+        <StatusBadge
+          status={displayStatus}
+          labelOverride={displayStatus === 'pending' && delivery.status === 'new' ? 'ממתין לבחירת נהג' : undefined}
+        />
         <Text style={[styles.deliveryId, { color: colors.textSecondary }]}>#{deliveryId.slice(0, 8)}</Text>
       </View>
 

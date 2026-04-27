@@ -33,7 +33,7 @@ export const STATUS_CONFIG: Record<DeliveryStatus, StatusDisplayConfig> = {
     description: 'New listing',
   },
   pending: {
-    label: 'ממתין לאישור',       // Pending approval
+    label: 'ממתין לבחירת נהג',   // Waiting for driver selection
     color: COLORS.warning,
     bgColor: COLORS.warningBg,
     icon: '\u23F3',              // hourglass

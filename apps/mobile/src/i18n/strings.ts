@@ -337,6 +337,7 @@ export const strings = {
     timelinePayment: { he: 'תשלום', en: 'Payment' } as LocaleStrings,
     timelineAwaitingPayment: { he: 'ממתין לתשלום', en: 'Awaiting payment' } as LocaleStrings,
     timelineCompleted: { he: 'הושלם', en: 'Completed' } as LocaleStrings,
+    timelinePaid: { he: 'שולם', en: 'Paid' } as LocaleStrings,
     asap: { he: 'בהקדם', en: 'ASAP' } as LocaleStrings,
     pickupDate: { he: 'מועד איסוף', en: 'Pickup date' } as LocaleStrings,
     // Payment section

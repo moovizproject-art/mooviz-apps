@@ -216,19 +216,18 @@ export function ChatScreen(): React.JSX.Element {
       }
 
       const isOwn = item.senderId === currentUser?.uid;
+      const isImageMsg = item.type === 'image' && !!item.imageUrl;
 
-      return (
-        <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
+      const bubbleInner = (
+        <>
           <View style={[
             styles.bubbleContent,
             isOwn
               ? [styles.ownContent, { backgroundColor: colors.primary }]
               : [styles.otherContent, { backgroundColor: colors.surface, borderColor: colors.border }],
           ]}>
-            {item.type === 'image' && item.imageUrl ? (
-              <TouchableOpacity activeOpacity={0.85} onPress={() => handleOpenImage(item.imageUrl!)}>
-                <Image source={{ uri: item.imageUrl }} style={styles.chatImage} resizeMode="cover" />
-              </TouchableOpacity>
+            {isImageMsg ? (
+              <Image source={{ uri: item.imageUrl! }} style={styles.chatImage} resizeMode="cover" />
             ) : (
               <Text style={[styles.messageText, { color: colors.textPrimary }, isOwn && styles.ownMessageText]}>
                 {item.text}
@@ -241,6 +240,27 @@ export function ChatScreen(): React.JSX.Element {
           {!isOwn && (
             <AvatarCircle name={recipientName} size={28} />
           )}
+        </>
+      );
+
+      // Lift the tap handler to the outermost item level for image messages.
+      // TouchableOpacity nested deep inside an inverted FlatList item loses
+      // touch coordinate mapping on Android (scaleY transform issue).
+      if (isImageMsg) {
+        return (
+          <TouchableOpacity
+            style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}
+            activeOpacity={0.85}
+            onPress={() => handleOpenImage(item.imageUrl!)}
+          >
+            {bubbleInner}
+          </TouchableOpacity>
+        );
+      }
+
+      return (
+        <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
+          {bubbleInner}
         </View>
       );
     },
@@ -371,6 +391,15 @@ export function ChatScreen(): React.JSX.Element {
         onNavigateToDelivery={handleNavigateToDelivery}
       />
 
+      {/* Empty state — rendered outside the inverted FlatList to avoid RTL mirror transform */}
+      {messages.length === 0 && (
+        <View style={styles.emptyChat}>
+          <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
+            {t('chat.startConversation', { name: recipientName })}
+          </Text>
+        </View>
+      )}
+
       {/* Messages list */}
       <FlatList
         ref={flatListRef}
@@ -379,13 +408,6 @@ export function ChatScreen(): React.JSX.Element {
         renderItem={renderMessage}
         inverted
         contentContainerStyle={styles.messagesList}
-        ListEmptyComponent={
-          <View style={styles.emptyChat}>
-            <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
-              {t('chat.startConversation', { name: recipientName })}
-            </Text>
-          </View>
-        }
       />
 
       {/* Input bar or closed banner */}
@@ -623,7 +645,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 48,
-    transform: [{ scaleY: -1 }], // Counteract inverted FlatList only — no scaleX (it mirrors Hebrew text)
   },
   emptyChatText: {
     fontSize: 15,
