@@ -39,6 +39,31 @@ export const onReportCreate = onDocumentCreated(
 
       const categoryLabel = categoryLabels[report.category] ?? report.category;
 
+      // Fetch reporter + reported user in parallel for the admin email
+      const reporterId: string | undefined = report.reporterUserId;
+      const reportedId: string | undefined = report.reportedUserId;
+
+      const [reporterDoc, reportedDoc] = await Promise.all([
+        reporterId ? db.collection("users").doc(reporterId).get() : Promise.resolve(null),
+        reportedId ? db.collection("users").doc(reportedId).get() : Promise.resolve(null),
+      ]);
+
+      const reporter = reporterDoc?.data();
+      const reported = reportedDoc?.data();
+
+      const userRow = (label: string, data: Record<string, unknown> | undefined, uid: string | undefined, bg: string) => {
+        if (!data || !uid) return `<tr style="background:${bg}"><td style="padding:8px 12px;font-weight:bold">${label}</td><td style="padding:8px 12px">—</td></tr>`;
+        const name = (data.fullName || data.displayName || "—") as string;
+        const phone = (data.phone || "—") as string;
+        const email = (data.email || "—") as string;
+        return `<tr style="background:${bg}"><td style="padding:8px 12px;font-weight:bold;vertical-align:top">${label}</td><td style="padding:8px 12px">
+          <strong>${name}</strong><br/>
+          📞 <a href="tel:${phone}" style="color:#1565C0;text-decoration:none">${phone}</a><br/>
+          ✉️ <a href="mailto:${email}" style="color:#1565C0;text-decoration:none">${email}</a><br/>
+          <a href="https://admin.mooviz.co.il/users/${uid}" style="font-size:12px;color:#9ca3af">פתח פרופיל</a>
+        </td></tr>`;
+      };
+
       // Email to admin
       await transporter.sendMail({
         from: `Mooviz Social Deliveries <${smtpUser.value()}>`,
@@ -49,8 +74,8 @@ export const onReportCreate = onDocumentCreated(
             <h2 style="color:#D32F2F">דיווח חדש התקבל</h2>
             <table style="border-collapse:collapse;width:100%">
               <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold">קטגוריה</td><td style="padding:8px 12px">${categoryLabel}</td></tr>
-              <tr><td style="padding:8px 12px;font-weight:bold">מדווח על</td><td style="padding:8px 12px">${report.reportedUserId || "—"}</td></tr>
-              <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold">מדווח ע"י</td><td style="padding:8px 12px">${report.reporterUserId || "—"}</td></tr>
+              ${userRow("מדווח על", reported, reportedId, "#ffffff")}
+              ${userRow("מדווח ע\"י", reporter, reporterId, "#f5f5f5")}
               <tr><td style="padding:8px 12px;font-weight:bold">תיאור</td><td style="padding:8px 12px">${report.description || "—"}</td></tr>
               <tr style="background:#f5f5f5"><td style="padding:8px 12px;font-weight:bold">משלוח</td><td style="padding:8px 12px">${report.deliveryId || "—"}</td></tr>
             </table>
@@ -60,11 +85,9 @@ export const onReportCreate = onDocumentCreated(
       });
       logger.info("Report admin email sent", { reportId });
 
-      // Confirmation email to reporter
-      const reporterId: string | undefined = report.reporterUserId;
+      // Confirmation email to reporter (reuse already-fetched reporter data)
       if (reporterId) {
-        const reporterDoc = await db.collection("users").doc(reporterId).get();
-        const reporterEmail: string | undefined = reporterDoc.data()?.email;
+        const reporterEmail: string | undefined = reporter?.email as string | undefined;
         if (reporterEmail) {
           await transporter.sendMail({
             from: `Mooviz Social Deliveries <${smtpUser.value()}>`,
