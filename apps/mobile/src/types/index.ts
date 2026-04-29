@@ -56,7 +56,7 @@ export interface User {
   driverAvailable: boolean;
   driverUnlocked: boolean;
   city: string | null;
-  kycStatus: KycStatus;
+  kycStatus: KycStatus | null;
   kycDocumentURL: string | null;
   kycIdURL: string | null;
   ratingAsDriver: UserRating;

@@ -260,6 +260,7 @@ export const strings = {
     submitForApproval: { he: 'שלח לאישור', en: 'Submit for approval' } as LocaleStrings,
     updateDocuments: { he: 'עדכן מסמכים', en: 'Update documents' } as LocaleStrings,
     status: { he: 'סטטוס', en: 'Status' } as LocaleStrings,
+    notSubmitted: { he: 'לא הוגש', en: 'Not submitted' } as LocaleStrings,
     pending: { he: 'ממתין לאישור', en: 'Pending approval' } as LocaleStrings,
     approved: { he: 'מאושר', en: 'Approved' } as LocaleStrings,
     rejected: { he: 'נדחה - יש להעלות מסמכים חדשים', en: 'Rejected - upload new documents' } as LocaleStrings,

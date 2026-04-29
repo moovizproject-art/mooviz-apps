@@ -296,8 +296,6 @@ export async function createUserDocument(
     ageRange: data.ageRange || '',
     role: 'sender',
     profilePhotoURL: '',
-    kycDocumentURL: '',
-    kycStatus: 'pending',
     ratingAsDriver: { average: 0, count: 0 },
     ratingAsSender: { average: 0, count: 0 },
     completedDeliveries: 0,

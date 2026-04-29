@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DocumentSnapshot } from 'firebase/firestore';
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { getUsers, getUserById, type UsersQueryParams, type AppUser } from '../services/users';
 import {
   getDeliveries,
@@ -13,32 +13,17 @@ import { getReports, type ReportsQueryParams } from '../services/reports';
 // ─── Users ──────────────────────────────────────────────
 
 export function useUsers(params: UsersQueryParams = {}) {
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
-
-  // Reset pagination cursor whenever filter params change
-  const filterKey = JSON.stringify({ role: params.role, status: params.status, kycStatus: params.kycStatus });
-  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
-  if (filterKey !== prevFilterKey) {
-    setLastDoc(null);
-    setPrevFilterKey(filterKey);
-  }
-
+  // No cursor/pagination: pageSize=200 covers all users.
+  // Cursor-based pagination caused empty results on filter change because
+  // React Query's refetchOnWindowFocus would re-run with a stale startAfter cursor.
   const queryResult = useQuery({
     queryKey: ['users', params],
-    queryFn: async () => {
-      const result = await getUsers({ ...params, lastDoc: lastDoc ?? undefined });
-      setLastDoc(result.lastDoc);
-      return result.users;
-    },
+    queryFn: () => getUsers(params).then((r) => r.users),
+    refetchOnWindowFocus: false,
+    refetchInterval: 30_000,
   });
 
-  const loadMore = useCallback(() => {
-    if (lastDoc) {
-      queryResult.refetch();
-    }
-  }, [lastDoc, queryResult]);
-
-  return { ...queryResult, loadMore, hasMore: lastDoc !== null };
+  return { ...queryResult, loadMore: () => {}, hasMore: false };
 }
 
 export function useUser(userId: string) {

@@ -8,7 +8,8 @@ import { useUsers } from '../hooks/useFirestore';
 import { useI18n } from '../i18n/I18nContext';
 import type { AppUser, UserRole, UserStatus, KycStatus } from '../services/users';
 
-const kycBadgeClass: Record<KycStatus, string> = {
+const kycBadgeClass: Record<KycStatus | 'none', string> = {
+  none: 'bg-gray-100 text-gray-400',
   pending: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
@@ -24,7 +25,7 @@ const statusBadgeClass: Record<UserStatus, string> = {
 // "userType" combines role + driverUnlocked into a meaningful admin filter:
 // 'sender'         = role === 'sender' (server-side)
 // 'driver'         = driverUnlocked === true (client-side: KYC-approved drivers)
-// 'pending_review' = kycStatus === 'pending' + has docs (client-side)
+// 'pending_review' = kycStatus === 'pending' (submitted docs, awaiting review)
 type UserTypeFilter = '' | 'sender' | 'driver' | 'pending_review';
 
 export default function UsersPage() {
@@ -70,16 +71,12 @@ export default function UsersPage() {
       key: 'kycStatus',
       label: t('users.kyc'),
       render: (user) => {
-        const hasDocs = !!(user.kycDocumentURL || user.kycIdURL);
+        const status = user.kycStatus ?? 'none';
+        const label = status === 'none' ? '—' : status === 'pending' ? '⏳ ממתין לאישור' : status;
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${kycBadgeClass[user.kycStatus]}`}>
-              {user.kycStatus === 'pending' && hasDocs ? '⏳ ממתין לאישור' : user.kycStatus}
-            </span>
-            {user.kycStatus === 'pending' && !hasDocs && (
-              <span className="text-xs text-gray-400">לא הגיש מסמכים</span>
-            )}
-          </div>
+          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${kycBadgeClass[status]}`}>
+            {label}
+          </span>
         );
       },
     },

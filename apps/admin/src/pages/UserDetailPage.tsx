@@ -110,7 +110,9 @@ export default function UserDetailPage() {
     ? 'bg-green-100 text-green-800'
     : user.kycStatus === 'rejected'
       ? 'bg-red-100 text-red-800'
-      : 'bg-yellow-100 text-yellow-800';
+      : user.kycStatus === 'pending'
+        ? 'bg-yellow-100 text-yellow-800'
+        : 'bg-gray-100 text-gray-400';
 
   return (
     <div className="space-y-6">
@@ -246,7 +248,7 @@ export default function UserDetailPage() {
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-900">KYC Verification</h3>
           <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${kycStatusColor}`}>
-            {user.kycStatus.toUpperCase()}
+            {user.kycStatus ? user.kycStatus.toUpperCase() : '—'}
           </span>
         </div>
 

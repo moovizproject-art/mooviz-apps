@@ -140,7 +140,6 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
           role: 'sender',
           driverUnlocked: false,
           driverAvailable: false,
-          kycStatus: 'pending',
           fcmTokens: [],
           location: { lat: 0, lng: 0, geohash: '' },
           createdAt: firestore.FieldValue.serverTimestamp(),

@@ -30,7 +30,7 @@ export interface AppUser {
   role: UserRole;
   activeMode: 'sender' | 'driver' | null;
   status: UserStatus;
-  kycStatus: KycStatus;
+  kycStatus: KycStatus | null;
   kycDocumentURL: string | null;
   kycIdURL: string | null;
   kycRejectionReason: string | null;
@@ -83,9 +83,9 @@ function normalizeUser(docSnap: DocumentSnapshot): AppUser {
     role: data.role ?? 'sender',
     activeMode: data.activeMode ?? null,
     status: data.status ?? 'active',
-    kycStatus: data.kycStatus ?? 'pending',
-    kycDocumentURL: data.kycDocumentURL ?? null,
-    kycIdURL: data.kycIdURL ?? null,
+    kycStatus: data.kycStatus ?? null,
+    kycDocumentURL: data.kycDocumentURL || null,
+    kycIdURL: data.kycIdURL || null,
     kycRejectionReason: data.kycRejectionReason ?? null,
     driverUnlocked: data.driverUnlocked ?? false,
     profilePhotoURL: data.profilePhotoURL ?? null,
@@ -116,13 +116,16 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
   }
   // kycStatus filtered client-side — compound index not guaranteed in prod
 
-  constraints.push(orderBy('createdAt', 'desc'));
-  if (params.pageSize) {
-    constraints.push(limit(params.pageSize));
-  }
-
+  // orderBy('createdAt') silently excludes documents that lack the field
+  // (e.g. Glide-migrated users). Only apply it when paginating with a cursor,
+  // where consistent ordering is required. For initial loads, skip orderBy
+  // and sort client-side so all documents are included regardless.
   if (params.lastDoc) {
+    constraints.push(orderBy('createdAt', 'desc'));
+    if (params.pageSize) constraints.push(limit(params.pageSize));
     constraints.push(startAfter(params.lastDoc));
+  } else if (params.pageSize) {
+    constraints.push(limit(params.pageSize));
   }
 
   const q = query(usersRef, ...constraints);
@@ -131,7 +134,8 @@ export async function getUsers(params: UsersQueryParams = {}): Promise<{
   let users = snapshot.docs.map(normalizeUser);
   if (params.kycStatus) {
     if (params.kycStatus === 'pending') {
-      // "Pending" filter = submitted docs AND awaiting review, not just newly registered users
+      // Only show users who actually submitted documents — kycStatus='pending' alone
+      // can be written by old app versions at registration without any docs.
       users = users.filter((u) => u.kycStatus === 'pending' && !!(u.kycDocumentURL || u.kycIdURL));
     } else {
       users = users.filter((u) => u.kycStatus === params.kycStatus);

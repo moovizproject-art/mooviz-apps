@@ -43,7 +43,7 @@ export function DriverKYCScreen(): React.JSX.Element {
   const [remoteIdUrl, setRemoteIdUrl] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(currentUser?.kycStatus === 'pending');
   const [isUploading, setIsUploading] = useState(false);
-  const [kycStatus, setKycStatus] = useState<KycStatus>(currentUser?.kycStatus || 'pending');
+  const [kycStatus, setKycStatus] = useState<KycStatus | null>(currentUser?.kycStatus ?? null);
 
   // Listen for KYC status changes in real-time (admin approval/rejection)
   useEffect(() => {
@@ -213,8 +213,9 @@ export function DriverKYCScreen(): React.JSX.Element {
       case 'rejected':
         return { text: t('kyc.rejected'), color: colors.error };
       case 'pending':
-      default:
         return { text: t('kyc.pending'), color: colors.warning };
+      default:
+        return { text: t('kyc.notSubmitted'), color: colors.textSecondary };
     }
   };
 
