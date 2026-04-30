@@ -47,7 +47,6 @@ export default function UsersPage() {
     status: statusFilter || undefined,
     kycStatus: kycStatusParam,
     driverUnlocked: driverUnlockedParam,
-    pageSize: 200,
   });
 
   const columns: Column<AppUser>[] = [
