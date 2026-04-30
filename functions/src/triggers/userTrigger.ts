@@ -69,7 +69,7 @@ export const onUserCreate = onDocumentCreated(
     // Enforce: kycStatus is only meaningful when docs are submitted.
     // Old app versions write kycStatus='pending' at registration with no docs.
     // Remove it so the admin KYC filter only shows real submissions.
-    const hasKycDoc = !!(data as Record<string, unknown>).kycDocumentURL;
+    const hasKycDoc = !!(data as Record<string, unknown>).kycDocumentURL || !!(data as Record<string, unknown>).kycIdURL;
     if (data.kycStatus === "pending" && !hasKycDoc) {
       defaults.kycStatus = admin.firestore.FieldValue.delete();
     }
@@ -163,7 +163,7 @@ export const onUserUpdate = onDocumentUpdated(
 
     // Enforce: old app versions write kycStatus='pending' at profile completion
     // without uploading docs. Remove it so only real submissions appear in admin.
-    const afterHasKycDoc = !!(after as any).kycDocumentURL;
+    const afterHasKycDoc = !!(after as any).kycDocumentURL || !!(after as any).kycIdURL;
     if ((after as any).kycStatus === 'pending' && !afterHasKycDoc) {
       await change.after.ref.update({
         kycStatus: admin.firestore.FieldValue.delete(),
