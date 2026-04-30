@@ -13,12 +13,10 @@ import { getReports, type ReportsQueryParams } from '../services/reports';
 // ─── Users ──────────────────────────────────────────────
 
 export function useUsers(params: UsersQueryParams = {}) {
-  // No cursor/pagination: pageSize=200 covers all users.
-  // Cursor-based pagination caused empty results on filter change because
-  // React Query's refetchOnWindowFocus would re-run with a stale startAfter cursor.
   const queryResult = useQuery({
     queryKey: ['users', params],
     queryFn: () => getUsers(params).then((r) => r.users),
+    staleTime: 0,
     refetchOnWindowFocus: false,
     refetchInterval: 30_000,
   });
