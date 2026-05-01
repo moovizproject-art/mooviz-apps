@@ -4,6 +4,7 @@ import { Logging } from "@google-cloud/logging";
 import { logger } from "../utils/logger";
 
 const db = admin.firestore();
+const logging = new Logging();
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,27 +31,20 @@ interface SystemVersions {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function assertAdmin(uid: string): Promise<void> {
-  const userRecord = await admin.auth().getUser(uid);
-  const isAdmin = userRecord.customClaims?.admin === true;
-  if (!isAdmin) {
-    throw new HttpsError("permission-denied", "Admin access required");
-  }
+function assertAdmin(request: { auth?: { uid: string; token: Record<string, unknown> } }): void {
+  if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Must be signed in");
+  if (request.auth.token?.admin !== true) throw new HttpsError("permission-denied", "Admin access required");
 }
 
-/** Strip revision suffix (e.g. `createdelivery-6abc1` → `createdelivery`). */
+/** Strip revision suffix (e.g. `createdelivery-6abc1def` → `createdelivery`). */
 function stripRevisionSuffix(name: string): string {
-  return name.replace(/-[a-z0-9]{5,}$/, "");
+  return name.replace(/-[a-z0-9]{8}$/, "");
 }
 
 // ─── getLogs ─────────────────────────────────────────────────────────────────
 
 export const getLogs = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Authentication required");
-  }
-  await assertAdmin(uid);
+  assertAdmin(request);
 
   const rawHours: unknown = request.data?.hours;
   const rawSeverity: unknown = request.data?.severity;
@@ -59,13 +53,13 @@ export const getLogs = onCall(async (request) => {
 
   // Clamp hours 1–72, default 72
   let hours = 72;
-  if (typeof rawHours === "number") {
+  if (typeof rawHours === "number" && Number.isFinite(rawHours)) {
     hours = Math.min(72, Math.max(1, Math.floor(rawHours)));
   }
 
   // Clamp pageSize 1–500, default 200
   let pageSize = 200;
-  if (typeof rawPageSize === "number") {
+  if (typeof rawPageSize === "number" && Number.isFinite(rawPageSize)) {
     pageSize = Math.min(500, Math.max(1, Math.floor(rawPageSize)));
   }
 
@@ -84,6 +78,12 @@ export const getLogs = onCall(async (request) => {
     typeof rawFunctionName === "string" && rawFunctionName.trim()
       ? rawFunctionName.trim().toLowerCase()
       : null;
+
+  if (functionName !== null) {
+    if (!/^[a-z0-9_-]{1,63}$/.test(functionName)) {
+      throw new HttpsError("invalid-argument", "functionName must be lowercase alphanumeric, hyphens, or underscores (max 63 chars)");
+    }
+  }
 
   // Build filter
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
@@ -108,8 +108,6 @@ export const getLogs = onCall(async (request) => {
   if (!projectId) {
     throw new HttpsError("internal", "GCLOUD_PROJECT not set");
   }
-
-  const logging = new Logging();
 
   let rawEntries: unknown[];
   try {
@@ -193,11 +191,7 @@ export const getLogs = onCall(async (request) => {
 // ─── getSystemVersions ────────────────────────────────────────────────────────
 
 export const getSystemVersions = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Authentication required");
-  }
-  await assertAdmin(uid);
+  assertAdmin(request);
 
   const doc = await db.collection("system").doc("versions").get();
 
@@ -241,11 +235,7 @@ export const getSystemVersions = onCall(async (request) => {
 // ─── recordDeploy ─────────────────────────────────────────────────────────────
 
 export const recordDeploy = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Authentication required");
-  }
-  await assertAdmin(uid);
+  assertAdmin(request);
 
   const {
     functionsVersion,
@@ -258,6 +248,13 @@ export const recordDeploy = onCall(async (request) => {
     mobileIos?: string;
     mobileAndroid?: string;
   } = request.data ?? {};
+
+  const MAX_LEN = 100;
+  for (const [key, val] of Object.entries({ functionsVersion, functionsCommit, mobileIos, mobileAndroid })) {
+    if (val !== undefined && val.length > MAX_LEN) {
+      throw new HttpsError("invalid-argument", `${key} exceeds maximum length of ${MAX_LEN} characters`);
+    }
+  }
 
   const hasFunctions =
     typeof functionsVersion === "string" || typeof functionsCommit === "string";
