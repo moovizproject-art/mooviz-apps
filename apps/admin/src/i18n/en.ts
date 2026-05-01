@@ -310,6 +310,7 @@ const en: Record<string, string> = {
   'logs.versions.deployedAt': 'Deployed',
   'logs.versions.unknown': 'Unknown',
   'logs.versions.record': 'Record Deploy',
+  'logs.lastUpdated': 'Updated',
 };
 
 export default en;

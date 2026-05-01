@@ -120,7 +120,10 @@ function VersionPanel() {
           {v?.functions.commit && <p className="font-mono text-gray-500">{v.functions.commit}</p>}
           {v?.functions.deployedAt && (
             <p className="mt-1 text-gray-400">
-              {t('logs.versions.deployedAt')}: {format(new Date(v.functions.deployedAt), 'dd/MM HH:mm')}
+              {t('logs.versions.deployedAt')}: {(() => {
+                try { return format(new Date(v.functions.deployedAt!), 'dd/MM HH:mm'); }
+                catch { return v.functions.deployedAt; }
+              })()}
             </p>
           )}
         </div>
@@ -158,7 +161,7 @@ function VersionPanel() {
           </button>
           {mutation.isError && (
             <p className="col-span-2 text-xs text-red-600">
-              {(mutation.error as Error)?.message ?? 'Error saving'}
+              {mutation.error instanceof Error ? mutation.error.message : 'Error saving'}
             </p>
           )}
         </div>
@@ -174,7 +177,7 @@ export default function LogsPage() {
   const [hours, setHours] = useState(72);
   const [search, setSearch] = useState('');
 
-  const { data, isLoading, refetch, isFetching, dataUpdatedAt } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ['logs', severity, functionName, hours],
     queryFn: () =>
       fetchLogs({
@@ -209,7 +212,7 @@ export default function LogsPage() {
         <div className="flex items-center gap-3">
           {dataUpdatedAt > 0 && (
             <span className="text-xs text-gray-400">
-              עודכן: {format(new Date(dataUpdatedAt), 'HH:mm:ss')}
+              {t('logs.lastUpdated')}: {format(new Date(dataUpdatedAt), 'HH:mm:ss')}
             </span>
           )}
           <button
@@ -286,12 +289,16 @@ export default function LogsPage() {
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         {isLoading ? (
           <p className="p-8 text-center text-sm text-gray-400">{t('logs.loading')}</p>
+        ) : isError ? (
+          <p className="p-8 text-center text-sm text-red-500">
+            {(error as Error)?.message ?? 'Failed to load logs'}
+          </p>
         ) : entries.length === 0 ? (
           <p className="p-8 text-center text-sm text-gray-400">{t('logs.empty')}</p>
         ) : (
           <div className="max-h-[calc(100vh-420px)] divide-y divide-gray-100 overflow-y-auto">
-            {entries.map((entry, i) => (
-              <LogRow key={`${entry.timestamp}-${i}`} entry={entry} />
+            {entries.map((entry) => (
+              <LogRow key={`${entry.timestamp}-${entry.functionName}-${entry.message.slice(0, 30)}`} entry={entry} />
             ))}
           </div>
         )}

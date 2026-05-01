@@ -310,6 +310,7 @@ const he: Record<string, string> = {
   'logs.versions.deployedAt': 'פורס',
   'logs.versions.unknown': 'לא ידוע',
   'logs.versions.record': 'עדכן גרסה',
+  'logs.lastUpdated': 'עודכן',
 };
 
 export default he;
