@@ -41,6 +41,12 @@ export {
 export { reviewKYC } from "./callable/kycCallable";
 
 export {
+  getLogs,
+  getSystemVersions,
+  recordDeploy,
+} from "./callable/adminCallable";
+
+export {
   uploadProfilePhoto,
   getAuthorizedPhoto,
   decryptDocument,
