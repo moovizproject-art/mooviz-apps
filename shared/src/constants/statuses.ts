@@ -125,6 +125,14 @@ export const TIMEOUT_ELIGIBLE_STATUSES: DeliveryStatus[] = [
 ];
 
 /**
- * Default timeout duration in hours for new deliveries.
+ * Timeout for immediate (asap) deliveries: 48h from creation.
  */
+export const ASAP_TIMEOUT_HOURS = 48;
+
+/**
+ * Timeout for scheduled deliveries: 24h after the chosen pickup date.
+ */
+export const SCHEDULED_TIMEOUT_HOURS_AFTER_DATE = 24;
+
+/** @deprecated Use ASAP_TIMEOUT_HOURS or SCHEDULED_TIMEOUT_HOURS_AFTER_DATE */
 export const DEFAULT_TIMEOUT_HOURS = 24;

@@ -4,7 +4,8 @@ import {
   Delivery,
   DeliveryStatus,
   StatusEntry,
-  DEFAULT_TIMEOUT_HOURS,
+  ASAP_TIMEOUT_HOURS,
+  SCHEDULED_TIMEOUT_HOURS_AFTER_DATE,
 } from "@mooviz/shared";
 import {
   assertValidTransition,
@@ -221,9 +222,10 @@ export const createDelivery = onCall(async (request) => {
 
   // --- Build delivery document (HLD-canonical format) ---
   const now = admin.firestore.Timestamp.now();
-  const timeoutAt = admin.firestore.Timestamp.fromMillis(
-    now.toMillis() + DEFAULT_TIMEOUT_HOURS * 60 * 60 * 1000
-  );
+  // Immediate deliveries expire 48h from creation; scheduled ones expire 24h after pickup date
+  const timeoutAt = pickupDate === "asap"
+    ? admin.firestore.Timestamp.fromMillis(now.toMillis() + ASAP_TIMEOUT_HOURS * 60 * 60 * 1000)
+    : admin.firestore.Timestamp.fromMillis(pickupDate.toMillis() + SCHEDULED_TIMEOUT_HOURS_AFTER_DATE * 60 * 60 * 1000);
 
   // Extract city from address string (Google format: "Street, City, Postal, Country")
   function extractCity(address: string, fallbackCity?: string): string {

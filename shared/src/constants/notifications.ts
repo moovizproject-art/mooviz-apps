@@ -6,6 +6,7 @@ export type NotificationEventType =
   | "delivery_delivered"
   | "payment_confirmed"
   | "delivery_cancelled"
+  | "delivery_expired"
   | "new_chat_message"
   | "driver_selected"
   | "driver_confirmed"
@@ -162,6 +163,15 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationEventType, NotificationT
     bodyEn: "The delivery has been waiting for your payment confirmation for {{hoursWaiting}} hours",
     recipient: "both",
     dataKeys: ["deliveryId", "hoursWaiting"],
+  },
+  delivery_expired: {
+    event: "delivery_expired",
+    titleHe: "המשלוח בוטל — לא נמצא נהג",
+    titleEn: "Delivery Cancelled — No Driver Found",
+    bodyHe: "לא נמצא נהג למשלוח מ-{{pickupCity}} ל-{{destinationCity}}. שקול להעלות את המחיר (כרגע {{price}} ₪) כדי למשוך נהגים",
+    bodyEn: "No driver was found for your delivery from {{pickupCity}} to {{destinationCity}}. Consider raising the price (currently {{price}} ₪) to attract drivers",
+    recipient: "sender",
+    dataKeys: ["deliveryId", "pickupCity", "destinationCity", "price"],
   },
 };
 

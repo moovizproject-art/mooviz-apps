@@ -5,6 +5,7 @@ import {
   StatusEntry,
   TIMEOUT_ELIGIBLE_STATUSES,
 } from "@mooviz/shared";
+import { sendDeliveryNotification } from "../services/notificationService";
 import { logger } from "../utils/logger";
 
 const db = admin.firestore();
@@ -28,6 +29,15 @@ export const timeoutCleanup = onSchedule(
     let totalProcessed = 0;
     let totalCancelled = 0;
     let totalReverted = 0;
+
+    // Collect deliveries cancelled by timeout so we can notify senders after batch commit
+    const expiredToNotify: Array<{
+      deliveryId: string;
+      senderId: string;
+      price: number;
+      pickupCity: string;
+      destinationCity: string;
+    }> = [];
 
     for (const status of TIMEOUT_ELIGIBLE_STATUSES) {
       const snapshot = await db
@@ -99,6 +109,17 @@ export const timeoutCleanup = onSchedule(
             updatedAt: now,
           });
 
+          // Queue expiry notification for the sender (only when no driver was assigned)
+          if (delivery.senderId) {
+            expiredToNotify.push({
+              deliveryId: doc.id,
+              senderId: delivery.senderId,
+              price: delivery.price ?? delivery.suggestedPrice ?? 0,
+              pickupCity: delivery.pickup?.city ?? "",
+              destinationCity: delivery.destination?.city ?? "",
+            });
+          }
+
           totalCancelled++;
         }
 
@@ -122,6 +143,24 @@ export const timeoutCleanup = onSchedule(
     }
 
     logger.info("Timeout cleanup complete", { totalProcessed, totalCancelled, totalReverted });
+
+    // Send expiry notifications — fire-and-forget, don't block cleanup on FCM failures
+    for (const expired of expiredToNotify) {
+      sendDeliveryNotification(
+        expired.deliveryId,
+        "delivery_expired",
+        {
+          pickupCity: expired.pickupCity,
+          destinationCity: expired.destinationCity,
+          price: String(expired.price),
+        }
+      ).catch((err) =>
+        logger.error("timeoutCleanup: delivery_expired notification failed", {
+          deliveryId: expired.deliveryId,
+          error: String(err),
+        })
+      );
+    }
 
     // awaiting_payment timeout: 48h → send reminder; 72h → auto-complete
     const awaitingPaymentQuery = db

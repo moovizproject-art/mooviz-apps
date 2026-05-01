@@ -9,7 +9,8 @@ import {
   StatusEntry,
   validateDeliveryCreate,
   validateStatusTransition,
-  DEFAULT_TIMEOUT_HOURS,
+  ASAP_TIMEOUT_HOURS,
+  SCHEDULED_TIMEOUT_HOURS_AFTER_DATE,
 } from "@mooviz/shared";
 import { sendDeliveryNotification, sendPushNotification } from "../services/notificationService";
 import { getNearbyDriverTokensMultiLocation } from "../services/geohashService";
@@ -111,10 +112,11 @@ export const onDeliveryCreate = onDocumentCreated(
       note: "Delivery created",
     };
 
-    // Calculate timeout
-    const timeoutAt = admin.firestore.Timestamp.fromMillis(
-      now.toMillis() + DEFAULT_TIMEOUT_HOURS * 60 * 60 * 1000
-    );
+    // Immediate deliveries expire 48h from creation; scheduled ones expire 24h after pickup date
+    const rawPickupDate = data.pickupDate;
+    const timeoutAt = (!rawPickupDate || rawPickupDate === "asap")
+      ? admin.firestore.Timestamp.fromMillis(now.toMillis() + ASAP_TIMEOUT_HOURS * 60 * 60 * 1000)
+      : admin.firestore.Timestamp.fromMillis((rawPickupDate as admin.firestore.Timestamp).toMillis() + SCHEDULED_TIMEOUT_HOURS_AFTER_DATE * 60 * 60 * 1000);
 
     // Lookup sender info for denormalization
     let senderName = "";
