@@ -12,6 +12,7 @@ import SettingsPage from './pages/SettingsPage';
 import EmailPage from './pages/EmailPage';
 import MigrationPage from './pages/MigrationPage';
 import ChatsPage from './pages/ChatsPage';
+import LogsPage from './pages/LogsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="chats" element={<ChatsPage />} />
         <Route path="email" element={<EmailPage />} />
         <Route path="migration" element={<MigrationPage />} />
+        <Route path="logs" element={<LogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
