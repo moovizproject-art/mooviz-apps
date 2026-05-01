@@ -287,6 +287,29 @@ const en: Record<string, string> = {
   'migration.note': 'Note',
   'migration.noteText': 'This imports user profiles to Firestore only. Users will need to sign up or reset their password when they first use the mobile app. Existing users (by email) are skipped automatically.',
   'migration.deleteAll': 'Delete Migrated Data',
+
+  // Logs
+  'nav.logs': 'Logs',
+  'logs.title': 'System Logs',
+  'logs.search': 'Search logs...',
+  'logs.severity.all': 'All',
+  'logs.severity.error': 'Errors',
+  'logs.severity.warning': 'Warnings',
+  'logs.severity.info': 'Info',
+  'logs.filter.function': 'Function',
+  'logs.filter.function.all': 'All Functions',
+  'logs.filter.hours': 'Last N hours',
+  'logs.refresh': 'Refresh',
+  'logs.empty': 'No logs to display',
+  'logs.loading': 'Loading logs...',
+  'logs.count': '{{count}} entries',
+  'logs.versions.title': 'Deployed Versions',
+  'logs.versions.functions': 'Functions',
+  'logs.versions.ios': 'iOS',
+  'logs.versions.android': 'Android',
+  'logs.versions.deployedAt': 'Deployed',
+  'logs.versions.unknown': 'Unknown',
+  'logs.versions.record': 'Record Deploy',
 };
 
 export default en;

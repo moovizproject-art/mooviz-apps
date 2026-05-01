@@ -287,6 +287,29 @@ const he: Record<string, string> = {
   'migration.note': 'הערה',
   'migration.noteText': 'היבוא מוסיף פרופילי משתמשים ל-Firestore בלבד. משתמשים יצטרכו להירשם או לאפס סיסמה בכניסה הראשונה לאפליקציה. משתמשים קיימים (לפי אימייל) מדולגים אוטומטית.',
   'migration.deleteAll': 'מחק נתונים מיובאים',
+
+  // Logs
+  'nav.logs': 'לוגים',
+  'logs.title': 'לוגי מערכת',
+  'logs.search': 'חיפוש בלוגים...',
+  'logs.severity.all': 'הכל',
+  'logs.severity.error': 'שגיאות',
+  'logs.severity.warning': 'אזהרות',
+  'logs.severity.info': 'מידע',
+  'logs.filter.function': 'פונקציה',
+  'logs.filter.function.all': 'כל הפונקציות',
+  'logs.filter.hours': 'שעות אחרונות',
+  'logs.refresh': 'רענן',
+  'logs.empty': 'אין לוגים לתצוגה',
+  'logs.loading': 'טוען לוגים...',
+  'logs.count': '{{count}} רשומות',
+  'logs.versions.title': 'גרסאות פרוסות',
+  'logs.versions.functions': 'Functions',
+  'logs.versions.ios': 'iOS',
+  'logs.versions.android': 'Android',
+  'logs.versions.deployedAt': 'פורס',
+  'logs.versions.unknown': 'לא ידוע',
+  'logs.versions.record': 'עדכן גרסה',
 };
 
 export default he;
