@@ -31,9 +31,16 @@ interface SystemVersions {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function assertAdmin(request: { auth?: { uid: string; token: Record<string, unknown> } }): void {
+async function assertAdmin(request: { auth?: { uid: string; token: Record<string, unknown> } }): Promise<void> {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Must be signed in");
-  if (request.auth.token?.admin !== true) throw new HttpsError("permission-denied", "Admin access required");
+  // Fast path: JWT custom claim
+  if (request.auth.token?.admin === true) return;
+  // Fallback: Firestore adminUids list (matches existing pattern in userCallable.ts)
+  const configDoc = await db.collection("adminActions").doc("config").get();
+  const adminUids: string[] = configDoc.exists ? (configDoc.data()?.adminUids ?? []) : [];
+  if (!adminUids.includes(request.auth.uid)) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
 }
 
 /** Strip revision suffix (e.g. `createdelivery-6abc1def` → `createdelivery`). */
@@ -44,7 +51,7 @@ function stripRevisionSuffix(name: string): string {
 // ─── getLogs ─────────────────────────────────────────────────────────────────
 
 export const getLogs = onCall(async (request) => {
-  assertAdmin(request);
+  await assertAdmin(request);
 
   const rawHours: unknown = request.data?.hours;
   const rawSeverity: unknown = request.data?.severity;
@@ -191,7 +198,7 @@ export const getLogs = onCall(async (request) => {
 // ─── getSystemVersions ────────────────────────────────────────────────────────
 
 export const getSystemVersions = onCall(async (request) => {
-  assertAdmin(request);
+  await assertAdmin(request);
 
   const doc = await db.collection("system").doc("versions").get();
 
@@ -235,7 +242,7 @@ export const getSystemVersions = onCall(async (request) => {
 // ─── recordDeploy ─────────────────────────────────────────────────────────────
 
 export const recordDeploy = onCall(async (request) => {
-  assertAdmin(request);
+  await assertAdmin(request);
 
   const {
     functionsVersion,
