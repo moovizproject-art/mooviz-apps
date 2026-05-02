@@ -31,11 +31,18 @@ interface SystemVersions {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+const ADMIN_EMAILS = new Set([
+  "tamir.konor@gmail.com",
+  "tamir@kal.solutions",
+  "admin@mooviz.co.il",
+]);
+
 async function assertAdmin(request: { auth?: { uid: string; token: Record<string, unknown> } }): Promise<void> {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Must be signed in");
-  // Fast path: JWT custom claim
-  if (request.auth.token?.admin === true) return;
-  // Fallback: Firestore adminUids list (matches existing pattern in userCallable.ts)
+  // Fast path: known admin email in JWT token
+  const email = request.auth.token?.email as string | undefined;
+  if (email && ADMIN_EMAILS.has(email)) return;
+  // Fallback: Firestore adminUids list (for future additional admins)
   const configDoc = await db.collection("adminActions").doc("config").get();
   const adminUids: string[] = configDoc.exists ? (configDoc.data()?.adminUids ?? []) : [];
   if (!adminUids.includes(request.auth.uid)) {
