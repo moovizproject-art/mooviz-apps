@@ -17,7 +17,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "deploy:functions": "firebase deploy --only functions",
-    "deploy:admin": "firebase deploy --only hosting"
+    "deploy:admin": "cd apps/admin && pnpm run build && cd ../.. && rm -rf hosting-dist/admin && cp -r apps/admin/dist hosting-dist/admin && firebase deploy --only hosting"
   },
   "devDependencies": {
     "firebase-tools": "^15.9.0",
