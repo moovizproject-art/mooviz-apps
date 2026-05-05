@@ -205,6 +205,21 @@ export const removeFCMToken = onCall(async (request) => {
 });
 
 /**
+ * Check whether a phone number is available for registration.
+ * Public endpoint (no auth required) — used by RegisterScreen before creating
+ * a Firebase Auth account so that we abort before any orphaned account is written.
+ * Returns { available: true } when the phone is not yet in use.
+ */
+export const checkPhoneAvailable = onCall(async (request) => {
+  const phone = typeof request.data.phone === "string" ? request.data.phone.trim() : "";
+  if (!phone || !/^\+[1-9]\d{6,14}$/.test(phone)) {
+    throw new HttpsError("invalid-argument", "phone in E.164 format is required");
+  }
+  const snap = await db.collection("users").where("phone", "==", phone).limit(1).get();
+  return { available: snap.empty };
+});
+
+/**
  * Create a new user profile document.
  * Called after Firebase Auth registration to set up the Firestore user doc.
  */

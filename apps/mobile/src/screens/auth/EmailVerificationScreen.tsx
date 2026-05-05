@@ -115,6 +115,10 @@ export function EmailVerificationScreen(): React.JSX.Element {
           </TouchableOpacity>
         )}
 
+        <Text style={[styles.spamHint, { color: colors.textSecondary }]}>
+          {t('auth.emailSpamHint')}
+        </Text>
+
         <TouchableOpacity onPress={handleLogout} style={styles.logoutLink}>
           <Text style={[styles.logoutText, { color: colors.error }]}>
             {t('auth.backToLogin')}
@@ -218,6 +222,13 @@ const styles = StyleSheet.create({
   resendText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  spamHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 20,
+    paddingHorizontal: 16,
   },
   logoutLink: {
     marginTop: 24,

@@ -80,13 +80,15 @@ function ensureEmulator() {
 }
 
 /** Get a Firestore instance authenticated as the given uid */
-function authedDb(uid: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function authedDb(uid: string): any {
   ensureEmulator();
   return testEnv.authenticatedContext(uid).firestore();
 }
 
 /** Get an unauthenticated Firestore instance */
-function unauthedDb() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unauthedDb(): any {
   ensureEmulator();
   return testEnv.unauthenticatedContext().firestore();
 }
@@ -95,7 +97,10 @@ function unauthedDb() {
 async function seedDoc(collectionPath: string, docId: string, data: Record<string, unknown>) {
   ensureEmulator();
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = context.firestore();
+    // context.firestore() returns a compat instance; cast to any so modular
+    // doc()/setDoc() helpers accept it without a type error.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: any = context.firestore();
     await setDoc(doc(db, collectionPath, docId), data);
   });
 }

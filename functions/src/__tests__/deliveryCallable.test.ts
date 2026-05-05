@@ -278,7 +278,7 @@ describe("createDelivery", () => {
         auth: { uid: "sender-1" },
         data,
       })
-    ).rejects.toThrow(/pickup must have valid lat\/lng/);
+    ).rejects.toThrow(/יש לבחור כתובת איסוף תקינה מהמפה/);
   });
 
   test("rejects missing item description", async () => {
@@ -1245,7 +1245,7 @@ describe("cancelDelivery", () => {
 
     expect(result).toEqual({
       success: true,
-      message: "Delivery cancelled successfully",
+      message: "Delivery cancelled",
     });
 
     const updateArgs = mockTxnUpdate.mock.calls[0][1];
@@ -1280,7 +1280,7 @@ describe("cancelDelivery", () => {
 
     expect(result).toEqual({
       success: true,
-      message: "Delivery cancelled successfully",
+      message: "Delivery returned to new",
     });
   });
 

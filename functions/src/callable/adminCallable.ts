@@ -265,46 +265,69 @@ export const recordDeploy = onCall(async (request) => {
 
   const MAX_LEN = 100;
   for (const [key, val] of Object.entries({ functionsVersion, functionsCommit, mobileIos, mobileAndroid })) {
-    if (val !== undefined && val.length > MAX_LEN) {
+    if (val !== undefined && val.trim().length > MAX_LEN) {
       throw new HttpsError("invalid-argument", `${key} exceeds maximum length of ${MAX_LEN} characters`);
     }
   }
 
-  const hasFunctions =
-    typeof functionsVersion === "string" || typeof functionsCommit === "string";
-  const hasMobile =
-    typeof mobileIos === "string" || typeof mobileAndroid === "string";
+  // Trim values; treat empty/whitespace-only as absent
+  const fn = functionsVersion?.trim() || null;
+  const fc = functionsCommit?.trim() || null;
+  const mios = mobileIos?.trim() || null;
+  const mand = mobileAndroid?.trim() || null;
+
+  const hasFunctions = !!(fn || fc);
+  const hasMobile = !!(mios || mand);
 
   if (!hasFunctions && !hasMobile) {
     throw new HttpsError(
       "invalid-argument",
-      "At least one field must be provided (functionsVersion, functionsCommit, mobileIos, mobileAndroid)"
+      "At least one non-empty field must be provided (functionsVersion, functionsCommit, mobileIos, mobileAndroid)"
     );
   }
 
+  // Use dot-notation keys so update() writes nested paths correctly.
+  // set() with merge:true does NOT expand dot notation — it would create
+  // literal field names like "functions.version" rather than nested objects.
   const update: Record<string, unknown> = {};
 
   if (hasFunctions) {
-    if (typeof functionsVersion === "string") {
-      update["functions.version"] = functionsVersion;
-    }
-    if (typeof functionsCommit === "string") {
-      update["functions.commit"] = functionsCommit;
-    }
+    if (fn) update["functions.version"] = fn;
+    if (fc) update["functions.commit"] = fc;
     update["functions.deployedAt"] = admin.firestore.FieldValue.serverTimestamp();
   }
 
   if (hasMobile) {
-    if (typeof mobileIos === "string") {
-      update["mobile.ios"] = mobileIos;
-    }
-    if (typeof mobileAndroid === "string") {
-      update["mobile.android"] = mobileAndroid;
-    }
+    if (mios) update["mobile.ios"] = mios;
+    if (mand) update["mobile.android"] = mand;
     update["mobile.updatedAt"] = admin.firestore.FieldValue.serverTimestamp();
   }
 
-  await db.collection("system").doc("versions").set(update, { merge: true });
+  const docRef = db.collection("system").doc("versions");
+  try {
+    await docRef.update(update);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("NOT_FOUND") || msg.includes("No document to update")) {
+      // First-ever deploy — document doesn't exist yet. Convert dot-notation
+      // keys to nested objects for the initial set().
+      const initData: Record<string, unknown> = {};
+      for (const [path, val] of Object.entries(update)) {
+        const dot = path.indexOf(".");
+        if (dot !== -1) {
+          const top = path.slice(0, dot);
+          const sub = path.slice(dot + 1);
+          if (!initData[top]) initData[top] = {};
+          (initData[top] as Record<string, unknown>)[sub] = val;
+        } else {
+          initData[path] = val;
+        }
+      }
+      await docRef.set(initData);
+    } else {
+      throw err;
+    }
+  }
 
   logger.info("recordDeploy: system/versions updated", {
     hasFunctions,

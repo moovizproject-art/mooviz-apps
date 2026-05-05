@@ -17,6 +17,8 @@ const config: Config = {
       },
     ],
   },
+  // firestoreRules requires the Firestore emulator — run via `pnpm test:rules`
+  testPathIgnorePatterns: ["firestoreRules"],
   // Clear mocks between tests
   clearMocks: true,
   restoreMocks: true,

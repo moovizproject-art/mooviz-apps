@@ -18,7 +18,8 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { validatePhone, validateEmail, validateRequired } from '../../utils/validators';
 import firestore from '@react-native-firebase/firestore';
-import { registerWithEmail, signInWithEmail, createUserDocument, mapFirebaseAuthError } from '../../services/auth';
+import functions from '@react-native-firebase/functions';
+import { registerWithEmail, signInWithEmail, createUserDocument, normalizePhoneNumber, mapFirebaseAuthError } from '../../services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
@@ -108,6 +109,21 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       setIsLoading(true);
       setLoadingStep(0);
       setLoadingVisible(true);
+
+      // Check phone uniqueness BEFORE creating a Firebase Auth account.
+      // This prevents orphaned Auth records when the same person registers twice.
+      const normalizedPhone = normalizePhoneNumber(form.phone);
+      try {
+        const phoneCheck = await functions().httpsCallable('checkPhoneAvailable')({ phone: normalizedPhone });
+        if (!(phoneCheck.data as { available: boolean }).available) {
+          setLoadingVisible(false);
+          carAlert.show('error', t('auth.registerError'), t('auth.phoneAlreadyRegistered'));
+          return;
+        }
+      } catch {
+        // If the check itself fails (network, cold start), proceed — server-side
+        // createUser callable will still enforce uniqueness after Auth creation.
+      }
 
       // Save registration data BEFORE creating Auth user — useAuth auto-create reads this
       // to avoid race condition (onAuthStateChanged fires before createUserDocument)

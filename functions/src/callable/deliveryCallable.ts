@@ -1359,6 +1359,7 @@ export const cancelDelivery = onCall(async (request) => {
 
       txn.update(ref, {
         status: "new",
+        cancelledBy: uid,
         driverId: null,
         driverName: null,
         driverPhotoUrl: null,

@@ -161,6 +161,23 @@ export const onUserUpdate = onDocumentUpdated(
     const before = change.before.data() as User;
     const after = change.after.data() as User;
 
+    // Diff tracked fields — PII fields are noted as "changed" only, never logged as values
+    const STATE_FIELDS = ["kycStatus", "status", "activeMode", "driverUnlocked"];
+    const PII_FIELDS   = ["fullName", "phone", "kycDocumentURL", "kycIdURL"];
+    const b = before as any;
+    const a = after as any;
+    const changes: Record<string, unknown> = {};
+    for (const field of STATE_FIELDS) {
+      if (b[field] !== a[field]) changes[field] = { from: b[field] ?? null, to: a[field] ?? null };
+    }
+    for (const field of PII_FIELDS) {
+      if (b[field] !== a[field]) changes[field] = "changed";
+    }
+    logger.info("onUserUpdate", {
+      userId,
+      changes: Object.keys(changes).length > 0 ? changes : "no tracked fields changed",
+    });
+
     // Enforce: old app versions write kycStatus='pending' at profile completion
     // without uploading docs. Remove it so only real submissions appear in admin.
     const afterHasKycDoc = !!(after as any).kycDocumentURL || !!(after as any).kycIdURL;

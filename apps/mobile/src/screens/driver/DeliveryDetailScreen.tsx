@@ -158,6 +158,15 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     }).catch(() => {});
   }, [delivery?.senderId, delivery?.senderName]);
 
+  // Fetch sender phone once this becomes the driver's assigned job
+  useEffect(() => {
+    const isAssigned = delivery?.driverId && currentUser?.uid && delivery.driverId === currentUser.uid;
+    if (!isAssigned || !delivery?.senderId) return;
+    firestore().collection('users').doc(delivery.senderId).get().then((snap) => {
+      if (snap.exists) setSenderPhone(snap.data()?.phone ?? null);
+    }).catch(() => {});
+  }, [delivery?.driverId, delivery?.senderId, currentUser?.uid]);
+
   // Prompt "Rate us on store" after 1st and 5th completed delivery
   useEffect(() => {
     if (delivery?.status === 'completed_paid' && currentUser?.uid) {
@@ -178,6 +187,7 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
   // Optimistic interest state — overrides Firestore snapshot until it catches up
   const [localInterestState, setLocalInterestState] = useState<'interested' | 'withdrawn' | null>(null);
+  const [senderPhone, setSenderPhone] = useState<string | null>(null);
 
   const [senderProfileVisible, setSenderProfileVisible] = useState(false);
   const [galleryVisible, setGalleryVisible] = useState(false);
@@ -348,11 +358,26 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   };
 
   const handleExpressInterest = (): void => {
-    if (!delivery?.pickup) {
-      doExpressInterest();
+    const from = delivery?.pickup?.address || '—';
+    const to = delivery?.destination?.address || '—';
+    const price = delivery?.price != null ? String(delivery.price) : '—';
+
+    const showConfirm = (distLine: string) => {
+      const msg = t('deliveryExtra.expressInterestConfirmMsg')
+        .replace('{from}', from)
+        .replace('{to}', to)
+        .replace('{price}', price) + distLine;
+      carAlert.show('info', t('deliveryExtra.expressInterestConfirmTitle'), msg, [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.confirm'), onPress: () => doExpressInterest() },
+      ]);
+    };
+
+    if (!delivery?.pickup?.lat && !delivery?.pickup?.latitude) {
+      showConfirm('');
       return;
     }
-    // Get driver's current location and show distance confirmation
+
     Geolocation.getCurrentPosition(
       (pos) => {
         const distKm = haversineKm(
@@ -360,15 +385,14 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
           delivery?.pickup?.lat ?? delivery?.pickup?.latitude ?? 0,
           delivery?.pickup?.lng ?? delivery?.pickup?.longitude ?? 0,
         );
-        const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} ${t('commonExtra.meters')}` : `${distKm.toFixed(1)} ${t('commonExtra.km')}`;
-        carAlert.show('info', t('driver.confirmPickup'), t('deliveryExtra.confirmPickupPrompt').replace('{dist}', distStr), [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('driver.confirmPickup'), onPress: () => doExpressInterest() },
-        ]);
+        const distStr = distKm < 1
+          ? `${Math.round(distKm * 1000)} ${t('commonExtra.meters')}`
+          : `${distKm.toFixed(1)} ${t('commonExtra.km')}`;
+        showConfirm(t('deliveryExtra.expressInterestDistLine').replace('{dist}', distStr));
       },
       () => {
-        // Location unavailable — proceed without distance
-        doExpressInterest();
+        // Location unavailable — show confirmation without distance
+        showConfirm('');
       },
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
@@ -426,6 +450,34 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
     (d: any) => d.status === 'interested' || d.status === 'confirmed'
   ).length;
 const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pending' : delivery.status;
+
+  const handleDriverChat = async () => {
+    let chatIdToUse = delivery.chatId;
+    if (!chatIdToUse && delivery.senderId && currentUser?.uid) {
+      try {
+        const chatRef = firestore().collection('chats').doc();
+        await chatRef.set({
+          deliveryId: delivery.id,
+          participants: [delivery.senderId, currentUser.uid],
+          lastMessage: '',
+          lastMessageAt: firestore.FieldValue.serverTimestamp(),
+          lastSenderId: '',
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          closed: false,
+        });
+        await firestore().collection('deliveries').doc(delivery.id).update({
+          chatId: chatRef.id,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+        chatIdToUse = chatRef.id;
+      } catch {
+        carAlert.show('error', '', t('delivery.chatCreationError'));
+        return;
+      }
+    }
+    if (!chatIdToUse) return;
+    navigation.navigate('ChatRoom', { chatId: chatIdToUse, recipientName: delivery.senderName || '' });
+  };
 
   const pickupCoords = {
     latitude: delivery.pickup?.latitude || delivery.pickup?.lat || 32.0853,
@@ -597,10 +649,10 @@ const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pe
           </TouchableOpacity>
         )}
 
-        {isMyJob && !!delivery.chatId && (
+        {isMyJob && (
           <TouchableOpacity
             style={[styles.chatButton, { borderColor: colors.primary, backgroundColor: colors.surface }]}
-            onPress={() => navigation.navigate('ChatRoom', { chatId: delivery.chatId!, recipientName: delivery.senderName || '' })}
+            onPress={handleDriverChat}
           >
             <Text style={[styles.chatButtonText, { color: colors.primary }]}>💬 {t('driver.chatWithSender')}</Text>
           </TouchableOpacity>
@@ -658,14 +710,27 @@ const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pe
               {delivery.senderRating ? `⭐ ${delivery.senderRating.toFixed(1)}` : t('driver.newSender')}
             </Text>
           </View>
-          {isMyJob && !!delivery.chatId && (
-            <TouchableOpacity
-              style={[styles.chatMiniBtn, { backgroundColor: colors.primary }]}
-              onPress={() => navigation.navigate('ChatRoom', { chatId: delivery.chatId!, recipientName: delivery.senderName || '' })}
-            >
-              <Text style={styles.chatMiniBtnText}>💬</Text>
-            </TouchableOpacity>
-          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isMyJob && (
+              <TouchableOpacity
+                style={[styles.chatMiniBtn, { backgroundColor: colors.primary }]}
+                onPress={handleDriverChat}
+              >
+                <Text style={styles.chatMiniBtnText}>💬</Text>
+              </TouchableOpacity>
+            )}
+            {isMyJob && !!senderPhone && (
+              <TouchableOpacity
+                style={[styles.chatMiniBtn, { backgroundColor: colors.success }]}
+                onPress={() => {
+                  const url = Platform.OS === 'ios' ? `telprompt:${senderPhone}` : `tel:${senderPhone}`;
+                  Linking.openURL(url).catch(() => {});
+                }}
+              >
+                <Text style={styles.chatMiniBtnText}>📞</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 

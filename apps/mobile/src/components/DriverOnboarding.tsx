@@ -9,50 +9,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
+import { useI18n } from '../i18n/I18nContext';
 import { BORDER_RADIUS } from '../constants/design';
-import { strings } from '../i18n/strings';
 
 const ONBOARDING_KEY = '@driver_onboarding_done';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-interface OnboardingStep {
-  icon: string;
-  title: string;
-  description: string;
-}
-
-const STEPS: OnboardingStep[] = [
-  {
-    icon: '🟢',
-    title: strings.driverOnboarding.availabilityTitle.he,
-    description: strings.driverOnboarding.availabilityDesc.he,
-  },
-  {
-    icon: '📏',
-    title: strings.driver.notificationRange.he,
-    description: strings.driverOnboarding.radiusDesc.he,
-  },
-  {
-    icon: '📡',
-    title: strings.driverOnboarding.radarTitle.he,
-    description: strings.driverOnboarding.radarDesc.he,
-  },
-  {
-    icon: '💰',
-    title: strings.driverOnboarding.earningsTitle.he,
-    description: strings.driverOnboarding.paymentDesc.he,
-  },
-  {
-    icon: '💳',
-    title: strings.driverOnboarding.directPaymentTitle.he,
-    description: strings.driverOnboarding.paymentDesc.he,
-  },
-  {
-    icon: '⚙️',
-    title: strings.driverOnboarding.advancedSettingsTitle.he,
-    description: strings.driverOnboarding.preferencesDesc.he,
-  },
-];
 
 interface Props {
   visible: boolean;
@@ -61,7 +22,17 @@ interface Props {
 
 export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [step, setStep] = useState(0);
+
+  const STEPS = [
+    { icon: '🟢', title: t('driverOnboarding.availabilityTitle'), description: t('driverOnboarding.availabilityDesc') },
+    { icon: '📏', title: t('driver.notificationRange'), description: t('driverOnboarding.radiusDesc') },
+    { icon: '📡', title: t('driverOnboarding.radarTitle'), description: t('driverOnboarding.radarDesc') },
+    { icon: '💰', title: t('driverOnboarding.earningsTitle'), description: t('driverOnboarding.paymentDesc') },
+    { icon: '💳', title: t('driverOnboarding.directPaymentTitle'), description: t('driverOnboarding.paymentDesc') },
+    { icon: '⚙️', title: t('driverOnboarding.advancedSettingsTitle'), description: t('driverOnboarding.preferencesDesc') },
+  ];
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -104,14 +75,14 @@ export function DriverOnboarding({ visible, onDone }: Props): React.JSX.Element 
           <View style={styles.actions}>
             {!isLast && (
               <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>{strings.onboarding.skip.he}</Text>
+                <Text style={[styles.skipText, { color: 'rgba(255,255,255,0.6)' }]}>{t('onboarding.skip')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               onPress={handleNext}
               style={[styles.nextBtn, { backgroundColor: colors.primary }]}
             >
-              <Text style={styles.nextText}>{isLast ? strings.onboarding.getStarted.he : strings.onboarding.next.he}</Text>
+              <Text style={styles.nextText}>{isLast ? t('onboarding.getStarted') : t('onboarding.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>

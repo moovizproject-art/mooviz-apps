@@ -355,16 +355,16 @@ const styles = StyleSheet.create({
   settingsButton: {
     position: 'absolute',
     left: 0,
-    top: 20,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   settingsIcon: {
-    fontSize: 16,
+    fontSize: 22,
     color: '#FFFFFF',
   },
   logoCircle: {

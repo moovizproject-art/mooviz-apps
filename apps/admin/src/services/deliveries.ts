@@ -50,6 +50,19 @@ export interface DeliveryItem {
   photoURL: string | null;
 }
 
+export type InterestedDriverStatus = 'interested' | 'selected' | 'confirmed' | 'declined' | 'cancelled' | 'withdrawn';
+
+export interface InterestedDriver {
+  uid: string;
+  name: string;
+  photoUrl: string | null;
+  rating: number;
+  completedDeliveries: number;
+  distanceKm: number;
+  expressedAt: Timestamp;
+  status: InterestedDriverStatus;
+}
+
 export interface Delivery {
   id: string;
   senderId: string;
@@ -71,6 +84,7 @@ export interface Delivery {
   } | null;
   proofPhotoURL: string | null;
   statusHistory: StatusEvent[];
+  interestedDrivers?: InterestedDriver[];
   chatId: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;

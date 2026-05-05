@@ -30,6 +30,7 @@ export {
 } from "./callable/deliveryCallable";
 
 export {
+  checkPhoneAvailable,
   createUser,
   updateProfile,
   updateFCMToken,

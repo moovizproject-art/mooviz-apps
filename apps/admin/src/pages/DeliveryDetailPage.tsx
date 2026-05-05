@@ -12,6 +12,7 @@ import {
   resolveDispute,
   updateDeliveryStatus,
   type DeliveryStatus,
+  type InterestedDriver,
 } from '../services/deliveries';
 
 const ALL_STATUSES: DeliveryStatus[] = [
@@ -262,16 +263,70 @@ export default function DeliveryDetailPage() {
           )}
         </div>
 
-        {/* Right Column - Timeline */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-gray-900">Status Timeline</h3>
-          <div className="mt-4">
-            {delivery.statusHistory && delivery.statusHistory.length > 0 ? (
-              <StatusTimeline events={delivery.statusHistory} />
-            ) : (
-              <p className="text-sm text-gray-500">No status history available</p>
-            )}
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Status Timeline */}
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-900">Status Timeline</h3>
+            <div className="mt-4">
+              {delivery.statusHistory && delivery.statusHistory.length > 0 ? (
+                <StatusTimeline events={delivery.statusHistory} />
+              ) : (
+                <p className="text-sm text-gray-500">No status history available</p>
+              )}
+            </div>
           </div>
+
+          {/* Interested Drivers */}
+          {delivery.interestedDrivers && delivery.interestedDrivers.length > 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-900">
+                Interested Drivers
+                <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                  {delivery.interestedDrivers.length}
+                </span>
+              </h3>
+              <ul className="mt-4 divide-y divide-gray-100">
+                {delivery.interestedDrivers.map((d: InterestedDriver) => {
+                  const statusColors: Record<string, string> = {
+                    interested: 'bg-blue-100 text-blue-700',
+                    selected: 'bg-purple-100 text-purple-700',
+                    confirmed: 'bg-green-100 text-green-700',
+                    declined: 'bg-orange-100 text-orange-700',
+                    cancelled: 'bg-gray-100 text-gray-500',
+                    withdrawn: 'bg-gray-100 text-gray-500',
+                  };
+                  return (
+                    <li key={d.uid} className="flex items-start gap-3 py-3">
+                      <div className="min-w-0 flex-1">
+                        <button
+                          onClick={() => navigate(`/users/${d.uid}`)}
+                          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+                        >
+                          {d.name || d.uid}
+                        </button>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                          {d.rating != null && <span>⭐ {d.rating.toFixed(1)}</span>}
+                          {d.distanceKm != null && <span>📍 {d.distanceKm.toFixed(1)} km</span>}
+                          {d.expressedAt && (
+                            <span>
+                              {format(
+                                d.expressedAt.toDate ? d.expressedAt.toDate() : new Date((d.expressedAt as any).seconds * 1000),
+                                'HH:mm'
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[d.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {d.status}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
