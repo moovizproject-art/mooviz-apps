@@ -792,7 +792,7 @@ export const strings = {
     deliveryProofs: { he: 'הוכחות משלוח', en: 'Delivery proofs' } as LocaleStrings,
     confirmPickupPrompt: { he: 'נקודת האיסוף נמצאת {dist} ממך.\nלהמשיך?', en: 'Pickup point is {dist} from you.\nContinue?' } as LocaleStrings,
     expressInterestConfirmTitle: { he: 'אישור קבלת משלוח', en: 'Accept delivery' } as LocaleStrings,
-    expressInterestConfirmMsg: { he: 'מאיפה: {from}\nלאן: {to}\nמחיר: ₪{price}\n\nאתה עומד לאשר עניין במשלוח זה. להמשיך?', en: 'From: {from}\nTo: {to}\nPrice: ₪{price}\n\nYou are about to express interest in this delivery. Continue?' } as LocaleStrings,
+    expressInterestConfirmMsg: { he: 'מאיפה: {from}\nלאן: {to}\nמחיר: ₪{price}\n\nשים לב: המשלוח יאושר רק כאשר השולח יבחר בך כנהג.', en: 'From: {from}\nTo: {to}\nPrice: ₪{price}\n\nNote: The delivery will only be confirmed once the sender selects you as the driver.' } as LocaleStrings,
     expressInterestDistLine: { he: '\nמרחק לאיסוף: {dist}', en: '\nDistance to pickup: {dist}' } as LocaleStrings,
     totalExpenses: { he: 'סה״כ עלויות משלוחים', en: 'Total delivery expenses' } as LocaleStrings,
     activeDelivery: { he: 'משלוח פעיל', en: 'Active delivery' } as LocaleStrings,
