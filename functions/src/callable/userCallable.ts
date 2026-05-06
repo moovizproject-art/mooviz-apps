@@ -210,7 +210,7 @@ export const removeFCMToken = onCall(async (request) => {
  * a Firebase Auth account so that we abort before any orphaned account is written.
  * Returns { available: true } when the phone is not yet in use.
  */
-export const checkPhoneAvailable = onCall(async (request) => {
+export const checkPhoneAvailable = onCall({ enforceAppCheck: false }, async (request) => {
   const phone = typeof request.data.phone === "string" ? request.data.phone.trim() : "";
   if (!phone || !/^\+[1-9]\d{6,14}$/.test(phone)) {
     throw new HttpsError("invalid-argument", "phone in E.164 format is required");
