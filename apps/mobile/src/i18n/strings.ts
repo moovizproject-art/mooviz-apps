@@ -192,6 +192,7 @@ export const strings = {
     smsNotEnabled: { he: 'אימות SMS לא מופעל. דלג לבינתיים.', en: 'SMS verification not enabled. Skip for now.' } as LocaleStrings,
     noVerificationId: { he: 'לא התקבל מזהה אימות. שלח קוד חדש.', en: 'No verification ID received. Resend code.' } as LocaleStrings,
     wrongCode: { he: 'קוד אימות שגוי. נסה שוב.', en: 'Wrong verification code. Try again.' } as LocaleStrings,
+    wrongNumber: { he: 'מספר שגוי? תקן', en: 'Wrong number? Fix it' } as LocaleStrings,
     phoneVerified: { he: 'מספר הטלפון אומת בהצלחה', en: 'Phone number verified successfully' } as LocaleStrings,
     skipDev: { he: 'דלג (מצב פיתוח)', en: 'Skip (dev mode)' } as LocaleStrings,
     fullNameRequired: { he: 'שם מלא נדרש', en: 'Full name is required' } as LocaleStrings,

@@ -508,13 +508,12 @@ const displayStatus = delivery.status === 'new' && activeInterestCount > 0 ? 'pe
     <>
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-      {/* ── 1. Status + ID header ── */}
+      {/* ── 1. Status header ── */}
       <View style={styles.statusRow}>
         <StatusBadge
           status={displayStatus}
           labelOverride={displayStatus === 'pending' && delivery.status === 'new' ? 'ממתין לבחירת נהג' : undefined}
         />
-        <Text style={[styles.deliveryId, { color: colors.textSecondary }]}>#{deliveryId.slice(0, 8)}</Text>
       </View>
 
       {/* ── 2. Item Summary Card ── */}

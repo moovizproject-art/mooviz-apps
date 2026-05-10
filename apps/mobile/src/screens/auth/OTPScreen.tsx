@@ -337,6 +337,15 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
               </TouchableOpacity>
             )}
           </View>
+
+          <TouchableOpacity
+            style={styles.wrongNumberButton}
+            onPress={() => navigation.navigate('AddPhone', { disableAutoSend: true })}
+          >
+            <Text style={[styles.wrongNumberText, { color: colors.textTertiary }]}>
+              {t('auth.wrongNumber')}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Step indicator with car */}
@@ -382,14 +391,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
+  wrongNumberButton: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  wrongNumberText: {
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
   backChevron: {
     width: 11,
     height: 11,
     borderBottomWidth: 2.5,
     borderLeftWidth: 2.5,
     borderColor: '#FFFFFF',
-    transform: [{ rotate: '-45deg' }],
-    marginRight: -3,
+    transform: [{ rotate: I18nManager.isRTL ? '135deg' : '-45deg' }],
   },
   cancelButton: {
     position: 'absolute',

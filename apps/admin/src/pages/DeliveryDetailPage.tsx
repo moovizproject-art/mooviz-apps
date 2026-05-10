@@ -277,16 +277,28 @@ export default function DeliveryDetailPage() {
             </div>
           </div>
 
-          {/* Interested Drivers */}
-          {delivery.interestedDrivers && delivery.interestedDrivers.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-900">
-                Interested Drivers
-                <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
-                  {delivery.interestedDrivers.length}
+          {/* Driver Reach & Interest */}
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            {/* Exposure row */}
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Driver Reach & Interest</h3>
+              {delivery.notifiedDrivers !== undefined && (
+                <span className="flex items-center gap-1 rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700 ring-1 ring-yellow-200">
+                  📣 {delivery.notifiedDrivers.length} notified
                 </span>
-              </h3>
-              <ul className="mt-4 divide-y divide-gray-100">
+              )}
+            </div>
+
+            {/* Interested drivers list */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-medium text-gray-700">Interested drivers</span>
+              <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                {delivery.interestedDrivers?.length ?? 0}
+              </span>
+            </div>
+
+            {delivery.interestedDrivers && delivery.interestedDrivers.length > 0 ? (
+              <ul className="divide-y divide-gray-100">
                 {delivery.interestedDrivers.map((d: InterestedDriver) => {
                   const statusColors: Record<string, string> = {
                     interested: 'bg-blue-100 text-blue-700',
@@ -325,8 +337,10 @@ export default function DeliveryDetailPage() {
                   );
                 })}
               </ul>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-gray-400 italic">No drivers have expressed interest yet.</p>
+            )}
+          </div>
         </div>
       </div>
 

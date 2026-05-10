@@ -79,11 +79,11 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
     <View style={styles.container}>
       {/* Header: label + ASAP toggle */}
       <View style={styles.asapRow}>
-        <Text style={[styles.label, { color: colors.textPrimary }]}>
+        <Text style={[styles.label, styles.labelFlex, { color: colors.textPrimary }]} numberOfLines={1}>
           {t('form.pickupDate')} *
         </Text>
         <View style={styles.asapToggle}>
-          <Text style={[styles.asapLabel, { color: colors.textSecondary }]}>
+          <Text style={[styles.asapLabel, { color: colors.textSecondary }]} numberOfLines={1}>
             {t('form.asap')}
           </Text>
           <Switch
@@ -196,9 +196,10 @@ export function DatePickerInput({ value, isAsap, onDateChange, onAsapToggle, min
 const styles = StyleSheet.create({
   container: { marginBottom: 16 },
   scheduleHint: { fontSize: 12, marginBottom: 8 },
-  asapRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  asapToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  asapRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 },
+  asapToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   label: { fontSize: 14, fontWeight: '600' },
+  labelFlex: { flexShrink: 1 },
   asapLabel: { fontSize: 13 },
   pickerButton: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

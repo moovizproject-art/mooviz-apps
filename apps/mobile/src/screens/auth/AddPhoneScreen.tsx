@@ -33,7 +33,7 @@ type Props = NativeStackScreenProps<any, any>;
 /**
  * AddPhoneScreen -- phone verification gate (required before app access)
  */
-export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
+export function AddPhoneScreen({ navigation, route }: Props): React.JSX.Element {
   const { colors } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -49,6 +49,8 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
     // Phone already linked in Firebase Auth → we're in the Firestore race window
     // (lastOtpAt hasn't written yet). Don't re-send — navigator will self-resolve.
     if (auth().currentUser?.phoneNumber) return;
+    // User navigated back to correct a typo — skip auto-send so they can edit
+    if (route.params?.disableAutoSend) return;
     const uid = auth().currentUser?.uid;
     if (!uid) return;
     firestore().collection('users').doc(uid).get().then((doc) => {
@@ -60,8 +62,9 @@ export function AddPhoneScreen({ navigation }: Props): React.JSX.Element {
         setIsLoading(true);
         sendPhoneOTP(savedPhone).then((verificationId) => {
           navigation.navigate('PhoneOTP', { phoneNumber: savedPhone, verificationId, mode: 'addPhone' as const });
+          // Reset loading so phone field is editable if user navigates back to fix a typo
+          setIsLoading(false);
         }).catch(() => {
-          // Failed — let user manually enter and retry
           setIsLoading(false);
         });
       }

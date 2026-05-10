@@ -22,7 +22,7 @@ import { formatCurrency, formatDate } from '../utils/formatters';
 const SIZE_ICONS: Record<string, string> = {
   small: '✉️',
   medium: '📦',
-  large: '📦',
+  large: '📦📦',
   xlarge: '🚚',
 };
 
@@ -105,7 +105,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
     small: t('delivery.sizeSmall'),
     medium: t('delivery.sizeMedium'),
     large: t('delivery.sizeLarge'),
-    xlarge: t('delivery.sizeXLarge'),
+    xlarge: t('delivery.sizeOther'),
   };
 
   const formatPickupInfo = (

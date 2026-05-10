@@ -93,6 +93,23 @@ export default function DeliveriesPage() {
       render: (d) => <StatusBadge status={d.status} />,
     },
     {
+      key: 'interestedDrivers',
+      label: 'Interested',
+      render: (d) => {
+        const count = d.interestedDrivers?.length ?? 0;
+        const notified = d.notifiedDrivers?.length;
+        return (
+          <span className="flex flex-col items-center leading-tight">
+            <span className={`font-semibold ${count > 0 ? 'text-brand-600' : 'text-gray-400'}`}>{count}</span>
+            {notified !== undefined && (
+              <span className="text-[10px] text-gray-400">{notified} notified</span>
+            )}
+          </span>
+        );
+      },
+      className: 'text-center',
+    },
+    {
       key: 'price',
       label: t('deliveries.price'),
       sortable: true,

@@ -85,6 +85,7 @@ export interface Delivery {
   proofPhotoURL: string | null;
   statusHistory: StatusEvent[];
   interestedDrivers?: InterestedDriver[];
+  notifiedDrivers?: string[];
   chatId: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -148,6 +149,8 @@ function normalizeDelivery(docSnap: DocumentSnapshot): Delivery {
     proof: data.proof ?? null,
     proofPhotoURL: data.proof?.deliveryURL ?? data.proofPhotoURL ?? null,
     statusHistory: (data.statusHistory ?? []) as StatusEvent[],
+    interestedDrivers: (data.interestedDrivers ?? undefined) as InterestedDriver[] | undefined,
+    notifiedDrivers: Array.isArray(data.notifiedDrivers) ? data.notifiedDrivers : undefined,
     chatId: data.chatId ?? null,
     createdAt: data.createdAt ?? Timestamp.now(),
     updatedAt: data.updatedAt ?? Timestamp.now(),
