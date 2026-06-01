@@ -145,7 +145,7 @@ export function getGeohashRange(
   const lower = encodeGeohash(latitude - latDelta, longitude - lonDelta, precision);
   const upper = encodeGeohash(latitude + latDelta, longitude + lonDelta, precision);
 
-  return { lower, upper };
+  return { lower, upper: upper + '' };
 }
 
 /**

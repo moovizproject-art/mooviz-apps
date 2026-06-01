@@ -2049,7 +2049,7 @@ packages:
         optional: true
 
   '@mooviz/shared@file:functions/mooviz-shared-1.0.0.tgz':
-    resolution: {integrity: sha512-WdBWzZP87cSEj8cLnDBGZ0XfiaDjtkOlFsiw6X0+f+9QlVDytlLgHKVUwcKcBg48y8Ape515mTX2GBD7qOkwCw==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
+    resolution: {integrity: sha512-rVJhYX24u8TYPH9U1ZroKSBJP2KiKnImQiwQxjEJBBlhZhXaxl7LDbWpYQsUFsMOcMV44jKwdopdsbZeoDkuWA==, tarball: file:functions/mooviz-shared-1.0.0.tgz}
     version: 1.0.0
 
   '@nodelib/fs.scandir@2.1.5':

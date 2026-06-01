@@ -102,10 +102,10 @@ export const DeliveryCard = React.memo(function DeliveryCard({
   })();
 
   const SIZE_LABELS: Record<string, string> = {
-    small: t('delivery.sizeSmall'),
-    medium: t('delivery.sizeMedium'),
-    large: t('delivery.sizeLarge'),
-    xlarge: t('delivery.sizeOther'),
+    small: t('form.sizeSmall'),
+    medium: t('form.sizeMedium'),
+    large: t('form.sizeLarge'),
+    xlarge: t('form.sizeOther'),
   };
 
   const formatPickupInfo = (
@@ -196,15 +196,17 @@ export const DeliveryCard = React.memo(function DeliveryCard({
             </Text>
             <View style={styles.statusArea}>
               {(() => {
-                const drivers = showDriverCount
-                  ? (delivery.interestedDrivers?.filter(
-                      (d) => d.status === 'interested' || d.status === 'confirmed'
-                    ) ?? [])
-                  : [];
+                // Active interested drivers — always checked for label logic
+                const activeDrivers = (delivery.interestedDrivers ?? []).filter(
+                  (d) => d.status === 'interested' || d.status === 'confirmed'
+                );
+                const hasActiveDrivers = activeDrivers.length > 0;
+                // Count badge — only shown when caller passes showDriverCount
+                const drivers = showDriverCount ? activeDrivers : [];
                 const hasDrivers = drivers.length > 0;
                 const isWaiting = delivery.status === 'pending' || delivery.status === 'new';
                 // Driver expressed interest: show "waiting for sender" label on their feed card
-                const viewerIsInterested = !!viewerUserId && delivery.status === 'new' &&
+                const viewerIsInterested = !!viewerUserId &&
                   (delivery.interestedDrivers ?? []).some(
                     (d) => d.uid === viewerUserId && d.status === 'interested'
                   );
@@ -216,7 +218,7 @@ export const DeliveryCard = React.memo(function DeliveryCard({
                         size="sm"
                         labelOverride="ממתין לאישור שולח"
                       />
-                    ) : hasDrivers && isWaiting && delivery.status === 'new' ? (
+                    ) : hasActiveDrivers && isWaiting && delivery.status === 'new' ? (
                       <StatusIndicator
                         status="pending"
                         size="sm"

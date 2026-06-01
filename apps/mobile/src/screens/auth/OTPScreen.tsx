@@ -23,7 +23,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../hooks/useAuth';
-import { sendPhoneOTP, verifyAndLinkPhone, mapFirebaseAuthError } from '../../services/auth';
+import { sendPhoneOTP, verifyAndLinkPhone, mapFirebaseAuthError, normalizePhoneNumber } from '../../services/auth';
 import { VerificationStepper } from '../../components/VerificationStepper';
 import { CarAlert, useCarAlert } from '../../components/CarAlert';
 
@@ -206,6 +206,7 @@ export function OTPScreen({ route, navigation }: Props): React.JSX.Element {
       if (uid) {
         await firestore().collection('users').doc(uid).update({
           lastOtpAt: firestore.FieldValue.serverTimestamp(),
+          phone: normalizePhoneNumber(phoneNumber),
         }).catch(() => {});
       }
       // Clear forceOtp BEFORE refreshing — prevents re-render loop

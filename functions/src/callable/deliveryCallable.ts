@@ -597,7 +597,7 @@ export const selectDriver = onCall(async (request) => {
   const { delivery, ref } = await getDeliveryOrThrow(deliveryId);
   if (delivery.senderId !== uid) throw new HttpsError("permission-denied", "רק השולח יכול לבחור נהג");
 
-  const SELECTION_TIMEOUT_MS = 15 * 60 * 1000;
+  const SELECTION_TIMEOUT_MS = 60 * 60 * 1000;
 
   await db.runTransaction(async (txn) => {
     const freshDoc = await txn.get(ref);

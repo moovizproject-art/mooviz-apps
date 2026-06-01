@@ -282,7 +282,7 @@ export function useDelivery(options?: UseDeliveryOptions): UseDeliveryResult {
     // Geohash-based proximity filter for driver feed
     if (geohashRange) {
       clauses.push(['pickup.geohash', '>=', geohashRange.lower]);
-      clauses.push(['pickup.geohash', '<=', geohashRange.upper]);
+      clauses.push(['pickup.geohash', '<', geohashRange.upper]);
     }
 
     return clauses.length > 0 ? clauses : undefined;
