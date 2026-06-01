@@ -26,6 +26,13 @@ const SIZE_ICONS: Record<string, string> = {
   xlarge: '🚚',
 };
 
+const SIZE_LABELS: Record<string, string> = {
+  small: 'קטן',
+  medium: 'בינוני',
+  large: 'גדול',
+  xlarge: 'אחר',
+};
+
 interface RatingSummary {
   rating: number;
   comment?: string;
@@ -100,13 +107,6 @@ export const DeliveryCard = React.memo(function DeliveryCard({
     else if (delivery.photoUrl) imgs.push(delivery.photoUrl);
     return imgs;
   })();
-
-  const SIZE_LABELS: Record<string, string> = {
-    small: t('form.sizeSmall'),
-    medium: t('form.sizeMedium'),
-    large: t('form.sizeLarge'),
-    xlarge: t('form.sizeOther'),
-  };
 
   const formatPickupInfo = (
     pickupDate?: string | null | { _seconds?: number; toDate?: () => Date; seconds?: number },
