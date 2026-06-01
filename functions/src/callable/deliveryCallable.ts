@@ -34,8 +34,8 @@ function renotifyNearbyDrivers(
   const pickupGeohash = delivery.pickup?.geohash;
   if (!pickupGeohash) return;
 
-  const pickupCity = delivery.pickup?.city ?? "";
-  const destCity = delivery.destination?.city ?? "";
+  const pickupCity = delivery.pickup?.city || delivery.pickup?.address || "";
+  const destCity = delivery.destination?.city || delivery.destination?.address || "";
 
   getNearbyDriverTokensMultiLocation(pickupGeohash, 15, delivery.pickup?.lat, delivery.pickup?.lng, excludeUids)
     .then((nearbyDrivers: import("../services/geohashService").NearbyDriver[]) =>

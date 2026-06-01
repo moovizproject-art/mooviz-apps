@@ -100,8 +100,8 @@ export const notifyExpansion = onSchedule(
         );
 
         if (newDrivers.length > 0) {
-          const pickupCity = (pickup?.city ?? "") as string;
-          const destCity = (delivery.destination?.city ?? "") as string;
+          const pickupCity = ((pickup?.city || pickup?.address) ?? "") as string;
+          const destCity = ((delivery.destination?.city || delivery.destination?.address) ?? "") as string;
           const price = String(delivery.suggestedPrice ?? delivery.price ?? 0);
 
           await Promise.all(

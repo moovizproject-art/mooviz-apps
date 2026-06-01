@@ -171,8 +171,8 @@ export const onDeliveryCreate = onDocumentCreated(
           itemSize
         );
 
-        const pickupCity = (pickup?.city ?? "") as string;
-        const destCity = (dest?.city ?? "") as string;
+        const pickupCity = ((pickup?.city || pickup?.address) ?? "") as string;
+        const destCity = ((dest?.city || dest?.address) ?? "") as string;
         const price = String((data as any).suggestedPrice ?? data.price ?? 0);
 
         await Promise.all(
