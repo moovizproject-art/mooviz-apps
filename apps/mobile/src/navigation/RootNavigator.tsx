@@ -359,10 +359,10 @@ export function RootNavigator(): React.JSX.Element {
   // Verification gates:
   // 1. Not logged in → Auth flow
   // 2. Firestore loading → spinner (don't flash login screen)
-  // 3. Email not verified → EmailVerification screen
+  // 3. Email verification removed — go straight to phone OTP
   // 4. Phone not linked → AddPhone → OTP flow
   // 5. Both verified → App
-  const needsEmailVerification = firebaseUser && !firebaseUser.emailVerified;
+  const needsEmailVerification = false;
   // Phone OTP required on every fresh login (2FA).
   // forceOtp is set by LoginScreen before signIn — immune to Firestore race conditions.
   const needsPhoneOtp = (() => {
