@@ -268,9 +268,10 @@ export const DeliveryCard = React.memo(function DeliveryCard({
             📅 {pickupInfo}
           </Text>
 
-          {/* Package size badge */}
-          <View style={[styles.sizeBadge, { backgroundColor: colors.border }]}>
-            <Text style={[styles.sizeBadgeText, { color: colors.textPrimary }]}>{sizeIcon} {sizeLabel}</Text>
+          {/* Package size badge — split into two Text nodes to avoid BiDi RTL clipping */}
+          <View style={[styles.sizeBadge, { backgroundColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
+            <Text style={[styles.sizeBadgeText, { color: colors.textPrimary }]}>{sizeIcon} </Text>
+            <Text style={[styles.sizeBadgeText, { color: colors.textPrimary }]}>{sizeLabel}</Text>
           </View>
 
           {/* Ratings preview — visible when any rating exists */}
