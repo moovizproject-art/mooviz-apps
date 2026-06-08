@@ -1,1 +1,0 @@
-../../../../../build/generated/ios/RNCNetInfoSpec/RNCNetInfoSpec.h
