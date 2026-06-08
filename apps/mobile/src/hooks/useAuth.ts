@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import firestore, { serverTimestamp as fsServerTimestamp, arrayRemove as fsArrayRemove } from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
@@ -195,9 +195,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               ageRange: '',
               autoCreated: true, // Flag for admin to identify auto-created users
               // If phone already linked, stamp OTP so they don't get stuck at verification
-              ...(fbUser.phoneNumber ? { lastOtpAt: firestore.FieldValue.serverTimestamp() } : {}),
-              createdAt: firestore.FieldValue.serverTimestamp(),
-              updatedAt: firestore.FieldValue.serverTimestamp(),
+              ...(fbUser.phoneNumber ? { lastOtpAt: fsServerTimestamp() } : {}),
+              createdAt: fsServerTimestamp(),
+              updatedAt: fsServerTimestamp(),
             };
             try {
               await firestore().collection('users').doc(fbUser.uid).set(autoProfile, { merge: true });
@@ -280,7 +280,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           const token = await messaging().getToken();
           if (token) {
             await firestore().collection('users').doc(uid).update({
-              fcmTokens: firestore.FieldValue.arrayRemove(token),
+              fcmTokens: fsArrayRemove(token),
             });
             console.log('[useAuth] FCM token removed from Firestore');
           }
@@ -335,8 +335,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       status: 'active',
       fcmTokens: [],
       location: { lat: 0, lng: 0, geohash: '' },
-      createdAt: firestore.FieldValue.serverTimestamp(),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
+      createdAt: fsServerTimestamp(),
+      updatedAt: fsServerTimestamp(),
     };
 
     await firestore().collection('users').doc(user.uid).set(profile, { merge: true });
@@ -397,7 +397,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
     await firestore().collection('users').doc(currentUser.uid).update({
       ...data,
-      updatedAt: firestore.FieldValue.serverTimestamp(),
+      updatedAt: fsServerTimestamp(),
     });
 
     setCurrentUser((prev) => (prev ? { ...prev, ...data } : prev));

@@ -22,6 +22,23 @@ const db = admin.firestore();
 const GEOHASH_PRECISION = 7;
 
 /**
+ * Extract the city name from a Google-format address string.
+ * Israeli format: "Street, City, Postal, Country" — city is the second-to-last non-postal part.
+ * If an explicit fallbackCity is provided it is returned as-is.
+ */
+function extractCity(address: string, fallbackCity?: string): string {
+  if (fallbackCity) return fallbackCity;
+  const parts = address.split(",").map((s: string) => s.trim());
+  if (parts.length >= 3) {
+    const candidate = parts[parts.length - 2];
+    if (/^\d+$/.test(candidate) && parts.length >= 4) return parts[parts.length - 3];
+    return candidate;
+  }
+  if (parts.length === 2) return parts[0];
+  return address;
+}
+
+/**
  * Fire-and-forget: re-notify nearby drivers about a delivery that's available again.
  * Excludes specified driver UIDs (cancelled/declined drivers + sender).
  */
@@ -227,22 +244,6 @@ export const createDelivery = onCall(async (request) => {
     ? admin.firestore.Timestamp.fromMillis(now.toMillis() + ASAP_TIMEOUT_HOURS * 60 * 60 * 1000)
     : admin.firestore.Timestamp.fromMillis(pickupDate.toMillis() + SCHEDULED_TIMEOUT_HOURS_AFTER_DATE * 60 * 60 * 1000);
 
-  // Extract city from address string (Google format: "Street, City, Postal, Country")
-  function extractCity(address: string, fallbackCity?: string): string {
-    if (fallbackCity) return fallbackCity;
-    const parts = address.split(",").map((s: string) => s.trim());
-    // Israeli addresses: last part is "ישראל"/"Israel", second-to-last may be postal code
-    // City is usually the 2nd part for "Street, City, Country" or 2nd for "Street, City, Postal, Country"
-    if (parts.length >= 3) {
-      // Skip postal codes (digits only)
-      const candidate = parts[parts.length - 2];
-      if (/^\d+$/.test(candidate) && parts.length >= 4) return parts[parts.length - 3];
-      return candidate;
-    }
-    if (parts.length === 2) return parts[0]; // "City, Country"
-    return address;
-  }
-
   const pickupCity = extractCity(pickupRaw.address ?? "", pickupRaw.city);
   const destCity = extractCity(destRaw.address ?? "", destRaw.city);
 
@@ -390,9 +391,10 @@ export const editDelivery = onCall(async (request) => {
       throw new HttpsError("invalid-argument", "pickup must have valid lat/lng");
     }
     const pickupGeohash = encodeGeohash(pickupLat, pickupLng, GEOHASH_PRECISION);
+    const pickupAddress = updates.pickup.address ?? "";
     updateFields["pickup"] = {
-      address: updates.pickup.address ?? "",
-      city: updates.pickup.city ?? "",
+      address: pickupAddress,
+      city: extractCity(pickupAddress, updates.pickup.city),
       lat: pickupLat,
       lng: pickupLng,
       geohash: pickupGeohash,
@@ -407,9 +409,10 @@ export const editDelivery = onCall(async (request) => {
       throw new HttpsError("invalid-argument", "destination must have valid lat/lng");
     }
     const destGeohash = encodeGeohash(destLat, destLng, GEOHASH_PRECISION);
+    const destAddress = updates.destination.address ?? "";
     updateFields["destination"] = {
-      address: updates.destination.address ?? "",
-      city: updates.destination.city ?? "",
+      address: destAddress,
+      city: extractCity(destAddress, updates.destination.city),
       lat: destLat,
       lng: destLng,
       geohash: destGeohash,
