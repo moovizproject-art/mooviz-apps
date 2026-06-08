@@ -637,7 +637,7 @@ export const selectDriver = onCall(async (request) => {
     });
   });
 
-  sendPushNotification(driverUid, "השולח בחר בך!", "אשר את המשלוח תוך 15 דקות", { event: "driver_selected", deliveryId })
+  sendPushNotification(driverUid, "השולח בחר בך!", "אשר את המשלוח תוך שעה", { event: "driver_selected", deliveryId })
     .catch((err: unknown) => logger.error("selectDriver notification failed", { deliveryId, driverUid, error: String(err) }));
 
   logger.info("Driver selected by sender", { deliveryId, senderId: uid, driverUid });
