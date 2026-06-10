@@ -1,1 +1,0 @@
-../../../Target Support Files/FirebaseFunctions/FirebaseFunctions-umbrella.h

@@ -195,6 +195,15 @@ importers:
       '@babel/runtime':
         specifier: ^7.23.0
         version: 7.28.6
+      '@react-native-community/cli':
+        specifier: 14.1.0
+        version: 14.1.0(typescript@5.9.3)
+      '@react-native-community/cli-platform-android':
+        specifier: 14.1.0
+        version: 14.1.0
+      '@react-native-community/cli-platform-ios':
+        specifier: 14.1.0
+        version: 14.1.0
       '@react-native/babel-preset':
         specifier: 0.75.5
         version: 0.75.5(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))

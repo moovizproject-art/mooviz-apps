@@ -53,6 +53,9 @@
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/runtime": "^7.23.0",
+    "@react-native-community/cli": "14.1.0",
+    "@react-native-community/cli-platform-android": "14.1.0",
+    "@react-native-community/cli-platform-ios": "14.1.0",
     "@react-native/babel-preset": "0.75.5",
     "@react-native/metro-config": "0.75.5",
     "@react-native/typescript-config": "0.75.5",

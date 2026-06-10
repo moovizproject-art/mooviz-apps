@@ -487,6 +487,74 @@ export const editDelivery = onCall(async (request) => {
 
   logger.info("Delivery edited", { deliveryId, senderId: uid });
 
+  // --- Notify nearby drivers when a driver-relevant field changed ---
+  // Edits only happen while status === 'new' with no interested drivers, so the
+  // audience is nearby drivers (no driver is selected yet). Pickup can move, so
+  // re-query nearby rather than only re-pinging the original notifiedDrivers.
+  // Skip pure notes/time-range edits — those don't matter to drivers.
+  const driverRelevantChange =
+    updateFields["pickup"] !== undefined ||
+    updateFields["destination"] !== undefined ||
+    updateFields["price"] !== undefined ||
+    updateFields["item"] !== undefined;
+
+  if (driverRelevantChange) {
+    // Effective values: use the edited field when present, else the existing one.
+    const effectivePickup = (updateFields["pickup"] as Record<string, unknown>) ?? (delivery.pickup as unknown as Record<string, unknown>) ?? {};
+    const effectiveDest = (updateFields["destination"] as Record<string, unknown>) ?? (delivery.destination as unknown as Record<string, unknown>) ?? {};
+    const effectiveItem = (updateFields["item"] as Record<string, unknown>) ?? (delivery.item as unknown as Record<string, unknown>) ?? {};
+    const effectivePrice = (updateFields["price"] as number | undefined) ?? (delivery as { price?: number }).price ?? 0;
+
+    const pickupGeohash = effectivePickup.geohash as string | undefined;
+    const pickupLat = (effectivePickup.lat ?? effectivePickup.latitude) as number | undefined;
+    const pickupLng = (effectivePickup.lng ?? effectivePickup.longitude) as number | undefined;
+
+    if (pickupGeohash && typeof pickupLat === "number" && typeof pickupLng === "number") {
+      const itemSize = effectiveItem.size as string | undefined;
+      const pickupCity = (effectivePickup.city || effectivePickup.address || "איסוף") as string;
+      const destCity = (effectiveDest.city || effectiveDest.address || "יעד") as string;
+      const priceStr = String(effectivePrice);
+      const prevNotified: string[] = ((delivery as { notifiedDrivers?: string[] }).notifiedDrivers) ?? [];
+      const prevSet = new Set(prevNotified);
+
+      // Fire-and-forget — don't block the edit response.
+      getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng, [uid], itemSize || undefined)
+        .then(async (nearbyDrivers) => {
+          const notifiedNow: string[] = [];
+          await Promise.all(
+            nearbyDrivers.map((driver) => {
+              notifiedNow.push(driver.uid);
+              const isNew = !prevSet.has(driver.uid);
+              // New nearby drivers get a "new delivery" push; drivers who already
+              // saw it get an "updated" push so it doesn't read as a duplicate.
+              const title = isNew ? "משלוח חדש באזורך" : "המשלוח עודכן";
+              const body = isNew
+                ? `משלוח חדש מ-${pickupCity} ל-${destCity} - ${priceStr} ₪`
+                : `המשלוח מ-${pickupCity} ל-${destCity} עודכן - ${priceStr} ₪`;
+              return sendPushNotification(
+                driver.uid,
+                title,
+                body,
+                {
+                  event: isNew ? "new_listing_nearby" : "delivery_updated",
+                  deliveryId,
+                  pickupCity,
+                  destinationCity: destCity,
+                  price: priceStr,
+                }
+              );
+            })
+          );
+          // Merge with previously-notified so the widening-net notifyExpansion
+          // function keeps an accurate exclusion list.
+          const merged = Array.from(new Set([...prevNotified, ...notifiedNow]));
+          await ref.update({ notifiedDrivers: merged });
+          logger.info("editDelivery: notified nearby drivers", { deliveryId, total: notifiedNow.length });
+        })
+        .catch((err) => logger.error("editDelivery: nearby driver notification failed", { deliveryId, error: String(err) }));
+    }
+  }
+
   return { success: true, deliveryId };
 });
 
@@ -637,7 +705,7 @@ export const selectDriver = onCall(async (request) => {
     });
   });
 
-  sendPushNotification(driverUid, "השולח בחר בך!", "אשר את המשלוח תוך 15 דקות", { event: "driver_selected", deliveryId })
+  sendPushNotification(driverUid, "השולח בחר בך!", "אשר את המשלוח תוך שעה", { event: "driver_selected", deliveryId })
     .catch((err: unknown) => logger.error("selectDriver notification failed", { deliveryId, driverUid, error: String(err) }));
 
   logger.info("Driver selected by sender", { deliveryId, senderId: uid, driverUid });

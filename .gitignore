@@ -16,12 +16,16 @@ dist/
 # Metro
 .metro-health-check*
 
-# React Native
-ios/Pods/
-ios/build/
+# React Native (patterns must match the monorepo path apps/*/ios — root-anchored
+# patterns like `ios/Pods/` only match <root>/ios and silently miss apps/mobile/ios)
+**/ios/Pods/
+**/ios/build/
+**/ios/.xcode.env.local
+**/vendor/bundle/
 **/.gradle/
 **/android/app/build/
 **/android/build/
+**/android/local.properties
 
 # Firebase
 .firebase/
