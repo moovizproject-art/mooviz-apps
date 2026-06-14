@@ -140,6 +140,43 @@ export const onUserCreate = onDocumentCreated(
       // Non-fatal — don't fail the trigger if SMTP is down
       logger.warn("Failed to send support BCC email", { userId, error: String(emailErr) });
     }
+
+    // Send welcome email to the user (only if they registered with an email address)
+    try {
+      const userEmail = ((data as Record<string, unknown>).email as string) || "";
+      const userFullName = ((data as Record<string, unknown>).fullName as string) || "";
+      const isDriver = ((data as Record<string, unknown>).activeMode as string) === "driver";
+      if (userEmail) {
+        const welcomeTransporter = nodemailer.createTransport({
+          host: "smtp.hostinger.com",
+          port: 465,
+          secure: true,
+          auth: { user: smtpUser.value(), pass: smtpPass.value() },
+        });
+        const greeting = userFullName ? `שלום ${userFullName},` : "שלום,";
+        const roleBodyHe = isDriver
+          ? "הצטרפת לקהילת מוביז כנהג. לאחר אישור זהותך תוכל להתחיל לאסוף משלוחים באזורך."
+          : "הצטרפת לקהילת מוביז. צור את המשלוח הראשון שלך ואנחנו נחבר אותך לנהג אמין בקרבתך.";
+        await welcomeTransporter.sendMail({
+          from: `Mooviz Social Deliveries <${smtpUser.value()}>`,
+          to: userEmail,
+          subject: "ברוכים הבאים למוביז! 🚚",
+          html: `
+            <div dir="rtl" style="font-family:Arial,sans-serif;padding:24px;max-width:600px;margin:0 auto;color:#222;">
+              <h1 style="color:#1a73e8;font-size:24px;margin-bottom:12px;">ברוכים הבאים למוביז!</h1>
+              <p style="font-size:16px;line-height:1.7;">${greeting}</p>
+              <p style="font-size:16px;line-height:1.7;">${roleBodyHe}</p>
+              <p style="font-size:16px;line-height:1.7;">תודה שבחרת בנו,<br/><strong>צוות מוביז</strong></p>
+              <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+              <p style="font-size:12px;color:#999;">Mooviz Social Deliveries — המשלוח החברתי שלך</p>
+            </div>
+          `,
+        });
+        logger.info("Welcome email sent to new user", { userId });
+      }
+    } catch (welcomeErr) {
+      logger.warn("Failed to send welcome email", { userId, error: String(welcomeErr) });
+    }
   }
 );
 
