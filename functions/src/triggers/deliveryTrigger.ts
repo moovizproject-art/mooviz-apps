@@ -155,7 +155,7 @@ export const onDeliveryCreate = onDocumentCreated(
       const pickupLat = (pickup?.lat ?? pickup?.latitude) as number | undefined;
       const pickupLng = (pickup?.lng ?? pickup?.longitude) as number | undefined;
 
-      const initialRadius = 15; // km
+      const initialRadius = 25; // km
       const notifiedDriverUids: string[] = [];
 
       if (pickupGeohash && pickupLat && pickupLng) {
@@ -243,28 +243,38 @@ export const onDeliveryUpdate = onDocumentUpdated(
 
     // Detect status change — validate transition server-side
     if (before.status !== after.status) {
-      const { STATUS_TRANSITIONS, TERMINAL_STATUSES } = require("@mooviz/shared");
+      // Check for admin override: if the latest statusHistory entry carries adminOverride:true,
+      // the admin panel explicitly forced this status — skip transition validation entirely.
+      const latestHistoryEntry = Array.isArray(rawHistory) && rawHistory.length > 0
+        ? rawHistory[rawHistory.length - 1]
+        : null;
+      if (latestHistoryEntry?.adminOverride === true) {
+        logger.info("onDeliveryUpdate: admin override detected, skipping transition validation", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
+        await handleStatusChange(deliveryId, before, after, change.after.ref);
+      } else {
+        const { STATUS_TRANSITIONS, TERMINAL_STATUSES } = require("@mooviz/shared");
 
-      // Guard: if BOTH before and after are terminal, don't revert (avoids infinite loop)
-      if (TERMINAL_STATUSES.includes(before.status) && TERMINAL_STATUSES.includes(after.status)) {
-        logger.warn("onDeliveryUpdate: skipping revert, both statuses terminal", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
-        return;
-      }
-
-      // Guard: if reverting TO a terminal status would just re-trigger, skip
-      const allowed = STATUS_TRANSITIONS[before.status as string];
-      if (!allowed || !allowed.includes(after.status)) {
-        // Don't revert if the before-status is also terminal (would cause infinite loop)
-        if (TERMINAL_STATUSES.includes(before.status)) {
-          logger.warn("onDeliveryUpdate: skipping revert, before-status is terminal", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
+        // Guard: if BOTH before and after are terminal, don't revert (avoids infinite loop)
+        if (TERMINAL_STATUSES.includes(before.status) && TERMINAL_STATUSES.includes(after.status)) {
+          logger.warn("onDeliveryUpdate: skipping revert, both statuses terminal", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
           return;
         }
-        // REVERT invalid transition — defense against direct client writes
-        logger.warn("onDeliveryUpdate: REVERTED invalid transition", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
-        await change.after.ref.update({ status: before.status });
-        return;
+
+        // Guard: if reverting TO a terminal status would just re-trigger, skip
+        const allowed = STATUS_TRANSITIONS[before.status as string];
+        if (!allowed || !allowed.includes(after.status)) {
+          // Don't revert if the before-status is also terminal (would cause infinite loop)
+          if (TERMINAL_STATUSES.includes(before.status)) {
+            logger.warn("onDeliveryUpdate: skipping revert, before-status is terminal", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
+            return;
+          }
+          // REVERT invalid transition — defense against direct client writes
+          logger.warn("onDeliveryUpdate: REVERTED invalid transition", { deliveryId, beforeStatus: before.status, afterStatus: after.status });
+          await change.after.ref.update({ status: before.status });
+          return;
+        }
+        await handleStatusChange(deliveryId, before, after, change.after.ref);
       }
-      await handleStatusChange(deliveryId, before, after, change.after.ref);
     }
 
     // Write history normalization AFTER status handling to batch into fewer writes

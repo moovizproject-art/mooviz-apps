@@ -221,11 +221,12 @@ export async function updateDeliveryStatus(
   adminId: string,
   note?: string,
 ): Promise<void> {
-  const statusEntry: StatusEvent = {
+  const statusEntry: StatusEvent & { adminOverride: true } = {
     status: newStatus,
     timestamp: Timestamp.now(),
     updatedBy: adminId,
     note: note ?? `Admin override to ${newStatus}`,
+    adminOverride: true,
   };
 
   const updates: Record<string, unknown> = {

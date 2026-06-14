@@ -368,16 +368,10 @@ export const editDelivery = onCall(async (request) => {
     throw new HttpsError("permission-denied", "רק השולח יכול לערוך את המשלוח");
   }
 
-  // Only editable when status is 'new'
-  if (delivery.status !== "new") {
-    throw new HttpsError("failed-precondition", "ניתן לערוך משלוח רק כשהסטטוס הוא חדש");
-  }
-
-  // No interested drivers
-  const interested: any[] = (delivery as any).interestedDrivers || [];
-  const activeInterested = interested.filter((d: any) => d.status !== "withdrawn");
-  if (activeInterested.length > 0) {
-    throw new HttpsError("failed-precondition", "לא ניתן לערוך משלוח כאשר נהגים כבר הביעו עניין");
+  // Editable until the driver picks up the package
+  const PRE_PICKUP_STATUSES = ["new", "pending", "awaiting_confirm", "waiting_for_pickup"];
+  if (!PRE_PICKUP_STATUSES.includes(delivery.status)) {
+    throw new HttpsError("failed-precondition", "לא ניתן לערוך משלוח לאחר שנאסף");
   }
 
   // Build update object
@@ -487,10 +481,7 @@ export const editDelivery = onCall(async (request) => {
 
   logger.info("Delivery edited", { deliveryId, senderId: uid });
 
-  // --- Notify nearby drivers when a driver-relevant field changed ---
-  // Edits only happen while status === 'new' with no interested drivers, so the
-  // audience is nearby drivers (no driver is selected yet). Pickup can move, so
-  // re-query nearby rather than only re-pinging the original notifiedDrivers.
+  // --- Notify relevant drivers when a driver-relevant field changed ---
   // Skip pure notes/time-range edits — those don't matter to drivers.
   const driverRelevantChange =
     updateFields["pickup"] !== undefined ||
@@ -499,59 +490,62 @@ export const editDelivery = onCall(async (request) => {
     updateFields["item"] !== undefined;
 
   if (driverRelevantChange) {
-    // Effective values: use the edited field when present, else the existing one.
     const effectivePickup = (updateFields["pickup"] as Record<string, unknown>) ?? (delivery.pickup as unknown as Record<string, unknown>) ?? {};
     const effectiveDest = (updateFields["destination"] as Record<string, unknown>) ?? (delivery.destination as unknown as Record<string, unknown>) ?? {};
     const effectiveItem = (updateFields["item"] as Record<string, unknown>) ?? (delivery.item as unknown as Record<string, unknown>) ?? {};
     const effectivePrice = (updateFields["price"] as number | undefined) ?? (delivery as { price?: number }).price ?? 0;
+    const pickupCity = (effectivePickup.city || effectivePickup.address || "איסוף") as string;
+    const destCity = (effectiveDest.city || effectiveDest.address || "יעד") as string;
+    const priceStr = String(effectivePrice);
 
-    const pickupGeohash = effectivePickup.geohash as string | undefined;
-    const pickupLat = (effectivePickup.lat ?? effectivePickup.latitude) as number | undefined;
-    const pickupLng = (effectivePickup.lng ?? effectivePickup.longitude) as number | undefined;
+    // When a driver is already selected/waiting, notify them directly about the change
+    const selectedDriverId = (delivery as any).selectedDriverId || (delivery as any).driverId;
+    if (selectedDriverId && ["awaiting_confirm", "waiting_for_pickup"].includes(delivery.status)) {
+      sendPushNotification(
+        selectedDriverId,
+        "המשלוח שבחרת עודכן",
+        `המשלוח מ-${pickupCity} ל-${destCity} עודכן על ידי השולח`,
+        { event: "delivery_updated", deliveryId, pickupCity, destinationCity: destCity, price: priceStr }
+      ).catch((err: unknown) => logger.error("editDelivery: selected driver notification failed", { deliveryId, error: String(err) }));
+    }
 
-    if (pickupGeohash && typeof pickupLat === "number" && typeof pickupLng === "number") {
-      const itemSize = effectiveItem.size as string | undefined;
-      const pickupCity = (effectivePickup.city || effectivePickup.address || "איסוף") as string;
-      const destCity = (effectiveDest.city || effectiveDest.address || "יעד") as string;
-      const priceStr = String(effectivePrice);
-      const prevNotified: string[] = ((delivery as { notifiedDrivers?: string[] }).notifiedDrivers) ?? [];
-      const prevSet = new Set(prevNotified);
+    // For new/pending status notify nearby drivers (no specific driver selected yet)
+    if (["new", "pending"].includes(delivery.status)) {
+      const pickupGeohash = effectivePickup.geohash as string | undefined;
+      const pickupLat = (effectivePickup.lat ?? effectivePickup.latitude) as number | undefined;
+      const pickupLng = (effectivePickup.lng ?? effectivePickup.longitude) as number | undefined;
 
-      // Fire-and-forget — don't block the edit response.
-      getNearbyDriverTokensMultiLocation(pickupGeohash, 15, pickupLat, pickupLng, [uid], itemSize || undefined)
-        .then(async (nearbyDrivers) => {
-          const notifiedNow: string[] = [];
-          await Promise.all(
-            nearbyDrivers.map((driver) => {
-              notifiedNow.push(driver.uid);
-              const isNew = !prevSet.has(driver.uid);
-              // New nearby drivers get a "new delivery" push; drivers who already
-              // saw it get an "updated" push so it doesn't read as a duplicate.
-              const title = isNew ? "משלוח חדש באזורך" : "המשלוח עודכן";
-              const body = isNew
-                ? `משלוח חדש מ-${pickupCity} ל-${destCity} - ${priceStr} ₪`
-                : `המשלוח מ-${pickupCity} ל-${destCity} עודכן - ${priceStr} ₪`;
-              return sendPushNotification(
-                driver.uid,
-                title,
-                body,
-                {
-                  event: isNew ? "new_listing_nearby" : "delivery_updated",
-                  deliveryId,
-                  pickupCity,
-                  destinationCity: destCity,
-                  price: priceStr,
-                }
-              );
-            })
-          );
-          // Merge with previously-notified so the widening-net notifyExpansion
-          // function keeps an accurate exclusion list.
-          const merged = Array.from(new Set([...prevNotified, ...notifiedNow]));
-          await ref.update({ notifiedDrivers: merged });
-          logger.info("editDelivery: notified nearby drivers", { deliveryId, total: notifiedNow.length });
-        })
-        .catch((err) => logger.error("editDelivery: nearby driver notification failed", { deliveryId, error: String(err) }));
+      if (pickupGeohash && typeof pickupLat === "number" && typeof pickupLng === "number") {
+        const itemSize = effectiveItem.size as string | undefined;
+        const prevNotified: string[] = ((delivery as { notifiedDrivers?: string[] }).notifiedDrivers) ?? [];
+        const prevSet = new Set(prevNotified);
+
+        // Fire-and-forget — don't block the edit response.
+        getNearbyDriverTokensMultiLocation(pickupGeohash, 25, pickupLat, pickupLng, [uid], itemSize || undefined)
+          .then(async (nearbyDrivers) => {
+            const notifiedNow: string[] = [];
+            await Promise.all(
+              nearbyDrivers.map((driver) => {
+                notifiedNow.push(driver.uid);
+                const isNew = !prevSet.has(driver.uid);
+                const title = isNew ? "משלוח חדש באזורך" : "המשלוח עודכן";
+                const body = isNew
+                  ? `משלוח חדש מ-${pickupCity} ל-${destCity} - ${priceStr} ₪`
+                  : `המשלוח מ-${pickupCity} ל-${destCity} עודכן - ${priceStr} ₪`;
+                return sendPushNotification(
+                  driver.uid,
+                  title,
+                  body,
+                  { event: isNew ? "new_listing_nearby" : "delivery_updated", deliveryId, pickupCity, destinationCity: destCity, price: priceStr }
+                );
+              })
+            );
+            const merged = Array.from(new Set([...prevNotified, ...notifiedNow]));
+            await ref.update({ notifiedDrivers: merged });
+            logger.info("editDelivery: notified nearby drivers", { deliveryId, total: notifiedNow.length });
+          })
+          .catch((err) => logger.error("editDelivery: nearby driver notification failed", { deliveryId, error: String(err) }));
+      }
     }
   }
 
@@ -656,7 +650,7 @@ export const expressInterest = onCall(async (request) => {
 
 /**
  * Sender selects a driver from the interested list.
- * Marks the driver as "selected" and sets a 15-minute confirmation window.
+ * Marks the driver as "selected" and sets a 1-hour confirmation window.
  */
 export const selectDriver = onCall(async (request) => {
   const uid = request.auth?.uid;

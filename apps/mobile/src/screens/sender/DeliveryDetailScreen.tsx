@@ -314,9 +314,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
   const driverPhone = driverProfile?.phone;
   const completedTrips = driverProfile?.completedDeliveries;
 
-  const canEditOrDelete = delivery.status === 'new'
+  const activeInterestedCount = delivery.interestedDrivers?.filter((d: any) => d.status !== 'withdrawn')?.length ?? 0;
+  const canEdit = ['new', 'pending', 'awaiting_confirm', 'waiting_for_pickup'].includes(delivery.status)
+    && delivery.senderId === currentUser?.uid;
+  const canDelete = delivery.status === 'new'
     && delivery.senderId === currentUser?.uid
-    && (delivery.interestedDrivers?.filter((d: any) => d.status !== 'withdrawn')?.length ?? 0) === 0;
+    && activeInterestedCount === 0;
+  const canEditOrDelete = canEdit || canDelete;
 
   const canEditMedia = ['new', 'pending'].includes(delivery.status) && delivery.senderId === currentUser?.uid;
   const canAddImage = canEditMedia && imageCount < 5;
@@ -922,9 +926,9 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
 
       {/* ── 7. Secondary Actions (Edit / Delete / Cancel / Rate) ── */}
       <View style={styles.secondaryActions}>
-        {canEditOrDelete && (
+        {(canEdit || canDelete) && (
           <View style={styles.editDeleteRow}>
-            <TouchableOpacity
+            {canEdit && <TouchableOpacity
               style={[styles.editBtn, { backgroundColor: colors.primary }]}
               onPress={() => {
                 const pickupLat = delivery.pickup?.lat ?? delivery.pickup?.latitude;
@@ -954,13 +958,13 @@ export function DeliveryDetailScreen({ route, navigation }: Props): React.JSX.El
               }}
             >
               <Text style={styles.editBtnText}>{t('edit.editDelivery')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </TouchableOpacity>}
+            {canDelete && <TouchableOpacity
               style={[styles.deleteBtn, { borderColor: '#E53935' }]}
               onPress={() => setDeleteAlertVisible(true)}
             >
               <Text style={styles.deleteBtnText}>{t('edit.deleteDelivery')}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>}
           </View>
         )}
         <AppAlert
