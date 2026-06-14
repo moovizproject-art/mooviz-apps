@@ -144,23 +144,28 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
         });
       } catch (docErr) {
         // Firestore doc creation failed — write directly as fallback
-        console.warn('[RegisterScreen] createUserDocument failed, writing directly:', docErr);
-        const firestore = require('@react-native-firebase/firestore').default;
-        const { normalizePhoneNumber } = require('../../services/auth');
-        await firestore().collection('users').doc(credential.user.uid).set({
-          uid: credential.user.uid,
-          fullName: form.fullName,
-          email: form.email,
-          phone: normalizePhoneNumber(form.phone),
-          city: '',
-          role: 'sender',
-          driverUnlocked: false,
-          driverAvailable: false,
-          fcmTokens: [],
-          location: { lat: 0, lng: 0, geohash: '' },
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        }).catch(() => {}); // Last resort — useAuth auto-create will catch this
+        // Guard: skip if fullName is missing (prevents nameless user docs)
+        if (!form.fullName?.trim()) {
+          console.warn('[RegisterScreen] fallback write skipped — fullName is empty');
+        } else {
+          console.warn('[RegisterScreen] createUserDocument failed, writing directly:', docErr);
+          const firestore = require('@react-native-firebase/firestore').default;
+          const { normalizePhoneNumber } = require('../../services/auth');
+          await firestore().collection('users').doc(credential.user.uid).set({
+            uid: credential.user.uid,
+            fullName: form.fullName.trim(),
+            email: form.email,
+            phone: normalizePhoneNumber(form.phone),
+            city: '',
+            role: 'sender',
+            driverUnlocked: false,
+            driverAvailable: false,
+            fcmTokens: [],
+            location: { lat: 0, lng: 0, geohash: '' },
+            createdAt: firestore.FieldValue.serverTimestamp(),
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          }).catch(() => {}); // Last resort — useAuth auto-create will catch this
+        }
       }
 
       setLoadingStep(1);
